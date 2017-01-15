@@ -925,6 +925,7 @@ class Options(object):
             if type(self.args.group_functions) != list:
                 self.args.group_functions = []
 
+
 cfg = None
 settings = None
 
@@ -1283,7 +1284,6 @@ def set_current_server(name):
         cfg.current_resources = get_available_resources(name)
     else:
         cfg.current_resources = None
-
     # make sure that a subdirectory exists in "connections" for the current
     # connection:
     path = os.path.join(cfg.connections_path, name)
@@ -1381,7 +1381,9 @@ def get_available_resources(configuration):
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
         except Exception as e:
-            logger.warn("There is an error in corpus module '{}': {}\nThe corpus is not available for queries.".format(corpus_name, str(e)))
+            s = "There is an error in corpus module '{}': {}\nThe corpus is not available for queries.".format(corpus_name, str(e))
+            print(s)
+            logger.warn(s)
         else:
             try:
                 d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
