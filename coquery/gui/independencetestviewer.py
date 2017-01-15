@@ -25,7 +25,7 @@ from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
 class IndependenceTestViewer(QtGui.QDialog):
     html_template = """
         <body>
-            <h1><span style="font-weight:600;">Corpus {corpus}</span></h1>
+            <h1><span style="font-weight:600;">Corpus: {corpus}</span></h1>
             {filters}
             <p>
             <table border="0" style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;" cellspacing="2" cellpadding="0">
@@ -62,7 +62,7 @@ class IndependenceTestViewer(QtGui.QDialog):
     """.strip()
 
     latex_template = """
-    \\textbf{{Corpus {corpus}}}
+    \\textbf{{Corpus: {corpus}}}
     {filters}
     \\begin{{table}}[htbp]
         \\centering
@@ -101,7 +101,7 @@ class IndependenceTestViewer(QtGui.QDialog):
             Returns
             -------
             value : str
-                A string, giving an estimat eof p. Possible values are:
+                A string, giving an estimate of p. Possible values are:
                 "< 0.001"
                 "< 0.01"
                 "< 0.05"
