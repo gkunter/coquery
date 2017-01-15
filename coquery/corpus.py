@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -32,7 +32,6 @@ from . import tokens
 from . import options
 from . import sqlhelper
 from .links import get_by_hash
-from .filters import QueryFilter
 
 #class ResFeature(str):
     #""" Define a feature class that acts like a string, but has some class
