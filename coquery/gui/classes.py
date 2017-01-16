@@ -2,7 +2,7 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -278,7 +278,6 @@ class CoqRotatedButton(QtGui.QPushButton):
     def minimumSizeHint(self):
         size = super(CoqRotatedButton, self).minimumSizeHint()
         size.transpose()
-        print("minimumSizeHint", size)
         return QtCore.QSize(QtGui.QPushButton().minimumSizeHint().height(),
                             size.width())
 
@@ -286,7 +285,6 @@ class CoqRotatedButton(QtGui.QPushButton):
         size = super(CoqRotatedButton, self).sizeHint()
         size.transpose()
         size.setWidth(QtGui.QLabel().sizeHint().height())
-        print("sizeHint", size)
         return size
 
     def getSyleOptions(self):
