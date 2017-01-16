@@ -772,13 +772,18 @@ class CoqueryApp(QtGui.QMainWindow):
         else:
             col = "#7f0000"
 
+        manager = self.Session.get_manager()
+        if manager.dropped_na_count:
+            rows = self.unfiltered_tokens - manager.dropped_na_count
+        else:
+            rows = self.unfiltered_tokens
         s = "Total rows: {num:<8} Displayed rows: {uniq:<8} Duration of last operation: {dur}"
 
-        if options.cfg.number_of_tokens and self.unfiltered_tokens != 0:
+        if options.cfg.number_of_tokens and rows != 0:
             s = "<font color='{{col}}'>Note: </font> Match limit ({{lim:<8}}) enabled. {s}".format(s=s)
 
         self.showMessage(s.format(
-            num=self.unfiltered_tokens,
+            num=rows,
             uniq=len(self.table_model.content),
             dur=duration_str, col=col,
             lim=options.cfg.number_of_tokens))
