@@ -313,6 +313,7 @@ class TokenQuery(object):
                 col.append("coquery_invisible_corpus_id")
                 col.append("coquery_invisible_origin_id")
             df = pd.DataFrame([[pd.np.nan] * len(col)], columns=col)
+            df["coquery_invisible_number_of_tokens"] = self._current_number_of_tokens
             self.empty_query = True
         else:
             df["coquery_dummy"] = 0
