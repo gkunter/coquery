@@ -996,8 +996,11 @@ class ContextString(ContextColumns):
             row["coquery_invisible_number_of_tokens"], connection,
             sentence_id=sentence_id)
         return pd.Series(
-            data=[collapse_words(list(pd.Series(left + [x.upper() for x in target] + right)))],
-            index=[self._name])
+            data=[collapse_words(list(pd.Series(
+                                        left +
+                                        [x.upper() for x in target if x] +
+                                        right)))],
+                                        index=[self._name])
 
 
 #############################################################################

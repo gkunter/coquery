@@ -340,6 +340,7 @@ class Manager(CoqObject):
 
     def summarize(self, df, session):
         print("\tsummarize()")
+        self.dropped_na_count = 0
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
         df = self.manager_summary_functions.apply(df, session=session, manager=self)
@@ -348,14 +349,14 @@ class Manager(CoqObject):
                                                    session=session,
                                                    manager=self)
 
-        cols = [x for x in vis_cols if x.startswith("coq_")]
+        cols = [x for x in vis_cols
+                if x.startswith("coq_") and not x.startswith("coq_context_")]
 
         if options.cfg.drop_on_na and cols:
-            ix = df[vis_cols].dropna(axis="index",
-                                     subset=cols,
-                                     how="all").index
-            df = df.iloc[ix]
-
+            ix = (df[vis_cols].dropna(axis="index", subset=cols, how="all")
+                              .index)
+            self.dropped_na_count = len(df) - len(ix)
+            df = df.loc[ix]
         print("\tdone")
         return df
 
