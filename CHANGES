@@ -1,4 +1,8 @@
 (feature_dplyr branch)
+* collect hidden columns in a side bar
+* add new visualizations: scatterplot, violin plot, box plot
+* allow vertical plots where sensible
+* introduce the Visualization designer, which is very cool
 * there is now a search widget
 * change 'Query' button to 'New query'
 * make keyboard shortcuts more consistent
