@@ -2327,9 +2327,6 @@ class CoqueryApp(QtGui.QMainWindow):
                         msg_remove_corpus_error.format(corpus=resource.name, code=e),
                         QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
                     success = False
-                finally:
-                    if connected:
-                        self.Session.db_connection = self.Session.db_engine.connect()
 
             # Remove the corpus module:
             if rm_module and success and module:
