@@ -971,8 +971,8 @@ class ContextColumns(Function):
 class ContextKWIC(ContextColumns):
     _name = "coq_context_kwic"
 
-    def _func(self, row, session):
-        row = super(ContextKWIC, self)._func(row, session)
+    def _func(self, row, session, connection):
+        row = super(ContextKWIC, self)._func(row, session, connection)
         return pd.Series(
             data=[collapse_words(row[self.left_cols]), collapse_words(row[self.right_cols])],
             index=[["coq_context_left", "coq_context_right"]])
