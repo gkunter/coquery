@@ -503,6 +503,26 @@ class Manager(CoqObject):
     def process(self, df, session, recalculate=True):
         print("process()")
         df = df.reset_index(drop=True)
+
+        # get index of duplicates, sorted so that those rows with the highest
+        # number of query tokens are used.
+
+        # Get index of rows that are retained if duplicates are removed from
+        # the data frame after sorting it by the number of query tokens that
+        # returned the rows. This ensures that if the same token is returned
+        # several times by a quantified query string, e.g. # by a string like
+        # 'get *{1,2}', the index of the most specific match is retained, for
+        # example a match such as 'get happy', whereas the index of the less
+        # specific matches, for example 'get <NA>', are discarded.
+        ix = (df.sort_values(by="coquery_invisible_number_of_tokens",
+                             ascending=False)
+                .drop_duplicates("coquery_invisible_corpus_id")
+                .index)
+
+        # use the index to discard all rows that contain duplicate corpus
+        # ids.
+        df = df.loc[ix]
+
         self.drop_on_na = None
 
         if options.cfg.stopword_list:
