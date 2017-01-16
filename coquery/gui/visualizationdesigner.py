@@ -405,7 +405,6 @@ class VisualizationDesigner(QtGui.QDialog):
         size = self.ui.group_preview.size()
         self.ui.group_preview_colors.setMinimumSize(size)
         self.ui.group_preview_colors.setMaximumSize(size)
-        print(self.ui.group_preview.size(), self.ui.group_preview_colors.size())
 
     def restore_settings(self):
         try:
