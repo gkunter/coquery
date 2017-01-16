@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import sys
-from PySide import QtCore, QtGui
-import os
-
-sys.path.append(os.path.join(sys.path[0], "../coquery"))
-sys.path.append(os.path.join(sys.path[0], "../coquery/corpora"))
-from corpus import collapse_words
-from ice_ng import Resource
+from coquery.corpus import collapse_words
+from coquery.installer.coq_install_ice_ng import Resource
 
 class Corpus(object):
     def __init__(self):

@@ -1,3 +1,52 @@
+(feature_dplyr branch)
+* collect hidden columns in a side bar
+* add new visualizations: scatterplot, violin plot, box plot
+* allow vertical plots where sensible
+* introduce the Visualization designer, which is very cool
+* there is now a search widget
+* change 'Query' button to 'New query'
+* make keyboard shortcuts more consistent
+* add initial support for using a reference corpus
+* add value substitutions
+* improve TextGrid export features
+* improve segment lookup in corpora that contain segments
+* use Icons8 icon set
+* add user data columns
+* drastically change data management:
+    - contexts and functions can be added at any time, not only before the query
+    - add completely revised filter dialogs
+    - add completely revised functions dialog
+    - introduce Group and Summary functions (the latter replaces the Statistics
+      special table)
+    - add new functions (Subcorpus size, Frequency ptw, Normalized frequency,
+      Number of matches, Number of unique matches, Row number, Type-token
+      ratio)
+    - add new string function (CHAIN and DECAT), use regex for COUNT, make 
+      regex more robust
+    - add logical functions (ADD, EQUAL, GREATERTHAN, ISFALSE, ISTRUE, 
+      LESSTHAN, NOTEQUAL, OR, XOR)
+    - add data grouping
+    - functions are now added to columns in the results table
+* add query cache that can speed up repeated queries (experimental)
+* add Kernel density estimates and Cumulative density function visualizations
+* add Scatter plot visualizations
+* external links are now persistent when changing the corpus or quitting the
+  program
+* add word-wrapping for long columns
+* Placeholder for empty cells is now configurable
+* greatly improve the speed of browsing the results table
+* add stopword lists for many languages
+* add option to restrict contexts to sentence boundaries
+* add widget to barplots that toggles between Frequency (normalized, raw,
+  relative), Proportion, Percentage
+* streamline the interface:
+    - move column selection to the left
+    - make Query button more prominent
+    - simplify query file widget
+    - add Result table management sidebar
+    - Column selection and Result table management sidebar can be hidden
+
+
 (development version, still unreleased)
 * add Module information dialog
 * add support for encoding detection when reading plain text files

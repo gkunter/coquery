@@ -15,12 +15,15 @@ from __future__ import unicode_literals
 import sys
 import os
 import pandas as pd
+import tgt
 
 from coquery import options
 from coquery.unicode import utf8
 from . import classes
 from .pyqt_compat import QtCore, QtGui
 from .ui.contextViewerUi import Ui_ContextView
+
+from coquery.sound import Sound
 
 class ContextView(QtGui.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, icon=None, parent=None):
@@ -45,7 +48,18 @@ class ContextView(QtGui.QWidget):
         self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", utf8(not self.ui.button_ids.isExpanded())))
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
-        
+
+        ##S = "/home/kunibert/Dev/coquery/s1601a.wav"
+        #S = "/home/kunibert/Dev/coquery/07_PEERS_s0901b.wav"
+        #sound = Sound(S)
+        #textgrid = tgt.read_textgrid("/home/kunibert/Dev/coquery/07_PEERS_s0901b.TextGrid")
+        #self.ui.textgrid_area.setSound(sound)
+        #self.ui.textgrid_area.setTextgrid(textgrid)
+        #self.ui.textgrid_area.display()
+
+        self.ui.spin_dynamic_range.valueChanged.connect(self.ui.textgrid_area.change_dynamic_range)
+        self.ui.spin_window_length.valueChanged.connect(self.ui.textgrid_area.change_window_length)
+
         L = self.corpus.get_origin_data(token_id)
         for table, fields in sorted(L):
             self.add_source_label(table)
@@ -80,6 +94,12 @@ class ContextView(QtGui.QWidget):
             self.ui.button_ids.setExpanded(False)
 
         self.ui.context_area.setStyleSheet(corpus.get_context_stylesheet())
+
+    def set_view(self, context):
+        if context:
+            self.ui.tab_widget.setCurrentIndex(0)
+        else:
+            self.ui.tab_widget.setCurrentIndex(1)
 
     def closeEvent(self, *args):
         options.settings.setValue("contextviewer_size", self.size())

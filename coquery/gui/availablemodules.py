@@ -17,7 +17,7 @@ import sys
 from coquery import options
 from coquery.defines import * 
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .ui.availableModulesUi import Ui_AvailableModules
 
 class AvailableModulesDialog(QtGui.QDialog):
@@ -33,17 +33,22 @@ class AvailableModulesDialog(QtGui.QDialog):
         self.ui.setupUi(self)
         self.ui.table_modules.setHorizontalHeaderLabels(["Module", "Available", "Description"])
 
-        modules = (
+        modules = [
+                ("cachetools", options.use_cachetools),
+                ("PyMySQL", options.use_mysql),
                 ("SciPy", options.use_scipy), 
                 ("Seaborn", options.use_seaborn),
-                ("PyMySQL", options.use_mysql),
+                ("statsmodels", options.use_statsmodels),
                 ("NLTK", options.use_nltk),
                 ("tgt", options.use_tgt),
                 ("chardet", options.use_chardet),
                 ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options.use_pdfminer),
                 ("python-docx", options.use_docx),
                 ("odfpy", options.use_odfpy),
-                ("BeautifulSoup", options.use_bs4))
+                ("BeautifulSoup", options.use_bs4),
+                ]
+        if sys.platform.startswith("linux"):
+            modules.insert(0, ("alsaaudio", options.use_alsaaudio))
         
         self.ui.table_modules.setRowCount(len(modules))
         
@@ -56,9 +61,9 @@ class AvailableModulesDialog(QtGui.QDialog):
             self._links[id(name_item)] = url
             
             if flag:
-                status_item.setIcon(options.cfg.main_window.get_icon("sign-check"))
+                status_item.setIcon(get_toplevel_window().get_icon("Checked Checkbox"))
             else:
-                status_item.setIcon(options.cfg.main_window.get_icon("sign-error"))
+                status_item.setIcon(get_toplevel_window().get_icon("Unchecked Checkbox"))
 
             
             self.ui.table_modules.setItem(i, 0, name_item)

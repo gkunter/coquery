@@ -4,11 +4,8 @@
 from __future__ import unicode_literals
 
 import unittest
-import os.path
-import sys
 
-sys.path.append(os.path.join(sys.path[0], "../coquery"))
-from bibliography import *
+from coquery.bibliography import *
 
 # Create a tuple containing the available string types 
 # (Python 3 has no unicode):
@@ -33,9 +30,9 @@ class TestPerson(unittest.TestCase):
         self.assertEqual(name.last, "Münster")
 
         name = Person(first="Jürgen", middle="M.", last="Münster")
-        self.assertTrue(isinstance(name.first, (unicode, str)))
+        self.assertTrue(isinstance(name.first, string_types))
         self.assertTrue(isinstance(name.middle, list))
-        self.assertTrue(isinstance(name.last, (unicode, str)))
+        self.assertTrue(isinstance(name.last, string_types))
 
     def test_repr(self):
         name = Person(first="Jürgen", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Münster")
@@ -716,8 +713,7 @@ class TestInCollection(unittest.TestCase):
             pub=coll.get_publishing_information()))
                         
 
-
-if __name__ == '__main__':
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestPerson),
         unittest.TestLoader().loadTestsFromTestCase(TestPersonList),
@@ -728,3 +724,6 @@ if __name__ == '__main__':
         unittest.TestLoader().loadTestsFromTestCase(TestInCollection),
         ])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

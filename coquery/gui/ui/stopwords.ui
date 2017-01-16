@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>656</width>
+    <width>640</width>
     <height>480</height>
    </rect>
   </property>
@@ -14,95 +14,60 @@
    <string> Stop words – Coquery</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_4">
-   <property name="spacing">
-    <number>16</number>
-   </property>
-   <property name="leftMargin">
-    <number>2</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>2</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
    <item>
-    <widget class="QFrame" name="frame">
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1">
-      <property name="spacing">
-       <number>0</number>
-      </property>
-      <property name="leftMargin">
-       <number>8</number>
-      </property>
-      <property name="topMargin">
-       <number>6</number>
-      </property>
-      <property name="rightMargin">
-       <number>8</number>
-      </property>
-      <property name="bottomMargin">
-       <number>6</number>
-      </property>
+    <widget class="QGroupBox" name="groupBox">
+     <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0">
       <item>
-       <widget class="QLabel" name="label">
+       <widget class="CoqTagBox" name="stopword_list"/>
+      </item>
+      <item>
+       <widget class="QDialogButtonBox" name="buttonbox_io">
+        <property name="standardButtons">
+         <set>QDialogButtonBox::Open|QDialogButtonBox::Reset|QDialogButtonBox::Save</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Preset lists</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Currently active stop words:</string>
+         <string>&amp;Language:</string>
+        </property>
+        <property name="buddy">
+         <cstring>combo_language</cstring>
         </property>
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1">
-        <property name="spacing">
-         <number>16</number>
+       <widget class="QComboBox" name="combo_language"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="button_add_list">
+        <property name="text">
+         <string>A&amp;dd preset list</string>
         </property>
-        <item>
-         <widget class="QListWidget" name="stopword_list">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="alternatingRowColors">
-           <bool>true</bool>
-          </property>
-          <property name="selectionMode">
-           <enum>QAbstractItemView::ExtendedSelection</enum>
-          </property>
-          <property name="flow">
-           <enum>QListView::TopToBottom</enum>
-          </property>
-          <property name="isWrapping" stdset="0">
-           <bool>true</bool>
-          </property>
-          <property name="resizeMode">
-           <enum>QListView::Adjust</enum>
-          </property>
-          <property name="spacing">
-           <number>10</number>
-          </property>
-          <property name="viewMode">
-           <enum>QListView::IconMode</enum>
-          </property>
-          <property name="wordWrap">
-           <bool>true</bool>
-          </property>
-          <property name="selectionRectVisible">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </widget>
@@ -113,7 +78,7 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok|QDialogButtonBox::Open|QDialogButtonBox::Reset|QDialogButtonBox::Save</set>
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
      <property name="centerButtons">
       <bool>false</bool>
@@ -122,6 +87,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CoqTagBox</class>
+   <extends>QListWidget</extends>
+   <header>..classes</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

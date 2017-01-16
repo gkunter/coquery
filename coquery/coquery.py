@@ -30,6 +30,7 @@ import time
 import logging
 import logging.handlers
 
+from . import general
 from .errors import *
 from . import options
 from .defines import *
@@ -58,13 +59,11 @@ def check_system():
         sys.exit(1)
 
 def main():
-    check_system()
-    options.process_options()
-    coquery_home = options.get_home_dir()
+    coquery_home = general.get_home_dir()
     logger = set_logger(os.path.join(coquery_home, "coquery.log"))
 
-    #if options.use_qt:
-        #sys.path.append(os.path.join(sys.path[0], "gui"))
+    check_system()
+    options.process_options()
 
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (NAME, VERSION))
@@ -102,6 +101,8 @@ def main():
     if options.cfg.comment:
         logger.info(options.cfg.comment)
 
+    options.set_current_server(options.cfg.current_server)
+
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
         from .gui.pyqt_compat import QtGui, QtCore
@@ -121,8 +122,10 @@ def main():
         Coq = CoqueryApp()
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
-        Coq.show()
         Coq.setGUIDefaults()
+
+        from . import session
+        Coq.Session = session.SessionCommandLine()
 
         options.cfg.icon = Coq.get_icon("coquerel_icon.png", small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
@@ -135,8 +138,8 @@ def main():
 
     # Otherwise, run program as a command-line tool:
     else:
-        options.set_current_server(options.cfg.current_server)
         from . import session
+
         # Choose the appropriate Session type instance:
         if options.cfg.MODE == QUERY_MODE_STATISTICS:
             Session = session.StatisticsSession()
@@ -162,6 +165,9 @@ def main():
             logger.error("Execution interrupted, exiting.")
         logger.info("--- Done (after %.3f seconds) ---" % (time.time() - start_time))
 
+    if options.cfg.use_cache:
+        options.cfg.query_cache.save()
+        
 if __name__ == "__main__":
     for x in sys.argv[1:]:
         if x == "--benchmark":

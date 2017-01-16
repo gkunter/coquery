@@ -2,10 +2,10 @@
 """ 
 timeseries.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -21,7 +21,7 @@ from coquery.errors import *
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
     vmax = 0
-    
+
     def __init__(self, *args, **kwargs):
         try:
             self.area = kwargs.pop("area")
@@ -35,7 +35,7 @@ class Visualizer(vis.BaseVisualizer):
             self.smooth = kwargs.pop("smooth")
         except KeyError:
             self.smooth = False
-            
+
         super(Visualizer, self).__init__(*args, **kwargs)
 
     def set_defaults(self):
@@ -49,7 +49,7 @@ class Visualizer(vis.BaseVisualizer):
         self.options["label_x_axis"] = self._groupby[-1]
         self.options["label_legend"] = self._groupby[0]
         super(Visualizer, self).set_defaults()
-    
+
     def update_data(self, bandwidth=1):
         super(Visualizer, self).update_data()
         for x in self._table.columns[::-1]:
@@ -73,7 +73,7 @@ class Visualizer(vis.BaseVisualizer):
                     if self._col_factor:
                         self._row_factor = self._col_factor
                     self._col_factor = self._groupby[0]
-                    
+
                     self._groupby[0] = self._groupby[1]
                     self._levels = [self._levels[1]]
                     self._groupby[1] = self._time_column
@@ -81,7 +81,7 @@ class Visualizer(vis.BaseVisualizer):
                     self._groupby.append(self._time_column)
         else:
             raise VisualizationInvalidDataError
-        
+
     def setup_figure(self):
         with sns.axes_style("whitegrid"):
             super(Visualizer, self).setup_figure()
@@ -91,7 +91,7 @@ class Visualizer(vis.BaseVisualizer):
             return (int(x) // self.bandwidth) * self.bandwidth
         except ValueError:
             return np.NaN
-        
+
     def convert_to_timeseries(self, x):
         # FIXME:
         # pandas >= 0.17.0 has changed the Timestamp API. Check that this
@@ -105,8 +105,7 @@ class Visualizer(vis.BaseVisualizer):
 
     def draw(self, **kwargs):
         """ Draw time series. """
-        
-        
+
         def plot_facet(data, color, **kwargs):
             num = []
             date = []
@@ -149,16 +148,157 @@ class Visualizer(vis.BaseVisualizer):
                     # Line plot:
                     self.vmax = max(self.vmax, ct.values.max())
                     ct.plot(ax=plt.gca(), color=self.get_palette())
-        
+
         self.map_data(plot_facet)
-        
+
         if self.percentage:
             self.g.set(ylim=(0, 100))
         else:
             self.g.set(ylim=(0, self.vmax))
         self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
-        
+
         if len(self._groupby) == 2:
             self.add_legend()
 
+class TimeSeries(vis.Visualizer):
+
+    def plot_facet(self, data, color, **kwargs):
+        x = kwargs.get("x")
+        y = kwargs.get("y")
+        levels_x = kwargs.get("levels_x")
+        levels_y = kwargs.get("levels_y")
+
+        #num = []
+        #date = []
+        #time = data[self._time_column]
+        #num = data[self._time_column].apply(self.convert_to_datetime)
+        #date = data[self._time_column].apply(self.convert_to_timeseries)
+        #if pd.isnull(num).sum() <= pd.isnull(date).sum():
+            #data[self._time_column] = num
+        #else:
+            #data[self._time_column] = date
+
+        #data.dropna(inplace=True)
+        #if len(self._groupby) == 2:
+            #ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
+            #ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
+            #ct = ct[pd.notnull(ct.index)]
+        #else:
+            #ct = pd.crosstab(
+                #data[self._time_column],
+                #pd.Series([""] * len(self._table[self._time_column]), name=""))
+
+        ## Line plot:
+        #self.vmax = max(self.vmax, ct.values.max())
+        #ct.plot(ax=plt.gca(), color=self.get_palette())
+
+    def set_annotations(self, grid):
+        grid.set(ylim=(0, self.vmax))
+        grid.set_axis_labels(
+            self.options["label_x_axis"], self.options["label_y_axis"])
+        if len(self._groupby) == 2:
+            self.add_legend()
+
+    def get_grid(self, **kwargs):
+        with sns.axes_style("whitegrid"):
+            grid = super(TimeSeries, self).get_grid(**kwargs)
+        return grid
+
+    @staticmethod
+    def validate_data(data_x, data_y, data_z, df, session):
+        cat, num, none = vis.Visualizer.count_parameters(
+            data_x, data_y, data_z, df, session)
+
+        # check if any of the data columns is a time column:
+        if ((session.translate_header(data_x) not
+             in session.Resource.time_features) and
+            (session.translate_header(data_x) not
+             in session.Resource.time_features)):
+            return False
+
+        # check if either column is a categorical column:
+        if (Visualizer.dtype(data_x, df) != object and
+            Visualizer.dtype(data_y, df) != object):
+            return False
+
+        return True
+
+class StackedArea(TimeSeries):
+
+    def plot_facet(self, data, color, **kwargs):
+        x = kwargs.get("x")
+        y = kwargs.get("y")
+        levels_x = kwargs.get("levels_x")
+        levels_y = kwargs.get("levels_y")
+
+        #num = []
+        #date = []
+        #time = data[self._time_column]
+        #num = data[self._time_column].apply(self.convert_to_datetime)
+        #date = data[self._time_column].apply(self.convert_to_timeseries)
+        #if pd.isnull(num).sum() <= pd.isnull(date).sum():
+            #data[self._time_column] = num
+        #else:
+            #data[self._time_column] = date
+
+        #data.dropna(inplace=True)
+        #if len(self._groupby) == 2:
+            #ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
+            #ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
+            #ct = ct[pd.notnull(ct.index)]
+        #else:
+            #ct = pd.crosstab(
+                #data[self._time_column],
+                #pd.Series([""] * len(self._table[self._time_column]), name=""))
+
+        ## Stacked area plot:
+        #if len(self._groupby) == 2:
+            #self.vmax = max(self.vmax, ct.apply(sum, axis=1).max())
+        #ct.plot(ax=plt.gca(), kind="area", stacked=True, color=self.get_palette(), **kwargs)
+
+
+class PercentageArea(TimeSeries):
+    def plot_facet(self, data, color, **kwargs):
+        x = kwargs.get("x")
+        y = kwargs.get("y")
+        levels_x = kwargs.get("levels_x")
+        levels_y = kwargs.get("levels_y")
+
+        #num = []
+        #date = []
+        #time = data[self._time_column]
+        #num = data[self._time_column].apply(self.convert_to_datetime)
+        #date = data[self._time_column].apply(self.convert_to_timeseries)
+        #if pd.isnull(num).sum() <= pd.isnull(date).sum():
+            #data[self._time_column] = num
+        #else:
+            #data[self._time_column] = date
+
+        #data.dropna(inplace=True)
+        #if len(self._groupby) == 2:
+            #ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
+            #ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
+            #ct = ct[pd.notnull(ct.index)]
+        #else:
+            #ct = pd.crosstab(
+                #data[self._time_column],
+                #pd.Series([""] * len(self._table[self._time_column]), name=""))
+
+        ## percentage area plot:
+        ## if there is only one grouping variable (the time column),
+        ## the cross table produces a Series, not a data frame. It
+        ## isn't really very informative to plot it, but we provide
+        ## for this special case anyway_
+        #if type(ct) == pd.Series:
+            #ct = ct.apply(lambda x: 100)
+        #else:
+            #ct = ct.apply(lambda x: (100 * x) / sum(x), axis=1)
+        #ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
+
+    def set_annotations(self, grid):
+        super(PercentageArea, self).set_annotations(grid)
+        grid.set(ylim=(0, 100))
+
 logger = logging.getLogger(NAME)
+
+

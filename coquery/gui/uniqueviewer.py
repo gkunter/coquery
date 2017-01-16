@@ -22,7 +22,7 @@ from coquery.unicode import utf8
 
 from . import errorbox
 from . import classes
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .ui.uniqueViewerUi import Ui_UniqueViewer
 
 class UniqueViewer(QtGui.QDialog):
@@ -144,17 +144,17 @@ class UniqueViewer(QtGui.QDialog):
         else:
             text = str(item.text())
         if self.rc_feature in ("word_label", "corpus_word"):
-            options.cfg.main_window.ui.edit_query_string.append(text)
+            get_toplevel_window().ui.edit_query_string.append(text)
         elif self.rc_feature in ("lemma_label", "word_lemma", "corpus_lemma"):
-            options.cfg.main_window.ui.edit_query_string.append("[{}]".format(text))
+            get_toplevel_window().ui.edit_query_string.append("[{}]".format(text))
         elif self.rc_feature in ("pos_label", "word_pos", "corpus_pos"):
-            options.cfg.main_window.ui.edit_query_string.append("*.[{}]".format(text))
+            get_toplevel_window().ui.edit_query_string.append("*.[{}]".format(text))
         elif self.rc_feature in ("transcript_label", "word_transcript", "corpus_transcript"):
-            options.cfg.main_window.ui.edit_query_string.append("/{}/".format(text))
+            get_toplevel_window().ui.edit_query_string.append("/{}/".format(text))
         elif self.rc_feature in ("lemma_transcript", "corpus_lemma_transcript"):
-            options.cfg.main_window.ui.edit_query_string.append("[/{}/]".format(text))
+            get_toplevel_window().ui.edit_query_string.append("[/{}/]".format(text))
         else:
-            options.cfg.main_window.ui.edit_query_string.append(text)
+            get_toplevel_window().ui.edit_query_string.append(text)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -200,7 +200,7 @@ class UniqueViewer(QtGui.QDialog):
 
         dialog.setVisible(True)
         dialog.get_uniques()
-        options.cfg.main_window.widget_list.append(dialog)
+        get_toplevel_window().widget_list.append(dialog)
         
         
 def main():

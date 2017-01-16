@@ -51,7 +51,7 @@ from coquery.errors import *
 
 from . import classes
 from .ui.visualizerUi import Ui_Visualizer
-from .pyqt_compat import QtGui, QtCore, pyside
+from .pyqt_compat import QtGui, QtCore, pyside, get_toplevel_window
 
 # Tell matplotlib whether PySide or PyQt4 is used:
 if pyside:
@@ -83,14 +83,14 @@ class CoqNavigationToolbar(NavigationToolbar):
             if isinstance(x, QtGui.QToolButton):
                 self._buttons[str(x.text())] = x
 
-        self._buttons["Forward"].setIcon(options.cfg.main_window.get_icon("sign-right"))
-        self._buttons["Back"].setIcon(options.cfg.main_window.get_icon("sign-left"))
-        self._buttons["Home"].setIcon(options.cfg.main_window.get_icon("sign-up"))
-        self._buttons["Zoom"].setIcon(options.cfg.main_window.get_icon("search"))
-        self._buttons["Save"].setIcon(options.cfg.main_window.get_icon("floppy"))
-        self._buttons["Customize"].setIcon(options.cfg.main_window.get_icon("pencil"))
-        self._buttons["Pan"].setIcon(options.cfg.main_window.get_icon("pan"))
-        self._buttons["Subplots"].setIcon(options.cfg.main_window.get_icon("scale"))
+        self._buttons["Forward"].setIcon(get_toplevel_window().get_icon("Circled Chevron Right Filled"))
+        self._buttons["Back"].setIcon(get_toplevel_window().get_icon("Circled Chevron Left Filled"))
+        self._buttons["Home"].setIcon(get_toplevel_window().get_icon("Circled Chevron Up Filled"))
+        self._buttons["Zoom"].setIcon(get_toplevel_window().get_icon("Resize"))
+        self._buttons["Save"].setIcon(get_toplevel_window().get_icon("Save"))
+        self._buttons["Customize"].setIcon(get_toplevel_window().get_icon("Edit"))
+        self._buttons["Pan"].setIcon(get_toplevel_window().get_icon("Resize Four Directions"))
+        self._buttons["Subplots"].setIcon(get_toplevel_window().get_icon("Crop"))
         
         self._buttons["Subplots"].setToolTip("Adjust figure margins")
         self._buttons["Customize"].setToolTip("Edit labels, colors, and fonts")
@@ -138,7 +138,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         self.margin_dialog.resetbutton.hide()
         self.margin_dialog.tightlayout.setText("&Reset")
         self.margin_dialog.show()
-        options.cfg.main_window.widget_list.append(self.margin_dialog)
+        get_toplevel_window().widget_list.append(self.margin_dialog)
         
 class VisualizerDialog(QtGui.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
@@ -175,6 +175,13 @@ class VisualizerDialog(QtGui.QWidget):
         self.spinner_label = QtGui.QLabel("Bandwidth: ")
         self.spinner.valueChanged.connect(self.update_plot)
         
+        self.combo_x_function = QtGui.QComboBox()
+        self.label_x_function = QtGui.QLabel("Variable on &X axis:")
+        self.label_x_function.setBuddy(self.combo_x_function)
+        self.combo_y_function = QtGui.QComboBox()
+        self.label_y_function = QtGui.QLabel("Variable on &Y axis:")
+        self.label_y_function.setBuddy(self.combo_y_function)
+        
         self.toolbar = None
         self.canvas = None
         
@@ -186,14 +193,6 @@ class VisualizerDialog(QtGui.QWidget):
     def closeEvent(self, event):
         options.settings.setValue("visualizer_size", self.size())
         self.close()
-
-    def add_visualizer(self, visualizer):
-        """ Add a Visualizer instance to the visualization dialog. Also, 
-        add a matplotlib canvas and a matplotlib navigation toolbar to the 
-        dialog. """
-        self.visualizer = visualizer
-        self.connect_signals()
-        options.cfg.main_window.widget_list.append(self)
 
     def update_plot(self):
         """ 
@@ -207,7 +206,7 @@ class VisualizerDialog(QtGui.QWidget):
         if hasattr(self.toolbar, "margin_dialog"):
             self.toolbar.margin_dialog.hide()
             self.toolbar.margin_dialog.close()
-            options.cfg.main_window.widget_list.remove(self.toolbar.margin_dialog)
+            get_toplevel_window().widget_list.remove(self.toolbar.margin_dialog)
             del self.toolbar.margin_dialog
             
         if self.smooth:
@@ -216,12 +215,29 @@ class VisualizerDialog(QtGui.QWidget):
         else:
             self.visualizer.update_data()
 
+
+        kwargs = {}
+        if self.visualizer.numerical_axes == 2:
+            try:
+                kwargs["func_y"] = self._function_list[self.combo_y_function.currentIndex()]
+                kwargs["column_y"] = None
+            except IndexError:
+                kwargs["func_y"] = None
+                kwargs["column_y"] = utf8(self.combo_y_function.currentText())
+        if self.visualizer.numerical_axes == 1:
+            try:
+                kwargs["func_x"] = self._function_list[self.combo_x_function.currentIndex()]
+                kwargs["column_x"] = None
+            except IndexError:
+                kwargs["func_x"] = None
+                kwargs["column_x"] = utf8(self.combo_x_function.currentText())
+
         self.visualizer.setup_figure()
         
         self.remove_matplot()
         self.add_matplot()
             
-        self.visualizer.draw()
+        self.visualizer.draw(**kwargs)
 
         self.visualizer.g.fig.tight_layout()
         self.visualizer.adjust_axes()
@@ -244,6 +260,14 @@ class VisualizerDialog(QtGui.QWidget):
 
         if not self.toolbar:
             self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
+            if (self.visualizer.numerical_axes == 2 and
+                self.visualizer.function_list):
+                self.toolbar.addWidget(self.label_y_function)
+                self.toolbar.addWidget(self.combo_y_function)
+            if (self.visualizer.numerical_axes == 1 and 
+                self.visualizer.function_list):
+                self.toolbar.addWidget(self.label_x_function)
+                self.toolbar.addWidget(self.combo_x_function)
             if options.cfg.experimental:
                 self.toolbar.check_freeze.stateChanged.connect(self.toggle_freeze)
             if self.smooth:
@@ -285,7 +309,7 @@ class VisualizerDialog(QtGui.QWidget):
         self.remove_matplot()
         super(VisualizerDialog, self).close()
         try:
-            options.cfg.main_window.widget_list.remove(self)
+            get_toplevel_window().widget_list.remove(self)
         except ValueError:
             pass
         try:
@@ -317,8 +341,8 @@ class VisualizerDialog(QtGui.QWidget):
         content of the results table changes, or the columns are moved."""
         if not options.cfg.experimental:
             return
-        options.cfg.main_window.table_model.dataChanged.connect(self.update_plot)
-        options.cfg.main_window.table_model.layoutChanged.connect(self.update_plot)
+        get_toplevel_window().table_model.dataChanged.connect(self.update_plot)
+        get_toplevel_window().table_model.layoutChanged.connect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.connect(self.update_plot)
 
     def disconnect_signals(self):
@@ -328,8 +352,8 @@ class VisualizerDialog(QtGui.QWidget):
         results table changes or the columns are moved."""
         if not options.cfg.experimental:
             return
-        options.cfg.main_window.table_model.dataChanged.disconnect(self.update_plot)
-        options.cfg.main_window.table_model.layoutChanged.disconnect(self.update_plot)
+        get_toplevel_window().table_model.dataChanged.disconnect(self.update_plot)
+        get_toplevel_window().table_model.layoutChanged.disconnect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.disconnect(self.update_plot)
         
     def toggle_freeze(self):
@@ -357,13 +381,28 @@ class VisualizerDialog(QtGui.QWidget):
         view given in 'view'. """
         self.smooth = kwargs.get("smooth", False)
         self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
+        self._function_list = self.visualizer.function_list
+        try:
+            self.combo_x_function.addItems([fnc.get_name() for fnc in self._function_list])
+            for x in self.visualizer._number_columns:
+                if x not in [fnc(columns=self.visualizer._group_by, session=get_toplevel_window().Session).get_id() for fnc in self._function_list]:
+                    self.combo_x_function.addItem(x)
+            self.combo_x_function.currentIndexChanged.connect(self.update_plot)
+        except AttributeError:
+            pass
+        try:
+            self.combo_y_function.addItems([fnc.get_name() for fnc in self._function_list] + self.visualizer._number_columns)
+            self.combo_y_function.currentIndexChanged.connect(self.update_plot)
+        except AttributeError:
+            pass
+        
         if not self.visualizer._table.empty:
             self.setVisible(True)
             self.connect_signals()
-            options.cfg.main_window.widget_list.append(self)
+            get_toplevel_window().widget_list.append(self)
             self.add_matplot()
-            
-            self.thread = classes.CoqThread(self.visualizer.draw, parent=self)
+            self.thread = classes.CoqThread(self.visualizer.draw, 
+                                            parent=self)
             self.thread.taskStarted.connect(self.startplot)
             self.thread.taskFinished.connect(self.finishplot)
             self.thread.taskException.connect(self.plotexception)

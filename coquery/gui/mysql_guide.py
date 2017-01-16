@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import sys
 
 from coquery import options
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtGui, get_toplevel_window
 from .ui.mysql_guideUi import Ui_mysql_guide
 
 class MySqlGuide(QtGui.QWizard):
@@ -38,4 +38,4 @@ class MySqlGuide(QtGui.QWizard):
     @staticmethod
     def display(parent=None):
         guide = MySqlGuide(parent)
-        options.cfg.main_window.widget_list.append(guide)
+        get_toplevel_window().widget_list.append(guide)

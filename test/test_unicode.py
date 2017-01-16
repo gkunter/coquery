@@ -5,13 +5,9 @@ from __future__ import print_function
 
 import unittest
 import sys
-import os
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery/gui")))
-
-from unicode import utf8
-from gui.pyqt_compat import QtCore
+from coquery.unicode import utf8
+from coquery.gui.pyqt_compat import QtCore
 
 class TestModuleMethods(unittest.TestCase):
     def test_namespace_conflict(self):
@@ -35,15 +31,18 @@ class TestModuleMethods(unittest.TestCase):
         s3 = u'unaccented text for testing'
         s4 = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
         s5 = u'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
-        s6 = QtCore.QString(s2)
-        s7 = QtCore.QString(s4)
-        
         # test types:
         self.assertEqual(type(utf8(s1)), type(u""))
         self.assertEqual(type(utf8(s2)), type(u""))
         self.assertEqual(type(utf8(s3)), type(u""))
         self.assertEqual(type(utf8(s4)), type(u""))
         self.assertEqual(type(utf8(s5)), type(u""))
+
+    def test_qstring(self):
+        s2 = 'unaccented text for testing'
+        s4 = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
+        s6 = QtCore.QString(s2)
+        s7 = QtCore.QString(s4)
         self.assertEqual(type(utf8(s6)), type(u""))
         self.assertEqual(type(utf8(s7)), type(u""))
         
@@ -64,14 +63,12 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(utf8(s2a), s2u)
         self.assertEqual(utf8(s2b), s2u)
         
-if __name__ == '__main__':
-    import timeit
-    
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
         ])
     
-    print()
-    print(" ----- START ----- ")
-    print()
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()
