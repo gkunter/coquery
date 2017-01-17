@@ -13,8 +13,12 @@ from __future__ import unicode_literals
 import logging
 import pandas as pd
 
-from .defines import *
 from .general import CoqObject
+
+# Since Filter.__repr__() uses globals() to look up the strings corresponding
+# to the operator type, a complete import of the constants from defines.py is
+# necessary:
+from .defines import *
 
 try:
     import numexpr
