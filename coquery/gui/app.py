@@ -270,12 +270,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.dirModel.setRootPath(QtCore.QDir.currentPath())
         self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
 
-        ## set auto-completer for the input file edit:
-        #self.path_completer = QtGui.QCompleter(parent=self)
-        #self.path_completer.setModel(self.dirModel)
-        #self.path_completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
-        #self.ui.edit_file_name.setCompleter(self.path_completer)
-
         # set up group columns
         self.ui.button_remove_group.setDisabled(True)
         self.ui.button_group_up.setDisabled(True)
