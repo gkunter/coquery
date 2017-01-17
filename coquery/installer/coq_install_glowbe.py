@@ -1,30 +1,28 @@
 # -*- coding: utf-8 -*-
 
 """
-coq_install_coca.py is part of Coquery.
+coq_install_glowbe.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-import codecs
-import csv
-import itertools
-import tempfile
 import zipfile
+import os.path
+import pandas as pd
+import logger
 
 try:
-    from cStringIO import StringIO, BytesIO
+    from cStringIO import BytesIO
 except ImportError:
-    from io import StringIO, BytesIO
+    from io import BytesIO
 
-from coquery.corpusbuilder import *
-from coquery.defines import *
-from coquery import options
+from coquery.corpusbuilder import BaseCorpusBuilder, Column, Identifier, Link
+
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.zip"
@@ -64,7 +62,7 @@ class BuilderClass(BaseCorpusBuilder):
         "db_za_asl.zip"]
     
     def __init__(self, gui=False, *args):
-       # all corpus builders have to call the inherited __init__ function:
+        # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
 
         self.create_table_description(self.word_table,
@@ -82,7 +80,7 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.source_id, "MEDIUMINT UNSIGNED NOT NULL"),
              Column(self.source_nwords, "TINYINT UNSIGNED NOT NULL"),
              Column(self.source_country, "VARCHAR(2) NOT NULL"),
-             Column(self.source_genre, "ENUM('A','B','C','D','E','F','G') NOT NULL"),
+             Column(self.source_genre, "CHAR(1)NOT NULL"),
              Column(self.source_url, "TINYTEXT NOT NULL"),
              Column(self.source_title, "TINYTEXT NOT NULL")])
 
@@ -183,24 +181,33 @@ class BuilderClass(BaseCorpusBuilder):
                     dtypes = dict(zip(target,
                                       (pd.np.int64, pd.np.int64, pd.np.int64)))
 
-                # Read the complete zip file into a pandas data frame. This 
+                # Read the complete zip file into a pandas data frame. This
                 # might be tweaked so that smaller chunks are processed so
                 # that the corpus can be installed on systems that do not have
-                # enough RAM to fit the largest source files (probably 
+                # enough RAM to fit the largest source files (probably
                 # lexicon.txt). # get_chunk() is provided in general.py.
+
+                # the file "db_us_b03.txt" contains an EOF character \x1a in
+                # the last line (row number 23302766), which breaks the
+                # installation. To fix this, this line will be skipped when
+                # reading that file (adjusted for 0-indexing):
+                skiprows = [23302765] if text_name == "db_us_b03.txt" else []
+
                 df = pd.read_csv(BytesIO(zip_file.read(text_name)),
                                  sep="\t", 
                                  names=target,
                                  dtype=dtypes,
                                  quoting=3,
-                                 header=2 if base_name in self.special_files else None, 
+                                 header=(2 if base_name in self.special_files
+                                         else None),
                                  error_bad_lines=False,
                                  encoding="latin-1",
+                                 skiprows=skiprows,
                                  engine="c")
                 # Strangely, the lexicon can have empty cells in Word, Lemma,
                 # and POS. They are filled by empty strings:
                 df = df.fillna("")
-                
+
                 # In sources.txt, the country and the genre column are stored 
                 # in a single column, but we want to store them as two:
                 if base_name == "sources.zip":
