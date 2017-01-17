@@ -60,6 +60,8 @@ def dia_to_unicode(s):
     return unicode_string
 
 class BuilderClass(BaseCorpusBuilder):
+    default_view_mode = VIEW_MODE_TABLES
+
     file_filter = "e??.cd"
 
     corpus_table = "Ortho_Words"
@@ -186,6 +188,8 @@ class BuilderClass(BaseCorpusBuilder):
     syntaxlemma_sub_c = "Lemma_Sub_C"
 
     expected_files = sorted(["eow.cd", "eol.cd", "epw.cd", "epl.cd", "emw.cd", "eml.cd", "esl.cd"])
+    
+    lexicon_root_table = "corpus"
     
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
@@ -317,7 +321,6 @@ class BuilderClass(BaseCorpusBuilder):
         self.map_query_item(QUERY_ITEM_TRANSCRIPT, "phonoword_phonstrsdisc")
         self.map_query_item(QUERY_ITEM_POS, "syntaxlemma_class")
         self.map_query_item(QUERY_ITEM_WORD, "corpus_worddia")
-        
 
     def build_load_files(self):
         def add_orth_word():

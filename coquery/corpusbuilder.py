@@ -6,14 +6,14 @@ from __future__ import print_function
 """
 corpusbuilder.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-""" 
+"""
 The module :mod:`corpusbuilder.py` provides the framework for corpus module
 installers.
 
@@ -22,36 +22,36 @@ layouts to provide the content of the corpus to the users. In order to
 make this content available to Coquery, the content of the corpus files
 must be processed, and stored in a database. Once this has been done,
 a corpus module, containing information on the database layout, will be
-written to a place where Coquery can find it. After that, the corpus 
+written to a place where Coquery can find it. After that, the corpus
 can be queried by Coquery.
 
-Thus, in order to use a new corpus with Coquery, a subclass of 
+Thus, in order to use a new corpus with Coquery, a subclass of
 :class:`BaseCorpusBuilder` needs to be defined that is tailored to the
-structure of that corpus. The name of this subclass has to be 
-:class:`BuilderClass`. Usually, such a subclass will at least 
-reimplement :func:`BaseCorpusBuilder.__init__`.. The reimplementation 
-contains the specifications for the data tables such as the name and data 
+structure of that corpus. The name of this subclass has to be
+:class:`BuilderClass`. Usually, such a subclass will at least
+reimplement :func:`BaseCorpusBuilder.__init__`.. The reimplementation
+contains the specifications for the data tables such as the name and data
 type of the columns. It also specifies links between different data tables.
-Please note that the reimplemented :func:`__init__`` should start with a 
+Please note that the reimplemented :func:`__init__`` should start with a
 call to the inherited initialization method, like so::
 
     super(BuilderClass, self).__init__(gui)
 
 In addition to that, most subclasses will also reimplement either
-:func:`BaseCorpusBuilder.process_file` or one of the related methods (e.g. 
-:func:`BaseCorpusBuilder.process_text_file`. The reimplemented method is 
-aware of the data format that is used in the corpus data files, and is 
-therefore able to process the information stored in the data files. It is 
-responsible for storing the information correctly in the pertaining data 
+:func:`BaseCorpusBuilder.process_file` or one of the related methods (e.g.
+:func:`BaseCorpusBuilder.process_text_file`. The reimplemented method is
+aware of the data format that is used in the corpus data files, and is
+therefore able to process the information stored in the data files. It is
+responsible for storing the information correctly in the pertaining data
 tables defined in :func:`BaseCorpusBuilder.__init__`.
 
 Examples
 --------    
-For examples of reimplementations of ``BaseCorpusBuilder``, see the 
-corpus installers distributed in the Coquery default installation. For 
-instance, :mod:`coq_install_generic.py` is a generic installer that process 
+For examples of reimplementations of ``BaseCorpusBuilder``, see the
+corpus installers distributed in the Coquery default installation. For
+instance, :mod:`coq_install_generic.py` is a generic installer that process
 any collection of text files in a directiory into a query-able corpus, and
-:mod:`coq_install_bnc.py` contains an installer that reads and processes the 
+:mod:`coq_install_bnc.py` contains an installer that reads and processes the
 XML version of the British National Corpus.
 """
 
@@ -68,7 +68,6 @@ import os.path
 import warnings
 import time
 import pandas as pd
-import unicodedata
 import argparse
 import re
 import sys
@@ -83,11 +82,12 @@ except ImportError:
         import xml.etree.cElementTree as ET
     except ImportError:
         import xml.etree.ElementTree as ET
-        
+
 from . import sqlhelper
 from . import sqlwrap
 from . import options
 from . import corpus
+from .tables import Column, Identifier, Link, Table
 
 from .errors import *
 from .defines import *
@@ -103,13 +103,13 @@ new_code_str = """
     @staticmethod
     def get_db_name():
         return "{db_name}"
-    
+
     @staticmethod
     def get_title():
         return "{name}: a {is_tagged_corpus}"
-        
+
     _is_adhoc = True
-        
+
     @staticmethod
     def get_description():
         return ["{description}"]
@@ -158,491 +158,11 @@ class Corpus(CorpusClass):
 {corpus_code}
 """
 
-# Corpus builders should include code that determines word counts for 
-# subcorpora. More specifically, they should produce a table with all
-# combinations of corpus features and the associated number of words.
-# For example, COCA should have a table with Genre, Year and Frequency,
-# with 5 x 23 rows (5 Genres, 23 Years). 
 
-class Column(object):
-    """ Define an object that stores the description of a column in one 
-    MySQL table."""
-    is_identifier = False
-    key = False
-    
-    def __init__(self, name, data_type, index_length=None):
-        """ 
-        Initialize the column
-        
-        Parameters
-        ----------
-        name : str 
-            The name of the column 
-        data_type : str 
-            A MySQL data type description 
-        index_length : int or None 
-            The length of the index for this column. If None, the index length 
-            will be determined automatically, which can take quite some time 
-            for larger corpora.
-        """
-
-        self._name = name
-        self._data_type = data_type
-        self.index_length = index_length        
-        self.unique = False
-        
-    def __repr__(self):
-        return "Column({}, {}, {})".format(self._name, self._data_type, self.index_length)
-        
-    @property
-    def name(self):
-        return self._name
-    
-    @name.setter
-    def name(self, new_name):
-        self._name = new_name
-    
-    @property
-    def data_type(self):
-        """
-        Return the data type of the column.
-        
-        Returns
-        -------
-        data_type : string
-            The data type of the column in the same form as used by the 
-            MySQL CREATE TABLE command.
-        
-        """
-        return self._data_type
-    
-    @property
-    def base_type(self):
-        """
-        Return the base type of the column.
-        
-        This function does not return the field length, but only the base 
-        data type, i.e. VARCHAR, MEDIUMINT, etc.
-        
-        Use data_type for the full column specification.
-
-        Returns
-        -------
-        base_type : string
-            A MySQL base data type.
-
-        """
-        return self._data_type.split()[0].partition("(")[0].upper()
-    
-    @data_type.setter
-    def data_type(self, new_type):
-        self._data_type = new_type
-        
-class Identifier(Column):
-    """ Define a Column class that acts as the primary key in a table."""
-    is_identifier = True
-
-    def __init__(self, name, data_type, unique=True, index_length=None):
-        super(Identifier, self).__init__(name, data_type, index_length)
-        self.unique = unique
-
-    def __repr__(self):
-        return "Identifier(name='{}', data_type='{}', unique={}, index_length={})".format(self._name, self._data_type, self.unique, self.index_length)
-    
-    @property
-    def name(self):
-        return self._name
-        if self.unique:
-            return self._name
-        else:
-            return "{}_primary".format(self._name)
-        
-class Link(Column):
-    """ Define a Column class that links a table to another table. In MySQL
-    terms, this acts like a foreign key."""
-    key = True
-    def __init__(self, name, table_name):
-        super(Link, self).__init__(name, "", True)
-        self._link = table_name
-
-    def __repr__(self):
-        return "Link(name='{}', '{}', data_type='{}')".format(self._name, self._link, self._data_type)
-        
-class Table(object):
-    """ Define a class that is used to store table definitions."""
-    def __init__(self, name):
-        self._name = name
-        self.columns = list()
-        self.primary = None
-        self._current_id = 0
-        self._row_order = []
-        self._add_cache = dict()
-        self._add_cache2 = list()
-        # The defaultdict _add_lookup will store the index of rows in this 
-        # table. It uses the trick described at http://ikigomu.com/?p=186
-        # to achieve an O(1) lookup. When looking up a row as in 
-        #
-        # x = self._add_lookup[tuple([row[x] for x in self._row_order])]
-        # 
-        # the returned value is the length of the lookup table at the time 
-        # the entry was created. In other words, this is the row id of that 
-        # row.
-        self._add_lookup = collections.defaultdict(lambda: len(self._add_lookup) + 1)
-        self._commited = {}
-        self._col_names = None
-        self._engine = None
-        self._max_cache = 0
-
-    @property
-    def name(self):
-        return self._name
-        
-    @name.setter
-    def name(self, s):
-        self._name = s
-        
-    def setDB(self, db):
-        self._DB = db
-
-    def commit(self, strange_check=False):
-        """
-        Commit the table content to the data base.
-        
-        This table commits the unsaved content of the table to the data base.
-        
-        As this method is usually called after a file has been processed, 
-        this ensures that all new table rows are commited, while at the same
-        time preserving some memory space.
-        """
-        
-        if self._add_cache2:
-            df = pd.DataFrame(self._add_cache2)
-            field_order = self._get_field_order()
-            assert len(field_order) == len(df.columns), "Length mismatch while committing table {}.\n{}\n\n{}".format(
-                self.name,
-                "".join(sorted(["{:20}".format(x) for x in field_order])),
-                "".join(sorted(["{:20}".format(x.name) for x in self.columns])))
-            
-            try:
-                df.columns = self._get_field_order()
-            except ValueError as e:
-                raise e
-
-            # make sure that all strings are unicode, even under 
-            # Python 2.7:
-            if sys.version_info < (3, 0):
-                for column in df.columns[df.dtypes == object]:
-                    try:
-                        df[column] = df[column].apply(utf8)
-                    except TypeError:
-                        pass
-
-            # apply unicode normalization:
-            for column in df.columns[df.dtypes == object]:
-                try:
-                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
-                except TypeError:
-                    pass
-
-            df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
-            self._add_cache2 = list()
-
-    def add(self, values):
-        """ 
-        Store the 'values' dictionary in the add cache of the table. If 
-        necessary, a valid primary key is added to the values.
-        
-        """ 
-        l = [values[x] for x in self._row_order]
-
-        if not self.primary.name in self._row_order:
-            self._current_id += 1
-            self._add_cache2.append(tuple([self._current_id] + l))
-        else:
-            self._current_id = values[self.primary.name]
-            self._add_cache2.append(tuple(l))
-
-        self._add_lookup[tuple(l)] = self._current_id
-
-        if self._max_cache and len(self._add_cache2) > self._max_cache:
-            self.commit()
-
-        return self._current_id
-            
-    def get_or_insert(self, values, case=False):
-        """ 
-        Returns the id of the first entry matching the values from the table.
-        
-        If there is no entry matching the values in the table, a new entry is
-        added to the table based on the values. 
-        description.
-        
-        Parameters
-        ----------
-        values : dict
-            A dictionary with column names as keys, and the entry content
-            as values.
-            
-        Returns
-        -------
-        id : int 
-            The id of the entry, as it is stored in the SQL table.
-        """
-        key = tuple([values[x] for x in self._row_order])
-        if key in self._add_lookup:
-            return self._add_lookup[key]
-        else:
-            return self.add(values)
-
-    def _get_field_order(self):
-        if not self.primary.name in self._row_order:
-            return [self.primary.name] + self._row_order
-        else:
-            return self._row_order
-
-    def find(self, values):
-        """ 
-        Return the first row that matches the values, or None
-        otherwise.
-        """
-        x = self._DB.find(self.name, values, [self.primary.name])
-        if x:
-            return x[0]
-        else:
-            return None
-        
-    def add_column(self, column):
-        self.columns.append(column)
-        if column.name in self._row_order:
-            if not column.key:
-                raise ValueError("Duplicate column: {}, {}".format(self._row_order, column.name))
-            else:
-                return
-        if column.is_identifier:
-            self.primary = column
-            if not column.unique:
-                self._row_order.append(column.name)
-        else:
-            self._row_order.append(column.name)
-
-    def get_column(self, name):
-        """
-        Return the specified column.
-        
-        Parameters
-        ----------
-        name : string
-            The name of the column
-            
-        Returns
-        -------
-        col : object or NoneType
-            The Column object matching the name, or None.
-        """
-        for x in self.columns:
-            if x.name == name:
-                return x
-        return None
-
-    def suggest_data_type(self, name):
-        """
-        Return an SQL data type that may be optimal in terms of storage space.
-        
-        For INT types, the optimal data type is the smallest integer type that
-        is large enough to store the integer.
-        
-        For CHAR and TEXT types, the optimal data type is VARCHAR(max), where 
-        max is the maximum number of characters for the column.
-        
-        FOR DECIMAL and NUMERIC types, the optimal type is changed to FLOAT
-        on MySQL and to REAL on SQLite3.
-        
-        For FLOAT, DOUBLE, and REAL types, the optimal type is not changed on 
-        MySQL, but changed to REAL on SQLite3.
-        
-        Parameters
-        ----------
-        name : string
-            The name of the column
-            
-        Returns
-        -------
-        S : string
-            A string containing the suggested data type
-        """
-        
-        sql_int = [
-            (0, 255, "TINYINT UNSIGNED"),
-            (-128, 127, "TINYINT"),
-            (0, 65535, "SMALLINT UNSIGNED"),
-            (-32768, 32767, "SMALLINT"),
-            (0, 16777215, "MEDIUMINT UNSIGNED"),
-            (-8388608, 8388607, "MEDIUMINT"),
-            (0, 4294967295, "INT UNSIGNED"),
-            (-2147483648, 2147483647, "INT")]
-
-        if self._DB.db_type == SQL_SQLITE:
-            func_length = "length"
-        elif self._DB.db_type == SQL_MYSQL:
-            func_length = "CHAR_LENGTH"
-
-        col = self.get_column(name)
-
-        # test if column contains NULL
-        S = "SELECT MAX({0} IS NULL) FROM {1}".format(col.name, self.name)
-        with self._DB.engine.connect() as connection:
-            has_null = connection.execute(S).fetchone()[0]
-        
-        # In an empty table, the previous check returns NULL. In this case,
-        # the original data type will be returned.
-        if has_null == None:
-            dt_type = col.data_type
-
-        # integer data types:
-        elif col.base_type.endswith("INT"):
-            S = "SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL".format(
-                col.name, self.name)
-            with self._DB.engine.connect() as connection:
-                v_min, v_max = connection.execute(S).fetchone()
-                
-            for dt_min, dt_max, dt_label in sql_int:
-                if v_min >= dt_min and v_max <= dt_max:
-                    dt_type = dt_label
-                    break
-            else:
-                if v_min >= 0:
-                    dt_type = "BIGINT UNSIGNED"
-                else:
-                    dt_type = "BIGINT"
-
-        # character data types:
-        elif col.base_type.endswith(("CHAR", "TEXT")):
-            S = "SELECT MAX({2}(RTRIM({0}))) FROM {1}".format(
-                col.name, self.name, func_length)
-            with self._DB.engine.connect() as connection:
-                max_len = connection.execute(S).fetchone()[0]
-            dt_type = "VARCHAR({})".format(max_len)
-            
-            
-        # fixed-point types:
-        elif col.base_type in ["DECIMAL", "NUMERIC"]:
-            if self._DB.db_type == SQL_SQLITE:
-                dt_type = "REAL"
-            else:
-                dt_type = col.data_type.replace(col.base_type, "FLOAT")
-                
-        # float and decimal data types:
-        elif col.base_type in ["FLOAT", "DOUBLE", "REAL"]:
-            if self._DB.db_type == SQL_SQLITE:
-                dt_type = "REAL"
-            else:
-                dt_type = col.data_type
-            
-            S = "SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL".format(
-                col.name, self.name)
-            with self._DB.engine.connect() as connection:
-                v_min, _ = connection.execute(S).fetchone()
-                
-            if v_min >= 0:
-                dt_type = "{} UNSIGNED".format(dt_type)
-
-        # all other data types:
-        else: 
-            dt_type = col.data_type
-
-        if has_null == 0:
-            dt_type = "{} NOT NULL".format(dt_type)
-
-        return dt_type
-
-        
-    def get_create_string(self, db_type):
-        """
-        Generates the SQL command required to create the table.
-        
-        Parameters
-        ----------
-        db_type : str
-            A string representing the SQL engine, either "mysql" or "sqlite"
-        
-        Returns
-        -------
-        S : str
-            A string that can be sent to the SQL engine in order to create
-            the table according to the specifications.
-        """
-        command_list = []
-        str_list = []
-        columns_added = set([])
-        for column in self.columns:
-            if column.name not in columns_added:
-                if db_type == SQL_MYSQL:
-                    if column.is_identifier:
-                        if not column.unique:
-                            # add surrogate key 
-                            # do not add AUTO_INCREMENT to strings or ENUMs:
-                            #str_list.insert(0, "{} INT AUTO_INCREMENT".format(column.name))
-                            str_list.insert(0, "{}_primary INT AUTO_INCREMENT".format(column.name))
-                            str_list.insert(1, "{} {}".format(column.name, column.data_type))
-                            str_list.append("PRIMARY KEY ({}_primary)".format(column.name))
-                        else:
-                            # do not add AUTO_INCREMENT to strings or ENUMs:
-                            if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
-                                pattern = "{} {}"
-                            else:
-                                pattern = "{} {} AUTO_INCREMENT"
-                            pattern = "{} {}"
-                            str_list.append(pattern.format(column.name, column.data_type))
-                            str_list.append("PRIMARY KEY ({})".format(column.name))
-                    else:
-                        str_list.append("{} {}".format(
-                            column.name,
-                            column.data_type))
-                    columns_added.add(column.name)
-                elif db_type == SQL_SQLITE:
-                    # replace ENUM by VARCHAR:
-                    match = re.match("^\s*enum\((.+)\)(.*)$", column.data_type, re.IGNORECASE)
-                    if match:
-                        max_len = 0
-                        for x in match.group(1).split(","):
-                            max_len = max(max_len, len(x.strip(" '\"")))
-                        data_type = "VARCHAR({max_len}) {spec}".format(
-                            max_len=max_len, spec=match.group(2))
-                    else:
-                        data_type = column.data_type
-                    
-                    if column.is_identifier:
-                        if not column.unique:
-                            # add surrogate key 
-                            str_list.insert(0, "{}_primary INT PRIMARY KEY".format(column.name))
-                            str_list.insert(1, "{} {}".format(column.name, data_type))
-                        else:
-                            str_list.append("{} {} PRIMARY KEY".format(
-                                column.name, data_type))
-                    else:
-                        str_list.append("{} {}".format(
-                            column.name, data_type))
-                    columns_added.add(column.name)
-
-        if db_type == SQL_SQLITE:
-            # make SQLite columns case-insensitive by default
-            for i, x in enumerate(list(str_list)):
-                field_type = x.split()[1]
-                if "VARCHAR" in field_type.upper() or "TEXT" in field_type.upper():
-                    str_list[i] = "{} COLLATE NOCASE".format(x)
-
-        S = ", ".join(str_list)
-        command_list.insert(0, S)
-        table_str = "; ".join(command_list)
-        if db_type == SQL_SQLITE:
-            return re.sub(r"\s*UNSIGNED", "", table_str)
-        else:
-            return table_str
-    
 class BaseCorpusBuilder(corpus.BaseResource):
     """ 
-    This class is the base class used to build and install a corpus for 
-    Coquery. For corpora currently not supported by Coquery, new builders 
+    This class is the base class used to build and install a corpus for
+    Coquery. For corpora currently not supported by Coquery, new builders
     can be developed by subclassing this class.
     """
     logger = None
@@ -660,21 +180,26 @@ class BaseCorpusBuilder(corpus.BaseResource):
     file_filter = None
     encoding = "utf-8"
     expected_files = []
-    # special files are expected files that will not be stored in the file 
-    # table. For example, a corpus may include a file with speaker 
+    lexical_features = []
+    # special files are expected files that will not be stored in the file
+    # table. For example, a corpus may include a file with speaker
     # information which needs to be evaluated during installation, and which
     # therefore has to be in the expected_files list, but which does not 
     # contain token information, and therefore should not be stored as a 
     # source file.
     special_files = []
     __version__ = "1.0"
-    
+    # file that contains meta data (only applicable in user corpora):
+    meta_data = ""
+
     _read_file_formatter = "Reading {file} (%v of %m)..."
-    
+
     def __init__(self, gui=False):
         self.module_code = module_code
         self.table_description = {}
         self._time_features = []
+        self._lexical_features = []
+        self._speaker_features = []
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
@@ -707,44 +232,44 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("--lookup_ngram", help="create an ngram lookup table (can be very big)", action="store_true")
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.additional_arguments()
-        
+
     def add_tag_table(self, features_only=False):
-        """ 
+        """
         Create the table description for a tag table.
-        
+
         Corpora should usually have a tag table that is used to store
         text information. This method is called during :func:`build` and
         adds a tag table if none is present yet.
         """
-        
+
         self.tag_table = "tags"
         self.tag_id = "TagId"
         self.tag_label = "Tag"
         self.tag_type = "Type"
         self.tag_corpus_id = self.corpus_id
         self.tag_attribute = "Attribute"
-        
+
         if not features_only:
             self.create_table_description(self.tag_table,
                 [Identifier(self.tag_id, "MEDIUMINT UNSIGNED NOT NULL"),
                 Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
-                Column(self.tag_label, "TINYTEXT NOT NULL"),
+                Column(self.tag_label, "VARCHAR(1024) NOT NULL"),
                 Link(self.tag_corpus_id, self.corpus_table),
-                Column(self.tag_attribute, "TINYTEXT NOT NULL")])
+                Column(self.tag_attribute, "VARCHAR(4048) NOT NULL")])
 
     def interrupt(self):
         """
         Interrupt the builder.
-        
-        Calling this method will interrupt the current building or 
-        installation process. All data written so far to the database will 
+
+        Calling this method will interrupt the current building or
+        installation process. All data written so far to the database will
         be discarded, and no corpus module will be written.
-        
+
         In particular, this method is called in the GUI if the Cancel button
         is pressed.
         """
         self._interrupted = True
-        
+
     @property
     def interrupted(self):
         return self._interrupted
@@ -777,12 +302,24 @@ class BaseCorpusBuilder(corpus.BaseResource):
             return
 
         for table in self._new_tables:
-            self._new_tables[table].commit(strange_check=True)
+            self._new_tables[table].commit()
 
         if self._corpus_buffer:
             df = pd.DataFrame(self._corpus_buffer)
             df.to_sql(self.corpus_table, self.DB.engine, if_exists="append", index=False)
             self._corpus_buffer = []             
+
+    @classmethod
+    def probe_metadata(cls, path):
+        """
+        Check whether the file 'path' is a meta data file.
+
+        Parameters
+        ----------
+        path : str
+            The path to a file that is to be probed.
+        """
+        return os.path.basename(path) == cls.meta_data
 
     def create_table_description(self, table_name, column_list):
         """
@@ -867,10 +404,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         for i, current_table in enumerate(self._new_tables):
+            S = self._new_tables[current_table].get_create_string(self.arguments.db_type)
             self._new_tables[current_table].setDB(self.DB)
-            self.DB.create_table(
-                current_table, 
-                self._new_tables[current_table].get_create_string(self.arguments.db_type))
+            self.DB.create_table(current_table, S)
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)
             if self.interrupted:
@@ -1021,6 +557,29 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         self._time_features.append(rc_feature)
     
+    def add_lexical_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of lexical features.
+        
+        Any feature that comes from a ``word'' table or its descendants
+        are considered lexical features. If the corpus stores lexical 
+        features directly in the ``corpus'' table, these features are
+        therefore not automatically recognized as lexical. This method is
+        used to register them so that they are treated as lexically.
+        """
+        self._lexical_features.append(rc_feature)
+    
+    def add_speaker_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of speaker features.
+
+        Any feature that refers to the speaker of a token that is not stored
+        in a dedicated speaker table can be marked as a speaker feature by
+        using this method. The feature will then be listed in the resource
+        feature tree under the root node 'Speakers'.
+        """
+        self._speaker_features.append(rc_feature)
+
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
         the class attribute self._lexicon_code. This function is needed
@@ -1042,6 +601,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
         lines.insert(0, "    time_features = {}".format(
             "[{}]".format(", ".join(['"{}"'.format(x) for x in self._time_features]))))
         lines.insert(0, "    number_of_tokens = {}\n".format(self._corpus_id))
+        lines.insert(0, "    lexical_features = {}\n".format(
+            "[{}]".format(", ".join(
+                ['"{}"'.format(x) for x in self._lexical_features]))))
+        lines.insert(0, "    speaker_features = {}\n".format(
+            "[{}]".format(", ".join(
+                ['"{}"'.format(x) for x in self._speaker_features]))))
         return "".join(lines)
     
     def get_method_code(self, method):
@@ -1063,74 +628,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
             The id of the file in the table, or None if the file is a special
             file
         """
-        if file_name in self.special_files:
-            return None
         self._file_name = file_name
         self._value_file_name = os.path.basename(file_name)
         self._value_file_path = os.path.split(file_name)[0]
 
-        self._file_id = self.table(self.file_table).get_or_insert(
-            {self.file_name: self._value_file_name,
-             self.file_path: self._value_file_path})
-
-    #def get_lemma(self, word):
-        #""" Return a lemma for the word. By default, this is simply the
-        #word in lower case, but this method can be overloaded with methods
-        #that use e.g. lemma dictionaries. 
-        #The method is used by the default file processing methods. If your
-        #corpus implements a specific file processing method, get_lemma() may
-        #be obsolete. """
-        #return word.lower()
-    
-    #def get_lemma_id(self, word):
-        #""" Return a lemma identifier for the word. If there is a separate 
-        #lemma table, the identifier is an index to that table. Otherwise, 
-        #the identifier is the lemma label."""
-        #try:
-            #return self.table_get(self.lemma_table, 
-                #{self.lemma_label: self.get_lemma(word)})
-        #else:
-            #return self.get_lemma(word)
-    
-    #def get_pos(self, word):
-        #""" Return the part-of-speech for the word. By default, an empty
-        #string is returned, but this method may be overloaded with methods
-        #that use for example a pos-tagged dictionary.
-        #The method is used by the default file processing methods. If your
-        #corpus implements a specific file processing method, get_lemma() may
-        #be obsolete. """
-        #return ""
-    
-    #def get_pos_id(self, word):
-        #""" Return a part-of-speech identifier for the word. If there is a 
-        #separate part-of-speech table, the identifier is an index to that 
-        #table. Otherwise, the identifier is the part-of-speech label."""
-        
-        #if "pos_table" in self.table_description:
-            #return self.table_get(self.pos_table, 
-                #{self.pos_label: self.get_pos(word)})
-        #else:
-            #return self.get_pos(word)        
-
-    #def get_transcript(self, word):
-        #""" Return the phonemic transcript for the word. By default, an 
-        #empty string is returned, but this method may be overloaded with 
-        #methods that use for example a pronunciation dictionary.
-        #The method is used by the default file processing methods. If your
-        #corpus implements a specific file processing method, get_lemma() may
-        #be obsolete. """
-        #return ""
-    
-    #def get_transcript_id(self, word):
-        #""" Return a transcription identifier for the word. If there is a 
-        #separate transcription table, the identifier is an index to that 
-        #table. Otherwise, the identifier is the transcript label."""
-        
-        #if "transcript_table" in self.table_description:
-            #return self.table_get(self.transcript_table, 
-                #{self.transcript_label: self.get_transcript(word)})
-        #else:
-            #return self.get_transcript(word)        
+        if self._value_file_name not in self.special_files:
+            self._file_id = self.table(self.file_table).get_or_insert(
+                {self.file_name: self._value_file_name,
+                 self.file_path: self._value_file_path})
 
     def process_xlabel_file(self, file_name):
         """ 
@@ -1495,7 +1000,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         S = S.replace("\\", "\\\\")
         return pd.read_sql(S, self.DB.engine)
 
-
     def build_create_frequency_table(self):
         """ 
         Create a frequency table for all combinations of corpus features.
@@ -1564,19 +1068,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
         step = 50000
         current_id = 0
 
-        iterations = max_id // step + 1
-
-        #if not Verbose:
-            #ProgressBar = progressbar.ProgressBar (Iterations)
-        #ToLog ("Inserting data, %s iterations" % Iterations, logging.info)
-
         corpus_tab = self._new_tables[self.corpus_table]
-        
+
         new_tab_desc = []
         d = {}
         for x in corpus_tab.columns:
             d[x.name] = x
-        
+
         for col in corpus_tab.columns:
             if col.name != word_id:
                 if col.is_identifier:
@@ -1683,7 +1181,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 return
 
             for column in table.columns:
-                # Links should get the same optimal data type as the linked 
+                # Links should get the same optimal data type as the linked
                 # column:
                 if column.key:
                     try:
@@ -1697,17 +1195,27 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         optimal = table.suggest_data_type(column.name)
                     except TypeError:
                         continue
-                current = self.DB.get_field_type(table.name, column.name).strip()
-                
+                try:
+                    current = self.DB.get_field_type(table.name, column.name).strip().upper()
+                except Exception as e:
+                    print(e)
+                    self.logger.error(str(e))
+                    continue
+
+                # length values are only used with VARCHAR types, otherwise,
+                # they are stripped:
+                if column.base_type.upper() != "VARCHAR":
+                    current = re.sub("\(\d+\)", "", current)
+
                 if current.lower() != optimal.lower():
+                    self.logger.info("Optimizing column {}.{} from {} to {}".format(
+                        table.name, column.name, current, optimal))
                     try:
                         self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
                         print(e)
                         self.logger.warning(e)
                     else:
-                        self.logger.info("Optimized column {}.{} from {} to {}".format(
-                            table.name, column.name, current, optimal))
                         column.data_type = optimal
                 column_count += 1
 
@@ -1744,8 +1252,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         if self._widget:
             self._widget.progressSet.emit(len(index_list), "Creating indices... (%v of %m)")
             self._widget.progressUpdate.emit(0)
-
-        index_count = 0
 
         i = 0
         for table, column in index_list:
@@ -1813,7 +1319,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         POS             pos_label, word_pos, lemma_pos, corpus_pos
         
         """
-        l = []
         if not hasattr(self, "query_item_word"):
             for x in ["word_label", "corpus_word"]:
                 if hasattr(self, x):
@@ -1840,6 +1345,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 if hasattr(self, x):
                     self.query_item_gloss = x
                     break
+
+    def store_metadata(self):
+        pass
+
+    def insert_metadata(self, *args):
+        pass
 
     def set_surface_feature(self, rc_feature):
         """
@@ -2060,8 +1571,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     exec("import {}".format(module))
                 except ImportError:
                     raise DependencyError(package, url)
-        if self.arguments.use_nltk:
-            import nltk
             
         if self.DB.db_type == SQL_MYSQL:
             self.DB.connection.execute("SET NAMES 'utf8'")
@@ -2164,6 +1673,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             try:
                 if self.arguments.c and not self.interrupted:
+                    if self.arguments.metadata:
+                        self.add_metadata(self.arguments.metadata)
                     current = progress_next(current)
                     self.build_create_tables()
                     progress_done()
@@ -2174,6 +1685,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
             
                 if self.arguments.l and not self.interrupted:
                     current = progress_next(current)
+                    if self.arguments.metadata:
+                        self.store_metadata()
                     self.build_load_files()
                     self.commit_data()
                     progress_done()
@@ -2268,7 +1781,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         new_code = new_code.replace("\\", "\\\\")
         in_class = False
         in_docstring = False
-        in_get_description = False
 
         for x in source:
             if self.arguments.use_nltk:

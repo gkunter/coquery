@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import sys
+import warnings
 
 pyside = False
 pyqt = False
@@ -51,13 +52,26 @@ else:
         QtGui.QGridLayout.setMargin = lambda x, y: True
 
 
+class CoqSettings(QtCore.QSettings):
+    def value(self, key, default=None):
+        if default is None:
+            warnings.warn("Settings key '{}' requested without default value".format(key))
+        try:
+            val = super(CoqSettings, self).value(key, default)
+        except Exception as e:
+            s = "Exception when requesting setting key '{}': {}".format(key, e)
+            print(s)
+            warnings.warn(s)
+            val = default
+        return val
+
 def QWebView(*args, **kwargs):
     if pyside:
         import PySide.QtWebKit as QtWebKit
     elif pyqt:
         import PyQt4.QtWebKit as QtWebKit
     return QtWebKit.QWebView(*args, **kwargs)
-        
+
 if sys.platform == 'win32':
     frameShadow = QtGui.QFrame.Raised
     frameShape = QtGui.QFrame.Panel
@@ -65,4 +79,12 @@ else:
     frameShadow = QtGui.QFrame.Raised
     frameShape = QtGui.QFrame.StyledPanel
     
-    
+def get_toplevel_window(name="MainWindow"):
+    """
+    Retrieves the top-level widget with the given name. By default, retrieve
+    the main window.
+    """
+    for widget in QtGui.qApp.topLevelWidgets():
+        if widget.objectName() == "MainWindow":
+            return widget
+    return None

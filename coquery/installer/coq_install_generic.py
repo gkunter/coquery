@@ -13,6 +13,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 import string
 import re
+import pandas as pd
 
 from coquery.corpusbuilder import *
 from coquery import options
@@ -23,6 +24,7 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
+    corpus_sentence = "Sentence_Id"
     word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
@@ -31,6 +33,7 @@ class BuilderClass(BaseCorpusBuilder):
     file_id = "FileId"
     file_name = "Filename"
     file_path = "Path"
+    meta_data = "metadata"
 
     def __init__(self, gui=False, pos=True):
         # all corpus builders have to call the inherited __init__ function:
@@ -60,14 +63,14 @@ class BuilderClass(BaseCorpusBuilder):
             self.word_pos = "POS"
             self.create_table_description(self.word_table,
                 [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(128) NOT NULL"),
-                Column(self.word_pos, "VARCHAR(12) NOT NULL"),
-                Column(self.word_label, "VARCHAR(128) NOT NULL")])
+                Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
+                Column(self.word_pos, "VARCHAR(128) NOT NULL"),
+                Column(self.word_label, "VARCHAR(1024) NOT NULL")])
         else:
             self.create_table_description(self.word_table,
                 [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(128) NOT NULL"),
-                Column(self.word_label, "VARCHAR(128) NOT NULL")])
+                Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
+                Column(self.word_label, "VARCHAR(1024) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -86,8 +89,8 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "INT UNSIGNED NOT NULL"),
-            Column(self.file_name, "TINYTEXT NOT NULL"),
-            Column(self.file_path, "TINYTEXT NOT NULL")])
+            Column(self.file_name, "VARCHAR(1024) NOT NULL"),
+            Column(self.file_path, "VARCHAR(4048) NOT NULL")])
 
         # Add the main corpus table. Each row in this table represents a 
         # token in the corpus. It has the following columns:
@@ -105,8 +108,11 @@ class BuilderClass(BaseCorpusBuilder):
         
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "BIGINT UNSIGNED NOT NULL"),
+             Column(self.corpus_sentence, "INT UNSIGNED NOT NULL"), 
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table)])
+            
+        self._sentence_id = 0
 
     @staticmethod
     def validate_files(l):
@@ -226,7 +232,63 @@ class BuilderClass(BaseCorpusBuilder):
         # store new token in corpus table:
         return self.add_token_to_corpus(
             {self.corpus_word_id: word_id,
+             self.corpus_sentence: self._sentence_id,
              self.corpus_file_id: self._file_id})
+
+    def add_metadata(self, file_name):
+        self._meta_table = pd.read_csv(file_name)
+        self._meta_table.index = range(1, len(self._meta_table)+1)
+        setattr(self, "file_name", self._meta_table.columns[0])
+        self._meta_table[self.file_path] = ""
+        for root, dirs, files in os.walk(os.path.split(file_name)[0]):
+            for filename in files:
+                self._meta_table[self.file_path].loc[
+                    self._meta_table[self.file_name] == filename] = root
+
+        l = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
+             Column(self.file_name, "VARCHAR({}) NOT NULL".format(
+                 max(self._meta_table[self.file_name].str.len())))]
+
+        for col in self._meta_table.columns[1:]:
+            rc_feature = "file_{}".format(col.lower())
+            setattr(self, rc_feature, col)
+            if self._meta_table[col].dtype == int:
+                l.append(Column(col, "MEDIUMINT"))
+            elif self._meta_table[col].dtype == float:
+                l.append(Column(col, "REAL"))
+            else:
+                l.append(Column(col, "VARCHAR({})".format(
+                    max(self._meta_table[col].str.len()))))
+        self.create_table_description(self.file_table, l)
+        self.special_files.append(os.path.basename(file_name))
+
+    def store_metadata(self):
+        self.DB.load_dataframe(self._meta_table,
+                               self.file_table,
+                               self.file_id)
+
+    def store_filename(self, file_name):
+        if self.arguments.metadata:
+            basename = os.path.basename(file_name)
+            if basename not in self.special_files:
+                self._file_id = self._meta_table[self._meta_table[self.file_name] == basename].index[0]
+        else:
+            return super(BuilderClass, self).store_filename(file_name)
+
+    @classmethod
+    def probe_metadata(cls, file_name):
+        if super(BuilderClass, cls).probe_metadata(
+            os.path.basename(file_name).lower()):
+            try:
+                df = pd.read_csv(file_name, nrows=2)
+                if not df.columns[0].lower().startswith("file"):
+                    return False
+            except:
+                return False
+            else:
+                return True
+        else:
+            return False
 
     def process_file(self, file_name):
         """ 
@@ -250,6 +312,9 @@ class BuilderClass(BaseCorpusBuilder):
         file_name : string
             The path name of the file that is to be processed
         """
+
+        if os.path.basename(file_name) in self.special_files:
+            return
 
         raw_text = self._read_text(file_name)
             
@@ -276,6 +341,7 @@ class BuilderClass(BaseCorpusBuilder):
             # and process this list one by one:
             sentence_list = nltk.sent_tokenize(raw_text)
             for sentence in sentence_list:
+                self._sentence_id += 1
                 # use NLTK tokenizer and POS tagger on this sentence:
                 tokens = nltk.word_tokenize(sentence)
                 pos_map = nltk.pos_tag(tokens)
@@ -299,6 +365,8 @@ class BuilderClass(BaseCorpusBuilder):
             
             tokens = raw_text.replace("\n", " ").split(" ")
             
+            final_punctuation = []
+            
             for token in [x.strip() for x in tokens if x.strip()]:
                 # any punctuation at the beginning of the token is added to the
                 # corpus as a punctuation token, and is also stripped from the
@@ -306,6 +374,20 @@ class BuilderClass(BaseCorpusBuilder):
                 while token and token[0] in string.punctuation:
                     self.add_token(token[0], "PUNCT")
                     token = token[1:]
+
+                # Try to detect sentence boundaries.
+                # A sentence boundary is assumed if 
+                # (a) there is final punctuation
+                # (b) final_punctuation contains only the sentence-delimiting 
+                #     punctuation marks .?!
+                # (c) the next word starts with a captial letter
+                
+                if (token and
+                    final_punctuation and
+                    not re.sub("[.!?'\"]", "", "".join(final_punctuation)) and
+                    token[0] == token[0].upper()):
+                    self._sentence_id += 1
+                    
                 # next, detect any word-final punctuation:
                 final_punctuation = []
                 for ch in reversed(token):
@@ -334,7 +416,6 @@ class BuilderClass(BaseCorpusBuilder):
                 # add final punctuation:
                 for p in final_punctuation:
                     self.add_token(p, "PUNCT")
-
 
 
 def main():

@@ -42,12 +42,16 @@ class corpus_code():
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "s??.zip"
 
-    content_table = "Lexicon"
-    content_id = "WordId"
-    content_label = "Word"
-    content_pos = "POS"
-    content_transcript = "Transcript"
-    content_lemmatranscript = "Lemma_Transcript"
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word = "Word"
+    corpus_pos = "POS"
+    corpus_transcript = "Transcript"
+    corpus_lemmatranscript = "Canonical_Transcript"
+    corpus_starttime = "Start"
+    corpus_endtime = "End"
+    corpus_file_id = "FileId"
+    corpus_speaker_id = "SpeakerId"
     
     file_table = "Files"
     file_id = "FileId"
@@ -55,24 +59,9 @@ class BuilderClass(BaseCorpusBuilder):
     file_path = "Path"
     file_duration = "Duration"
 
-    corpus_table = "Corpus"
-    corpus_id = "ID"
-    corpus_word_id = "MetaId"
-    corpus_file_id = "FileId"
-    corpus_speaker_id = "SpeakerId"
-    corpus_starttime = "Start"
-    corpus_endtime = "End"
-
-    # In order to make possible the one-to-many relation between words
-    # and segments, the word table is simply a meta table with links 
-    # to the Lexicon 'content_table' and the segments table.
-    word_table = "Meta"
-    word_id = "MetaId"
-    word_content_id = "WordId"
-    word_segment_id = "SegmentId"
-
     segment_table = "Segments"
     segment_id = "SegmentId"
+    segment_origin_id = "FileId"
     segment_label = "Segment"
     segment_starttime = "SegStart"
     segment_endtime = "SegEnd"
@@ -248,10 +237,11 @@ class BuilderClass(BaseCorpusBuilder):
         # index types.
 
         self.create_table_description(self.segment_table,
-            [Identifier(self.segment_id, "INT(12) UNSIGNED NOT NULL", unique=False),
+            [Identifier(self.segment_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.segment_origin_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.segment_starttime, "REAL NOT NULL"),
              Column(self.segment_endtime, "REAL NOT NULL"),
-             Column(self.segment_label, "VARCHAR(128) NOT NULL")])
+             Column(self.segment_label, "VARCHAR(14) NOT NULL")])
         
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
@@ -275,20 +265,6 @@ class BuilderClass(BaseCorpusBuilder):
         # A text value containing the phonological transcription of this
         # word-form.
 
-        self.create_table_description(self.content_table,
-            [Identifier(self.content_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.content_label, "VARCHAR(40) NOT NULL"),
-             Column(self.content_pos, "ENUM('CC','CD','DT','DT_VBZ','EX','EX_VBZ','FW','IN','JJ','JJR','JJS','LS','MD','MD_RB','NN','NNP','NNPS','NNS','null','PDT','PRP','PRP_MD','PRP_VBP','PRP_VBZ','PRP$','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBG_TO','VBN','VBP','VBP_RB','VBP_TO','VBZ','VBZ_RB','WDT','WP','WP_VBZ','WP$','WRB') NOT NULL"),
-             Column(self.content_transcript, "VARCHAR(41) NOT NULL"),
-             Column(self.content_lemmatranscript, "VARCHAR(41) NOT NULL")])
-
-        self.create_table_description(self.word_table,
-            [Identifier(self.word_id, "INT(12) UNSIGNED NOT NULL"),
-             Link(self.word_content_id, self.content_table),
-             Link(self.word_segment_id, self.segment_table)])
-                 
-
-                 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
         # corpus table is linked to exactly one file from this table, and
@@ -302,10 +278,10 @@ class BuilderClass(BaseCorpusBuilder):
         # A text value containing the path that points to this data file.
 
         self.create_table_description(self.file_table,
-            [Identifier(self.file_id, "INT(3) UNSIGNED NOT NULL"),
+            [Identifier(self.file_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "VARCHAR(18) NOT NULL"),
              Column(self.file_duration, "REAL NOT NULL"),
-             Column(self.file_path, "TINYTEXT NOT NULL")])
+             Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
         self.create_table_description(self.speaker_table,
             [Identifier(self.speaker_id, "TINYINT(2) UNSIGNED NOT NULL"),
@@ -331,11 +307,13 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Link(self.corpus_file_id, self.file_table),
-             Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_speaker_id, self.speaker_table),
-             Column(self.corpus_starttime, "DECIMAL(17,6) NOT NULL"),
-             Column(self.corpus_endtime, "DECIMAL(17,6) NOT NULL")])
-
+             Column(self.corpus_word, "VARCHAR(1028) NOT NULL"),
+             Column(self.corpus_pos, "VARCHAR(13) NOT NULL"),
+             Column(self.corpus_transcript, "VARCHAR(41) NOT NULL"),
+             Column(self.corpus_lemmatranscript, "VARCHAR(41) NOT NULL"),
+             Column(self.corpus_starttime, "REAL(17,6) NOT NULL"),
+             Column(self.corpus_endtime, "REAL(17,6) NOT NULL")])
         
         # Specify that the corpus-specific code is contained in the dummy
         # class 'corpus_code' defined above:
@@ -343,15 +321,16 @@ class BuilderClass(BaseCorpusBuilder):
         
         self.add_time_feature(self.corpus_starttime)
         self.add_time_feature(self.corpus_endtime)
+        for x in ["corpus_word", "corpus_pos", "corpus_transcript", "corpus_lemmatranscript"]:
+            self.add_lexical_feature(x)
         
         self._file_id = 0
         self._token_id = 0
 
-        self.map_query_item(QUERY_ITEM_TRANSCRIPT, "content_transcript")
-        self.map_query_item(QUERY_ITEM_POS, "content_pos")
-        self.map_query_item(QUERY_ITEM_WORD, "content_label")
-        self.map_query_item(QUERY_ITEM_LEMMA, "content_lemmatranscript")
-
+        self.map_query_item(QUERY_ITEM_TRANSCRIPT, "corpus_lemmatranscript")
+        self.map_query_item(QUERY_ITEM_POS, "corpus_pos")
+        self.map_query_item(QUERY_ITEM_WORD, "corpus_word")
+        self.map_query_item(QUERY_ITEM_LEMMA, "corpus_transcript")
     
     @staticmethod
     def get_name():
@@ -442,7 +421,6 @@ class BuilderClass(BaseCorpusBuilder):
                     self.file_path: self._value_file_path}
                 self._file_id = self.table(self.file_table).get_or_insert(d)
                 self.commit_data()
-                
 
     def _get_segments(self, speaker_zip, filename):
         file_body = False
@@ -466,13 +444,13 @@ class BuilderClass(BaseCorpusBuilder):
                     end_time, _, remain = row.partition(" ")
                     _, _, segment = remain.partition(" ")
                 except ValueError:
-                    print(".phones file {}: error in row partitioning ({})".format(filename, row))
+                    logger.warn(".phones file {}: error in row partitioning ({})".format(filename, row))
                     continue
                 end_time = float(end_time)
                 
                 # Some segments have the undocumented form 'n; *'. In that 
                 # case, strip the latter part:
-                segment = segment.partition(";")[0]
+                segment = segment.partition(";")[0].strip()
                 
                 if end_time >= 0:
                     segments.append((end_time, segment))
@@ -486,10 +464,22 @@ class BuilderClass(BaseCorpusBuilder):
         input_data = speaker_zip.read(words_file)
         input_data = [utf8(x.strip()) for x in input_data.splitlines() if x.strip()]
         self._duration = 0
-        tokens = []
+        regex = re.compile("[{<].+[}>]")
         
+        
+        # The list ``segments'' contains all segments in this file. Each
+        # entry in the list is a tuple with the end time and the segment
+        # label as values.
         segments = self._get_segments(speaker_zip, filename)
+        
         last_row = None
+        # go through the input data and create the list ``tokens''. Each
+        # entry in the list is a tuple with the token's ending time as the 
+        # first element, and as the second element a dictionary with the 
+        # label, POS, transcript, # and canonical transcript as values.
+        tokens = []
+
+
         for row in input_data:
             row = re.sub("\s+", " ", row)
 
@@ -516,12 +506,12 @@ class BuilderClass(BaseCorpusBuilder):
                     self._value_corpus_time, _, remain = row.partition(" ")
                     _, _, value = remain.partition(" ")
                 except ValueError:
-                    print(".words file {}: error in row partitioning ({})".format(filename, row))
+                    logger.warn(".words file {}: error in row partitioning ({})".format(filename, row))
                     continue
                 try:
                     self._value_corpus_time = float(self._value_corpus_time)
                 except ValueError:
-                    print(".words file {}: error in float conversion ({})".format(filename, row))
+                    logger.warn(".words file {}: error in float conversion ({})".format(filename, row))
                     continue
                 
                 split_values = value.split("; ")
@@ -530,10 +520,10 @@ class BuilderClass(BaseCorpusBuilder):
                 # canonical transcription, the transcribed word, and the POS 
                 # tag. 
                 try:
-                    (self._value_content_label, 
-                    self._value_content_lemmatranscript, 
-                    self._value_content_transcript, 
-                    self._value_content_pos) = split_values
+                    (self._value_corpus_word, 
+                    self._value_corpus_lemmatranscript, 
+                    self._value_corpus_transcript, 
+                    self._value_corpus_pos) = split_values
                 except ValueError:
                     # if there are less than 4 values, still try to salvage 
                     # the row
@@ -546,55 +536,57 @@ class BuilderClass(BaseCorpusBuilder):
                         continue
 
                     # the first value is always the word:
-                    self._value_content_label = split_values[0]
+                    self._value_corpus_word = split_values[0]
 
                     # Initialize the other content fields with empty strings:
-                    self._value_content_lemmatranscript = ""
-                    self._value_content_transcript = ""
-                    self._value_content_pos = ""
+                    self._value_corpus_lemmatranscript = ""
+                    self._value_corpus_transcript = ""
+                    self._value_corpus_pos = ""
 
                     if len(split_values) == 3:
                         # check if last value is a valid POS tag, or "null", 
                         # i.e. a non-speech label:
                         if split_values[2] in [self._valid_pos, "null"]:
-                            self._value_content_transcript = split_values[1]
-                            self._value_content_pos = split_values[2]
+                            self._value_corpus_transcript = split_values[1]
+                            self._value_corpus_pos = split_values[2]
                         else:
-                            self._value_content_transcript = split_values[1]
-                            self._value_content_lemmatranscript = split_values[2]
+                            self._value_corpus_transcript = split_values[1]
+                            self._value_corpus_lemmatranscript = split_values[2]
                     
                     elif len(split_values) == 2:
                         # check if last value is a valid POS tag, or "null", 
                         # i.e. a non-speech label:
                         if split_values[1] in [self._valid_pos, "null"]:
-                            self._value_content_pos = split_values[1]
+                            self._value_corpus_pos = split_values[1]
                             if split_values[-1] == "null":
                                 # apparently, 'U' is used as transcription of 
                                 # non-speech labels:
-                                self._value_content_lemmatranscript = "U"
-                                self._value_content_transcript = "U"
+                                self._value_corpus_lemmatranscript = "U"
+                                self._value_corpus_transcript = "U"
                         else:
-                            self._value_content_transcript = split_values[1]
+                            self._value_corpus_transcript = split_values[1]
+
+                if regex.match(self._value_corpus_word):
+                    self._value_corpus_pos = "null"
+                    self._value_corpus_transcript = ""
+                    self._value_corpus_lemmatranscript = ""
 
                 if self._value_corpus_time >= 0:
                     tokens.append(
                         (self._value_corpus_time,
-                        {self.content_label: self._value_content_label, 
-                            self.content_pos: self._value_content_pos,
-                            self.content_transcript: self._value_content_transcript,
-                            self.content_lemmatranscript: self._value_content_lemmatranscript}))
-                
+                        {self.corpus_word: self._value_corpus_word, 
+                            self.corpus_pos: self._value_corpus_pos,
+                            self.corpus_transcript: self._value_corpus_transcript,
+                            self.corpus_lemmatranscript: self._value_corpus_lemmatranscript}))
+
+        # Now, go through the tokens in order to add them to the corpus,
+        # and to link them to their segments via the meta table.
         segment_index = 0
         last_t = 0
         for i, token in enumerate(tokens):
             # get next token in list, and insert it both into word_table and 
             # content_table:
             end_time, d = token
-            self._token_id += 1
-            self._content_id = self.table(self.content_table).get_or_insert(d)
-            self._word_id = self.table(self.word_table).add({
-                self.word_content_id: self._content_id,
-                self.word_segment_id: self._token_id})
 
             try:
                 start_time = tokens[i-1][0]
@@ -604,16 +596,24 @@ class BuilderClass(BaseCorpusBuilder):
             except IndexError:
                 start_time = 0.0
 
+            d.update({self.corpus_starttime: start_time,
+                      self.corpus_endtime: end_time,
+                      self.corpus_speaker_id: self._speaker_id,
+                      self.corpus_file_id: self._file_id + 1})
+            
+            self.add_token_to_corpus(d)
+            
             # add segments
             try:
                 while True:
                     t, segment = segments[segment_index]
                     if t <= end_time:
-                        d = {self.segment_id: self._token_id,
-                            self.segment_starttime: last_t,
-                            self.segment_endtime: t,
-                            self.segment_label: segment}
-                        self.table(self.segment_table).add(d)
+                        d2 = {self.segment_starttime: last_t,
+                              self.segment_origin_id: self._file_id + 1,
+                              self.segment_endtime: t,
+                              self.segment_label: segment}
+                        self._segment_id = self.table(self.segment_table).add(d2)
+
                         segment_index += 1
                         last_t = t
                     else:
@@ -621,13 +621,6 @@ class BuilderClass(BaseCorpusBuilder):
             except IndexError:
                 # all segments processed
                 pass
-            
-            self.add_token_to_corpus(
-                    {self.corpus_word_id: self._token_id, 
-                     self.corpus_speaker_id: self._speaker_id,
-                    self.corpus_file_id: self._file_id + 1,
-                    self.corpus_starttime: start_time,
-                    self.corpus_endtime: end_time})
 
             self._duration = max(self._duration, float(end_time))
 

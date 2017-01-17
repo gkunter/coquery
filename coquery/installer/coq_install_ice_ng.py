@@ -248,6 +248,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     corpus_table = "Corpus"
     corpus_id = "ID"
+    corpus_sentence = "Sentence__ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
     corpus_source_id = "SourceId"
@@ -463,10 +464,6 @@ class BuilderClass(BaseCorpusBuilder):
         """
         super(BuilderClass, self).__init__(gui, *args)
 
-        # specify which features are provided by this corpus and lexicon:
-        #self.lexicon_features = ["LEX_WORDID", "LEX_LEMMA", "LEX_ORTH", "LEX_POS"]
-        #self.corpus_features = ["CORP_CONTEXT", "CORP_FILENAME", "CORP_STATISTICS", "CORP_SOURCE"]
-
         self.check_arguments()
         
         # add table descriptions for the tables used in this database.
@@ -507,12 +504,6 @@ class BuilderClass(BaseCorpusBuilder):
         # An int value containing the unique identifier of the data file 
         # that contains this token.
         
-        #self.corpus_table = "corpus"
-        #self.corpus_id = "TokenId"
-        #self.corpus_word_id = "WordId"
-        #self.corpus_file_id = "FileId"
-        #self.corpus_source_id = "SourceId"
-        
         # Add the main lexicon table. Each row in this table represents a
         # word-form that occurs in the corpus. It has the following columns:
         #
@@ -533,16 +524,10 @@ class BuilderClass(BaseCorpusBuilder):
         # A text value containing the part-of-speech label of this 
         # word-form.
         
-        #self.word_table = "word"
-        #self.word_id = "WordId"
-        #self.word_lemma = "Lemma"
-        #self.word_label = "Text"
-        #self.word_pos = "Pos"
-        
         self.create_table_description(self.word_table,
             [Identifier(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(36) NOT NULL"),
-             Column(self.word_lemma, "VARCHAR(36) NOT NULL"),
+             Column(self.word_label, "VARCHAR(27) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(27) NOT NULL"),
              Column(self.word_pos, "ENUM('CC','CD','DT','EX','FW','IN','JJ','JJR','JJS','LS','MD','NN','NNS','NP','NPS','PDT','POS','PP','PP$','PUNCT','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBN','VBP','VBZ','WDT','WP','WP$','WRB') NOT NULL")])
              
 
@@ -558,34 +543,11 @@ class BuilderClass(BaseCorpusBuilder):
         # Path
         # A text value containing the path that points to this data file.
         
-        #self.file_table = "file"
-        #self.file_id = "FileId"
-        #self.file_name = "Filename"
-        #self.file_path = "Path"
-        
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "TINYTEXT NOT NULL"),
              Column(self.file_path, "TINYTEXT NOT NULL")])
             
-        #self.sentence_table = "sentence"
-        #self.sentence_id = "SentenceId"
-        
-        #self.add_table_description(self.sentence_table, self.sentence_id,
-            #{"CREATE" : [
-                #"`{}` MEDIUMINT(5) UNSIGNED NOT NULL".format(self.sentence_id)]})
-        
-        #self.source_table = "source"
-        #self.source_id = "SourceId"
-        #self.source_mode = "Mode"
-        #self.source_age = "Age"
-        #self.source_gender = "Gender"
-        #self.source_ethnicity = "Ethnicity"
-        #self.source_date = "Date"
-        #self.source_icetext = "ICE_text_category"
-        #self.source_icetextcode = "ICE_text_code"
-        #self.source_place = "Place"
-        
         self.add_time_feature(self.source_date)
         self.add_time_feature(self.source_age)
 
@@ -602,12 +564,18 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.corpus_sentence, "SMALLINT UNSIGNED NOT NULL"),
              Link(self.corpus_file_id, self.file_table),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_source_id, self.source_table)])
                 
         self._corpus_id = 0
         self._corpus_code = corpus_code
+        self._sentence_id = 1
+        self.add_speaker_feature("source_age")
+        self.add_speaker_feature("source_gender")
+        self.add_speaker_feature("source_ethnicity")
+
         
 
     def xml_preprocess_tag(self, element):
@@ -632,39 +600,38 @@ class BuilderClass(BaseCorpusBuilder):
             #self.tag_last_token(element.tag, element.attrib)
 
     def process_text(self, text):
+        new_sentence = False
         for row in text.splitlines():
             try:
                 self._value_word_label, self._value_word_pos, self._value_word_lemma = [x.strip() for x in row.split("\t")]
             except ValueError:
                 pass
             else:
-                self._value_word_label = self._replace_encoding_errors(self._value_word_label)
-                self._value_word_lemma = self._replace_encoding_errors(self._value_word_lemma)
-                new_sentence = False
+                d = {self.word_label: self._replace_encoding_errors(self._value_word_label),
+                     self.word_lemma: self._replace_encoding_errors(self._value_word_lemma),
+                     self.word_pos: self._value_word_pos}
                 
                 if self._value_word_pos == "CD":
-                    self._value_word_lemma = self._value_word_label
-                if self._value_word_pos in string.punctuation or self._value_word_pos == "''":
-                    self._value_word_pos = "PUNCT"
-                if self._value_word_pos == "SENT":
+                    d[self.word_lemma] = d[self.word_label]
+                elif self._value_word_pos in string.punctuation or self._value_word_pos == "''":
+                    d[self.word_pos] = "PUNCT"
+                elif self._value_word_pos == "SENT":
+                    d[self.word_pos] = "PUNCT"
                     new_sentence = True
-                    self._value_word_pos = "PUNCT"
                     
-                if self._value_word_label and self._value_word_lemma:
+                if d[self.word_label] and d[self.word_lemma]:
                     self._word_id = self.table(self.word_table).get_or_insert(
-                        {self.word_label: self._value_word_label, 
-                        self.word_lemma: self._value_word_lemma, 
-                        self.word_pos: self._value_word_pos}, case=True)
+                        d, case=True)
                         
                     self.add_token_to_corpus(
                         {self.corpus_word_id: self._word_id,
+                        self.corpus_sentence: self._sentence_id,
                         self.corpus_file_id: self._file_id,
                         self.corpus_source_id: self._source_id})
-
-                #if new_sentence:
-                    #self._sentence_id = self.table_get(self.sentence_table,
-                        #{self.sentence_source_id: self._source_id})
-
+                if new_sentence:
+                    self._sentence_id += 1
+                    new_sentence = False
+                    
     def xml_process_content(self, element_text):
         """ In ICE-NG, the XML elements contain rows of words. This method 
         processes these rows, and creates token entries in the corpus table. 

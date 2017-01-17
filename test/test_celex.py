@@ -13,11 +13,12 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import unittest
-import sys, os
 
-sys.path.append(os.path.join(sys.path[0], "../coquery"))
-sys.path.append(os.path.join(sys.path[0], "../coquery/installer"))
-from coq_install_celex import *
+from .mockmodule import setup_module
+
+setup_module("sqlalchemy")
+
+from coquery.installer.coq_install_celex import *
 
 class TestCELEX(unittest.TestCase):
     def test_dia_to_unicode(self):
@@ -29,8 +30,11 @@ class TestCELEX(unittest.TestCase):
         self.assertEqual(dia_to_unicode('fa,cade'), "façade")
         self.assertEqual(dia_to_unicode('sm@aland'), "småland")
         
-if __name__ == '__main__':
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestCELEX),
         ])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

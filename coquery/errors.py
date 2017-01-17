@@ -23,6 +23,19 @@ import textwrap
 from .defines import *
 from .unicode import utf8
 
+_source_paths = [sys.path[0]]
+
+def add_source_path(s):
+    global _source_paths
+    _source_paths.append(s)
+    
+def remove_source_path(s):
+    global _source_paths
+    _source_paths.remove(s)
+
+def get_source_paths():
+    return _source_paths
+
 class GenericException(Exception):
     def __init__(self, *par):
         self.par = ", ".join([utf8(x) for x in par])
@@ -191,6 +204,9 @@ class TokenUnsupportedTranscriptError(NoTraceException):
 class InvalidFilterError(NoTraceException):
     error_message = "Invalid query filter specification"
 
+class WordInformationUnavailableError(NoTraceException):
+    error_message = "Word information is not avaiable"
+
 class CorpusUnavailableQueryTypeError(GenericException):
     error_message = "Query type %s not available for corpus %s"
     def __init__(self, Corpus, Type):
@@ -267,13 +283,16 @@ def get_error_repr(exc_info):
     trace_string = ""
     Indent = ""
     Text = ""
-    for FileName, LineNo, FunctionName, Text in Trace:
-        ModuleName = os.path.split(FileName) [1]
-        trace_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
-        Indent += "  "
-    file_location = "{}, line {}".format(FileName, LineNo)
-    if Text:
-        trace_string += "%s> %s\n" % (Indent[:-1], Text)
+    for file_name, line_no, func_name, text in Trace:
+        path, module_name = os.path.split(file_name)
+        # only print exceptions from Coquery files:
+        if any([path.startswith(x) for x in get_source_paths()]):
+            trace_string += "{} {}, line {}: {}\n".format(
+                Indent, module_name, line_no, func_name.replace("<", "&lt;"))
+            Indent += "  "
+    file_location = "{}, line {}".format(file_name, line_no)
+    if text:
+        trace_string += "%s> %s\n" % (Indent[:-1], text)
     return (exc_type, exc_obj, trace_string, file_location)
 
 def print_exception(exc):

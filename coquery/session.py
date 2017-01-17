@@ -2,10 +2,10 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -19,81 +19,90 @@ import fileinput
 import codecs
 import logging
 import collections
+import sqlalchemy
 
 import pandas as pd
 
 from . import options
 from .errors import *
-from .corpus import *
 from .defines import *
+from .general import *
+from . import sqlhelper
 from . import queries
-from . import filters
-from . import tokens
+from . import managers
+from . import functionlist
 
 class Session(object):
+    _is_statistics = False
+    query_id = 0
+
     def __init__(self):
         self.header = None
         self.max_number_of_input_columns = 0
         self.query_list = []
         self.requested_fields = []
         options.cfg.query_label = ""
-            
-        # load current corpus module depending on the value of options.cfg.corpus,
-        # i.e. the corpus specified as an argumment:        
-        ResourceClass, CorpusClass, LexiconClass, Path = options.cfg.current_resources[options.cfg.corpus]
-        
-        current_lexicon = LexiconClass()
-        current_corpus = CorpusClass()
-        current_resource = ResourceClass(current_lexicon, current_corpus)
 
-        self.Corpus = current_corpus
-        self.Corpus.lexicon = current_lexicon
-        self.Corpus.resource = current_resource
-        
-        self.Lexicon = current_lexicon
-        self.Lexicon.corpus = current_corpus
-        self.Lexicon.resource= current_resource
-        
-        self.Resource = current_resource
+        # load current corpus module depending on the value of options.cfg.corpus,
+        # i.e. the corpus specified as an argumment:
+        if options.cfg.corpus:
+
+            ResourceClass, CorpusClass, LexiconClass, Path = options.cfg.current_resources[options.cfg.corpus]
+
+            current_lexicon = LexiconClass()
+            current_corpus = CorpusClass()
+            current_resource = ResourceClass(current_lexicon, current_corpus)
+
+            self.Corpus = current_corpus
+            self.Corpus.lexicon = current_lexicon
+            self.Corpus.resource = current_resource
+
+            self.Lexicon = current_lexicon
+            self.Lexicon.corpus = current_corpus
+            self.Lexicon.resource= current_resource
+
+            self.Resource = current_resource
+
+            self.db_engine = sqlalchemy.create_engine(
+                sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
+
+            logger.info("Corpus '{}' on connection '{}'".format(
+                self.Resource.name, options.cfg.current_server))
+
+        else:
+            self.Corpus = None
+            self.Resource = None
+            self.Lexicon = None
+            self.db_engine = None
+            logger.warn("No corpus available on connection '{}'".format(
+                options.cfg.current_server))
 
         self.show_header = options.cfg.show_header
-
         self.query_type = queries.get_query_type(options.cfg.MODE)
-
-        logger.info("Corpus '{}' on connection '{}'".format(
-            self.Resource.name, options.cfg.current_server))
 
         self.data_table = pd.DataFrame()
         self.output_object = pd.DataFrame()
         self.output_order = []
         self.header_shown = False
         self.input_columns = []
-        self._header_cache = {}
+        self._manager_cache = {}
+        self._first_saved_dataframe = True
+
+        self.column_functions = functionlist.FunctionList()
+        self.group_functions = []
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
         # values. If the value is False, the row in the output object is
         # hidden, otherwise, it is visible.
-        self.row_visibility = {}
-        self.column_visibility = defaultdict(pd.Series)
 
-        # verify filter list:
-        new_list = []
-        if options.cfg.use_corpus_filters:
-            for filt in options.cfg.filter_list:
-                if isinstance(filt, filters.QueryFilter):
-                    new_list.append(filt)
-                else:
-                    new_filt = filters.QueryFilter()
-                    new_filt.resource = self.Resource
-                    new_filt.text = filt
-                    new_list.append(new_filt)
-        self.filter_list = new_list
-        self.Resource.filter_list = new_list
-        
+        ## FIXME: reimplement row visibility
+        #self.row_visibility = {}
+
+
     def get_max_token_count(self):
         """
-        Return the maximal number of tokens that may be produced by the 
+        Return the maximal number of tokens that may be produced by the
         queries from this session.
         """
         maximum = 0
@@ -101,46 +110,165 @@ class Session(object):
             maximum = max(maximum, query.get_max_tokens())
         return maximum
 
-    def run_queries(self, to_file=False):
-        """ 
-        Run each query in the query list, and append the results to the 
-        output object. Afterwards, apply all filters, and aggregate the data.
-        If Coquery is run as a console program, write the aggregated data to 
-        a file (or the standard output).
-        """
+    def start_timer(self):
         self.start_time = datetime.datetime.now()
         self.end_time = None
-        
+
+    def stop_timer(self):
+        self.end_time = datetime.datetime.now()
+
+    def save_dataframe(self, df, append=False):
+        if not options.cfg.output_path:
+            output_file = sys.stdout
+        else:
+            if append and not self._first_saved_dataframe:
+                file_mode = "a"
+            else:
+                file_mode = "w"
+
+            output_file = codecs.open(
+                options.cfg.output_path,
+                file_mode,
+                encoding=options.cfg.output_encoding)
+
+        columns = [x for x in df.columns.values if not x.startswith("coquery_invisible")]
+        if self._first_saved_dataframe:
+            header = [self.translate_header(x) for x in columns]
+        else:
+            header = False
+
+        # FIXME:
+        # saving doesn't work anymore!
+        df[columns].to_csv(
+            output_file,
+            header=header,
+            sep=options.cfg.output_separator,
+            encoding="utf-8",
+            float_format = "%.{}f".format(options.cfg.digits),
+            index=False)
+        output_file.flush()
+        self._first_saved_dataframe = False
+
+    def connect_to_db(self):
+        self.db_connection = self.db_engine.connect()
+
+    def disconnect_from_db(self):
+        self.db_connection.close()
+
+    def run_queries(self, to_file=False, **kwargs):
+        """
+        Run each query in the query list, and append the results to the
+        output object. Afterwards, apply all filters, and aggregate the data.
+        If Coquery is run as a console program, write the aggregated data to
+        a file (or the standard output).
+
+        Parameters
+        ----------
+        to_file : bool
+            True if the query results are directly written to a file, and
+            False if they will be displayed in the GUI. Data that is written
+            directly to a file contains less information, e.g. it doesn't
+            contain an origin ID or a corpus ID (unless requested).
+        """
+        self.start_timer()
+
+        self.connect_to_db()
+
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
+        Session.query_id += 1
 
         number_of_queries = len(self.query_list)
+        manager = self.get_manager()
+        manager.set_filters(options.cfg.filter_list)
+        manager.set_group_filters(options.cfg.group_filter_list)
+        manager.set_summary_functions(options.cfg.summary_functions)
 
-        for i, current_query in enumerate(self.query_list):
-            if options.cfg.gui and number_of_queries > 1:
-                options.cfg.main_window.showMessage("Running query ({} of {})...".format(
-                    i+1, number_of_queries))
-            if not self.quantified_number_labels:
-                self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
-            start_time = time.time()
-            if number_of_queries > 1:
-                logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
-            else:
-                logger.info("Start query: '{}'".format(current_query.query_string))
-            current_query.run()
-            self.data_table = current_query.append_results(self.data_table)
-            logger.info("Query executed (%.3f seconds)" % (time.time() - start_time))
+        dtype_list = []
 
-        #self.frequency_table = self.get_frequency_table()
-        
-        self.filter_data()
+        self.queries = {}
 
-        self.data_table.index = range(1, len(self.data_table.index) + 1)
+        _queried = []
 
-        self.end_time = datetime.datetime.now()
-        self.reset_row_visibility(queries.TokenQuery, self.data_table)
+        try:
+            for i, current_query in enumerate(self.query_list):
+                if current_query.query_string in _queried:
+                    continue
+                _queried.append(current_query.query_string)
+                self.queries[i] = current_query
 
-        if not options.cfg.gui or to_file:
+                if options.cfg.gui and number_of_queries > 1:
+                    options.cfg.main_window.updateMultiProgress.emit(i+1)
+                if not self.quantified_number_labels:
+                    self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
+                start_time = time.time()
+                if number_of_queries > 1:
+                    logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
+                else:
+                    logger.info("Start query: '{}'".format(current_query.query_string))
+
+                df = current_query.run(connection=self.db_connection, to_file=to_file, **kwargs)
+
+                # apply clumsy hack that tries to make sure that the dtypes of
+                # data frames containing NaNs or empty strings does not change
+                # when appending the new data frame to the previous.
+
+                # The same hack is also needed in queries.run().
+                if len(self.data_table) > 0 and df.dtypes.tolist() != dtype_list.tolist():
+                    for x in df.columns:
+                        # the idea is that pandas/numpy use the 'object'
+                        # dtype as a fall-back option for strange results,
+                        # including those with NaNs.
+                        # One problem is that integer columns become floats
+                        # in the process. This is so because Pandas does not
+                        # have an integer NA type:
+                        # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
+
+                        try:
+                            dtype_changed = df.dtypes[x] != dtype_list[x]
+                        except (IndexError, KeyError):
+                            continue
+
+                        if df.dtypes[x] != dtype_list[x]:
+                            if df.dtypes[x] == object:
+                                if not df[x].any():
+                                    df[x] = [pd.np.nan] * len(df)
+                                    dtype_list[x] = self.data_table[x].dtype
+                            elif dtype_list[x] == object:
+                                if not self.data_table[x].any():
+                                    self.data_table[x] = [pd.np.nan] * len(self.data_table)
+                                    dtype_list[x] = df[x].dtype
+                else:
+                    dtype_list = df.dtypes
+
+                df = current_query.insert_static_data(df)
+                #df["coquery_invisible_query_number"] = i
+
+                if not to_file:
+                    self.data_table = self.data_table.append(df)
+                else:
+                    df = manager.process(df, session=self)
+                    self.save_dataframe(df, append=True)
+
+                logger.info("Query executed ({:.3f} seconds, {} match{})".format(
+                    time.time() - start_time, len(df), "es" if len(df) != 1 else ""))
+
+        finally:
+            self.disconnect_from_db()
+
+        for col in self.data_table.columns:
+            if self.data_table.dtypes[col] == object:
+                if sys.version_info < (3, 0):
+                    try:
+                        self.data_table[col] = self.data_table[col].apply(lambda x: x.encode("utf-8"))
+                    except Exception as e:
+                        print(e)
+                        logger.warn(e)
+
+        ## FIXME: reimplement row visibility
+        #self.reset_row_visibility(queries.TokenQuery, self.data_table)
+
+        if not options.cfg.gui:
             self.aggregate_data()
             if not options.cfg.output_path:
                 output_file = sys.stdout
@@ -149,340 +277,243 @@ class Session(object):
                     file_mode = "a"
                 else:
                     file_mode = "w"
-                
+
                 output_file = codecs.open(
-                    options.cfg.output_path, 
-                    file_mode, 
+                    options.cfg.output_path,
+                    file_mode,
                     encoding=options.cfg.output_encoding)
 
             columns = [x for x in self.output_object.columns.values if not x.startswith("coquery_invisible")]
 
             self.output_object[columns].to_csv(
                 output_file,
-                header = [self.translate_header(x) for x in columns], 
+                header = [self.translate_header(x) for x in columns],
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
                 float_format = "%.{}f".format(options.cfg.digits),
                 index=False)
             output_file.flush()
 
-    def get_frequency_table(self):
-        frequency_table = queries.FrequencyQuery.aggregate_it(self.data_table, self.Corpus, session=self)
-        frequency_table.fillna("", inplace=True)
-        frequency_table.index = range(1, len(frequency_table.index) + 1)
+    def get_manager(self):
+        return managers.get_manager(options.cfg.MODE, self.Resource.name)
 
-        return frequency_table
+    def has_cached_data(self):
+        return (self, self.get_manager()) in self._manager_cache
 
-    #def mask_data(self):
-        #"""
-        #Return a data frame that contains the currently visible rows and 
-        #columns from the session's data table.
-        #"""
-        
-        #print(options.cfg.row_visibility)
-        #print(options.cfg.column_visibility)
-        #print(self.query_type)
-        
-        #invisible_rows = options.cfg.row_visibility[self.query_type].keys()
-        #visible_columns = [x for x in self.output_order if options.cfg.column_visibility[self.query_type].get(x, True)]
-
-        #print(invisible_rows)
-        #print(visible_columns)
-        
-        #print(self.data_table[visible_columns].iloc[~self.data_table.index.isin(invisible_rows)])
-        
+    @classmethod
+    def is_statistics_session(cls):
+        return cls._is_statistics
 
     def aggregate_data(self, recalculate=True):
         """
-        Apply the aggegate function from the current query type to the 
-        data table produced in this session.
+        Use the current manager to process the data table. If requested, use
+        a cached table (e.g. for sorting when no recalculation is needed).
         """
-        # if no explicit recalculation is requested, try to use a cached 
-        # output object for the current query type:
-        if not recalculate:
-            if self.query_type == queries.FrequencyQuery and hasattr(self, "_cached_frequency_table"):
-                self.output_object = self._cached_frequency_table
-                return
-            elif self.query_type == queries.DistinctQuery and hasattr(self, "_cached_unique_table"):
-                self.output_object = self._cached_unique_table
-                return
-            elif self.query_type == queries.CollocationQuery and hasattr(self, "_cached_collocation_table"):
-                self.output_object = self._cached_collocation_table
-                return
-            elif self.query_type == queries.ContingencyQuery and hasattr(self, "_cached_contingency_table"):
-                self.output_object = self._cached_contingency_table
-                return
-            elif self.query_type == queries.ContrastQuery and hasattr(self, "_cached_contrast_table"):
-                self.output_object = self._cached_contrast_table
-                return
-        # Recalculate the output object for the current query type, excluding
-        # invisible rows:
-        if self.query_type == queries.TokenQuery:
-            if not queries.TokenQuery in self.row_visibility:
-                self.reset_row_visibility(queries.TokenQuery, self.data_table)
-            tab = self.data_table
-        else:
-            tab = self.data_table[self.row_visibility[queries.TokenQuery]]
 
-        old_index = tab.index
+        manager = self.get_manager()
+        manager.set_filters(options.cfg.filter_list)
+        manager.set_group_filters(options.cfg.group_filter_list)
 
-        self.output_object = self.query_type.aggregate_it(
-            tab,
-            self.Corpus, session=self)
+        self.output_object = manager.process(self.data_table, self, recalculate)
 
-        self.output_object.fillna("", inplace=True)
-        self.output_object.index = range(1, len(self.output_object.index) + 1)
-
-        if (not self.query_type in self.row_visibility or 
-            len(old_index) != len(self.output_object.index) or
-            not old_index.equals(self.output_object.index)):
-            self.reset_row_visibility(self.query_type)
-
-        # cache the output object for the current query type:
-        if self.query_type == queries.FrequencyQuery:
-            self._cached_frequency_table = self.output_object
-        elif self.query_type == queries.DistinctQuery:
-            self._cached_unique_table = self.output_object
-        elif self.query_type == queries.CollocationQuery:
-            self._cached_collocation_table = self.output_object
-        elif self.query_type == queries.ContingencyQuery:
-            self._cached_contingency_table = self.output_object
-        elif self.query_type == queries.ContrastQuery:
-            self._cached_contrast_table = self.output_object
+        #self._manager_cache[(self, manager)] = self.output_object
 
     def drop_cached_aggregates(self):
-        try:
-            del self._cached_collocation_table
-        except AttributeError:
-            pass
-        try:
-            del self._cached_frequency_table
-        except AttributeError:
-            pass
-        try:
-            del self._cached_unique_table
-        except AttributeError:
-            pass
+        self._manager_cache = {}
 
-    def reset_row_visibility(self, query_type, df=pd.DataFrame()):
-        if df.empty:
-            df = self.output_object
-        self.row_visibility[query_type] = pd.Series(
-            data=[True] * len(df.index), index=df.index)
+    ## FIXME: reimplement row visibility
+    #def reset_row_visibility(self, query_type, df=pd.DataFrame()):
+        #if df.empty:
+            #df = self.output_object
+        #self.row_visibility[query_type] = pd.Series(
+            #data=[True] * len(df.index), index=df.index)
 
-    def filter_data(self, column="statistics_frequency"):
+    @staticmethod
+    def apply_substitutions(df):
+        subst = options.get_column_properties().get("substitutions", {})
+        if subst:
+            return df.replace(subst)
+        else:
+            return df
+
+    def retranslate_header(self, label):
         """
-        Apply the frequency filters to the output object.
+        Return the column name in the current content data frame that matches
+        the giben display name.
         """
-        if not self.filter_list or not options.cfg.use_corpus_filters:
-            return 
-        no_freq = True
-        for filt in self.filter_list:
-            if filt.var == COLUMN_NAMES["statistics_frequency"]:
-                if not hasattr(self, "frequency_table"):
-                    self.frequency_table = self.get_frequency_table()
-                try:
-                    self.frequency_table = self.frequency_table[self.frequency_table[column].apply(filt.check_number)]
-                    no_freq = False
-                except AttributeError:
-                    pass
-        
-        # did at least one of the filters contain a frequency filter?
-        if no_freq:
-            return
+        for x in self.data_table.columns:
+            if self.translate_header(x) == label:
+                return x
+        return None
 
-        columns = [x for x in self.data_table.columns if not x.startswith(("statistics_", "coquery_invisible")) and x != column]
-
-        self.data_table = pd.merge(self.data_table, self.frequency_table[columns], how="inner", copy=False, on=columns)
-        
     def translate_header(self, header, ignore_alias=False):
-        """ 
-        Return a string that contains the display name for the header 
-        string. 
-        
-        Translation removes the 'coq_' prefix and any numerical suffix, 
-        determines the resource feature from the remaining string, translates 
-        it to its display name, and returns the display name together with 
+        """
+        Return a string that contains the display name for the header
+        string.
+
+        Translation removes the 'coq_' prefix and any numerical suffix,
+        determines the resource feature from the remaining string, translates
+        it to its display name, and returns the display name together with
         the numerical suffix attached.
-        
+
         Parameters
         ----------
         header : string
             The resource string that is to be translated
         ignore_alias : bool
-            True if user names should be ignored, and False if user names 
+            True if user names should be ignored, and False if user names
             should be used.
-            
+
         Returns
         -------
         s : string
             The display name of the resource string
         """
+
+        if header == None:
+            return header
+
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
+        # if options.cfg.verbose: print("translate_header({})".format(header))
         if not ignore_alias and header in options.cfg.column_names:
+            # if options.cfg.verbose: print(1)
             return options.cfg.column_names[header]
-        
-        if header in self._header_cache:
-            return self._header_cache[header]
-        
-        # FIXME:
-        # this is an ugly hack: a RuntimeError is raised if the header could
-        # be translated!
-        try:
-            # Retain the column header if the query string was from an input file
-            if header == "coquery_query_string" and options.cfg.query_label:
-                raise RuntimeError(options.cfg.query_label)
 
-            if header.startswith("coquery_invisible"):
-                raise RuntimeError(header)
+        # Retain the column header if the query string was from an input file
+        if header == "coquery_query_string" and options.cfg.query_label:
+            # if options.cfg.verbose: print(2)
+            return options.cfg.query_label
 
-            # treat frequency columns:
-            if header == "statistics_frequency":
-                if options.cfg.query_label:
-                    raise RuntimeError("{}({})".format(COLUMN_NAMES[header], options.cfg.query_label))
-                else:
-                    raise RuntimeError("{}".format(COLUMN_NAMES[header]))
-            
-            if header.startswith("statistics_g_test"):
-                label = header.partition("statistics_g_test_")[-1]
-                raise RuntimeError("G²('{}', y)".format(label))
-            
-            # other features:
-            if header in COLUMN_NAMES:
-                raise RuntimeError(COLUMN_NAMES[header])
-            
-            # deal with function headers:
-            if header.startswith("func_"):
-                match = re.match("func_(.*)_(\d+)_(\d+)$", header)
-                core = match.group(1)
-                function_number = int(match.group(2))
-                item_number = int(match.group(3))
-                #print(header, core, function_number, item_number)
-                if core.startswith("db_"):
-                    match2 = re.match("db_(.*)_coq_(.*)", core)
-                    resource = options.get_resource_of_database(match2.group(1))
-                    res_prefix = "{}.".format(resource.name)
-                else:
-                    match2 = re.match("coq_(.*)", core)
-                    res_prefix = ""
-                    resource = self.Resource
+        if header.startswith("coquery_invisible"):
+            # if options.cfg.verbose: print(3)
+            return header
 
-                if core.startswith("coq_"):
-                    core = core.rpartition("coq_")[-1]
-                _, hashed, tab, feat = self.Resource.split_resource_feature(core)
-                if hashed != None:
-                    res_hash = "{}.".format(hashed)
-                else:
-                    res_hash = ""
-
-                lookup = "func.{}{}_{}".format(res_hash, tab, feat)
-                count = 1
-                for rc_feature, _, is_lexical, full_label, label in options.cfg.selected_functions:
-                    if rc_feature == lookup:
-                        if count == function_number:
-                            if is_lexical:
-                                try:
-                                    raise RuntimeError(label.format(N=item_number))
-                                except:
-                                    raise RuntimeError(label)
-                                    
-                            else:
-                                raise RuntimeError(label.format(N=""))
-                        count += 1
-                raise RuntimeError("FUNC")
-                #return "FUNC({})".format(self.translate_header(header))
-
-            ## treat functions:
-            #if is_function:
-                #func_counter = collections.Counter()
-                #for res, _, label in options.cfg.selected_functions:
-                    #res = res.rpartition(".")[-1]
-                    #func_counter[res] += 1
-                    #fc = func_counter[res]
-                    
-                    #new_name = "func_{}_{}".format(res, fc)
-                    #if new_name == rc_feature:
-                        #column_name = getattr(resource, res)
-                        #function_label = label
-                        #break
-                #else:
-                    #if options.cfg.selected_functions:
-                        #column_name = res
-                    #else:
-                        #column_name = "UNKNOWN"
-                    #function_label = rc_feature
-                #try:
-                    #number = self.quantified_number_labels[int(number) - 1]
-                #except ValueError:
-                    #pass
-                #return str(function_label).replace(column_name, "{}{}{}".format(
-                    #res_prefix, column_name, number))
-
-            
-            if header.startswith("db_"):
-                match = re.match("db_(.*)_coq_(.*)", header)
-                resource = options.get_resource_of_database(match.group(1))
-                res_prefix = "{}.".format(resource.name)
-                header = match.group(2)
+        # treat frequency columns:
+        if header == "statistics_frequency":
+            if options.cfg.query_label:
+                # if options.cfg.verbose: print(4)
+                return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
             else:
-                match = re.match("coq_(.*)", header)
-                if not match:
-                    raise RuntimeError(header)
-                header = match.group(1)
-                res_prefix = ""
-                resource = self.Resource
-                
-            # special treatment of context columns:
-            if header.startswith("context_lc"):
-                raise RuntimeError("L{}".format(header.split("context_lc")[-1]))
-            if header.startswith("context_rc"):
-                raise RuntimeError("R{}".format(header.split("context_rc")[-1]))
-            
-            rc_feature, _, number = header.rpartition("_")
-            
-            # If there is only one query token, number is set to "" so that no
-            # number suffix is added to the labels in this case:
-            if self.get_max_token_count() == 1:
-                number = ""
+                # if options.cfg.verbose: print(5)
+                return "{}".format(COLUMN_NAMES[header])
 
-            # special treatment of query tokens:
-            if rc_feature == "coquery_query_token":
-                try:
-                    number = self.quantified_number_labels[int(number) - 1]
-                except ValueError:
-                    pass
-                raise RuntimeError("{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number))
-            
-            # special treatment of lexicon features:
-            if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
-                try:
-                    number = self.quantified_number_labels[int(number) - 1]
-                except ValueError:
-                    pass
-                raise RuntimeError("{}{}{}".format(res_prefix, getattr(resource, str(rc_feature)), number))
+        if header.startswith("statistics_g_test"):
+            label = header.partition("statistics_g_test_")[-1]
+            # if options.cfg.verbose: print(6)
+            return "G²('{}', y)".format(label)
 
-            # treat any other feature that is provided by the corpus:
+        if header.startswith("coq_userdata"):
+            return "Userdata{}".format(header.rpartition("_")[-1])
+
+        if header.startswith("coq_context"):
+            if header == "coq_context_left":
+                s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_left)
+            elif header == "coq_context_right":
+                s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_right)
+            elif header == "coq_context_string":
+                s = "{}({}L, {}R)".format(COLUMN_NAMES[header],
+                                            options.cfg.context_left,
+                                            options.cfg.context_right)
+            elif header.startswith("coq_context_lc"):
+                s = "L{}".format(header.split("coq_context_lc")[-1])
+            elif header.startswith("coq_context_rc"):
+                s = "R{}".format(header.split("coq_context_rc")[-1])
+            # if options.cfg.verbose: print(7)
+            return s
+
+        # other features:
+        if header in COLUMN_NAMES:
+            # if options.cfg.verbose: print(8)
+            return COLUMN_NAMES[header]
+
+        # deal with function headers:
+        if header.startswith("func_"):
+            manager = self.get_manager()
+            match = re.search("(.*)\((.*)\)", header)
+            if match:
+                s = match.group(1)
+                # if options.cfg.verbose: print(s, header)
+                fun = manager.get_function(s)
+                try:
+                    # if options.cfg.verbose: print(9)
+                    return "{}({})".format(fun.get_label(session=self, manager=manager),
+                                           match.group(2))
+                except AttributeError:
+                    # if options.cfg.verbose: print(10)
+                    return header
+            else:
+                fun = manager.get_function(header)
+                if fun == None:
+                    # if options.cfg.verbose: print(11)
+                    return header
+                else:
+                    # if options.cfg.verbose: print(12)
+                    return fun.get_label(session=self, manager=manager)
+
+        if header.startswith("db_"):
+            match = re.match("db_(.*)_coq_(.*)", header)
+            resource = options.get_resource_of_database(match.group(1))
+            res_prefix = "{}.".format(resource.name)
+            header = match.group(2)
+        else:
+            match = re.match("coq_(.*)", header)
+            if not match:
+                # if options.cfg.verbose: print(13)
+                return header
+            header = match.group(1)
+            res_prefix = ""
+            resource = self.Resource
+
+        rc_feature, _, number = header.rpartition("_")
+
+        # If there is only one query token, number is set to "" so that no
+        # number suffix is added to the labels in this case:
+        if self.get_max_token_count() == 1:
+            number = ""
+
+        # special treatment of query tokens:
+        if rc_feature == "coquery_query_token":
             try:
-                raise RuntimeError("{}{}".format(res_prefix, getattr(resource, str(rc_feature))))
-            except AttributeError:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
                 pass
+            # if options.cfg.verbose: print(14)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
-            # other features:
-            if rc_feature in COLUMN_NAMES:
-                try:
-                    number = self.quantified_number_labels[int(number) - 1]
-                except ValueError:
-                    pass
-                raise RuntimeError("{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number))
+        # special treatment of lexicon features:
+        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
+            try:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            # if options.cfg.verbose: print(15)
+            return "{}{}{}".format(res_prefix,
+                                   getattr(resource, str(rc_feature)).replace("__", " "),
+                                   number)
 
-            raise RuntimeError(header)
-        except RuntimeError as e:
-            self._header_cache[header] = e.args[0]
-            
-        return self._header_cache[header]
+        # treat any other feature that is provided by the corpus:
+        try:
+            # if options.cfg.verbose: print(16)
+            return "{}{}".format(res_prefix,
+                                 getattr(resource, str(rc_feature)).replace("__", " "))
+        except AttributeError:
+            pass
+
+        # other features:
+        if rc_feature in COLUMN_NAMES:
+            try:
+                number = self.quantified_number_labels[int(number) - 1]
+            except ValueError:
+                pass
+            # if options.cfg.verbose: print(17)
+            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
+
+        # if options.cfg.verbose: print(18)
+        return header
 
 class StatisticsSession(Session):
+    _is_statistics = True
     def __init__(self):
         super(StatisticsSession, self).__init__()
         self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
@@ -500,7 +531,7 @@ class SessionCommandLine(Session):
         for query_string in options.cfg.query_list:
             if self.query_type:
                 new_query = self.query_type(query_string, self)
-            else: 
+            else:
                 raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
             self.query_list.append(new_query)
         self.max_number_of_input_columns = 0
@@ -510,7 +541,7 @@ class SessionInputFile(Session):
         super(SessionInputFile, self).__init__()
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-            
+
             try:
                 input_file = pd.read_table(
                     filepath_or_buffer=InputFile,
@@ -532,7 +563,7 @@ class SessionInputFile(Session):
                 current_line = list(current_line[1])
                 if options.cfg.query_column_number > len(current_line):
                     raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
-                
+
                 if read_lines >= options.cfg.skip_lines:
                     try:
                         query_string = current_line.pop(options.cfg.query_column_number - 1)
@@ -545,12 +576,12 @@ class SessionInputFile(Session):
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
                 read_lines += 1
             self.input_columns = ["coq_{}".format(x) for x in self.header]
-            
+
 
         logger.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
             logger.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
-            
+
 
 class SessionStdIn(Session):
     def __init__(self):
@@ -569,9 +600,8 @@ class SessionStdIn(Session):
                         self.query_list.append(new_query)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
             read_lines += 1
-        logger.info("Reading standard input ({} {})".format(len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))            
+        logger.info("Reading standard input ({} {})".format(len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
             logger.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
-    
+
 logger = logging.getLogger(NAME)
-    
