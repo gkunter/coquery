@@ -13,9 +13,7 @@ from __future__ import unicode_literals
 import logging
 import pandas as pd
 
-from .defines import (NAME,
-                      OPERATOR_STRINGS,
-                      OP_MATCH, OP_NMATCH, OP_RANGE, OP_NE, OP_EQ)
+from .defines import *
 from .general import CoqObject
 
 try:
