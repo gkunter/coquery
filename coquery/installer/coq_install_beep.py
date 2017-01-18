@@ -65,7 +65,7 @@ class BuilderClass(BaseCorpusBuilder):
         
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
-             Column(self.corpus_word, "VARCHAR(25) NOT NULL"),
+             Column(self.corpus_word, "VARCHAR(50) NOT NULL"),
              Column(self.corpus_transcript, "VARCHAR(100) NOT NULL"),
              Column(self.corpus_ipa, "VARCHAR(100) NOT NULL")])
 
