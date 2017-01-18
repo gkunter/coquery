@@ -476,8 +476,10 @@ class Options(object):
                     # COCA compatibility options
                     group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
                     group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
-            except KeyError:
-                pass
+            except (KeyError, TypeError, AttributeError) as e:
+                print("Exception raised with feature '{}' () from corpus {}:".format(
+                    rc_feature, column, self.args.corpus))
+                print(e)
 
         if D:
             # add choice arguments for the available table columns:
