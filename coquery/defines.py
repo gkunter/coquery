@@ -298,7 +298,7 @@ except NameError:
 
 msg_userdata_warning = """
 <p><b>Your results table contains user data.</b></p>
-<p>If you start a new query, the user data that you have manually entered
+<p>If you start a new query, the user data that you have entered manually
 will be lost.</p>
 <p>Do you really want to start a new query?</p>
 """

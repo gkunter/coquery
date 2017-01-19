@@ -601,12 +601,14 @@ class BaseCorpusBuilder(corpus.BaseResource):
         lines.insert(0, "    time_features = {}".format(
             "[{}]".format(", ".join(['"{}"'.format(x) for x in self._time_features]))))
         lines.insert(0, "    number_of_tokens = {}\n".format(self._corpus_id))
-        lines.insert(0, "    lexical_features = {}\n".format(
-            "[{}]".format(", ".join(
-                ['"{}"'.format(x) for x in self._lexical_features]))))
-        lines.insert(0, "    speaker_features = {}\n".format(
-            "[{}]".format(", ".join(
-                ['"{}"'.format(x) for x in self._speaker_features]))))
+        if self._lexical_features:
+            lines.insert(0, "    lexical_features = {}\n".format(
+                "[{}]".format(", ".join(
+                    ['"{}"'.format(x) for x in self._lexical_features]))))
+        if self._speaker_features:
+            lines.insert(0, "    speaker_features = {}\n".format(
+                "[{}]".format(", ".join(
+                    ['"{}"'.format(x) for x in self._speaker_features]))))
         return "".join(lines)
     
     def get_method_code(self, method):
@@ -1734,6 +1736,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 warnings.warn(str(e))
                 print(str(e))
                 self.remove_build()
+                self.DB.connection.close()
                 raise e
         self.DB.engine.dispose()
         

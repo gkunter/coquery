@@ -990,7 +990,7 @@ class BuilderClass(BaseCorpusBuilder):
                     self._speaker_dict[who] = self._speaker_id
         # <s> is a sentence:
         elif tag == "s":
-            sentence = "{}{}".format(self._value_source_xmlname, 
+            sentence = "{}_{}".format(self._value_source_xmlname,
                                      element.attrib["n"].strip())
             self._sentence_id = self.table(
                 self.sentence_table).get_or_insert({self.sentence_label: sentence})

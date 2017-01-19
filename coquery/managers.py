@@ -515,14 +515,16 @@ class Manager(CoqObject):
         # 'get *{1,2}', the index of the most specific match is retained, for
         # example a match such as 'get happy', whereas the index of the less
         # specific matches, for example 'get <NA>', are discarded.
-        ix = (df.sort_values(by="coquery_invisible_number_of_tokens",
-                             ascending=False)
-                .drop_duplicates("coquery_invisible_corpus_id")
-                .index)
+        if ("coquery_invisible_corpus_id" in df.columns and
+            "coquery_invisible_number_of_tokens" in df.columns):
+            ix = (df.sort_values(by="coquery_invisible_number_of_tokens",
+                                ascending=False)
+                    .drop_duplicates("coquery_invisible_corpus_id")
+                    .index)
 
-        # use the index to discard all rows that contain duplicate corpus
-        # ids.
-        df = df.loc[ix]
+            # use the index to discard all rows that contain duplicate corpus
+            # ids.
+            df = df.loc[ix]
 
         self.drop_on_na = None
 

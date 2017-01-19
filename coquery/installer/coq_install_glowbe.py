@@ -13,8 +13,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 import zipfile
 import os.path
+import logging
 import pandas as pd
-import logger
 
 try:
     from cStringIO import BytesIO
@@ -22,7 +22,7 @@ except ImportError:
     from io import BytesIO
 
 from coquery.corpusbuilder import BaseCorpusBuilder, Column, Identifier, Link
-
+from coquery.defines import NAME
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.zip"
@@ -231,3 +231,5 @@ class BuilderClass(BaseCorpusBuilder):
 
 if __name__ == "__main__":
     BuilderClass().build()
+
+logger = logging.getLogger(NAME)
