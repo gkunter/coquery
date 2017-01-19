@@ -465,15 +465,15 @@ class VisualizationDesigner(QtGui.QDialog):
         data_y = self.ui.tray_data_y.data()
         data_z = self.ui.tray_data_z.data()
         if data_x:
-           levels_x = sorted(list(self.df[data_x].unique()))
+           levels_x = sorted(list(self.df[data_x].dropna().unique()))
         else:
             levels_x = []
         if data_y:
-            levels_y = sorted(list(self.df[data_y].unique()))
+            levels_y = sorted(list(self.df[data_y].dropna().unique()))
         else:
             levels_y = []
         if data_z:
-            levels_z = sorted(list(self.df[data_z].unique()))
+            levels_z = sorted(list(self.df[data_z].dropna().unique()))
         else:
             levels_z = []
 
