@@ -463,6 +463,7 @@ class Table(object):
                         pattern = "{} {}"
                         str_list.append(pattern.format(column.name, column.data_type))
                         str_list.append("PRIMARY KEY ({})".format(column.name))
+                    # add generated index column for next token?
                     if index_gen:
                         if "mariadb" in self._DB.version.lower():
                             kwd = "PERSISTENT"
@@ -472,7 +473,6 @@ class Table(object):
                             id=column.name, kwd=kwd))
                         str_list.append("INDEX {id}Next{id} ({id}, Next{id})".format(
                             id=column.name))
-
                 else:
                     str_list.append("{} {}".format(
                         column.name,
