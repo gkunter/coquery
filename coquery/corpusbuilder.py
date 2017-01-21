@@ -404,8 +404,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressUpdate.emit(0)
 
         for i, current_table in enumerate(self._new_tables):
-            S = self._new_tables[current_table].get_create_string(self.arguments.db_type)
             self._new_tables[current_table].setDB(self.DB)
+            S = self._new_tables[current_table].get_create_string(
+                self.arguments.db_type,
+                index_gen=current_table == getattr(self, "corpus_table"))
             self.DB.create_table(current_table, S)
             if self._widget:
                 self._widget.progressUpdate.emit(i + 1)

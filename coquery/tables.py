@@ -415,7 +415,7 @@ class Table(object):
 
         return dt_type
 
-    def get_create_string(self, db_type):
+    def get_create_string(self, db_type, index_gen=False):
         """
         Generates the SQL command required to create the table.
 
@@ -423,6 +423,18 @@ class Table(object):
         ----------
         db_type : str
             A string representing the SQL engine, either "mysql" or "sqlite"
+
+        index_gen : bool
+            A boolean variable that indicates whether a generated indexed
+            column should be created for this table.
+
+            If `index_gen` is False, no generated index column will be
+            generated. If it is True, an generated column named `Next{}` will
+            will be generated with the primary index name inserted into the
+            string. This column will contain the value of the
+            primary key + 1.
+
+            At the moment, this is only available in MySQL databases.
 
         Returns
         -------
@@ -451,6 +463,16 @@ class Table(object):
                         pattern = "{} {}"
                         str_list.append(pattern.format(column.name, column.data_type))
                         str_list.append("PRIMARY KEY ({})".format(column.name))
+                    if index_gen:
+                        if "mariadb" in self._DB.version.lower():
+                            kwd = "PERSISTENT"
+                        else:
+                            kwd = "STORED"
+                        str_list.append("Next{id} INT GENERATED ALWAYS AS ({id} + 1) {kwd}".format(
+                            id=column.name, kwd=kwd))
+                        str_list.append("INDEX {id}Next{id} ({id}, Next{id})".format(
+                            id=column.name))
+
                 else:
                     str_list.append("{} {}".format(
                         column.name,
