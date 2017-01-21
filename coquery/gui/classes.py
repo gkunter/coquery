@@ -46,6 +46,7 @@ class CoqThread(QtCore.QThread):
         self.exiting = False
         self.args = args
         self.kwargs = kwargs
+        self.quitted = False
 
     def __del__(self):
         self.exiting = True
@@ -58,12 +59,15 @@ class CoqThread(QtCore.QThread):
         self.INTERRUPT_FUN = fun
 
     def quit(self):
-        self.INTERRUPT_FUN()
+        self.quitted = True
+        if hasattr(self, "INTERRUPT_FUN"):
+            self.INTERRUPT_FUN()
         super(CoqThread, self).quit()
 
     def run(self):
         self.taskStarted.emit()
         self.exiting = False
+        self.quitted = False
         result = None
         try:
             if options.cfg.profile:
