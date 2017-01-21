@@ -32,7 +32,7 @@ if options.use_mysql:
     import pymysql
     import pymysql.cursors
 
-class SqlDB (object):
+class SqlDB(object):
     """ A wrapper for MySQL. """
     def __init__(self, Host, Port, Type, User, Password, db_name="", db_path="", encoding="utf8", connect_timeout=60, local_infile=0):
         
@@ -52,6 +52,11 @@ class SqlDB (object):
 
         self.sql_url = sqlhelper.sql_url(options.cfg.current_server, self.db_name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
+        test, version = sqlhelper.test_configuration(options.cfg.current_server)
+        if test:
+            self.version = version
+        else:
+            self.version = ""
         self.connection = None
             
     def create_database(self, db_name):
