@@ -97,8 +97,12 @@ class ColumnPropertiesDialog(QtGui.QDialog):
     def accept(self, *args):
         super(ColumnPropertiesDialog, self).accept(*args)
         options.settings.setValue("columnproperties_size", self.size())
-        options.settings.setValue("columnproperties_column", self.ui.widget_selection.currentItem().data(QtCore.Qt.UserRole))
-        options.settings.setValue("columnproperties_index", self.ui.tab_widget.currentIndex())
+        current_item = self.ui.widget_selection.currentItem()
+        if current_item:
+            options.settings.setValue("columnproperties_column",
+                                      current_item.data(QtCore.Qt.UserRole))
+        options.settings.setValue("columnproperties_index",
+                                  self.ui.tab_widget.currentIndex())
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -119,7 +123,12 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         self.ui.widget_selection.setMoveAvailable(False)
         self.ui.widget_selection.setSelectedLabel("Visible columns")
         self.ui.widget_selection.setAvailableLabel("Hidden columns")
-        self.show_column(self.ui.widget_selection.currentItem())
+
+        if columns:
+            self.show_column(self.ui.widget_selection.currentItem())
+        else:
+            self.ui.tab_widget.setEnabled(False)
+
         self.ui.widget_selection.currentItemChanged.connect(self.show_column)
         self.ui.edit_column_name.textChanged.connect(self.change_alias)
         self.ui.table_substitutions.cellChanged.connect(
