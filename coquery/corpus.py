@@ -1159,9 +1159,15 @@ class SQLResource(BaseResource):
                 operator = "REGEXP"
             else:
                 if token.has_wildcards(token.S):
-                    operator = "LIKE"
+                    if token.negated:
+                        operator = "NOT LIKE"
+                    else:
+                        operator = "LIKE"
                 else:
-                    operator = "="
+                    if token.negated:
+                        operator = "<>"
+                    else:
+                        operator = "="
             alias = "COQ_{}_{}".format(tab.upper(), i+1)
 
             fstr = "{}.{} {} '{}'"
@@ -1186,7 +1192,7 @@ class SQLResource(BaseResource):
     def get_annotation(cls, n, table):
         """
         """
-        sql_template = "{table_name} AS {table_alias}"
+        sql_template = "LEFT JOIN {table_name} AS {table_alias}"
         kwargs = {
             "table_name": getattr(cls, "{}_table".format(table)),
             "table_alias": "COQ_{}_1".format(table.upper())}
@@ -1197,7 +1203,7 @@ class SQLResource(BaseResource):
             " AND {parent_alias}.{parent_end} - {table_alias}.{table_start} > 0.001"
             " AND {table_alias}.{table_origin} = COQ_CORPUS_1.{parent_origin}")
         kwargs = {
-            "table_alias": table_alias,
+            "table_alias": "COQ_{}_1".format(table.upper()),
             "table_start": getattr(cls, "{}_starttime".format(table)),
             "table_end": getattr(cls, "{}_endtime".format(table)),
             "table_origin": getattr(cls, "{}_origin_id".format(table)),
@@ -1208,7 +1214,8 @@ class SQLResource(BaseResource):
                              getattr(cls, "corpus_file_id", "")}
         where_str = sql_template.format(**kwargs)
 
-        return [table_str], [where_str]
+        table_str = "{} ON {}".format(table_str, where_str)
+        return table_str
 
     @classmethod
     def get_required_columns(cls, token_list, selected, to_file=False):
@@ -1322,13 +1329,9 @@ class SQLResource(BaseResource):
         for rc_feature in features:
             _, tab, _ = cls.split_resource_feature(rc_feature)
             if tab in cls.annotations:
-                table_strings, where_strings = cls.get_annotation(len(query_items), tab)
-                for s in table_strings:
-                    if s not in join_list:
-                        join_list.append(s)
-                for s in where_strings:
-                    if s not in condition_list:
-                        condition_list.append(s)
+                table_string = cls.get_annotation(len(query_items), tab)
+                if table_string not in join_list:
+                    join_list.append(table_string)
 
         sql_template = """
         SELECT {columns}
