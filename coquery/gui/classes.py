@@ -1802,9 +1802,12 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.formatted = self.format_content(self.content)
 
     def flags(self, index):
-        if self.content.columns[index.column()].startswith("coq_userdata"):
-            return super(CoqTableModel, self).flags(index) | QtCore.Qt.ItemIsEditable
-        else:
+        try:
+            if self.content.columns[index.column()].startswith("coq_userdata"):
+                return super(CoqTableModel, self).flags(index) | QtCore.Qt.ItemIsEditable
+            else:
+                return super(CoqTableModel, self).flags(index)
+        except IndexError:
             return super(CoqTableModel, self).flags(index)
 
     def get_dtype(self, column):
