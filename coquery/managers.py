@@ -581,11 +581,14 @@ class Manager(CoqObject):
         # 'get *{1,2}', the index of the most specific match is retained, for
         # example a match such as 'get happy', whereas the index of the less
         # specific matches, for example 'get <NA>', are discarded.
-        if ("coquery_invisible_corpus_id" in df.columns and
-            "coquery_invisible_number_of_tokens" in df.columns):
-            ix = (df.sort_values(by="coquery_invisible_number_of_tokens",
-                                ascending=False)
-                    .drop_duplicates("coquery_invisible_corpus_id")
+        id_cols = [x for x in df.columns
+                   if x.startswith("coquery_invisible")
+                   and x.endswith("_id")]
+
+        if (id_cols and "coquery_invisible_number_of_tokens" in df.columns):
+            ix = (df.sort_values(by=id_cols+["coquery_invisible_number_of_tokens"],
+                                ascending=[True] * len(id_cols) + [False])
+                    .drop_duplicates(id_cols)
                     .index)
 
             # use the index to discard all rows that contain duplicate corpus
@@ -804,6 +807,7 @@ class Collocations(Manager):
         # function should be used to get the correct size.
         # If no corpus features are selected, the whole corpus will be
         # used.
+        self.dropped_na_count = 0
         corpus_size = session.Resource.corpus.get_corpus_size()
 
         left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
