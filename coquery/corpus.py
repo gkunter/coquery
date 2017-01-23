@@ -789,7 +789,7 @@ class SQLResource(BaseResource):
         self._word_cache = {}
         self.lexicon = lexicon
         self.corpus = corpus
-        _, _, self.db_type, _, _ = options.get_con_configuration()
+        self.db_type = options.get_configuration_type()
 
         # FIXME: in order to make this not depend on a fixed database layout
         # (here: 'source' and 'file' tables), we should check for any table
@@ -885,7 +885,7 @@ class SQLResource(BaseResource):
                 else:
                     comp = "COQ_CORPUS_{prev}.{id} + 1".format(prev=current_pos - 1, id=cls.corpus_id)
 
-                if i == 0:
+                if current_pos == 1:
                     s = "{corpus} AS COQ_CORPUS_{N}"
                 else:
                     s = "INNER JOIN {corpus} AS COQ_CORPUS_{N} ON COQ_CORPUS_{N}.{corpus_id} = {comp}"
@@ -1083,7 +1083,7 @@ class SQLResource(BaseResource):
         return attach_list
 
     @classmethod
-    def get_lemmeatized_contitions(cls, i, token):
+    def get_lemmatized_contitions(cls, i, token):
         # FIXME: lemmatization doesn't work yet!
         if not hasattr(cls, QUERY_ITEM_LEMMA):
             raise UnsupportedQueryItemError("Lemmatization by \"#\" flag")
@@ -1134,6 +1134,37 @@ class SQLResource(BaseResource):
         Return a dictionary with required tables as names, and SQL
         conditions as values.
         """
+
+        def handle_case(s):
+            # take care of case options:
+            if (options.cfg.query_case_sensitive):
+                if (options.get_configuration_type() == SQL_MYSQL):
+                    return "BINARY {}".format(s)
+                elif options.get_configuration_type() == SQL_SQLITE:
+                    return "{} COLLATE BINARY".format(s)
+            else:
+                if (options.get_configuration_type() == SQL_MYSQL):
+                    return s
+                elif options.get_configuration_type() == SQL_SQLITE:
+                    return "{} COLLATE NOCASE".format(s)
+
+        def get_operator(S):
+            if options.cfg.regexp:
+                operator = "REGEXP"
+            else:
+                token = tokens.COCAToken(S)
+                if token.has_wildcards(S):
+                    if token.negated:
+                        operator = "NOT LIKE"
+                    else:
+                        operator = "LIKE"
+                else:
+                    if token.negated:
+                        operator = "<>"
+                    else:
+                        operator = "="
+            return operator
+
         d = defaultdict(list)
         # Make sure that the token contains only those query item types that
         # are actually supported by the resource:
@@ -1147,7 +1178,7 @@ class SQLResource(BaseResource):
                 continue
 
             if token.lemmatize:
-                condition = cls.get_lemmeatized_contitions(i, token)
+                condition = cls.get_lemmatized_contitions(i, token)
 
             try:
                 col = getattr(cls, getattr(cls, label))
@@ -1155,36 +1186,35 @@ class SQLResource(BaseResource):
                 raise UnsupportedQueryItemError(item_type)
             _, tab, _ = cls.split_resource_feature(getattr(cls, label))
 
-            if options.cfg.regexp:
-                operator = "REGEXP"
-            else:
-                if token.has_wildcards(token.S):
-                    if token.negated:
-                        operator = "NOT LIKE"
-                    else:
-                        operator = "LIKE"
-                else:
-                    if token.negated:
-                        operator = "<>"
-                    else:
-                        operator = "="
             alias = "COQ_{}_{}".format(tab.upper(), i+1)
-
-            fstr = "{}.{} {} '{}'"
-            # take care of case options:
-            if (options.cfg.query_case_sensitive):
-                if (options.get_con_configuration()[2] == SQL_MYSQL):
-                    format_str = "BINARY {}".format(fstr)
-                elif options.get_con_configuration()[2] == SQL_SQLITE:
-                    format_str = "{} COLLATE BINARY".format(fstr)
+            if len(spec_list) == 1:
+                x = spec_list[0]
+                format_str = handle_case("{}.{} {} '{}'")
+                s = format_str.format(alias, col, get_operator(x), x)
             else:
-                if (options.get_con_configuration()[2] == SQL_MYSQL):
-                    format_str = fstr
-                elif options.get_con_configuration()[2] == SQL_SQLITE:
-                    format_str = "{} COLLATE NOCASE".format(fstr)
+                wildcards = []
+                explicit = []
+                for x in spec_list:
+                    if tokens.COCAToken.has_wildcards(x):
+                        wildcards.append(x)
+                    else:
+                        explicit.append(x)
 
-            s = " OR ".join([format_str.format(alias, col, operator, x)
-                            for x in spec_list])
+                if explicit:
+                    format_str = handle_case("{}.{} IN ({})")
+                    s_list = ",".join(["'{}'".format(x) for x in explicit])
+                    s_exp = [format_str.format(alias, col, s_list)]
+                else:
+                    s_exp = []
+
+                if options.cfg.regexp:
+                    operator = "REGEXP"
+                else:
+                    operator = "LIKE" if not token.negated else "NOT LIKE"
+                format_str = handle_case("{}.{} {} '{}'")
+                s_list = [format_str.format(alias, col, operator, x)
+                          for x in wildcards]
+                s = " OR ".join(s_list + s_exp)
             d[tab].append(s)
         return d
 
