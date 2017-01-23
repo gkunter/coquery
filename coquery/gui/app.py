@@ -853,6 +853,14 @@ class CoqueryApp(QtGui.QMainWindow):
     ### interface status and interface interaction methods
     ###
 
+    def check_filters(self, df):
+        """
+        Checks whether filters are still valid. Remove invalid filters.
+        This method is called whenever a reaggregation has completed.
+        """
+        l = [x for x in options.cfg.filter_list if x.feature in df.columns]
+        options.cfg.filter_list = l
+
     def collapse_hidden_columns(self):
         splitter_sizeHint = self.ui.splitter_columns.sizeHint()
         self._hidden = True
@@ -1267,6 +1275,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.show_query_status()
         self.check_group_items()
+        self.check_filters(self.Session.output_object)
         self.set_button_labels()
         self.ui.button_apply_management.setDisabled(True)
         self.ui.button_apply_management.setFlat(True)
