@@ -11,62 +11,37 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
-from __future__ import absolute_import
 
 import warnings
-from collections import *
+from collections import defaultdict, deque
 import re
+import logging
 
-try:
-    import sqlalchemy
-    import pandas as pd
-except ImportError:
-    # Missing dependencies are handled in check_system() from coquery.py,
-    # so we can pass any ImportError here.
-    pass
+import sqlalchemy
+import pandas as pd
 
-from .errors import *
-from .defines import *
-from .general import *
+from .errors import (
+    WordNotInLexiconError, UnsupportedQueryItemError)
+from .defines import (
+    QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
+    SQL_MYSQL, SQL_SQLITE,
+    CONTEXT_STRING, NAME,
+    PREFERRED_ORDER,
+    DEFAULT_MISSING_VALUE)
+
+from .general import collapse_words
 from . import tokens
 from . import options
 from . import sqlhelper
 from .links import get_by_hash
 
-#class ResFeature(str):
-    #""" Define a feature class that acts like a string, but has some class
-    #properties that makes using features somewhat easier."""
-    #def __init__(self, s, *args):
-        #if "_" not in s:
-            #raise ValueError
-        #super(ResFeature, self).__imit__(s, args)
-        #self._s = s
-
-    #@property
-    #def table(self):
-        #""" Return the resource table to which the feature belongs."""
-        #return "{}_table".format(self._s.split("_")[0])
-
-    #@property
-    #def table_id(self):
-        #""" Return the id resource feature for the table the feature belongs
-        #to. """
-        #return "{}_id".format(self._s.split("_")[0])
-
-    #def link_id(self, table):
-        #""" Return the link resource feature that links the feature's table
-        #to the specified table. """
-        #return "{}_{}_id".format(self._s.split("_")[0], table)
-
-    #def is_id(self):
-        #""" Return True if the resource feature is an identifier, i.e. ends
-        #in "_id", or False otherwise."""
-        #return _s.endswith("_id")
-
 class LexiconClass(object):
     """
     Define a base lexicon class.
     """
+    def pos_check_function(self, l):
+        return [self.is_part_of_speech(s) for s in l]
 
     def check_pos_list(self, L):
         """ Returns the number of elements for which
@@ -78,69 +53,23 @@ class LexiconClass(object):
                 count += 1
         return count
 
-    def sql_string_get_posid_list_where(self, token):
-        comparing_operator = self.resource.get_operator(token)
-        where_clauses = []
-        target = self.resource.get_field(getattr(self.resource, QUERY_ITEM_POS))
-        for current_pos in token.class_specifiers:
-            S = '{} {} "{}"'.format(target, comparing_operator, current_pos)
-            where_clauses.append (S)
-        return "(%s)" % "OR ".join (where_clauses)
-
-    def sql_string_is_part_of_speech(self, pos):
-        current_token = tokens.COCAToken(pos, self, parse=True, replace=False)
-        rc_feature = getattr(self.resource, QUERY_ITEM_POS)
-        _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-        S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-            getattr(self.resource, "{}_id".format(table)),
-            getattr(self.resource, "{}_table".format(table)),
-            getattr(self.resource, rc_feature),
-            self.resource.get_operator(current_token),
-            pos.replace("'", "''"))
-        return S
-
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
-            S = self.sql_string_is_part_of_speech(pos)
+            current_token = tokens.COCAToken(pos, replace=False)
+            rc_feature = getattr(self.resource, QUERY_ITEM_POS)
+            _, table, _ = self.resource.split_resource_feature(rc_feature)
+            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                getattr(self.resource, "{}_id".format(table)),
+                getattr(self.resource, "{}_table".format(table)),
+                getattr(self.resource, rc_feature),
+                self.resource.get_operator(current_token),
+                pos.replace("'", "''"))
             engine = self.resource.get_engine()
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
-
             return len(df.index) > 0
         else:
             return False
-
-    def sql_string_get_posid_list(self, token):
-        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-        _, _, w_table, _ = self.resource.split_resource_feature(word_feature)
-        word_table = getattr(self.resource, "{}_table".format(w_table))
-        word_id = getattr(self.resource, "{}_id".format(w_table))
-
-        pos_feature = getattr(self.resource, QUERY_ITEM_POS)
-        pos_field = getattr(self.resource, pos_feature)
-        _, _, p_table, _ = self.resource.split_resource_feature(pos_feature)
-        pos_table = getattr(self.resource, "{}_table".format(p_table))
-        pos_id = getattr(self.resource, "{}_id".format(p_table))
-
-        self.table_list = [word_table]
-
-        if p_table != w_table:
-            self.joined_tables = [word_table]
-            self.add_table_path(word_feature, pos_feature)
-            where_string = self.sql_string_get_wordid_list_where(token)
-        else:
-            where_string = self.sql_string_get_posid_list_where(token)
-        return "SELECT DISTINCT {}.{} FROM {} WHERE {}".format(
-            pos_table, pos_field, " ".join(self.table_list), where_string)
-
-    def get_posid_list(self, token):
-        """ Return a list of all PosIds that match the query token. """
-        S = self.sql_string_get_posid_list(token)
-        engine = self.resource.get_engine()
-        df = pd.read_sql(S.replace("%", "%%"), engine)
-        engine.dispose()
-
-        return set(list(df.ix[:,0]))
 
     def sql_string_get_wordid_list_where(self, token):
         """
@@ -165,7 +94,7 @@ class LexiconClass(object):
                 target = self.resource.get_field(rc_feature)
                 for spec in spec_list:
                     if spec != "%":
-                        dummy = tokens.COCAToken(spec, self, replace=False, parse=False)
+                        dummy = tokens.COCAToken(spec, replace=False, parse=False)
                         dummy.negated = token.negated
                         S = dummy.S
                         # For the construction of the query string,
@@ -200,8 +129,8 @@ class LexiconClass(object):
         table_list (which contains the join strings).
         """
         # FIXME: treat features from linked tables like native features
-        _, _, last_table, _ = self.resource.split_resource_feature(start_feature)
-        _, _, end_table, _ = self.resource.split_resource_feature(end_feature)
+        _, last_table, _ = self.resource.split_resource_feature(start_feature)
+        _, end_table, _ = self.resource.split_resource_feature(end_feature)
 
         table_path = self.resource.get_table_path(last_table, end_table)
         for table in table_path[1:]:
@@ -224,7 +153,7 @@ class LexiconClass(object):
         """
 
         word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-        _, _, table, _ = self.resource.split_resource_feature(word_feature)
+        _, table, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(table))
         word_id = getattr(self.resource, "{}_id".format(table))
 
@@ -243,7 +172,7 @@ class LexiconClass(object):
             # this happens if the lexicon table is not immediately linked to
             # the corpus table:
             self.add_table_path("word_id", getattr(self.resource, QUERY_ITEM_WORD))
-            _, _, table, _ = self.resource.split_resource_feature("word_id")
+            _, table, _ = self.resource.split_resource_feature("word_id")
             word_table = getattr(self.resource, "{}_table".format(table))
             word_id = getattr(self.resource, "{}_id".format(table))
 
@@ -301,12 +230,12 @@ class LexiconClass(object):
 
         # next, create a table path from the word table to the lemma table
         word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-        _, _, table, _ = self.resource.split_resource_feature(word_feature)
+        _, table, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(table))
         word_id = getattr(self.resource, "{}_id".format(table))
 
         lemma_feature = getattr(self.resource, QUERY_ITEM_LEMMA)
-        _, _, table, _ = self.resource.split_resource_feature(lemma_feature)
+        _, table, _ = self.resource.split_resource_feature(lemma_feature)
         lemma_table = getattr(self.resource, "{}_table".format(table))
         lemma_id = getattr(self.resource, "{}_id".format(table))
 
@@ -328,7 +257,7 @@ class LexiconClass(object):
         engine.dispose()
         # construct a new token that uses the list of lemmas as its token
         # specification:
-        token = tokens.COCAToken("[{}]".format("|".join(list(df[getattr(self.resource, lemma_feature)]))), lexicon=self)
+        token = tokens.COCAToken("[{}]".format("|".join(list(df[getattr(self.resource, lemma_feature)]))))
         # return the SQL string for the new token:
         return self.sql_string_get_matching_wordids(token)
 
@@ -444,7 +373,7 @@ class BaseResource(object):
 
         # handle external links by delegating the formatting to the external
         # resource:
-        _, hashed, table, feature = cls.split_resource_feature(rc_feature)
+        hashed, table, feature = cls.split_resource_feature(rc_feature)
         if hashed != None:
             link, res = get_by_hash(hashed)
             l = res.format_resource_feature("{}_{}".format(table, feature), N)
@@ -472,15 +401,10 @@ class BaseResource(object):
         Returns:
         --------
         tup : tuple
-            A tuple consisting of a boolean specificing whether it is a
-            function, the hashed of the link (or None), the resource table
-            name, and the feature name
+            A tuple consisting of a boolean specifying the hash of the link
+            (or None), the resource table name, and the feature name
         """
-        is_function = rc_feature.startswith("func.")
-        if is_function:
-            _, _, s = rc_feature.partition(".")
-        else:
-            s = rc_feature
+        s = rc_feature
         if "." in s:
             hashed, _, s= s.partition(".")
         else:
@@ -489,7 +413,7 @@ class BaseResource(object):
         if not table or not feature:
             raise ValueError("either no table or no feature: {}".format(rc_feature))
 
-        return (is_function, hashed, table, feature)
+        return (hashed, table, feature)
 
     @classmethod
     def get_preferred_output_order(cls):
@@ -508,7 +432,7 @@ class BaseResource(object):
         # make sure that if there is timing information, the ending time
         # occurs after the start time by default (fixes Issue #177):
         for i, rc_feature in enumerate(order):
-            _, _, tab, feat = cls.split_resource_feature(rc_feature)
+            _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
                 j = order.index("{}_starttime".format(tab))
                 if j < i:
@@ -516,7 +440,7 @@ class BaseResource(object):
                     order[i] = "{}_endtime".format(tab)
 
         for i, rc_feature in enumerate(all_features):
-            _, _, tab, feat = cls.split_resource_feature(rc_feature)
+            _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
                 j = all_features.index("{}_endtime".format(tab))
                 if j < i:
@@ -546,13 +470,13 @@ class BaseResource(object):
         split_features = [cls.split_resource_feature(x) for x in dir(cls) if "_" in x and not x.startswith("_")]
 
         # create a list of table names from the resource features:
-        tables = [table for _, _, table, feature in split_features if feature == "table"]
+        tables = [table for _, table, feature in split_features if feature == "table"]
         # add special tables:
         tables += cls.special_table_list
 
         # return the features that can be constructed from the feature name
         # and the table:
-        return ["{}_{}".format(table, feature) for _, _, table, feature in split_features if table in tables]
+        return ["{}_{}".format(table, feature) for _, table, feature in split_features if table in tables]
 
     @classmethod
     def get_table_dict(cls):
@@ -763,19 +687,12 @@ class BaseResource(object):
                 lexicon_variables.append((y, getattr(cls, y)))
         return lexicon_variables
 
-    @staticmethod
-    def get_feature_from_function(func):
-        if func.count(".") > 1:
-            return "_".join(func.split(".")[1:])
-        else:
-            return func.split(".")[-1]
-
     @classmethod
     def get_field(cls, rc_feature):
         """
         Get a full SQL field name for the resource feature.
         """
-        _, _, table, _ = cls.split_resource_feature(rc_feature)
+        _, table, _ = cls.split_resource_feature(rc_feature)
         return "{}.{}".format(
             getattr(cls, "{}_table".format(table)), getattr(cls, rc_feature))
 
@@ -786,8 +703,6 @@ class BaseResource(object):
 
         For normal output columns, the referent feautre name is identical
         to the rc_feature string.
-
-        For functions, it is the rc_feature minus the prefix "func.".
 
         For columns from an external table, or for functions applied to such
         columns, it is the feature name of the column that the label is
@@ -802,7 +717,7 @@ class BaseResource(object):
         resource : string
         """
 
-        func, hashed, table, feature = cls.split_resource_feature(rc_feature)
+        hashed, table, feature = cls.split_resource_feature(rc_feature)
 
         # Check if the feature has the same database as the current
         # resource, i.e. check if the feature is NOT from a linked table:
@@ -810,7 +725,7 @@ class BaseResource(object):
             return "{}_{}".format(table, feature)
         else:
             link, res = get_by_hash(hashed)
-            _, _, tab, feat = res.split_resource_feature(link.rc_from)
+            _, tab, feat = res.split_resource_feature(link.rc_from)
             return "{}_{}".format(tab, feat)
 
     @classmethod
@@ -877,13 +792,14 @@ class SQLResource(BaseResource):
         _, _, self.db_type, _, _ = options.get_con_configuration()
 
         # FIXME: in order to make this not depend on a fixed database layout
-        # (here: 'source' and 'file' tables), we should check # for any table
-        # that corpus_table is linked to except for # word_table (and all
+        # (here: 'source' and 'file' tables), we should check for any table
+        # that corpus_table is linked to except for word_table (and all
         # child tables).
         # FIXME: some mechanism is probably necessary to handle self-joined
         # tables
 
-        for x in ["corpus_source_id", "corpus_file_id", "corpus_sentence_id", "corpus_id"]:
+        for x in ["corpus_source_id", "corpus_file_id",
+                  "corpus_sentence_id", "corpus_id"]:
             if hasattr(self, x):
                 options.cfg.token_origin_id = x
                 break
@@ -954,48 +870,484 @@ class SQLResource(BaseResource):
             df.sort(columns=list(df.columns)[:2], inplace=True)
         return df
 
-    def get_query_string(self, Query, token_list, to_file=False):
+    @classmethod
+    def get_corpus_joins(cls, query_items):
         """
-        Get a query string that can be used to retrieve the query matches.
+        Returns a list of corpus joins for the sub query
+        """
+        l = []
+        current_pos = 1
+        for i, (pos, token) in enumerate(query_items):
+            if token is not None:
+                if hasattr(cls, "corpus_next_id"):
+                    comp = "COQ_CORPUS_{prev}.{next_id}".format(prev=current_pos,
+                                                    next_id=cls.corpus_next_id)
+                else:
+                    comp = "COQ_CORPUS_{prev}.{id} + 1".format(prev=current_pos - 1, id=cls.corpus_id)
 
-        If any of the tokens does not match any word in the current lexicon,
-        an empty query string is returned.
+                if i == 0:
+                    s = "{corpus} AS COQ_CORPUS_{N}"
+                else:
+                    s = "INNER JOIN {corpus} AS COQ_CORPUS_{N} ON COQ_CORPUS_{N}.{corpus_id} = {comp}"
 
-        Parameters
-        ----------
-        query : TokenQuery
-            An TokenQuery instance that specifies the current query.
-        token_list : list
-            A list of Tokens
-        to_file : bool
-            True if the query results are directly written to a file, and
-            False if they will be displayed in the GUI. Data that is written
-            directly to a file contains less information, e.g. it doesn't
-            contain an origin ID or a corpus ID (unless requested).
+                l.append(s.format(
+                    corpus=cls.corpus_table,
+                    corpus_id=cls.corpus_id,
+                    N=current_pos, comp=comp))
 
-        Returns
+                current_pos += 1
+        return l
+
+    @classmethod
+    def get_required_tables(cls, root, selected, conditions):
+        """
+        Returns a tuple that represents the table structure that is required
+        to query the features given in `selected`.
+
+        The tuple consists of two elements. The first element is the root
+        table name. The second element is a list of tuples that recursively
+        represent the tables that have to be joined to the root table.
+
+        Example
         -------
-        query_string : str
-            A string that can be executed by an SQL engine.
-        """
-        try:
-            # if there is a lookup ngram table, and if the length of the
-            # query string does not exceed that table, use it for the
-            # query
-            if (hasattr(self, "corpusngram_table") and
-                1 < len(token_list) <= self.corpusngram_width) and options.cfg.experimental:
-                    query_string = self.corpus.sql_string_query_lookup(Query, token_list)
-            else:
-                # otherwise, use the self-joined corpus table:
-                query_string = self.corpus.sql_string_query(Query, token_list, to_file)
-                #l = self.corpus.get_required_features(Query, token_list)
-                #if options.cfg.verbose:
-                    #print(l)
-        except WordNotInLexiconError:
-            query_string = ""
 
-        Query.Session.output_order = self.get_select_list(Query)
-        return query_string
+        Assuming a table structure
+
+        corpus
+        + source
+        + word
+
+        A call get_required_tables("corpus", ["source_label", "word_label"])
+        might return the following structure:
+
+        ("corpus", [("source", []), ("word", [])])
+        """
+
+        # First, create a set containing all tables that are needed to
+        # target all selected features. At the bare minimum, those tables
+        # are needed which are required to fulfil the conditions.
+        tables = set(conditions.keys())
+        for rc_feature in sorted(selected):
+            _, target, _ = cls.split_resource_feature(rc_feature)
+            table_path = cls.get_table_path(root, target)
+            if table_path:
+                tables = tables.union(table_path)
+
+        # also add those tables that are required in order to pull in an
+        # external table:
+        for rc_feature in selected:
+            hashed, table, feature = cls.split_resource_feature(rc_feature)
+            if hashed is not None:
+                link, res = get_by_hash(hashed)
+                _, tab, _ = cls.split_resource_feature(link.rc_from)
+                table_path = cls.get_table_path(root, tab)
+                if table_path:
+                    tables = tables.union(table_path)
+
+        # second, create a list of dummy features for each table. This list
+        # is then used to pull in all required tables in order:
+        selected = ["{}_dummy".format(x) for x in tables]
+        l = []
+        for dummy in sorted(selected):
+            _, target, _ = cls.split_resource_feature(dummy)
+            # check if the current table is a neighbor of the current root
+            # table:
+            table_path = cls.get_table_path(root, target)
+            if table_path and len(table_path) == 2:
+                # if the table is a neighbor of root, recursively get the
+                # children of the current table:
+                sub_select = list(selected)
+                sub_select.remove(dummy)
+                tup = cls.get_required_tables(target, sub_select, conditions)
+                # insert tuple for current table into list:
+                l.append(tup)
+        return root, l
+
+    @staticmethod
+    def alias_external_table(n, link, res):
+        _, table, _ = res.split_resource_feature(link.rc_to)
+        ext_table = getattr(res, "{}_table".format(table))
+        return "{db_name}_{table}_{N}".format(
+                  db_name=res.db_name.upper(),
+                  table=ext_table, N=n+1).upper()
+
+    @classmethod
+    def get_feature_joins(cls, n, selected, conditions={}):
+        """
+        Returns a list of table joins that are needed to satisfy the given
+        list of selected features.
+        """
+        def get_join(n, table, parent):
+            """
+            Construct a partial SQL table statement that can be used as an
+            argument for the feature joins.
+            """
+            table_name = getattr(cls, "{}_table".format(table))
+            table_alias = "COQ_{}_{}".format(table.upper(), n+1)
+            table_id = getattr(cls, "{}_id".format(table))
+            parent_id = getattr(cls, "{}_{}_id".format(parent, table))
+
+            sql_template = "{table_name} AS {table_alias}"
+            table_str = sql_template.format(
+                table_name=table_name, table_alias=table_alias)
+
+            sql_template = "{table_alias}.{table_id} = COQ_{parent}_{N}.{parent_id}"
+            where_str = sql_template.format(
+                table_alias=table_alias, table_id=table_id,
+                parent=parent.upper(), parent_id=parent_id, N=n+1)
+
+            table_str = "LEFT JOIN {} ON {}".format(table_str, where_str)
+            return [table_str], []
+
+        def add_joins(n, parent, tup):
+            """
+            Recursively build a list containing the partial SQL statements
+            used for the feature joins.
+            """
+            root, joins = tup
+            table_list, where_list = get_join(n, root, parent)
+            for x in joins:
+                l1, l2 = add_joins(n, root, x)
+                table_list += l1
+                where_list += l2
+            return table_list, where_list
+
+        def get_external_join(n, rc_feature):
+            """
+            Return the join string for the link represented by the
+            resource feature.
+            """
+            hashed, table, _ = cls.split_resource_feature(rc_feature)
+            link, res = get_by_hash(hashed)
+            _, int_tab, int_feat = cls.split_resource_feature(link.rc_from)
+            int_table = getattr(cls, "{}_table".format(int_tab))
+            int_alias = "COQ_{}_{}".format(int_tab.upper(), n+1)
+            int_column = getattr(cls, link.rc_from)
+
+
+            ext_table = getattr(res, "{}_table".format(table))
+            ext_alias = cls.alias_external_table(n, link, res)
+            ext_name = "{}.{}".format(res.db_name, ext_table)
+            ext_column = getattr(res, link.rc_to)
+
+            table_string = "{ext_name} AS {ext_alias}".format(
+                ext_name=ext_name, ext_alias=ext_alias)
+
+            s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}"
+            where_string = s.format(
+                        ext_alias=ext_alias, ext_column=ext_column,
+                        int_alias=int_alias, int_column=int_column)
+
+            table_string = "{} {} ON {}".format(
+                link.join_type, table_string, where_string)
+            return table_string
+
+        table_list = []
+        where_list = []
+
+        features = [x for x in sorted(selected) if not x.startswith("segment_")]
+        root, tables = cls.get_required_tables("corpus", features, conditions)
+
+        for tup in tables:
+            table_strings, where_strings = add_joins(n, "corpus", tup)
+            for s in table_strings:
+                if s not in table_list:
+                    table_list.append(s)
+            for s in where_strings:
+                if s not in where_list:
+                    where_list.append(s)
+
+        # also add those tables that are required in order to pull in an
+        # external table:
+        for rc_feature in sorted(selected):
+            hashed, _, _ = cls.split_resource_feature(rc_feature)
+            if hashed is not None:
+                table_string = get_external_join(n, rc_feature)
+                if table_string not in table_list:
+                    table_list.append(table_string)
+
+        return table_list, where_list
+
+    @classmethod
+    def get_attach_list(cls, selected):
+        """
+        Return a list of data bases that have to be attached in order to
+        fulfil this query. This is only needed for SQL_SQLITE.
+        """
+        attach_list = set([])
+        for rc_feature in sorted(selected):
+            hashed, _, _ = cls.split_resource_feature(rc_feature)
+            if hashed is not None:
+                link, res = get_by_hash(hashed)
+                attach_list.add(res.db_name)
+        return attach_list
+
+    @classmethod
+    def get_lemmeatized_contitions(cls, i, token):
+        # FIXME: lemmatization doesn't work yet!
+        if not hasattr(cls, QUERY_ITEM_LEMMA):
+            raise UnsupportedQueryItemError("Lemmatization by \"#\" flag")
+
+        # create a table path from the word table to the lemma table
+        word_feature = getattr(cls, QUERY_ITEM_WORD)
+        _, table, _ = cls.split_resource_feature(word_feature)
+        word_table = getattr(cls, "{}_table".format(table))
+        word_id = getattr(cls, "{}_id".format(table))
+
+        lemma_feature = getattr(cls, QUERY_ITEM_LEMMA)
+        _, table, _ = cls.split_resource_feature(lemma_feature)
+        lemma_table = getattr(cls, "{}_table".format(table))
+        lemma_id = getattr(cls, "{}_id".format(table))
+
+        path = cls.get_table_path(word_table, lemma_table)
+        table_list = MAGIC_FUNCTION(path)
+
+        if options.cfg.regexp:
+            operator = "REGEXP"
+        else:
+            if token.has_wildcards(token.S):
+                operator = "LIKE"
+            else:
+                operator = "="
+
+        where_string = "{}.{} {} '{}'".format(word_table, word_id, operator, token.S)
+
+        # using the path, get a list of all lemma labels that belong to
+        # the word ids from the list:
+        inner_select = "SELECT DISTINCT {}.{} FROM {} WHERE {}".format(
+                lemma_table, getattr(cls, lemma_feature),
+                table_list, where_string)
+
+        kwargs = {
+            "lemma_alias": TODO,
+            "lemma_feature": lemma_feature,
+            "inner_select": inner_select,
+            "N": i+1}
+
+        S = "{lemma_alias}_{N}.{lemma_feature} IN ({inner_select})".format(
+            **kwargs)
+        return S
+
+    @classmethod
+    def get_token_conditions(cls, i, token):
+        """
+        Return a dictionary with required tables as names, and SQL
+        conditions as values.
+        """
+        d = defaultdict(list)
+        # Make sure that the token contains only those query item types that
+        # are actually supported by the resource:
+        for spec_list, label, item_type in [
+                (token.word_specifiers, QUERY_ITEM_WORD, "Word"),
+                (token.lemma_specifiers, QUERY_ITEM_LEMMA, "Lemma"),
+                (token.class_specifiers, QUERY_ITEM_POS, "Part-of-speech"),
+                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT, "Transcription"),
+                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss")]:
+            if not spec_list:
+                continue
+
+            if token.lemmatize:
+                condition = cls.get_lemmeatized_contitions(i, token)
+
+            try:
+                col = getattr(cls, getattr(cls, label))
+            except AttributeError:
+                raise UnsupportedQueryItemError(item_type)
+            _, tab, _ = cls.split_resource_feature(getattr(cls, label))
+
+            if options.cfg.regexp:
+                operator = "REGEXP"
+            else:
+                if token.has_wildcards(token.S):
+                    operator = "LIKE"
+                else:
+                    operator = "="
+            alias = "COQ_{}_{}".format(tab.upper(), i+1)
+
+            fstr = "{}.{} {} '{}'"
+            # take care of case options:
+            if (options.cfg.query_case_sensitive):
+                if (options.get_con_configuration()[2] == SQL_MYSQL):
+                    format_str = "BINARY {}".format(fstr)
+                elif options.get_con_configuration()[2] == SQL_SQLITE:
+                    format_str = "{} COLLATE BINARY".format(fstr)
+            else:
+                if (options.get_con_configuration()[2] == SQL_MYSQL):
+                    format_str = fstr
+                elif options.get_con_configuration()[2] == SQL_SQLITE:
+                    format_str = "{} COLLATE NOCASE".format(fstr)
+
+            s = " OR ".join([format_str.format(alias, col, operator, x)
+                            for x in spec_list])
+            d[tab].append(s)
+        return d
+
+    @classmethod
+    def get_annotation(cls, n, table):
+        """
+        """
+        sql_template = "{table_name} AS {table_alias}"
+        kwargs = {
+            "table_name": getattr(cls, "{}_table".format(table)),
+            "table_alias": "COQ_{}_1".format(table.upper())}
+        table_str = sql_template.format(**kwargs)
+
+        sql_template = (
+            "{table_alias}.{table_end} - COQ_CORPUS_1.{parent_start} > 0.001"
+            " AND {parent_alias}.{parent_end} - {table_alias}.{table_start} > 0.001"
+            " AND {table_alias}.{table_origin} = COQ_CORPUS_1.{parent_origin}")
+        kwargs = {
+            "table_alias": table_alias,
+            "table_start": getattr(cls, "{}_starttime".format(table)),
+            "table_end": getattr(cls, "{}_endtime".format(table)),
+            "table_origin": getattr(cls, "{}_origin_id".format(table)),
+            "parent_alias": "COQ_CORPUS_{}".format(n),
+            "parent_start": cls.corpus_starttime,
+            "parent_end": cls.corpus_endtime,
+            "parent_origin": getattr(cls, "corpus_source_id", "") or
+                             getattr(cls, "corpus_file_id", "")}
+        where_str = sql_template.format(**kwargs)
+
+        return [table_str], [where_str]
+
+    @classmethod
+    def get_required_columns(cls, token_list, selected, to_file=False):
+        """
+        Return a list of strings. Each string refers to a column in the
+        query data frame. They represent the aliasing translation from the
+        SQL column lables to the format used in Coquery for column lables.
+        For example, the string for the resource `word_label` is
+        "COQ_WORD_x AS coq_word_label_x", where 'x' is the number of the
+        query item.
+        """
+        lexicon_features = [x for x, _ in cls.get_lexicon_features()]
+        corpus_features = [x for x, _ in cls.get_corpus_features()]
+        annotations = getattr(cls, "annotations", {})
+
+        columns = []
+        for rc_feature in selected:
+            current_pos = 1
+            for i, (pos, token) in enumerate(token_list):
+                hashed, tab, feat = cls.split_resource_feature(rc_feature)
+                if hashed:
+                    link, res = get_by_hash(hashed)
+                    if link.rc_from in lexicon_features:
+                        ext_alias = cls.alias_external_table(current_pos-1,
+                                                         link, res)
+                        ext_rc = "{}_{}".format(tab, feat)
+                        ext_column = getattr(res, ext_rc)
+                        s = "{ext_alias}.{ext_column} AS db_{db_name}_coq_{ext_rc}_{N}"
+                        alias = s.format(
+                            ext_alias=ext_alias, ext_column=ext_column,
+                            db_name=res.db_name, ext_rc=ext_rc, N=current_pos)
+                        columns.append(alias)
+                        current_pos += 1
+                if rc_feature in lexicon_features:
+                    if token is not None:
+                        column = "COQ_{table}_{pos}.{name}".format(
+                            table=tab.upper(), pos=current_pos,
+                            name=getattr(cls, rc_feature))
+                        current_pos += 1
+                    else:
+                        column = "NULL"
+                    s = "{column} AS coq_{rc_feature}_{N}".format(
+                        column=column, rc_feature=rc_feature, N=i+1)
+                    if s not in columns:
+                        columns.append(s)
+
+        for rc_feature in selected:
+            if rc_feature in corpus_features:
+                _, tab, feat = cls.split_resource_feature(rc_feature)
+                s = "COQ_{table}_1.{name} AS coq_{rc_feature}_1".format(
+                    table=tab.upper(), name=getattr(cls, rc_feature),
+                    rc_feature=rc_feature)
+                if s not in columns:
+                    columns.append(s)
+
+            if tab in annotations:
+                s = "COQ_{tab_upper}_1.{tab_id} AS coquery_invisible_{tab}_id".format(
+                    tab=tab, tab_upper=tab.upper(),
+                    tab_id=getattr(cls, "{}_id".format(tab)))
+                if s not in columns:
+                    columns.append(s)
+
+        if not to_file:
+            s = "COQ_CORPUS_1.{} AS coquery_invisible_corpus_id".format(
+                cls.corpus_id)
+            if s not in columns:
+                columns.append(s)
+
+            origin_id = (getattr(cls, "corpus_source_id", "") or
+                         getattr(cls, "corpus_file_id", ""))
+            if origin_id:
+                s = "COQ_CORPUS_1.{} AS coquery_invisible_origin_id".format(
+                    origin_id)
+                columns.append(s)
+        return columns
+
+    @classmethod
+    def get_query_string(cls, query_items, selected, columns=[], to_file=False):
+        """
+        Return an SQL string for the specified query.
+        """
+        if not columns:
+            columns = cls.get_required_columns(query_items, selected, to_file)
+
+        # get list of self-joints for the corpus:
+        join_list = cls.get_corpus_joins(query_items)
+        condition_list = []
+        current_pos = 0
+
+        # go through the query items and add all required list as well as
+        # the WHERE conditions based on the query item specification
+        for i, (pos, s) in enumerate(query_items):
+            if s is not None:
+                token = tokens.COCAToken(s)
+                if s != "*":
+                    conditions = cls.get_token_conditions(current_pos, token)
+                else:
+                    conditions = {}
+
+                for _, l in conditions.items():
+                    condition_list += ["({})".format(x) for x in l]
+                table_list, where_list = cls.get_feature_joins(current_pos, selected, conditions)
+                join_list += table_list
+                condition_list += ["({})".format(x) for x in where_list]
+                current_pos += 1
+
+        # Some tables are not linked by an ID, but by time alignments.
+        # One example is the Segments table from the Buckeye corpus.
+        # These tables are explicitly added:
+        features = [x for x in sorted(selected) if x.startswith("segment_")]
+        for rc_feature in features:
+            _, tab, _ = cls.split_resource_feature(rc_feature)
+            if tab in cls.annotations:
+                table_strings, where_strings = cls.get_annotation(len(query_items), tab)
+                for s in table_strings:
+                    if s not in join_list:
+                        join_list.append(s)
+                for s in where_strings:
+                    if s not in condition_list:
+                        condition_list.append(s)
+
+        sql_template = """
+        SELECT {columns}
+        FROM   {joins}"""
+
+        if condition_list:
+            sql_template = """{}
+            WHERE  {{conditions}}""".format(sql_template)
+
+        S = sql_template.format(columns=", ".join(columns),
+                                joins=" ".join(join_list),
+                                conditions=" AND ".join(condition_list))
+
+        if options.cfg.number_of_tokens:
+            S = """{}
+            LIMIT  {}
+            """.format(options.cfg.number_of_tokens)
+
+        return S
 
     def get_context(self, token_id, origin_id, number_of_tokens, db_connection,
                     sentence_id=None):
@@ -1025,7 +1377,7 @@ class SQLResource(BaseResource):
                             word_feature = self.surface_feature
                         else:
                             word_feature = getattr(self, QUERY_ITEM_WORD)
-                        _, _, table, feature = self.split_resource_feature(word_feature)
+                        _, table, feature = self.split_resource_feature(word_feature)
 
                         self.lexicon.joined_tables = []
                         self.lexicon.table_list = [self.word_table]
@@ -1137,133 +1489,6 @@ class SQLResource(BaseResource):
         #S = self.sql_string_get_sentence_wordid(sentence_id)
         #self.resource.DB.execute(S)
 
-    @classmethod
-    def get_select_list(cls, query):
-        """
-        Return a list of field names that can be used to extract the
-        requested columns from the joined MySQL query table.
-
-        This list is usually stored in Session.output_order and determines
-        which columns appear in the output table. If a column is missing,
-        it may be because it is not correctly included in this set.
-
-        Parameters
-        ----------
-        query : CorpusQuery
-            The query for which a select set is required
-
-        Returns
-        -------
-        select_list : list
-            A list of strings representing the aliased columns in the joined
-            MySQL query table.
-        """
-
-        lexicon_features = [x for x, _ in cls.get_lexicon_features() if x in options.cfg.selected_features]
-        corpus_features = [x for x, _ in cls.get_corpus_features() if x in options.cfg.selected_features]
-
-        max_token_count = query.Session.get_max_token_count()
-        # the initial select list contains the columns from the input file
-        # (if present):
-        select_list = list(query.Session.input_columns)
-
-        ordered_selected_features = []
-        for feature in cls.get_preferred_output_order():
-            if feature in options.cfg.selected_features:
-                ordered_selected_features.append(feature)
-
-        # then, add an appropriately aliased name for each selected feature:
-        #for rc_feature in options.cfg.selected_features:
-        for rc_feature in ordered_selected_features:
-            select_list += cls.format_resource_feature(rc_feature, max_token_count)
-
-        # linked columns
-        for rc_feature in options.cfg.selected_features:
-            func, hashed, table, feature = cls.split_resource_feature(rc_feature)
-            if hashed != None and not func:
-                link, res = get_by_hash(hashed)
-                linked_feature = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
-                if cls.is_lexical(link.rc_from):
-                    select_list += ["{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
-                else:
-                    select_list.append("{}_1".format(linked_feature))
-
-        # functions:
-        func_counter = Counter()
-        for rc_feature in options.cfg.selected_features:
-            func, hashed, table, feature = cls.split_resource_feature(rc_feature)
-            if func:
-                if hashed != None:
-                    link, res = get_by_hash(hashed)
-                    resource = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
-                else:
-                    resource = "coq_{}_{}".format(table, feature)
-
-                func_counter[resource] += 1
-                fc = func_counter[resource]
-
-                if cls.is_lexical(rc_feature):
-                    select_list += ["func_{}_{}_{}".format(resource, fc, x + 1) for x in range(max_token_count)]
-                else:
-                    select_list.append("func_{}_{}_1".format(resource, fc))
-
-        # if requested and possible, add contexts for each query match:
-        if (options.cfg.context_mode != CONTEXT_NONE and
-            (options.cfg.context_left or options.cfg.context_right) and
-            options.cfg.token_origin_id):
-
-            # KWIC and context columns should by default be placed around
-            # the lexical features in order to be similar to standard
-            # concordancing software. In order to do so, we determine the
-            # current positions of lexical features in the output list:
-            first_lexical_feature = len(select_list)
-            last_lexical_feature = 0
-            for i, field in enumerate(select_list):
-                try:
-                    feature = re.match("coq_(.*)_\d+$", field).group(1)
-                except AttributeError:
-                    # This is raised if the RE doesn't match the field name.
-                    # In particular, it is raised for columns from special
-                    # tables (Statistics, Coquery, Tag). They never count as
-                    # Lexical features, so they should not be considered as
-                    # places for the context anyway.
-                    pass
-                else:
-                    if feature in lexicon_features:
-                        first_lexical_feature = min(i, first_lexical_feature)
-                        last_lexical_feature = max(i, last_lexical_feature)
-
-            # KWIC: add context columns to left and right of lexical features:
-            if options.cfg.context_mode == CONTEXT_KWIC:
-                if options.cfg.context_left:
-                    select_list.insert(first_lexical_feature, "coq_context_left")
-                if options.cfg.context_right:
-                    select_list.insert(last_lexical_feature + int(options.cfg.context_left > 1) + 1,
-                                       "coq_context_right")
-
-            # Strings and Sentences: add context columns after all other columns
-            elif options.cfg.context_mode == CONTEXT_STRING:
-                select_list.append("coq_context_string")
-            elif options.cfg.context_mode == CONTEXT_SENTENCE:
-                select_list.append("coq_context_string")
-
-            # Columns: add context columns for each word to left and right of
-            # lexical features:
-            elif options.cfg.context_mode == CONTEXT_COLUMNS:
-                for x in range(options.cfg.context_left):
-                    select_list.insert(first_lexical_feature,
-                                       "coq_context_lc{}".format(x+1))
-                for x in range(options.cfg.context_right):
-                    select_list.insert(last_lexical_feature + options.cfg.context_left + x + 1,
-                                       "coq_context_rc{}".format(x+1))
-
-            select_list.append("coquery_invisible_origin_id")
-
-        select_list.append("coquery_invisible_corpus_id")
-        select_list.append("coquery_invisible_number_of_tokens")
-        assert sorted(list(set(select_list))) == sorted(select_list), "Duplicates in select_list: {}".format(select_list)
-        return select_list
-
 class CorpusClass(object):
     """
     """
@@ -1289,41 +1514,6 @@ class CorpusClass(object):
         engine.dispose()
 
         return df.values.ravel()[0]
-
-    def get_file_data(self, token_id, features):
-        """
-        Return a data frame containing the requested features for the token
-        id.
-        """
-        if isinstance(token_id, list):
-            tokens = token_id
-        elif isinstance(token_id, pd.Series):
-            tokens = list(token_id.values)
-        else:
-            tokens = list(token_id)
-
-        self.lexicon.joined_tables = ["corpus"]
-        self.lexicon.table_list = [self.resource.corpus_table]
-
-        self.lexicon.add_table_path("corpus_id", "file_id")
-
-        f = ", ".join(["{}.{}".format(
-                    self.resource.file_table, getattr(self.resource, x)) for x in features] + ["{}.{}".format(self.resource.corpus_table, self.resource.corpus_id)])
-        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN {token_ids}".format(
-                features=f,
-                corpus=self.resource.corpus_table,
-                path = " ".join(self.lexicon.table_list),
-                files=self.resource.file_table,
-                corpus_file=self.resource.corpus_file_id,
-                file_id=self.resource.file_id,
-                corpus_id=self.resource.corpus_id,
-                token_ids="({})".format(", ".join([str(x) for x in tokens])))
-
-        engine = self.resource.get_engine()
-        df = pd.read_sql(S, engine)
-        engine.dispose()
-
-        return df
 
     def get_origin_data(self, token_id):
         """
@@ -1389,10 +1579,10 @@ class CorpusClass(object):
                 continue
 
             # obtain the field name from the resource name:
-            _, _, _, feature = self.resource.split_resource_feature(rc_feature)
+            _, _, feature = self.resource.split_resource_feature(rc_feature)
             # determine whether the field name is a linking field:
             try:
-                _, _, tab, feat = self.resource.split_resource_feature(feature)
+                _, tab, feat = self.resource.split_resource_feature(feature)
             except ValueError:
                 # split_resource_feature() raises a ValueError exception if
                 # the passed string does not appear to be a resource feature.
@@ -1440,7 +1630,7 @@ class CorpusClass(object):
         self.lexicon.joined_tables = []
         filter_strings = []
         for rc_feature, values in filters:
-            _, _, tab, feat = self.resource.split_resource_feature(rc_feature)
+            _, tab, feat = self.resource.split_resource_feature(rc_feature)
             self.lexicon.add_table_path("corpus_id", rc_feature)
 
             # FIXME: remove code replication with get_subcorpus_range()
@@ -1554,7 +1744,7 @@ class CorpusClass(object):
                 except AttributeError:
                     print("couldn't split", column)
                     continue
-                _, _, tab, feat = self.resource.split_resource_feature(rc_feature)
+                _, tab, feat = self.resource.split_resource_feature(rc_feature)
                 self.lexicon.add_table_path("corpus_id", rc_feature)
 
                 # FIXME: remove code replication with get_corpus_size()
@@ -1617,1086 +1807,30 @@ class CorpusClass(object):
 
         if s in ["%", "_"]:
             s = "\\" + s
+        s = s.replace("'", "''")
+        s = s.replace("%", "%%")
 
-        if tup in self._frequency_cache:
+        if s in self._frequency_cache:
             return self._frequency_cache[s]
 
-        if not s:
-            return 0
+        query_list = tokens.preprocess_query(s)
+        freq = 0
 
-        token = tokens.COCAToken(s, self, False)
-
-        word_pos_column = getattr(self.resource, QUERY_ITEM_POS, None)
-
-        if hasattr(self.resource, "corpus_word_id"):
-            word_id_column = self.resource.corpus_word_id
-        elif hasattr(self.resource, "corpus_word"):
-            word_id_column = self.resource.corpus_id
+        if not engine:
+            work_engine = self.resource.get_engine()
         else:
-            word_id_column = None
+            work_engine = engine
 
-        try:
-            where_clauses = self.get_whereclauses(token,
-                                                  word_id_column,
-                                                  word_pos_column)
-        except WordNotInLexiconError:
-            freq = 0
-        else:
-            self.lexicon.table_list = []
-            self.lexicon.joined_tables = []
+        for sub in query_list:
+            S = self.resource.get_query_string(sub, [], columns=["COUNT(*)"])
+            df = pd.read_sql(S, work_engine)
+            freq += df.values.ravel()[0]
 
-            S = "SELECT COUNT(*) FROM {} WHERE {}".format(
-                        self.resource.corpus_table,
-                        " AND ".join(where_clauses))
-            if not engine:
-                tmp_engine = self.resource.get_engine()
-                df = pd.read_sql(S.replace("%", "%%"), tmp_engine)
-                tmp_engine.dispose()
-            else:
-                df = pd.read_sql(S.replace("%", "%%"), engine)
-
-            freq = df.values.ravel()[0]
+        if not engine:
+            work_engine.dispose()
 
         self._frequency_cache[s] = freq
         return freq
-
-    def get_whereclauses(self, token, WordTarget, PosTarget=None):
-        if not token:
-            return []
-
-        where_clauses = []
-
-        # Make sure that the token contains only those query item types that
-        # are actually supported by the resource:
-        for spec_list, label, item_type in [(token.word_specifiers, QUERY_ITEM_WORD, "Word"),
-                                (token.lemma_specifiers, QUERY_ITEM_LEMMA, "Lemma"),
-                                (token.class_specifiers, QUERY_ITEM_POS, "Part-of-speech"),
-                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT, "Transcription"),
-                                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss")]:
-            if spec_list and not hasattr(self.resource, label):
-                raise UnsupportedQueryItemError(item_type)
-
-        # if only a class specification is given, this specification is
-        # used as the where clause:
-        if PosTarget and token.class_specifiers and not (token.word_specifiers or token.lemma_specifiers or token.transcript_specifiers):
-            L = self.lexicon.get_posid_list(token)
-            if L:
-                where_clauses.append("{} IN ({})".format(
-                    PosTarget, ", ".join (["'{}'".format(x) for x in L])))
-        # if there is a token with either a wordform, lemma, or token
-        # specification, then get the list of matching word_ids from the
-        # lexicon:
-        else:
-            try:
-                if token.lemmatize:
-                    L = set(self.lexicon.get_lemmatized_wordids(token))
-                else:
-                    L = set(self.lexicon.get_matching_wordids(token))
-            except ValueError:
-                # this resource does not provide word ids.
-                L = []
-                S = self.lexicon.sql_string_get_wordid_list_where(token)
-                where_clauses.append(S)
-            else:
-                if L:
-                    if hasattr(self.resource, "word_id"):
-                        L = [str(x) for x in L]
-                    else:
-                        L = ["'{}'".format(x) for x in L]
-                    where_clauses.append("{} IN ({})".format(
-                        WordTarget, ", ".join(L)))
-                else:
-                    # no word ids were available for this token. this can
-                    # happen if there is no word in the lexicon that matches
-                    # the specification.
-                    if token.S not in ("%", ""):
-                        if token.negated:
-                            return []
-                        else:
-                            raise WordNotInLexiconError
-        return where_clauses
-
-    def get_token_query_order(self, token_list):
-        """
-        Return an order list in which the token queries should be executed.
-
-        Ideally, the order corresponds to the number of rows in the
-        corpus that match the token query, from small to large. This
-        increases query performance because it reduces the number of rows
-        that need to be scanned once all tables have been joined.
-
-        The optimal order would be in decreasing frequency order for the
-        subcorpus specified by all source filters, but this is not
-        implemented yet. It may turn out that determining the subcorpus
-        frequency is too time-consuming after all.
-
-        Instead, the current implentation is a heuristic. It assumes that
-        a longer token string is more specific, and should therefore have
-        precedence over a short token string. This may be true for normal
-        queries, but queries that contain an OR selection the heuristic is
-        probably suggesting suboptimal orders.
-
-        The second criterion is the number of asterisks in the query string:
-        a query string containing a '*' should be joined later than a query
-        string of the same length without '*'.
-
-        Parameters
-        ----------
-        token_list : list
-            A list of token tuples, the first element stating the position of
-            the target output column, the second the token string
-
-        Returns
-        -------
-        L : list
-            A list of tuples. The first element contains the token number,
-            the second element contains the target output column
-        """
-        # FIXME: improve the heuristic.
-
-        if len(token_list) == 1:
-            return [(1, 1)]
-
-        def calc_weight(s):
-            """
-            Calculates the weight of the query string s
-            """
-            # word wildcards are strongly penalized:
-            if s == "%":
-                w = -9999
-            else:
-                w = len(s) * 2
-            # character wildcards are penalized also, but take escaping
-            # into account:
-            w = w - (s.count("_") - s.count("\\_"))
-            if s.strip().startswith("~"):
-                w = -w
-            return w
-
-        sort_list = list(enumerate(token_list))
-        # first, sort in reverse length:
-        sort_list = sorted(sort_list,
-                           key=lambda x: calc_weight(x[1][1]), reverse=True)
-        #return [x+1 for x, _ in sort_list]
-        if options.cfg.align_quantified:
-            L = []
-            last_number = 0
-            for x, (number, token) in sort_list:
-                if number != last_number:
-                    token_counter = number - 1
-                    last_number = number
-                else:
-                    token_counter += 1
-                L.append((x+1, token_counter + 1))
-            return L
-        else:
-            return [(x+1, x+1) for x, _ in sort_list]
-
-    def filter_to_sql(self, filt):
-        """
-        Return an SQL string that can be used in a WHERE clause to fulfil
-        the filter.
-        """
-        variable, rc_feature, table_name, op, value_list, _value_range = filt
-        _, hashed, tab, feat = self.resource.split_resource_feature(rc_feature)
-        if hashed != None:
-            link, ext_resource = get_by_hash(hashed)
-            db = ext_resource.db_name
-            sql_field = "{}.{}.{}".format(
-                db,
-                getattr(ext.resource, "{}_table".format(tab)),
-                getattr(ext.resource, "{}_{}".format(tab, feat)))
-        else:
-            sql_field = getattr(self.resource, rc_feature)
-
-        if op.upper() == "LIKE":
-            sql_template = "{} LIKE '{}'"
-            if "*" not in value_list[0]:
-                value_list[0] = "*{}*".format(value_list[0])
-            value_list[0] = tokens.COCAToken.replace_wildcards(value_list[0])
-        else:
-            sql_template = "{} = '{}'"
-        return sql_template.format(sql_field, value_list[0])
-
-    def get_required_features(self, query, token_list, only_lexical=False):
-        """
-        Get a set of all feature names that are required to fulfil the
-        query.
-        """
-
-        required_features = set([])
-
-        # add all features that are required because they are in the current
-        # selection:
-        for rc_feature in options.cfg.selected_features:
-            func, hashed, table, feat = self.resource.split_resource_feature(rc_feature)
-            if func:
-                print("FUNC")
-            if table not in self.resource.special_table_list:
-                s = "{}_{}".format(table, feat)
-                if hashed != None:
-                    link, res = get_by_hash(hashed)
-                    required_features.add("{}.{}".format(res.name , s))
-                else:
-                    required_features.add(s)
-
-        # if a GUI is used, include source features so the entries in the
-        # result table can be made clickable to show the context:
-        if (options.cfg.gui and not options.cfg.to_file) or options.cfg.context_left or options.cfg.context_right:
-            if options.cfg.token_origin_id:
-                required_features.add(options.cfg.token_origin_id)
-
-        # add features required for links:
-        for link, _ in options.cfg.external_links:
-            required_features.add(link.rc_from)
-            required_features.add("{}.{}".format(link.res_to, link.rc_to))
-
-        # make sure that the word_id is always included in the query:
-        # FIXME: Why is this needed?
-        required_features.add("corpus_word_id")
-
-        for i, tup in enumerate(token_list):
-            _, tok = tup
-            token = tokens.COCAToken(tok, self.lexicon)
-
-            if token.class_specifiers and not (
-                token.word_specifiers or
-                token.lemma_specifiers or
-                token.gloss_specifiers or
-                token.transcript_specifiers):
-
-                try:
-                    required_features.add(
-                        getattr(self.resource, QUERY_ITEM_POS))
-                except AttributeError:
-                    pass
-
-        for feat in list(required_features):
-            _, _, tab, _ = self.resource.split_resource_feature(feat)
-            self.lexicon.table_list = []
-            self.lexicon.joined_tables = ["corpus"]
-            self.lexicon.add_table_path("corpus_id", feat)
-            tabs = self.lexicon.joined_tables
-            for i, tab in enumerate(tabs[:-1]):
-                required_features.add("{}_{}_id".format(tab, tabs[i+1]))
-                required_features.add("{}_id".format(tabs[i+1]))
-        return required_features
-
-    def get_required_tables(self, feature_list):
-        """
-        Return a list containing the tables required for the feature list.
-        """
-
-        self.lexicon.table_list = []
-        self.lexicon.joined_tables = ["corpus"]
-
-        table_set = set([])
-
-        for rc_feature in feature_list:
-            _, hashed, table, feature = self.resource.split_resource_feature(rc_feature)
-            # FIXME: what about linked tables?
-            self.lexicon.joined_tables = ["corpus"]
-            self.lexicon.add_table_path("corpus_id", rc_feature)
-            for tab in self.lexicon.joined_tables:
-                table_set.add(tab)
-        return table_set
-
-    def get_token_query_string(self, current_token, number, to_file=False):
-        """
-        Return a SQL SELECT string that selects a table matching the current
-        token, and which includes all columns that are requested, or which
-        are required to join the tables.
-
-        Parameters
-        ----------
-        current_token : CorpusToken
-            An instance of CorpusToken as a part of a query string.
-        number : int
-            The number of current_token in the query string (starting with 0)
-        to_file : bool
-            True if the query results are directly written to a file, and
-            False if they will be displayed in the GUI. Data that is written
-            directly to a file contains less information, e.g. it doesn't
-            contain an origin ID or a corpus ID (unless requested).
-
-        Returns
-        -------
-        s : string
-            The partial SQL string.
-        """
-        # corpus variables will only be included in the token query string if
-        # this is the first query token.
-        if number == 0:
-            requested_features = [x for x in options.cfg.selected_features]
-
-            # if a GUI is used, include source features so the entries in the
-            # result table can be made clickable to show the context:
-            if (options.cfg.gui and not options.cfg.to_file) or options.cfg.context_left or options.cfg.context_right:
-                if options.cfg.token_origin_id:
-                    requested_features.append(options.cfg.token_origin_id)
-        else:
-            corpus_variables = [x for x, _ in self.resource.get_corpus_features() if not x.endswith(("_starttime", "_endtime"))]
-            requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
-
-        rc_where_constraints = defaultdict(set)
-
-        # make sure that the word_id is always included in the query:
-        # FIXME: Why is this needed?
-        requested_features.append("corpus_word_id")
-
-        # Add hack that accounts for segments. The way this hack works is that
-        # it constructs a normal query string (ignoring segments), and then
-        # joins that query with a query to segments.
-        # In order for this to work, the corpus times need to be included as
-        # selected features.
-
-        self.segment_features = [x for x in options.cfg.selected_features if x.startswith("segment_")]
-        requested_features = [x for x in requested_features if not x.startswith("segment_")]
-
-        try:
-            pos_feature = getattr(self.resource, QUERY_ITEM_POS)
-        except AttributeError:
-            word_pos_column = None
-            pos_feature = ""
-        else:
-            word_pos_column = getattr(self.resource, pos_feature)
-        # make sure that the tables and features that are required to
-        # match the current token are also requested as features:
-
-        # create constraint lists:
-        sub_list = set([])
-
-        if hasattr(self.resource, "corpus_word_id"):
-            word_id_column = self.resource.corpus_word_id
-        elif hasattr(self.resource, "corpus_word"):
-            word_id_column = self.resource.corpus_id
-        else:
-            word_id_column = None
-
-        where_clauses = self.get_whereclauses(
-            current_token,
-            word_id_column,
-            word_pos_column)
-        for x in where_clauses:
-            if x:
-                sub_list.add(x)
-        s = ""
-        if sub_list or current_token.S in ["%", ""]:
-            if sub_list:
-                if current_token.negated:
-                    s = "NOT ({})".format(" AND ".join(sub_list))
-                else:
-                    s = " AND ".join(sub_list)
-
-            if s:
-                if current_token.class_specifiers and not (current_token.word_specifiers or current_token.lemma_specifiers or current_token.transcript_specifiers):
-                    requested_features.append(pos_feature)
-                    _, _, table, _ = self.resource.split_resource_feature(pos_feature)
-                    rc_where_constraints["{}_table".format(table)].add(s)
-                else:
-                    rc_where_constraints["corpus_table"].add(s)
-
-        for col in options.cfg.group_columns:
-            if col not in requested_features:
-                requested_features.append(col)
-
-        # get a list of all tables that are required to satisfy the
-        # feature request:
-
-        required_tables = defaultdict(list)
-        for rc_feature in requested_features:
-            function, hashed, tab, _ = self.resource.split_resource_feature(rc_feature)
-
-            # ignore features from one of the special tables:
-            if tab in self.resource.special_table_list:
-                continue
-
-            if hashed != None:
-                required_tables["{}.{}_table".format(hashed, tab)].append(rc_feature)
-                try:
-                    link, _ = get_by_hash(hashed)
-                except ValueError:
-                    pass
-                else:
-                    if link.rc_from not in requested_features:
-                        requested_features.append(link.rc_from)
-            else:
-                rc_table = "{}_table".format(tab)
-                if rc_table not in required_tables:
-                    tree = self.resource.get_table_structure(rc_table,  options.cfg.selected_features)
-                    parent = tree["parent"]
-                    table_id = "{}_id".format(tab)
-                    required_tables[rc_table].append(rc_feature)
-                    requested_features.append(table_id)
-                    if parent:
-                        _, _, parent_tab, _ = self.resource.split_resource_feature(parent)
-                        parent_id = "{}_{}_id".format(parent_tab, tab)
-                        requested_features.append(parent_id)
-
-        join_strings = {}
-        external_links = []
-        join_strings[self.resource.corpus_table] = "{} AS COQ_CORPUS_TABLE".format(self.resource.corpus_table)
-        full_tree = self.resource.get_table_structure("corpus_table", requested_features)
-        # create a list of the tables
-        select_list = set([])
-
-        self.lexicon.table_list = []
-
-        for rc_table in required_tables:
-            func, hashed, table, feature = self.resource.split_resource_feature(rc_table)
-
-            if hashed != None:
-                link, ex_res = get_by_hash(hashed)
-                linked_table = "{}_table".format(table)
-
-                column_list = []
-
-                # add linking variable:
-                column_list.append("{} AS db_{}_coq_{}_{}".format(
-                    getattr(ex_res, link.rc_to),
-                    ex_res.db_name,
-                    link.rc_to,
-                    number+1))
-
-                # add selected variables from external table:
-                for rc_feature in required_tables[rc_table]:
-                    _, _, tab, feat = ex_res.split_resource_feature(rc_feature)
-                    rc_ext = "{}_{}".format(tab, feat)
-                    alias = "db_{}_coq_{}_{}".format(
-                        ex_res.db_name, rc_ext, number+1)
-                    column_list.append("{} AS {}".format(
-                        getattr(ex_res, rc_ext), alias))
-                    select_list.add(alias)
-
-                if not link.one_to_many:
-                    column_list.append(getattr(ex_res, "{}_id".format(table)))
-
-                # construct subquery that joins the external table:
-                columns = ", ".join(set(column_list))
-                alias = "db_{}_coq_{}_{}".format(ex_res.db_name, table, hashed).upper()
-
-                if link.one_to_many:
-                    target = ""
-                    table_id = ""
-                    sql_template = """
-                    LEFT JOIN
-                            (SELECT {columns}
-                            FROM    {corpus}.{table})
-                            AS      {alias}
-                    ON      coq_{internal_feature}_{n} = {alias}.db_{corpus}_coq_{external_feature}_{n}
-                    """
-                else:
-                    table_id = getattr(ex_res, "{}_id".format(table))
-                    target = getattr(ex_res, link.rc_to)
-                    sql_template = """
-                    LEFT JOIN
-                        (SELECT {columns}
-                        FROM {corpus}.{table}) AS {alias}
-                        ON {alias}.{table_id} =
-                            (SELECT MIN({table_id})
-                               FROM {corpus}.{table}
-                              WHERE {target} = coq_{internal_feature}_{n})
-                    """
-
-                S = sql_template.format(
-                    columns=columns, n=number+1,
-                    internal_feature=link.rc_from,
-                    corpus=ex_res.db_name,
-                    table=getattr(ex_res, linked_table),
-                    external_feature=link.rc_to, alias=alias, target=target, table_id=table_id)
-
-                external_links.append(S)
-
-                if self.resource.db_type == SQL_SQLITE:
-                    if not hasattr(self.resource, "attach_list"):
-                        self.resource.attach_list = set([])
-                    self.resource.attach_list.add(ex_res.db_name)
-
-            else:
-                rc_tab = rc_table.split("_")[0]
-                sub_tree = self.resource.get_sub_tree(rc_table, full_tree)
-
-                try:
-                    parent_tree = self.resource.get_sub_tree(sub_tree["parent"], full_tree)
-                except TypeError as e:
-                    print("----", e)
-                    print("sub_tree:", sub_tree)
-                    print("requested_features:", requested_features)
-                    print("rc_table:", rc_table)
-                    print("required_tables:", required_tables)
-                    print("----", e)
-                    parent_tree = None
-                table = getattr(self.resource, rc_table)
-                if parent_tree:
-                    rc_parent = parent_tree["rc_table_name"]
-                else:
-                    rc_parent = None
-
-                column_list = set()
-                if sub_tree:
-                    for rc_feature in sub_tree["rc_requested_features"]:
-                        if rc_feature.startswith("func."):
-                            name = "coq_{}_{}".format(
-                                rc_feature.split("func.")[-1], number+1)
-                        else:
-                            name = "coq_{}_{}".format(rc_feature, number+1)
-
-                        variable_string = "{} AS {}".format(
-                            getattr(self.resource, rc_feature.split("func.")[-1]),
-                            name)
-                        column_list.add(variable_string)
-                        select_list.add(name)
-
-                columns = ", ".join(column_list)
-                where_string = ""
-                if rc_table in rc_where_constraints:
-                    where_string = "WHERE {}".format(" AND ".join(list(rc_where_constraints[rc_table])))
-
-                if rc_parent:
-                    parent_id = "coq_{}_{}_id_{}".format(
-                        rc_parent.split("_")[0],
-                        rc_table.split("_")[0],
-                        number+1)
-                    child_id = "coq_{}_id_{}".format(
-                        rc_table.split("_")[0],
-                        number+1)
-
-                    if self.resource.is_lexical(rc_feature):
-                        join_type = "INNER"
-                    else:
-                        join_type = "LEFT"
-
-                    sql_template = """
-                    {join_type} JOIN (SELECT {columns} FROM {table} {where})
-                    AS COQ_{rc_table}
-                    ON {parent_id} = {child_id}
-                    """
-                    join_strings[rc_table] = sql_template.format(
-                        join_type = join_type,
-                        columns = columns,
-                        table = table,
-                        rc_table = rc_table.upper(),
-                        where = where_string,
-                        parent_id = parent_id,
-                        child_id = child_id)
-                else:
-                    # corpus table
-                    if self.segment_features:
-                        columns += ", {} AS coquery_invisible_corpus_starttime_{}".format(
-                            self.resource.corpus_starttime, number+1)
-                        columns += ", {} AS coquery_invisible_corpus_endtime_{}".format(
-                            self.resource.corpus_endtime, number+1)
-                    join_strings[rc_table] = "(SELECT {columns} FROM {table} {where}) AS COQ_{rc_table}".format(
-                        columns = columns,
-                        table = table,
-                        rc_table = rc_table.upper(),
-                        where = where_string)
-
-        # create a list containing the join strings for the different tables,
-        # in the order in which they are required based on their position in
-        # the database layout:
-        table_order = self.resource.get_table_order(full_tree)
-        L = []
-        for x in table_order:
-            if x in join_strings and not join_strings[x] in L:
-                L.append(join_strings[x])
-
-        for x in external_links:
-            if x not in L:
-                L.append(x)
-
-        if not select_list:
-            return ""
-
-        # in order to make the context viewer work in the gui, add the
-        # corpus origin resource (which is either the source id or the file
-        # id) to the selected columns, but only for the first query item,
-        # and only if the gui is used:
-        if (to_file or options.cfg.to_file) and number == 0 and options.cfg.token_origin_id:
-            select_list.add("coq_{}_1".format(options.cfg.token_origin_id))
-
-        if self.segment_features:
-            select_list.add("coquery_invisible_corpus_starttime_{}".format(number+1))
-            select_list.add("coquery_invisible_corpus_endtime_{}".format(number+1))
-
-        S = "SELECT {} FROM {}".format(", ".join(select_list), " ".join(L))
-        return S
-
-    #def get_token_query_string_self_joined(self, token, number):
-        #"""
-        #Return a MySQL SELECT string that queries one token in a query on an
-        #n-gram corpus table.
-        #"""
-
-        ## get a list of all tables that are required to satisfy the
-        ## feature request:
-        #corpus_variables = [x for x, _ in self.resource.get_corpus_features()]
-        #requested_features = [x for x in options.cfg.selected_features if not x in corpus_variables]
-
-        #requested_features.append("word_id")
-
-        #column_list = []
-        #for rc_feature in requested_features:
-            #column_list.append("{} AS coq_{}_{}".format(
-                #getattr(self.resource, rc_feature),
-                #rc_feature, number + 1))
-
-        #where_clauses = self.get_whereclauses(
-            #token,
-            #self.resource.corpus_word_id,
-            #None)
-
-        #where_clauses = []
-        #L = []
-        #try:
-            #word_label = self.resource.word_label
-        #except AttributeError:
-            #pass
-        #else:
-            #for word in token.word_specifiers:
-                #current_token = tokens.COCAToken(word, self, replace=False, parse=False)
-                #current_token.negated = token.negated
-                #S = current_token.S
-                #if S != "%":
-                    ## take care of quotation marks:
-                    #S = S.replace("'", "''")
-                    #L.append("%s %s '%s'" % (word_label, self.resource.get_operator(current_token), S))
-        #if L:
-            #where_clauses.append("({})".format(" OR ".join(L)))
-
-        #L = []
-        #try:
-            #lemma_label = self.resource.word_lemma
-        #except AttributeError:
-            #pass
-        #else:
-            #for lemma in token.lemma_specifiers:
-                #current_token = tokens.COCAToken(lemma, self, replace=False, parse=False)
-                #current_token.negated = token.negated
-                #S = current_token.S
-                #if S != "%":
-                    ## take care of quotation marks:
-                    #S = S.replace("'", "''")
-                    #L.append("%s %s '%s'" % (lemma_label, self.resource.get_operator(current_token), S))
-        #if L:
-            #where_clauses.append("({})".format(" OR ".join(L)))
-
-        #L = []
-        #try:
-            #pos_label = self.resource.pos
-        #except AttributeError:
-            #pass
-        #else:
-            #for pos in token.class_specifiers:
-                #current_token = tokens.COCAToken(pos, self, replace=False, parse=False)
-                #current_token.negated = token.negated
-                #S = current_token.S
-                ## take care of quotation marks:
-                #if S != "%":
-                    #S = S.replace("'", "''")
-                    #L.append("%s %s '%s'" % (pos_label, self.resource.get_operator(current_token), S))
-        #if L:
-            #where_clauses.append("({})".format(" OR ".join(L)))
-
-        #if where_clauses:
-            #S = """
-            #SELECT  {columns}
-            #FROM    {lexicon}
-            #WHERE   {constraints}
-            #""".format(
-                #columns=", ".join(column_list),
-                #lexicon=self.resource.word_table,
-                #constraints=" AND ".join(where_clauses))
-        #else:
-            #S = """
-            #SELECT  {columns}
-            #FROM    {lexicon}
-            #""".format(
-                #columns=", ".join(column_list),
-                #lexicon=self.resource.word_table),
-        #return S
-
-    def sql_string_query_lookup(self, Query, token_list):
-        """
-        Return a string that is sufficient to run the query on the
-        MySQL database.
-        """
-
-        def sql_string_join_lexical():
-            """
-            Return a string containing the inline views required to fulfil
-            the lexicon feature selections.
-
-            The string contains a format placeholder {N} that can be filled
-            with the correct query item number.
-            """
-            table_features = defaultdict(list)
-            table_chain = defaultdict(list)
-            s_set = []
-
-            lexicon_features = [x for x, _ in self.resource.get_lexicon_features()]
-
-            self.lexicon.table_list = []
-            self.lexicon.joined_tables = ["corpus"]
-
-            for x in [x for x in options.cfg.selected_features if x in lexicon_features]:
-                _, _, table, _ = self.resource.split_resource_feature(x)
-                self.lexicon.joined_tables = ["corpus"]
-                self.lexicon.add_table_path("corpus_id", x)
-                table_features[table].append(x)
-                id_feature = "{}_id".format(table)
-                if id_feature not in table_features[table]:
-                    table_features[table].append(id_feature)
-                table_chain[table] = self.lexicon.joined_tables
-                for i, _ in enumerate(self.lexicon.joined_tables[:-1]):
-                    this_tab = self.lexicon.joined_tables[i]
-                    next_tab = self.lexicon.joined_tables[i + 1]
-                    table_features[this_tab].append("{}_id".format(this_tab))
-                    table_features[this_tab].append("{}_{}_id".format(this_tab, next_tab))
-
-            sql_template = """
-            LEFT JOIN
-                    (SELECT {features}
-                    FROM    {table})
-                    AS      {alias}
-            ON      {alias_id} = {ref_id}
-            """
-            for table in table_features:
-                if table != "corpus":
-                    l = []
-                    for feature in table_features[table]:
-                        l.append("{} AS coq_{}_{{N}}".format(
-                            getattr(self.resource, feature), feature))
-                    features = ", ".join(l)
-                    prev_table = table_chain[table][-2]
-                    s_set.append(sql_template.format(
-                        features=features,
-                        table=getattr(self.resource, "{}_table".format(table)),
-                        alias="COQ_{}_TABLE_{{N}}".format(table.upper()),
-                        alias_id="coq_{}_id_{{N}}".format(table),
-                        ref_table="COQ_{}_TABLE".format(prev_table.upper()),
-                        ref_id="coq_{}_{}_id_{{N}}".format(prev_table, table)))
-
-            return "\n".join(s_set)
-
-        # For a query string 'the [n*2]', this is the query string this method
-        # should produce (in COCA):
-
-        # SELECT  e1.Word AS coq_word_label_1,
-        #         e2.Word AS coq_word_label_2,
-        #         Genre AS coq_corpus_source_1
-        # FROM    CorpusNgram
-        # INNER JOIN
-        #         Sources
-        # ON      CorpusNgram.SourceId = Sources.SourceId
-        # INNER JOIN
-        #         Lexicon AS e1
-        # ON      CorpusNgram.WordId1 = e1.WordId
-        # INNER JOIN
-        #         Lexicon AS e2
-        # ON      CorpusNgram.WordId2 = e2.WordId
-        # WHERE   e1.Word = 'the' AND e2.POS LIKE 'n%2'
-
-        sql_master = """
-        SELECT  {fields}
-        FROM    {corpus}
-                {table_join}
-        WHERE   {where_string}
-        """
-
-
-        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features()]
-        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features()]
-
-        # determine how words are stored: either directly as a string in a
-        # word column, or as keys to a word table:
-        if hasattr(self.resource, "corpus_word_id"):
-            word_id_column = self.resource.corpus_word_id
-        elif hasattr(self.resource, "corpus_word"):
-            word_id_column = self.resource.corpus_id
-
-        corpus_fields = ["{id} AS coq_corpus_id_1".format(
-            tab=self.resource.corpusngram_table,
-            id=self.resource.corpus_id)]
-
-        for i in range(len(token_list)):
-            corpus_fields.append("{col}{i} AS coq_corpus_word_id_{i}".format(
-                tab=self.resource.corpusngram_table,
-                col=word_id_column,
-                i=i+1))
-
-        if options.cfg.token_origin_id:
-            corpus_fields.append("{} AS coq_{}_1".format(
-                getattr(self.resource, options.cfg.token_origin_id),
-                options.cfg.token_origin_id))
-
-
-        #### OLD:
-
-
-        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features()]
-        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features()]
-
-        # determine how words are stored: either directly as a string in a
-        # word column, or as keys to a word table:
-        if hasattr(self.resource, "corpus_word_id"):
-            word_id_column = self.resource.corpus_word_id
-        elif hasattr(self.resource, "corpus_word"):
-            word_id_column = self.resource.corpus_id
-
-        corpus_fields = ["{id} AS coq_corpus_id_1".format(
-            tab=self.resource.corpusngram_table,
-            id=self.resource.corpus_id)]
-
-        for i in range(len(token_list)):
-            corpus_fields.append("{col}{i} AS coq_corpus_word_id_{i}".format(
-                tab=self.resource.corpusngram_table,
-                col=word_id_column,
-                i=i+1))
-
-        if options.cfg.token_origin_id:
-            corpus_fields.append("{} AS coq_{}_1".format(
-                getattr(self.resource, options.cfg.token_origin_id),
-                options.cfg.token_origin_id))
-
-        # get word_id constraints for each query item:
-        where_clauses = []
-        for i, tup in enumerate(token_list):
-            _, item = tup
-            try:
-                where_clauses += self.get_whereclauses(
-                    tokens.COCAToken(item, self.lexicon),
-                    "{}{}".format(word_id_column, i+1))
-            except CompleteLexiconRequestedError:
-                where_clauses = []
-
-        table_joins = []
-        for i in range(len(token_list)):
-            s = sql_string_join_lexical()
-            s = s.format(N=i+1)
-            table_joins.append(s)
-
-        final_select = self.get_select_columns(Query, token_list)
-        if where_clauses:
-            where_string = "WHERE {}".format(" AND ".join(where_clauses))
-        else:
-            where_string = ""
-
-        # get inline view of corpus table
-        # FIXME: Currently, this selects only the word id fields, and not
-        # any other fields in the corpus table.
-        sql_template = """
-        (SELECT {corpus_fields}
-        FROM    {corpusngram_table}
-        {where}) AS COQ_CORPUS_TABLE
-        """
-        aliased_corpus = sql_template.format(
-            corpus_fields=", ".join(corpus_fields),
-            corpusngram_table=self.resource.corpusngram_table,
-            where=where_string)
-
-        sql_template = """
-        SELECT  {fields}
-        FROM    {aliased_corpus}
-                {table_joins}
-        """
-        query_string = sql_template.format(
-            fields=", ".join(set(final_select)),
-            aliased_corpus=aliased_corpus,
-            table_joins=" ".join(table_joins))
-
-        # add LIMIT clause if necessary:
-        if options.cfg.number_of_tokens:
-            query_string = "{} LIMIT {}".format(
-                query_string, options.cfg.number_of_tokens)
-
-        return query_string
-
-
-        #token_query_list = {}
-
-        #corpus_features = [x for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-        #lexicon_features = [x for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-
-        #for i, tup in enumerate(token_list):
-            #number, token = tup
-            #s = self.get_token_query_string(tokens.COCAToken(token, self.lexicon), i)
-            #if s:
-                #join_string = "INNER JOIN ({s}) AS e{i}\nON coq_word_id_{i} = W{i}".format(
-                    #s = s,
-                    #i=i+1)
-                #token_query_list[i+1] = join_string
-        #final_select = []
-
-        #requested_features = [x for x in options.cfg.selected_features]
-        #if options.cfg.context_left or options.cfg.context_right:
-            ## in order to make this not depend on a fixed database layout
-            ## (here: 'source' and 'file' tables), we should check for any
-            ## table that corpus_table is linked to except for word_table
-            ## (and all child tables).
-            #if options.cfg.token_origin_id:
-                #requested_features.append(options.cfg.token_origin_id.replace("corpus", "corpusngram"))
-
-        #for rc_feature in requested_features:
-            #try:
-                #final_select.append(
-                    #"{} AS coq_{}_1".format(getattr(self.resource, "corpusngram_{}".format(rc_feature)), rc_feature))
-            #except AttributeError:
-                ## This means that the requested feature is not directly
-                ## stored in the n-gram table. This means that a table
-                ## link is necessary.
-                #pass
-
-        ## FIXME:
-        ## Not working:
-        ## - align_quantified
-        ## - linked tables
-
-        #for rc_feature in self.resource.get_preferred_output_order():
-            #if rc_feature in requested_features:
-                #if rc_feature in lexicon_features:
-                    #for i in range(Query.Session.get_max_token_count()):
-                        #if i < len(token_list):
-                            #final_select.append("coq_{}_{}".format(rc_feature, i+1))
-                        #else:
-                            #final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-                #elif rc_feature in corpus_features:
-                    #pass
-                    ##final_select.append("coq_{}_1".format(rc_feature))
-
-        ##for rc_feature in options.cfg.selected_features:
-            ##select_feature = "coq_{}_1".format(rc_feature)
-            ##if rc_feature in corpus_features or rc_feature in lexicon_features:
-                ##final_select.append(select_feature)
-            ##else:
-                ##final_select.append("NULL AS {}".format(select_feature))
-
-        #final_select.append("{} AS coquery_invisible_corpus_id".format(self.resource.corpus_id))
-
-        #return """
-        #SELECT  {}
-        #FROM    {}
-        #{}
-        #{}
-        #""".format(
-            #", ".join(final_select),
-            #self.resource.corpusngram_table,
-            #"\n".join(token_query_list.values()),
-            #"WHERE {}".format(" AND ".join(where_string_list)) if where_string_list else "",
-            #)
-
-
-    def get_select_columns(self, Query, token_list, to_file=False):
-        """
-        Get a list of aliased columns that is used in the query string.
-
-        Parameters
-        ----------
-        to_file : bool
-            True if the query results are directly written to a file, and
-            False if they will be displayed in the GUI. Data that is written
-            directly to a file contains less information, e.g. it doesn't
-            contain an origin ID or a corpus ID (unless requested).
-        """
-
-        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-
-        positions_lexical_items = self.get_lexical_item_positions(token_list)
-
-        max_token_count = Query.Session.get_max_token_count()
-        final_select = []
-        for rc_feature in self.resource.get_preferred_output_order():
-            if rc_feature in options.cfg.selected_features:
-                if (not rc_feature.startswith("segment_") and
-                    (rc_feature in [x for x, _ in lexicon_features] or self.resource.is_tokenized(rc_feature))):
-                    for i in range(max_token_count):
-                        if options.cfg.align_quantified:
-                            last_offset = 0
-                            if i in positions_lexical_items:
-                                final_select.append("coq_{}_{}".format(rc_feature, i+1))
-                            else:
-                                final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-                        else:
-                            if i < len(token_list):
-                                final_select.append("coq_{}_{}".format(rc_feature, i+1))
-                            else:
-                                final_select.append("NULL AS coq_{}_{}".format(rc_feature, i+1))
-                if (rc_feature.startswith("segment_")):
-                    final_select.append("coquery_invisible_corpus_starttime_1")
-                    final_select.append("coquery_invisible_corpus_endtime_{}".format(max_token_count))
-
-        # add any external feature that is not a function:
-        for link, rc_feature in options.cfg.external_links:
-            res, _, _ = options.get_resource(link.res_to)
-            _, _, tab, feat = self.resource.split_resource_feature(rc_feature)
-            rc_feat = "{}_{}".format(tab, feat)
-            if self.resource.is_lexical(link.rc_from):
-                for i in range(max_token_count):
-                    if options.cfg.align_quantified:
-                        if i in positions_lexical_items:
-                            final_select.append("db_{}_coq_{}_{}".format(res.db_name, rc_feat, i+1))
-                    else:
-                        final_select.append("db_{}_coq_{}_{}".format(res.db_name, rc_feat, i+1))
-            else:
-                final_select.append("db_{}_coq_{}_1".format(res.db_name, rc_feat))
-
-        # add the corpus features in the preferred order:
-        # FIXME: Is this still necessary?
-        for rc_feature in self.resource.get_preferred_output_order():
-            if rc_feature in options.cfg.selected_features:
-                if rc_feature in [x for x, _ in corpus_features]:
-                    final_select.append("coq_{}_1".format(rc_feature))
-
-        # Add any feature that is selected that is neither a corpus feature,
-        # a lexicon feature nor a Coquery feature:
-        # FIXME: What does this do, then?
-        for rc_feature in options.cfg.selected_features:
-            if any([x == rc_feature for x, _ in self.resource.get_corpus_features()]):
-                break
-            if any([x == rc_feature for x, _ in self.resource.get_lexicon_features()]):
-                break
-            _, _, table, _ = self.resource.split_resource_feature(rc_feature)
-
-            # special table entries are included as NULL columns. This is
-            # needed because otherwise, empty select lists can occur if the
-            # only selected feature comes from a special table (e.g. only
-            # Query string):
-            if table in self.resource.special_table_list:
-                final_select.append("NULL AS {}".format(rc_feature))
-            else:
-                if "." not in rc_feature:
-                    final_select.append("coq_{}_1".format(rc_feature.replace(".", "_")))
-
-        for rc_feature in options.cfg.group_columns:
-            L = self.resource.format_resource_feature(rc_feature, max_token_count)
-            for col in L:
-                try:
-                    num = int(col.rpartition("_")[-1]) - 1
-                except ValueError:
-                    # this happens if the column label does not end in a
-                    # number, e.g. for fields from the special tables.
-                    continue
-                if options.cfg.align_quantified:
-                    if num in positions_lexical_items:
-                        final_select.append(col)
-                    else:
-                        final_select.append("NULL AS {}".format(col))
-                else:
-                    if num < len(token_list):
-                        final_select.append(col)
-                    else:
-                        final_select.append("NULL AS {}".format(col))
-
-        ## add coquery_invisible_origin_id if a context is requested:
-        #if (options.cfg.context_mode != CONTEXT_NONE and
-            #options.cfg.token_origin_id != None and
-            #(options.cfg.context_left or options.cfg.context_right)):
-        if not to_file or (options.cfg.context_mode != CONTEXT_NONE):
-            final_select.append("coq_{}_1 AS coquery_invisible_origin_id".format(options.cfg.token_origin_id))
-            # Always add the corpus id to the output fields:
-            final_select.append("coq_corpus_id_1 AS coquery_invisible_corpus_id")
-        return final_select
 
     def get_lexical_item_positions(self, token_list):
         """
@@ -2722,128 +1856,6 @@ class CorpusClass(object):
 
             positions_lexical_items.append(column_number)
         return positions_lexical_items
-
-    def sql_string_query(self, Query, token_list, to_file=False):
-        """
-        Return a string that is sufficient to run the query on the
-        MySQL database.
-
-        Parameters
-        ----------
-        Query : instance of TokenQuery
-            The currently active query
-        token_list : list
-            A list of Token instances
-        to_file : bool
-            True if the query results are directly written to a file, and
-            False if they will be displayed in the GUI. Data that is written
-            directly to a file contains less information, e.g. it doesn't
-            contain an origin ID or a corpus ID (unless requested).
-        """
-
-        token_query_list = {}
-
-        corpus_features = [(x, y) for x, y in self.resource.get_corpus_features() if x in options.cfg.selected_features]
-        lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
-
-        order = self.get_token_query_order(token_list)
-        if not order:
-            return
-
-        referent_id, referent_column = order.pop(0)
-
-        # get a partial query string for each token:
-        last_offset = 0
-        token_counter = None
-        positions_lexical_items = []
-
-        for i, tup in enumerate(token_list):
-            offset, token = tup
-
-            if options.cfg.align_quantified:
-                if offset != last_offset:
-                    token_count = 0
-                    last_offset = offset
-                column_number = offset + token_count - 1
-                token_count += 1
-            else:
-                column_number = i
-
-            positions_lexical_items.append(column_number)
-
-            s = self.get_token_query_string(
-                tokens.COCAToken(token, self.lexicon),
-                column_number, to_file)
-            if i + 1 == referent_id:
-                token_query_list[i+1] = s
-            elif i + 1 < referent_id:
-                if s:
-                    join_string = "INNER JOIN ({s}) AS e{num} ON coq_corpus_id_{ref_col} > {offset} AND coq_corpus_id_{col_number} = coq_corpus_id_{ref_col} - {offset}".format(
-                        s=s,
-                        num=i+1,
-                        col_number=column_number + 1,
-                        offset=referent_id - i - 1,
-                        ref_col=referent_column)
-                    token_query_list[i+1] = join_string
-            else:
-                if s:
-                    join_string = "INNER JOIN ({s}) AS e{num} ON coq_corpus_id_{col_number} = coq_corpus_id_{ref_col} + {offset}".format(
-                        s = s,
-                        num=i+1,
-                        col_number=column_number + 1,
-                        offset=i - referent_id + 1,
-                        ref_col=referent_column)
-                    token_query_list[i+1] = join_string
-        query_string_part = [
-            "SELECT COQ_OUTPUT_FIELDS FROM ({}) AS e{}".format(token_query_list.pop(referent_id), referent_id)]
-        for referent_id, _ in order:
-            query_string_part.append(token_query_list[referent_id])
-
-        final_select = self.get_select_columns(Query, token_list, to_file)
-        segment_columns = [x for x in final_select if x.startswith("coq_segment_")]
-        final_select = [x for x in final_select if not x.startswith("coq_segment_")]
-        # construct the query string from the token query parts:
-        query_string = " ".join(query_string_part)
-        query_string = query_string.replace("COQ_OUTPUT_FIELDS", ", ".join(set(final_select)))
-
-        segment_columns = [x for x in options.cfg.selected_features if x.startswith("segment_")]
-
-
-        if segment_columns:
-            columns = set(["{} AS coq_{}_1".format(getattr(self.resource, x), x) for x in segment_columns] + [x.rpartition(" AS ")[-1] for x in final_select])
-            columns.add("coquery_invisible_corpus_starttime_1")
-            columns.add("coquery_invisible_corpus_endtime_{N}".format(N=len(token_list)))
-            query_string = """
-            SELECT {columns} FROM ({s}) as results
-            INNER JOIN
-                {segment_table}
-            WHERE
-                {segment_table}.{segment_end} - coquery_invisible_corpus_starttime_1 > 0.001 AND
-                coquery_invisible_corpus_endtime_{N} - {segment_table}.{segment_start} > 0.001  AND
-                {segment_table}.{segment_source} = coquery_invisible_origin_id
-            """.format(columns=", ".join(columns),
-                       s=query_string,
-                       segment_table=self.resource.segment_table,
-                       segment_start=self.resource.segment_starttime,
-                       segment_end=self.resource.segment_endtime,
-                       segment_source=self.resource.segment_origin_id,
-                       N=len(token_list))
-
-        # add LIMIT clause if necessary:
-        if options.cfg.number_of_tokens:
-            query_string = "{} LIMIT {}".format(
-                query_string, options.cfg.number_of_tokens)
-
-        # if verbose, add some line breaks and tabs to the query string so
-        # that it is somewhat easier to read:
-        if options.cfg.verbose:
-            query_string = query_string.replace("INNER JOIN ", "\nINNER JOIN \n\t")
-            query_string = query_string.replace("LEFT JOIN ", "\nLEFT JOIN \n\t")
-            query_string = query_string.replace("SELECT ", "SELECT \n\t")
-            query_string = query_string.replace("FROM ", "\n\tFROM \n\t\t")
-            query_string = query_string.replace("WHERE ", "\n\tWHERE \n\t\t")
-
-        return query_string
 
     def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):
         if hasattr(self.resource, "corpus_word_id"):
@@ -2979,7 +1991,7 @@ class CorpusClass(object):
         else:
             corpus_word_id = self.resource.corpus_word
 
-        _, _, tab, _ = self.resource.split_resource_feature(word_feature)
+        _, tab, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(tab))
         word_id = getattr(self.resource, "{}_id".format(tab))
 
@@ -3189,3 +2201,5 @@ class CorpusClass(object):
         s = s.replace("</p>", "</p>\n")
         s = s.replace("<br/>", "<br/>\n")
         return s
+
+logger = logging.getLogger(NAME)
