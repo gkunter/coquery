@@ -79,7 +79,9 @@ class CoqColumnMenu(QtGui.QMenu):
     editFunctionRequested = QtCore.Signal(str)
     changeSortingRequested = QtCore.Signal(tuple)
     propertiesRequested = QtCore.Signal(list)
-    
+    addGroupRequested = QtCore.Signal(str)
+    removeGroupRequested = QtCore.Signal(str)
+
     def __init__(self, columns=[], title="", parent=None, *args, **kwargs):
         super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
         self.columns = columns
@@ -107,8 +109,18 @@ class CoqColumnMenu(QtGui.QMenu):
         hide_column.triggered.connect(lambda: self.hideColumnRequested.emit(columns))
         self.addAction(hide_column)
 
-        self.addSeparator()
+        if len(columns) == 1:
+            rc_feature = columns[0]
+            add_grouping = QtGui.QAction("Add to &group columns", parent)
+            remove_grouping = QtGui.QAction("Remove from &group columns", parent)
 
+            if self.parent().ui.list_group_columns.find_resource(rc_feature) is not None:
+                self.addAction(remove_grouping)
+                remove_grouping.triggered.connect(lambda: self.removeGroupRequested.emit(rc_feature))
+            else:
+                self.addAction(add_grouping)
+                add_grouping.triggered.connect(lambda: self.addGroupRequested.emit(rc_feature))
+        self.addSeparator()
 
         # add additional function actions, but only if all columns really
         # are functions:

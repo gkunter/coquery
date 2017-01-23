@@ -1842,6 +1842,8 @@ class CoqueryApp(QtGui.QMainWindow):
         menu.editFunctionRequested.connect(self.edit_function)
         menu.changeSortingRequested.connect(self.change_sorting_order)
         menu.propertiesRequested.connect(self.column_properties)
+        menu.addGroupRequested.connect(self.add_group_column)
+        menu.removeGroupRequested.connect(self.remove_group_column)
 
         return menu
 
