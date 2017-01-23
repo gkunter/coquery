@@ -123,12 +123,15 @@ class Manager(CoqObject):
 
     def get_group_columns(self, df, session):
         columns = []
-        # use group columns as sorters
         for col in options.cfg.group_columns:
-            formatted_cols = session.Resource.format_resource_feature(col, session.get_max_token_count())
-            for x in formatted_cols:
-                if x in df.columns:
-                    columns.append(x)
+            if col.startswith("func_"):
+                columns.append(col)
+            else:
+                formatted_cols = session.Resource.format_resource_feature(
+                                    col, session.get_max_token_count())
+                for x in formatted_cols:
+                    if x in df.columns:
+                        columns.append(x)
         return columns
 
     def mutate_groups(self, df, session):

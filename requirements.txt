@@ -1,0 +1,6 @@
+sqlalchemy
+numpy
+matplotlib
+pandas
+seaborn
+tgt
