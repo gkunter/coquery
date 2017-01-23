@@ -502,13 +502,6 @@ class Table(object):
                     str_list.append("{} {}".format(
                         column.name, data_type))
                 columns_added.add(column.name)
-        if db_type == SQL_SQLITE:
-            # make SQLite columns case-insensitive by default
-            for i, x in enumerate(list(str_list)):
-                field_type = x.split()[1]
-                if "VARCHAR" in field_type.upper() or "TEXT" in field_type.upper():
-                    str_list[i] = "{} COLLATE NOCASE".format(x)
-
         S = ",\n\t".join(str_list)
         command_list.insert(0, S)
         table_str = "; ".join(command_list)
