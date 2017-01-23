@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import itertools
 import re
+import string
 
 from .defines import msg_token_dangling_open
 from .errors import TokenParseError
@@ -543,6 +544,12 @@ def preprocess_query(S):
 
         if val == "_NULL":
             val = None
+        elif re.match("~?_PUNCT", val):
+            neg = val.startswith("~")
+            val = "|".join(list(".,;!-+") + ["\\?"])
+            # FIXME: negation doesn't work
+            if neg:
+                val = "~{}".format(val)
         inner = []
         # For each tuple, create a list of constant length
         # Each element contains a different number of
