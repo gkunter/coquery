@@ -23,7 +23,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -189,6 +189,13 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
+        <widget class="QCheckBox" name="check_regular_expressions">
+         <property name="text">
+          <string>Interpret queries as &amp;regular expressions</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QCheckBox" name="check_ignore_case_query">
          <property name="text">
           <string>Ignore &amp;case in query strings</string>
@@ -222,16 +229,7 @@
           <property name="spacing">
            <number>0</number>
           </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
+          <property name="margin">
            <number>0</number>
           </property>
           <item>
@@ -554,7 +552,8 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -593,7 +592,8 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -632,7 +632,8 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>

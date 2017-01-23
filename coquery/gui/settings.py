@@ -170,6 +170,10 @@ class Settings(QtGui.QDialog):
             self.ui.check_ignore_case_query.setChecked(not self._options.query_case_sensitive)
         except AttributeError:
             pass
+        try:
+            self.ui.check_regular_expressions.setChecked(self._options.regexp)
+        except AttributeError:
+            pass
         #try:
             #self.ui.check_ignore_punctuation.setChecked(bool(self._options.ignore_punctuation))
         #except AttributeError:
@@ -239,6 +243,7 @@ class Settings(QtGui.QDialog):
 
         # Query options
         self._options.query_case_sensitive = not bool(self.ui.check_ignore_case_query.isChecked())
+        self._options.regexp = bool(self.ui.check_regular_expressions.isChecked())
         self._options.drop_on_na = bool(self.ui.check_drop_empty_queries.isChecked())
         self._options.use_cache = bool(self.ui.check_use_cache.isChecked())
         self._options.last_cache_size = int(self.ui.spin_cache_size.value())
