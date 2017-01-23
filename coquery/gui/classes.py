@@ -1445,7 +1445,15 @@ class CoqListWidget(QtGui.QListWidget):
         rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
-        label = getattr(get_toplevel_window().resource, rc_feature)
+        try:
+            label = getattr(get_toplevel_window().resource, rc_feature)
+        except AttributeError:
+            try:
+                label = (get_toplevel_window()
+                         .Session.translate_header(rc_feature))
+            except AttributeError:
+                return None
+
         new_item = QtGui.QListWidgetItem(label)
 
         self.columns.append((new_item, rc_feature))
