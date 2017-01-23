@@ -275,7 +275,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
             # external resource does not exist (anymore), return
             return
 
-        _, _, tab, feat = ext_res.split_resource_feature(link.rc_to)
+        _, tab, feat = ext_res.split_resource_feature(link.rc_to)
         ext_table = "{}_table".format(tab)
 
         tree = classes.CoqTreeLinkItem()
@@ -289,7 +289,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
         # fill new tree with the features from the linked table (exclude
         # the linking feature):
         for rc_feature in [x for x in table if x != link.rc_to]:
-            _, _, _, feature = ext_res.split_resource_feature(rc_feature)
+            _, _, feature = ext_res.split_resource_feature(rc_feature)
             # exclude special resource features
             if feature not in ("id", "table") and not feature.endswith("_id"):
                 new_item = classes.CoqTreeItem()

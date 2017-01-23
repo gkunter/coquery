@@ -1845,7 +1845,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         else:
             rc_feature = rc_feature
 
-        _, hashed, table, feature = resource.split_resource_feature(rc_feature)
+        hashed, table, feature = resource.split_resource_feature(rc_feature)
         if hashed is None:
             db_name = resource.db_name
         else:
