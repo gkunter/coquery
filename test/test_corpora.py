@@ -61,6 +61,9 @@ class TestCorpus(unittest.TestCase):
     def setUp(self):
         options.cfg = argparse.Namespace()
         options.cfg.number_of_tokens = 0
+        options.cfg.regexp = False
+        options.cfg.query_case_sensitive = False
+        options.get_configuration_type = lambda: SQL_MYSQL
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Lexicon = None
