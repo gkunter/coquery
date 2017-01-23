@@ -242,7 +242,7 @@ _threads = []
 def read_wav(source, start=0, end=None):
     warnings.warn(
         "read_wav() is deprecated, use Sound() class instead",
-        warnings.DeprecationWarning)
+        DeprecationWarning)
     in_wav = wave.open(source, "rb")
     fr = in_wav.getframerate()
     chan = in_wav.getnchannels()
@@ -275,7 +275,7 @@ def extract_sound(source, target, start=0, end=None):
     """
     warnings.warn(
         "extract_sound() is deprecated, use Sound() class instead",
-        warnings.DeprecationWarning)
+        DeprecationWarning)
     sound = read_wav(source, start, end)
 
     out_wav = wave.open(target, "wb")
