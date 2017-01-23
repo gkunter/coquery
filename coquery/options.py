@@ -1151,6 +1151,22 @@ def get_con_configuration():
     else:
         return None
 
+def get_configuration_type():
+    """
+    Return the type of the current configuration.
+
+    Returns
+    -------
+    s : str or None
+        Depending on the type of the currenct configuration, `s` equals
+        either the constant SQL_MYSQL or SQL_SQLITE from defines.py. If
+        no configuration is available, return None.
+    """
+    if cfg.current_server in cfg.server_configuration:
+        return cfg.server_configuration[cfg.current_server]["type"]
+    else:
+        return None
+
 def process_options():
     global cfg
     global settings
