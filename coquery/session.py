@@ -63,8 +63,9 @@ class Session(object):
 
             self.Resource = current_resource
 
-            self.db_engine = sqlalchemy.create_engine(
-                sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
+            sql_url = sqlhelper.sql_url(options.cfg.current_server,
+                                          self.Resource.db_name)
+            self.db_engine = sqlalchemy.create_engine(sql_url)
 
             logger.info("Corpus '{}' on connection '{}'".format(
                 self.Resource.name, options.cfg.current_server))
@@ -150,7 +151,20 @@ class Session(object):
         self._first_saved_dataframe = False
 
     def connect_to_db(self):
+        def _sqlite_regexp(expr, item):
+            """
+            Function which adds regular expressions to SQLite
+            """
+            if options.cfg.query_case_sensitive:
+                match = re.search(expr, item)
+            else:
+                match = re.search(expr, item, re.IGNORECASE)
+            return match is not None
+
         self.db_connection = self.db_engine.connect()
+        if self.Resource.db_type == SQL_SQLITE:
+            self.db_connection.connection.create_function("REGEXP", 2,
+                                                          _sqlite_regexp)
 
     def disconnect_from_db(self):
         self.db_connection.close()
