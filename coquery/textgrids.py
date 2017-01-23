@@ -81,7 +81,7 @@ class TextgridWriter(object):
         tiers = set([])
         for rc_feature in [x for x in features if (
                             not x.startswith(("func_", "coquery_", "db_")))]:
-            _, hashed, tab, feature = (
+            hashed, tab, feature = (
                 self.resource.split_resource_feature(rc_feature))
 
             if tab == "segment":
@@ -175,7 +175,7 @@ class TextgridWriter(object):
             else:
                 s = col.partition("coq_")[-1]
                 rc_feature, _, number = s.rpartition("_")
-                _, _, tab, feature = (
+                _, tab, feature = (
                     self.resource.split_resource_feature(rc_feature))
                 tier_name = "{}_{}".format(tab, feature)
 
@@ -325,7 +325,7 @@ class TextgridWriter(object):
             grid = grids[x]
             for i, tier in enumerate(grid.tiers):
                 try:
-                    _, hashed, tab, feature = self.resource.split_resource_feature(tier.name)
+                    hashed, tab, feature = self.resource.split_resource_feature(tier.name)
                     if hashed is not None:
                         link, res = get_by_hash(hashed)
                         label = getattr(res, "{}_{}".format(tab, feature))
