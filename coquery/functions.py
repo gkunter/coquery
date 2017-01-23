@@ -593,7 +593,6 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
             sqlhelper.sql_url(options.cfg.current_server,
                               current_resource.db_name))
 
-
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         val = df[word_columns].apply(lambda x: self._func(x,
@@ -604,7 +603,6 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
             self._name, x, options.cfg.reference_corpus) for x in val.columns]
         engine.dispose()
         return val
-        return pd.Series([0] * len(df), index=df.index)
 
 
 class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
