@@ -100,7 +100,7 @@ class ConnectionConfiguration(QtGui.QDialog):
     noConnection = QtCore.Signal(Exception)
     accessDenied = QtCore.Signal(Exception)
     configurationError = QtCore.Signal(Exception)
-    connected = QtCore.Signal()
+    connected = QtCore.Signal(str)
     
     def __init__(self, name, config_dict, host="127.0.0.1", port=3306, user="mysql", password="mysql", db_type=SQL_SQLITE, parent=None):
         
@@ -142,7 +142,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.noConnection.connect(lambda x: self.update_connection("noConnection", x))
         self.accessDenied.connect(lambda x: self.update_connection("accessDenied", x))
         self.configurationError.connect(lambda x: self.update_connection("configurationError", x))
-        self.connected.connect(lambda: self.update_connection("connected"))
+        self.connected.connect(lambda x: self.update_connection("connected"))
         self.state = None
         
         # set the validator for the configuration name QLineEdit so that
@@ -599,7 +599,7 @@ class ConnectionConfiguration(QtGui.QDialog):
             else:
                 self.noConnection.emit(exc.orig)
         else:
-            self.connected.emit()
+            self.connected.emit(exc)
     
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:

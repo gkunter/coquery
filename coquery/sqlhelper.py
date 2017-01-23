@@ -108,7 +108,7 @@ def test_configuration(name):
         the second element. 
         
         If the configuration is valid, the boolean value is True, and the 
-        second element is None.
+        second element is the value of the query ``SELECT VERSION()``.
         
         If the configuration is not valid, the boolean value is False, and 
         the second element is the exception that was raised when testing 
@@ -120,14 +120,14 @@ def test_configuration(name):
             engine = sqlalchemy.create_engine(sql_url(name))
             with engine.connect() as connection:
                 result = connection.execute("SELECT VERSION()")
-            result.close()
         except sqlalchemy.exc.SQLAlchemyError as e:
             res = (False, e)
         except Exception as e:
             raise e
         else:
-            res = (True, None)
+            res = (True, result.fetchall()[0][0])
         finally:
+            result.close()
             try:
                 engine.dispose()
             except UnboundLocalError:
