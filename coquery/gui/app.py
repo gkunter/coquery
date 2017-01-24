@@ -1599,8 +1599,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
         old_list = options.cfg.filter_list
 
         try:
-            columns = self.table_model.content.columns
-            dtypes = self.table_model.content.dtypes
+            columns = (self.table_model.content.columns +
+                       self.hidden_model.content.columns)
+            dtypes = (self.table_model.content.dtypes +
+                      self.hidden_model.content.dtypes)
         except AttributeError:
             columns = []
             dtypes = []
