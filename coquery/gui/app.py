@@ -1327,7 +1327,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if options.cfg.first_run:
             if self._first_corpus:
-                self.selected_features = ["word_label"]
+                self.selected_features = set(["word_label"])
                 self._first_corpus = False
 
         if self.ui.combo_corpus.count():
@@ -1544,8 +1544,10 @@ class CoqueryApp(QtGui.QMainWindow):
         old_list = options.cfg.filter_list
 
         try:
-            columns = self.table_model.content.columns
-            dtypes = self.table_model.content.dtypes
+            columns = (self.table_model.content.columns +
+                       self.hidden_model.content.columns)
+            dtypes = (self.table_model.content.dtypes +
+                      self.hidden_model.content.dtypes)
         except AttributeError:
             columns = []
             dtypes = []
