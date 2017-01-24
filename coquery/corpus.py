@@ -1808,7 +1808,7 @@ class CorpusClass(object):
         self._corpus_range_cache[cache_key] = val
         return self._corpus_range_cache[cache_key]
 
-    def get_frequency(self, s, engine=False):
+    def get_frequency(self, s, engine):
         """
         Return the frequency for a token specified by s.
 
@@ -1835,9 +1835,9 @@ class CorpusClass(object):
             the filter list is applied.
         """
 
-        # FIXME: an engine is passed to this method. This is probably not
-        # a good idea.
-
+        if isinstance(s, (int, float)):
+            s = "{}".format(s)
+            
         if s in ["%", "_"]:
             s = "\\" + s
         s = s.replace("'", "''")
@@ -1849,18 +1849,10 @@ class CorpusClass(object):
         query_list = tokens.preprocess_query(s)
         freq = 0
 
-        if not engine:
-            work_engine = self.resource.get_engine()
-        else:
-            work_engine = engine
-
         for sub in query_list:
             S = self.resource.get_query_string(sub, [], columns=["COUNT(*)"])
-            df = pd.read_sql(S, work_engine)
+            df = pd.read_sql(S, engine)
             freq += df.values.ravel()[0]
-
-        if not engine:
-            work_engine.dispose()
 
         self._frequency_cache[s] = freq
         return freq
