@@ -2940,6 +2940,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
                          functions.ReferenceCorpusFrequency,
                          functions.ReferenceCorpusFrequencyPTW,
                          functions.ReferenceCorpusFrequencyPMW,
+                         functions.ReferenceCorpusLLKeyness,
+                         functions.ReferenceCorpusDiffKeyness,
                          functions.RowNumber,
                          functions.Percent, functions.Proportion,
                          functions.Tokens, functions.Types,
