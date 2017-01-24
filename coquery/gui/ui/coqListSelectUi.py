@@ -33,6 +33,7 @@ class Ui_CoqListSelect(object):
         self.layout = QtGui.QGridLayout()
         self.layout.setObjectName(_fromUtf8("layout"))
         self.verticalLayout_5 = QtGui.QVBoxLayout()
+        self.verticalLayout_5.setContentsMargins(3, -1, 3, -1)
         self.verticalLayout_5.setObjectName(_fromUtf8("verticalLayout_5"))
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout_5.addItem(spacerItem)
