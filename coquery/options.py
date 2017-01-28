@@ -838,8 +838,8 @@ class Options(object):
             self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
             self.args.text_source_path = config_file.str("gui", "text_source_path", fallback="")
 
-            self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=False)
-            self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=False)
+            self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=True)
+            self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=True)
 
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
             self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)

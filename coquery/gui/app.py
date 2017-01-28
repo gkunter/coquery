@@ -452,7 +452,6 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_limit_query.triggered.connect(self.toggle_limit_matches)
         self.ui.menuSettings.addAction(self.ui.action_limit_query)
 
-
         _widget = QtGui.QWidget()
         _hlayout = QtGui.QHBoxLayout(_widget)
         _hlayout.setMargin(0)
@@ -478,6 +477,9 @@ class CoqueryApp(QtGui.QMainWindow):
             lambda: self.ui.menuSettings.hide())
 
         self.ui.menuSettings.addAction(self.ui.action_number_of_matches)
+
+        self.ui.action_toggle_columns.setVisible(False)
+        self.ui.action_toggle_management.setVisible(False)
 
     def setup_hooks(self):
         """
