@@ -2239,6 +2239,10 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.start()
 
     def visualization_designer(self):
+        if not options.use_seaborn:
+            errorbox.alert_missing_module("Seaborn", self)
+            return
+
         from . import visualizationdesigner
         try:
             df = pd.concat([self.table_model.content,
