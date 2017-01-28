@@ -57,6 +57,9 @@ class Ui_FiltersDialog(object):
         self.list_columns = QtGui.QListWidget(self.widget_filters)
         self.list_columns.setObjectName(_fromUtf8("list_columns"))
         self.verticalLayout_5.addWidget(self.list_columns)
+        self.check_before_transformation = QtGui.QCheckBox(self.widget_filters)
+        self.check_before_transformation.setObjectName(_fromUtf8("check_before_transformation"))
+        self.verticalLayout_5.addWidget(self.check_before_transformation)
         self.horizontalLayout.addLayout(self.verticalLayout_5)
         self.verticalLayout = QtGui.QVBoxLayout()
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
@@ -133,6 +136,7 @@ class Ui_FiltersDialog(object):
     def retranslateUi(self, FiltersDialog):
         FiltersDialog.setWindowTitle(_translate("FiltersDialog", "Summary filters – Coquery", None))
         self.label_2.setText(_translate("FiltersDialog", "&Column:", None))
+        self.check_before_transformation.setText(_translate("FiltersDialog", "&Apply before transformation", None))
         self.label_3.setText(_translate("FiltersDialog", "&Relation:", None))
         self.radio_OP_EQ.setText(_translate("FiltersDialog", "equals", None))
         self.radio_OP_NE.setText(_translate("FiltersDialog", "does not equal", None))

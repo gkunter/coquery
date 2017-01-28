@@ -19,7 +19,7 @@ from .functions import *
 from .functionlist import FunctionList
 from .general import CoqObject, get_visible_columns
 from . import options
-
+from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
 
 class Sorter(CoqObject):
     def __init__(self, column, ascending=True, reverse=False, position=0):
@@ -377,7 +377,7 @@ class Manager(CoqObject):
             pass
         return df.reset_index(drop=True)
 
-    def filter(self, df, session):
+    def filter(self, df, session, stage):
         if (len(df) == 0 or not self._filters):
             return df
 
@@ -386,7 +386,8 @@ class Manager(CoqObject):
         print("\tfilter()")
         for filt in self._filters:
             print("\t\t", filt)
-            df = filt.apply(df)
+            if filt.stage == stage:
+                df = filt.apply(df)
         print("\tdone")
         df = df.reset_index(drop=True)
         self._len_post_filter = len(df)
@@ -526,14 +527,17 @@ class Manager(CoqObject):
         5.  mutate_groups(df)
             Apply group functions to each group.
 
-        6.  filter(df)
+        6.  filter(df, stage=FILTER_STAGE_BEFORE_TRANSFORM)
             Apply the filters to the ungrouped data frame.
 
         7.  summarize(df)
             Take the data frame, and transform it according to the current
             transformation.
 
-        8.  select(df)
+        8.  filter(df, stage=FILTER_STAGE_FINAL)
+            Apply remaining filters to the transformed data frame.
+
+        9.  select(df)
             Discard the columns that are not needed for the current
             transformation.
         """
@@ -577,8 +581,9 @@ class Manager(CoqObject):
             df = self.filter_groups(df, session)
             df = self.arrange_groups(df, session)
             df = self.mutate_groups(df, session)
-        df = self.filter(df, session)
+        df = self.filter(df, session, stage=FILTER_STAGE_BEFORE_TRANSFORM)
         df = self.summarize(df, session)
+        df = self.filter(df, session, stage=FILTER_STAGE_FINAL)
         df = self.select(df, session)
         self._functions = (session.column_functions.get_list() +
                            self.group_functions.get_list() +

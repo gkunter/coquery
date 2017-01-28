@@ -64,6 +64,13 @@
           <item>
            <widget class="QListWidget" name="list_columns"/>
           </item>
+          <item>
+           <widget class="QCheckBox" name="check_before_transformation">
+            <property name="text">
+             <string>&amp;Apply before transformation</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
