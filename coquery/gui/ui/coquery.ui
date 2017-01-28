@@ -950,7 +950,7 @@ p, li { white-space: pre-wrap; }
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
-     <string>&amp;Preferences</string>
+     <string>&amp;Options</string>
     </property>
     <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>

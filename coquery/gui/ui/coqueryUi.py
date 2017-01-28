@@ -808,7 +808,7 @@ class Ui_MainWindow(object):
         self.menuFile.setTitle(_translate("MainWindow", "&File", None))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help", None))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus", None))
-        self.menuSettings.setTitle(_translate("MainWindow", "&Preferences", None))
+        self.menuSettings.setTitle(_translate("MainWindow", "&Options", None))
         self.menuAnalyse.setTitle(_translate("MainWindow", "&Visualizations", None))
         self.menuFrequencies.setTitle(_translate("MainWindow", "&Bar charts", None))
         self.menuFrequency_maps.setTitle(_translate("MainWindow", "&Frequency maps", None))
