@@ -796,7 +796,7 @@ class CoqueryApp(QtGui.QMainWindow):
             rows = self.unfiltered_tokens
         s = "Total rows: {num:<8} Displayed rows: {uniq:<8} Duration of last operation: {dur}"
 
-        if options.cfg.number_of_tokens and rows != 0:
+        if options.cfg.limit_matches and rows != 0:
             s = "<font color='{{col}}'>Note: </font> Match limit ({{lim:<8}}) enabled. {s}".format(s=s)
 
         self.showMessage(s.format(
