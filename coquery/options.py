@@ -265,8 +265,9 @@ class Options(object):
         self.args.current_resources = None
         self.args.main_window = None
         self.args.first_run = False
-        self.args.number_of_tokens = 0
-        self.args.last_number_of_tokens = 0
+        self.args.number_of_tokens = 50
+        self.args.limit_matches = False
+        self.args.last_number_of_tokens = 50
         self.args.output_separator = ","
 
         self.args.table_links = defaultdict(list)
@@ -841,8 +842,9 @@ class Options(object):
             self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=False)
 
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
-            # FIXME: number_of_tokens should not be stored in options.cfg!
             self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
+            self.args.limit_matches = config_file.bool("gui", "limit_matches", fallback=False)
+
             s = config_file.str("gui", "show_log_messages", d=defaults)
             try:
                 self.args.show_log_messages = [x.strip() for x in s.split(",") if x]
@@ -1107,6 +1109,10 @@ def save_configuration():
             config.set("gui", "number_of_tokens", cfg.number_of_tokens)
         except AttributeError:
             config.set("gui", "number_of_tokens", 0)
+        try:
+            config.set("gui", "limit_matches", cfg.limit_matches)
+        except AttributeError:
+            config.set("gui", "limit_matches", False)
 
         try:
             config.set("gui", "save_query_string", cfg.save_query_string)

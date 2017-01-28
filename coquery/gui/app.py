@@ -441,28 +441,43 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
+        self.ui.menuSettings.aboutToShow.connect(self.show_options_menu)
 
         # add match limit widget to settings menu:
         self.ui.menuSettings.addSeparator()
+
+        self.ui.action_limit_query = QtGui.QWidgetAction(self)
+        self.ui.action_limit_query.setCheckable(True)
+        self.ui.action_limit_query.setText("&Limit queried matches")
+        self.ui.action_limit_query.triggered.connect(self.toggle_limit_matches)
+        self.ui.menuSettings.addAction(self.ui.action_limit_query)
+
+
         _widget = QtGui.QWidget()
         _hlayout = QtGui.QHBoxLayout(_widget)
-        _limit_action = QtGui.QWidgetAction(self)
-        _label = QtGui.QLabel("Limit matches: ")
+        _hlayout.setMargin(0)
+        _hlayout.setSpacing(0)
+
+        self.ui.label_limit_matches = classes.CoqClickableLabel("Matches per &query")
         self.ui.spin_query_limit = QtGui.QSpinBox()
-        self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
         self.ui.spin_query_limit.valueChanged.connect(_set_number_of_tokens)
-        self.ui.spin_query_limit.setSpecialValueText("all")
+        self.ui.spin_query_limit.setMinimum(1)
         self.ui.spin_query_limit.setMaximum(9999)
+        self.ui.label_limit_matches.setBuddy(self.ui.spin_query_limit)
+
+        _hlayout.addItem(QtGui.QSpacerItem(QtGui.QCheckBox().sizeHint().width() * 2,
+                                           0, QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed))
+        _hlayout.addWidget(self.ui.label_limit_matches)
+        _hlayout.addWidget(self.ui.spin_query_limit)
+
+        self.ui.action_number_of_matches = QtGui.QWidgetAction(self)
+        self.ui.action_number_of_matches = QtGui.QWidgetAction(self)
+        self.ui.action_number_of_matches.setDefaultWidget(_widget)
+
         self.ui.spin_query_limit.editingFinished.connect(
             lambda: self.ui.menuSettings.hide())
 
-        _hlayout.addWidget(_label)
-        _hlayout.addWidget(self.ui.spin_query_limit)
-        _hlayout.addWidget(QtGui.QLabel("per query"))
-
-        _action = QtGui.QWidgetAction(self)
-        _action.setDefaultWidget(_widget)
-        self.ui.menuSettings.addAction(_action)
+        self.ui.menuSettings.addAction(self.ui.action_number_of_matches)
 
     def setup_hooks(self):
         """
@@ -595,12 +610,12 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_copy_to_clipboard.setEnabled(True)
 
     def show_corpus_menu(self):
-        if self.ui.combo_corpus.count():
-            self.ui.action_corpus_documentation.setEnabled(True)
-            self.ui.action_statistics.setEnabled(True)
-        else:
-            self.ui.action_corpus_documentation.setEnabled(False)
-            self.ui.action_statistics.setEnabled(False)
+        enabled = bool(self.ui.combo_corpus.count())
+        self.ui.action_reference_corpus.setEnabled(enabled)
+        self.ui.action_link_external.setEnabled(enabled)
+        self.ui.action_corpus_documentation.setEnabled(enabled)
+        self.ui.action_statistics.setEnabled(enabled)
+
         if options.cfg.reference_corpus:
             self.ui.action_reference_corpus.setText("Change &reference corpus... ({})".format(options.cfg.reference_corpus))
         else:
@@ -633,6 +648,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_tree_map.setVisible(False)
         self.ui.action_word_cloud.setVisible(False)
 
+    def show_options_menu(self):
+        self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
+        self.ui.action_limit_query.setChecked(options.cfg.limit_matches)
+        self.ui.action_number_of_matches.setEnabled(options.cfg.limit_matches)
+
     ###
     ### widget appearance methods
     ###
@@ -647,6 +667,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.column_tree.show()
         else:
             self.column_tree.hide()
+
+    def toggle_limit_matches(self):
+        options.cfg.limit_matches = not options.cfg.limit_matches
 
     def toggle_data_management(self):
         options.cfg.show_data_management = not options.cfg.show_data_management

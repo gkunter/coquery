@@ -2506,7 +2506,7 @@ class CorpusClass(object):
             table_joins=" ".join(table_joins))
 
         # add LIMIT clause if necessary:
-        if options.cfg.number_of_tokens:
+        if options.limit_matches and options.cfg.number_of_tokens:
             query_string = "{} LIMIT {}".format(
                 query_string, options.cfg.number_of_tokens)
 
@@ -2830,7 +2830,7 @@ class CorpusClass(object):
                        N=len(token_list))
 
         # add LIMIT clause if necessary:
-        if options.cfg.number_of_tokens:
+        if options.limit_matches and options.cfg.number_of_tokens:
             query_string = "{} LIMIT {}".format(
                 query_string, options.cfg.number_of_tokens)
 
