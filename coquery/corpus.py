@@ -1375,7 +1375,7 @@ class SQLResource(BaseResource):
                                 joins=" ".join(join_list),
                                 conditions=" AND ".join(condition_list))
 
-        if options.cfg.number_of_tokens:
+        if options.cfg.limit_matches and options.cfg.number_of_tokens:
             S = """{}
             LIMIT  {}
             """.format(options.cfg.number_of_tokens)
