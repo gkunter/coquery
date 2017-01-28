@@ -1350,7 +1350,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
         if options.cfg.first_run:
             if self._first_corpus:
-                self.selected_features = ["word_label"]
+                self.selected_features = set(["word_label"])
                 self._first_corpus = False
 
         if self.ui.combo_corpus.count():
