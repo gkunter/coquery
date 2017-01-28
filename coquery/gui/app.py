@@ -1350,6 +1350,16 @@ class CoqueryApp(QtGui.QMainWindow):
             self.enable_corpus_widgets()
             self.ui.centralwidget.setEnabled(True)
 
+        item_types = []
+        if hasattr(self, "resource"):
+            # remember selected query item types:
+            for item_type in [QUERY_ITEM_WORD, QUERY_ITEM_LEMMA,
+                                QUERY_ITEM_POS, QUERY_ITEM_TRANSCRIPT,
+                                QUERY_ITEM_GLOSS]:
+                rc_feature = getattr(self.resource, item_type, None)
+                if rc_feature in options.cfg.selected_features:
+                    item_types.append(item_type)
+
         if options.cfg.first_run:
             if self._first_corpus:
                 self.selected_features = set(["word_label"])
@@ -1361,6 +1371,12 @@ class CoqueryApp(QtGui.QMainWindow):
             self.column_tree.setup_resource(self.resource)
         else:
             self.column_tree.clear()
+
+        # restore remembered query item types
+        for item_type in item_types:
+            rc_feature = getattr(self.resource, item_type, None)
+            if rc_feature:
+                self.selected_features.add(rc_feature)
 
         # try to transfer as many features from previous selections to the
         # new resource tree:
