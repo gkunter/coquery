@@ -505,6 +505,38 @@ class Manager(CoqObject):
         return df[valid]
 
     def process(self, df, session, recalculate=True):
+        """
+        Process the data frame.
+
+        Processing a data frame involves the following stages:
+
+        1.  mutate(df)
+            Apply all main functions (including context functions) as well as
+            user functions.
+
+        2.  substitute(df)
+            Apply the substitution table from the current session.
+
+        3.  filter_groups(df)
+            For each group, apply the group filters.
+
+        4.  arrange_groups(df)
+            Sort the entries within each group.
+
+        5.  mutate_groups(df)
+            Apply group functions to each group.
+
+        6.  filter(df)
+            Apply the filters to the ungrouped data frame.
+
+        7.  summarize(df)
+            Take the data frame, and transform it according to the current
+            transformation.
+
+        8.  select(df)
+            Discard the columns that are not needed for the current
+            transformation.
+        """
         print("process()")
         df = df.reset_index(drop=True)
 
