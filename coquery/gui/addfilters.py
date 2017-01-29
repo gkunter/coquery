@@ -2,7 +2,7 @@
 """
 addfilter.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,13 +15,13 @@ from __future__ import unicode_literals
 from coquery import options
 from coquery.defines import *
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.addFilterUi import Ui_FiltersDialog
 from .classes import CoqTableItem, CoqListItem
 from coquery.filters import Filter
 
 
-class FilterDialog(QtGui.QDialog):
+class FilterDialog(QtWidgets.QDialog):
     def __init__(self, filter_list, columns, dtypes, session, parent=None):
         super(FilterDialog, self).__init__(parent)
         self.ui = Ui_FiltersDialog()
@@ -114,9 +114,9 @@ class FilterDialog(QtGui.QDialog):
             if filt is not None:
                 new_list.add(filt.get_hash())
         if self.old_list == new_list:
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setDisabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setDisabled(True)
         else:
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
 
     def update_filter(self):
         """
@@ -252,7 +252,7 @@ class FilterDialog(QtGui.QDialog):
 
     def exec_(self):
         result = super(FilterDialog, self).exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             l = []
             for i in range(self.ui.table_filters.rowCount() - 1):
                 filt = self.ui.table_filters.item(0, i).objectName()

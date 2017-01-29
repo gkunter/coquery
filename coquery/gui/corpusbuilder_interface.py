@@ -26,11 +26,11 @@ from coquery.unicode import utf8
 from . import classes
 from . import errorbox
 from . import csvoptions
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
 
 
-class InstallerGui(QtGui.QDialog):
+class InstallerGui(QtWidgets.QDialog):
     button_label = "&Install"
     window_title = "Corpus installer – Coquery"
 
@@ -65,8 +65,8 @@ class InstallerGui(QtGui.QDialog):
         self.ui.group_only_module.toggled.connect(lambda x: self.activate_read(False))
         self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setText(self.button_label)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).clicked.connect(self.start_install)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setText(self.button_label)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).clicked.connect(self.start_install)
 
         self.ui.corpus_name.setText(builder_class.get_name())
         self.ui.corpus_name.setReadOnly(True)
@@ -91,16 +91,17 @@ class InstallerGui(QtGui.QDialog):
             self.ui.notes_box = classes.CoqDetailBox("Installation notes")
             self.ui.verticalLayout.addWidget(self.ui.notes_box)
 
-            self.ui.notes_label = QtGui.QLabel(notes)
+            self.ui.notes_label = QtWidgets.QLabel(notes)
             self.ui.notes_label.setWordWrap(True)
             self.ui.notes_label.setOpenExternalLinks(True)
             try:
-                self.ui.notes_label.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
+                self.ui.notes_label.setBackgroundRole(
+                    QtGui.QPalette.ColorRole.Base)
             except:
                 print("corpusbuilder_interface.InstallerGui.__init__(): Could not set background color of installation note box")
             self.ui.notes_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
 
-            self.ui.notes_scroll = QtGui.QScrollArea()
+            self.ui.notes_scroll = QtWidgets.QScrollArea()
             self.ui.notes_scroll.setWidgetResizable(True)
             self.ui.notes_scroll.setWidget(self.ui.notes_label)
 
@@ -166,19 +167,19 @@ class InstallerGui(QtGui.QDialog):
 
     def validate_dialog(self, check_path=True):
         self.ui.input_path.setStyleSheet("")
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(True)
         self.ui.issue_label.setText("")
 
         if self.ui.group_read_files.isChecked() and check_path:
             path = utf8(self.ui.input_path.text())
             if not path:
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
                 return
             if ((self._onefile and not os.path.isfile(path)) or
                 (not self._onefile and not os.path.isdir(path))):
                 self.ui.issue_label.setText("Illegal data source path.")
                 self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
                 return
 
     def display(self):
@@ -203,11 +204,11 @@ class InstallerGui(QtGui.QDialog):
         path = utf8(self.ui.input_path.text())
         if not path:
             path = os.path.join(options.cfg.base_path, "texts")
-        name = QtGui.QFileDialog.getExistingDirectory(
+        name = QtWidgets.QFileDialog.getExistingDirectory(
             directory=path,
-            options=(QtGui.QFileDialog.ReadOnly |
-                     QtGui.QFileDialog.ShowDirsOnly |
-                     QtGui.QFileDialog.HideNameFilterDetails))
+            options=(QtWidgets.QFileDialog.ReadOnly |
+                     QtWidgets.QFileDialog.ShowDirsOnly |
+                     QtWidgets.QFileDialog.HideNameFilterDetails))
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -221,15 +222,15 @@ class InstallerGui(QtGui.QDialog):
         if not path:
             path = os.path.expanduser("~")
 
-        name = QtGui.QFileDialog.getOpenFileName(directory=path)
+        name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
         if type(name) == tuple:
             name = name[0]
         if name:
             if not self.builder_class.probe_metadata(name):
-                QtGui.QMessageBox.critical(self,
+                QtWidgets.QMessageBox.critical(self,
                                            "Invalid meta data file – Coquery",
                                            msg_invalid_metadata,
-                                           QtGui.QMessageBox.Yes)
+                                           QtWidgets.QMessageBox.Yes)
             else:
                 self.ui.label_metafile.setText(name)
                 self.ui.check_use_metafile.setChecked(True)
@@ -271,7 +272,7 @@ class InstallerGui(QtGui.QDialog):
         if self.state == "failed":
             S = "Installation of {} failed.".format(self.builder.name)
             self.ui.progress_box.hide()
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(True)
             self.ui.widget_options.setEnabled(True)
         else:
             self.state = "finished"
@@ -279,10 +280,10 @@ class InstallerGui(QtGui.QDialog):
             self.ui.label.setText("Installation complete.")
             self.ui.progress_bar.hide()
             self.ui.progress_general.hide()
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes))
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel))
-            self.ui.buttonBox.addButton(QtGui.QDialogButtonBox.Ok)
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
+            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes))
+            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel))
+            self.ui.buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.accept)
             self.parent().showMessage(S)
             self.accept()
         self.parent().showMessage(S)
@@ -290,10 +291,10 @@ class InstallerGui(QtGui.QDialog):
     def install_exception(self):
         self.state = "failed"
         if isinstance(self.exception, RuntimeError):
-            QtGui.QMessageBox.critical(self, "Installation error – Coquery",
+            QtWidgets.QMessageBox.critical(self, "Installation error – Coquery",
                                         str(self.exception))
         elif isinstance(self.exception, DependencyError):
-            QtGui.QMessageBox.critical(self, "Missing Python module – Coquery",
+            QtWidgets.QMessageBox.critical(self, "Missing Python module – Coquery",
                                         str(self.exception))
         else:
             errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
@@ -303,10 +304,10 @@ class InstallerGui(QtGui.QDialog):
             if self.state == "finished":
                 self.accept()
             elif self.install_thread:
-                response = QtGui.QMessageBox.warning(self,
+                response = QtWidgets.QMessageBox.warning(self,
                     "Aborting installation",
                     msg_install_abort,
-                    QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
+                    QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.Yes)
                 if response:
                     self.install_thread.quit()
                     super(InstallerGui, self).reject()
@@ -314,7 +315,7 @@ class InstallerGui(QtGui.QDialog):
             super(InstallerGui, self).reject()
 
     def check_input(self):
-        button = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes)
+        button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
         if self.ui.group_only_module.isChecked():
             self.ui.input_path.setStyleSheet('')
             button.setEnabled(True)
@@ -346,11 +347,11 @@ class InstallerGui(QtGui.QDialog):
             try:
                 self.builder_class.validate_files(l)
             except RuntimeError as e:
-                reply = QtGui.QMessageBox.question(
+                reply = QtWidgets.QMessageBox.question(
                     None, "Corpus path not valid – Coquery",
                     msg_corpus_path_not_valid.format(e),
-                    QtGui.QMessageBox.Ignore | QtGui.QMessageBox.Discard)
-                if reply == QtGui.QMessageBox.Discard:
+                    QtWidgets.QMessageBox.Ignore | QtWidgets.QMessageBox.Discard)
+                if reply == QtWidgets.QMessageBox.Discard:
                     return
 
         self.installStarted.emit()
@@ -371,7 +372,7 @@ class InstallerGui(QtGui.QDialog):
         self.builder.arguments = self.get_arguments_from_gui()
         self.builder.name = self.builder.arguments.name
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
         self.ui.widget_options.setEnabled(False)
 
         self.install_thread = classes.CoqThread(self.do_install, self)
@@ -467,13 +468,14 @@ class BuilderGui(InstallerGui):
 
         self.setWindowTitle(self.window_title)
 
-        self.ui.issue_layout = QtGui.QVBoxLayout()
-        self.ui.name_layout = QtGui.QHBoxLayout()
+        self.ui.issue_layout = QtWidgets.QVBoxLayout()
+        self.ui.name_layout = QtWidgets.QHBoxLayout()
         self.ui.issue_label.setStyleSheet("QLabel { color: red; }")
 
         self.ui.corpus_name.setReadOnly(False)
         self.ui.corpus_name.setText("")
-        self.ui.corpus_name.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
+        self.ui.corpus_name.setValidator(
+            QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
         self.ui.name_label.setBuddy(self.ui.corpus_name)
 
         self.ui.verticalLayout.insertLayout(0, self.ui.issue_layout)
@@ -496,7 +498,7 @@ class BuilderGui(InstallerGui):
                 self.ui.use_pos_tagging.setChecked(False)
             else:
                 self.ui.use_pos_tagging.clicked.connect(self.pos_check)
-                size = QtGui.QCheckBox().sizeHint()
+                size = QtWidgets.QCheckBox().sizeHint()
                 self.ui.icon_nltk_check = classes.CoqSpinner(size)
                 self.ui.layout_nltk.addWidget(self.ui.icon_nltk_check)
 
@@ -510,7 +512,7 @@ class BuilderGui(InstallerGui):
             else:
                 self.ui.input_path.setText("")
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
         self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
         self.ui.corpus_name.setFocus()
         try:
@@ -543,8 +545,8 @@ class BuilderGui(InstallerGui):
             self.ui.label_pos_tagging.setText("Testing NLTK components, please wait...")
             self.ui.label_pos_tagging.setDisabled(True)
             self.ui.use_pos_tagging.setDisabled(True)
-            self._old_button_state = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).isEnabled()
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+            self._old_button_state = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).isEnabled()
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
             self.test_thread.start()
 
     def test_nltk_exception(self):
@@ -601,7 +603,7 @@ class BuilderGui(InstallerGui):
 
         self.ui.icon_nltk_check.stop()
         self.ui.label_pos_tagging.setText(self._label_text)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
             self.nltk_exceptions.append("Lemmatization: {} Tokenization: {} Tagging: {}".format(self._nltk_lemmatize, self._nltk_tokenize, self._nltk_tagging))
             self.ui.use_pos_tagging.setChecked(False)
@@ -630,7 +632,7 @@ class BuilderGui(InstallerGui):
             self.ui.corpus_name.setStyleSheet("")
         super(BuilderGui, self).validate_dialog()
 
-        button = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes)
+        button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
         button.setEnabled(True)
 
         if hasattr(self.ui, "corpus_name"):
@@ -674,9 +676,9 @@ class BuilderGui(InstallerGui):
                 path = os.path.expanduser("~")
             else:
                 path = os.path.split(options.cfg.corpus_table_source_path)[0]
-            name = QtGui.QFileDialog.getOpenFileName(directory=path)
+            name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
         else:
-            name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
+            name = QtWidgets.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
 
         if type(name) == tuple:
             name = name[0]
@@ -690,7 +692,7 @@ class BuilderGui(InstallerGui):
     def install_exception(self):
         self.state = "failed"
         if type(self.exception) == RuntimeError:
-            QtGui.QMessageBox.critical(self, "Corpus building error – Coquery",
+            QtWidgets.QMessageBox.critical(self, "Corpus building error – Coquery",
                                         str(self.exception))
         else:
             errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)

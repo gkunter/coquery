@@ -2,7 +2,7 @@
 """
 results.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -18,14 +18,14 @@ from coquery.defines import *
 from coquery.unicode import utf8
 from coquery import managers
 
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from . import classes
 
 _left_align = int(QtCore.Qt.AlignLeft) | int(QtCore.Qt.AlignVCenter)
 _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)
 
 
-class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
+class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
     fill = False
 
     def __init__(self, *args, threshold=0.95, **kwargs):
@@ -50,9 +50,9 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
             CoqResultCellDelegate.bg_color = None
 
     def get_foreground(self, option, index):
-        if option.state & QtGui.QStyle.State_MouseOver:
+        if option.state & QtWidgets.QStyle.State_MouseOver:
             return self._app.palette().color(QtGui.QPalette().Link)
-        elif option.state & QtGui.QStyle.State_Selected:
+        elif option.state & QtWidgets.QStyle.State_Selected:
             return self._app.palette().color(QtGui.QPalette().HighlightedText)
         else:
             if self._table.is_visible(index):
@@ -71,7 +71,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
                 return self._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text)
 
     def get_background(self, option, index):
-        if option.state & QtGui.QStyle.State_Selected:
+        if option.state & QtWidgets.QStyle.State_Selected:
             return self._app.palette().color(QtGui.QPalette().Highlight)
         else:
             if not self.bg_color:
@@ -97,7 +97,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         painter.save()
 
         # show content as a link on mouse-over:
-        if option.state & QtGui.QStyle.State_MouseOver:
+        if option.state & QtWidgets.QStyle.State_MouseOver:
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
@@ -106,7 +106,7 @@ class CoqResultCellDelegate(QtGui.QStyledItemDelegate):
         bg = self.get_background(option, index)
         if bg:
             painter.setBackground(bg)
-            if option.state & QtGui.QStyle.State_Selected or self.fill:
+            if option.state & QtWidgets.QStyle.State_Selected or self.fill:
                 painter.fillRect(option.rect, bg)
 
         if fg:
@@ -162,21 +162,21 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         content = self.format_str.format(self.prefix, value, self.suffix)
 
         # show content as a link on mouse-over:
-        if option.state & QtGui.QStyle.State_MouseOver:
+        if option.state & QtWidgets.QStyle.State_MouseOver:
             font = painter.font()
             font.setUnderline(True)
             painter.setFont(font)
         fg = self.get_foreground(option, index)
         bg = self.get_background(option, index)
         if bg:
-            if option.state & QtGui.QStyle.State_Selected:
+            if option.state & QtWidgets.QStyle.State_Selected:
                 painter.fillRect(option.rect, bg)
             elif value != 0:
                 rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
                 rect.setWidth(int(option.rect.width() * min(self.max_value, value)/self.max_value))
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
         if fg:
-            painter.setPen(QtGui.QPen(fg))
+            painter.setPen(QtPen.QPen(fg))
 
         try:
             if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:
@@ -217,7 +217,7 @@ class CoqLikelihoodDelegate(CoqResultCellDelegate):
         self.threshold = kwargs.get("threshold")
 
     def get_background(self, option, index):
-        if option.state & QtGui.QStyle.State_Selected:
+        if option.state & QtWidgets.QStyle.State_Selected:
             return self._app.palette().color(QtGui.QPalette().Highlight)
         else:
             try:
@@ -247,15 +247,15 @@ class CoqResultsTableView(classes.CoqTableView):
         self.setSelectionMode(self.ExtendedSelection)
 
         h_header = classes.CoqHorizontalHeader(QtCore.Qt.Horizontal)
-        h_header.setMovable(True)
+        h_header.setSectionsMovable(True)
         h_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        h_header.setSelectionBehavior(QtGui.QAbstractItemView.SelectColumns)
-        h_header.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        h_header.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectColumns)
+        h_header.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.setHorizontalHeader(h_header)
 
         v_header = self.verticalHeader()
         v_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        v_header.setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
+        v_header.setDefaultSectionSize(QtWidgets.QLabel().sizeHint().height() + 2)
 
     def setDelegates(self):
         h_header = self.horizontalHeader()

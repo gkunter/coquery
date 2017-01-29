@@ -4,7 +4,7 @@
 """
 This is the main module of Coquery, a free corpus query tool.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -48,9 +48,9 @@ def set_logger(log_file_path):
 def check_system():
     if options.missing_modules:
         if options.use_qt:
-            from .gui.pyqt_compat import QtGui
-            app = QtGui.QApplication(sys.argv)
-            QtGui.QMessageBox.critical(None,
+            from .gui.pyqt_compat import QtWidgets
+            app = QtWidgets.QApplication(sys.argv)
+            QtWidgets.QMessageBox.critical(None,
                 "Missing dependencies – Coquery",
                 msg_missing_modules.format("<br/>".join([str(x) for x in options.missing_modules])))
             print_exception(msg_missing_modules.format(", ".join(options.missing_modules)))
@@ -64,7 +64,6 @@ def main():
 
     check_system()
     options.process_options()
-
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (NAME, VERSION))
     logger.info("{}".format(sys.version))
@@ -105,7 +104,7 @@ def main():
 
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
-        from .gui.pyqt_compat import QtGui, QtCore
+        from .gui.pyqt_compat import QtWidgets, QtCore
         from .gui.app import CoqueryApp
         from .gui.app import GuiHandler
 
@@ -114,10 +113,10 @@ def main():
         logger.addHandler(options.cfg.gui_logger)
 
         if sys.platform == "darwin":
-            QtGui.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
-            QtGui.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
-            QtGui.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
-        options.cfg.app = QtGui.QApplication(sys.argv)
+            QtWidgets.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
+            QtWidgets.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
+            QtWidgets.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
+        options.cfg.app = QtWidgets.QApplication(sys.argv)
 
         Coq = CoqueryApp()
         options.cfg.gui = Coq

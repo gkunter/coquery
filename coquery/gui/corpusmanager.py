@@ -2,7 +2,7 @@
 """
 corpusmanager.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -25,10 +25,10 @@ from coquery.defines import *
 from coquery.unicode import utf8
 
 from . import classes
-from .pyqt_compat import QtCore, QtGui, frameShadow, frameShape
+from .pyqt_compat import QtCore, QtWidgets, QtGui, frameShadow, frameShape
 from .ui.corpusManagerUi import Ui_corpusManager
 
-class CoqAccordionEntry(QtGui.QWidget):
+class CoqAccordionEntry(QtWidgets.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""
     def __init__(self, path=None, stack=None, *args, **kwargs):
         super(CoqAccordionEntry, self).__init__(*args, **kwargs)
@@ -50,18 +50,18 @@ class CoqAccordionEntry(QtGui.QWidget):
         self._code = ""
         self._path = path
 
-        self.verticalLayout_2 = QtGui.QVBoxLayout(self)
-        self.corpus_description_frame = QtGui.QFrame(self)
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self)
+        self.corpus_description_frame = QtWidgets.QFrame(self)
 
         button_col = options.cfg.app.palette().color(QtGui.QPalette().Light)
         style = "QFrame {{ background-color: rgb({}, {}, {}); }}".format(button_col.red(), button_col.green(), button_col.blue())
         self.corpus_description_frame.setStyleSheet(style)
         self.corpus_description_frame.setFrameShape(frameShape)
         self.corpus_description_frame.setFrameShadow(frameShadow)
-        self.verticalLayout_3 = QtGui.QVBoxLayout(self.corpus_description_frame)
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.corpus_description_frame)
         self.verticalLayout_3.setSpacing(20)
-        self.verticalLayout_3.setMargin(20)
-        self.corpus_description = QtGui.QLabel(self.corpus_description_frame)
+        self.verticalLayout_3.setContentsMargins(20, 20, 20, 20)
+        self.corpus_description = QtWidgets.QLabel(self.corpus_description_frame)
         self.corpus_description.setWordWrap(True)
         self.corpus_description.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.corpus_description.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
@@ -69,12 +69,12 @@ class CoqAccordionEntry(QtGui.QWidget):
 
         self.verticalLayout_3.addWidget(self.corpus_description)
 
-        self.button_layout = QtGui.QHBoxLayout()
+        self.button_layout = QtWidgets.QHBoxLayout()
         self.button_layout.setSpacing(8)
 
-        self.validation_label = QtGui.QLabel("")
+        self.validation_label = QtWidgets.QLabel("")
         self.button_layout.addWidget(self.validation_label)
-        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.button_layout.addItem(spacerItem)
         self.verticalLayout_3.addLayout(self.button_layout)
 
@@ -101,9 +101,9 @@ class CoqAccordionEntry(QtGui.QWidget):
         '_to_clipboard', which copies the references to the clipboard.
         """
         if utf8(link) == "_to_clipboard":
-            QtGui.QApplication.clipboard().setText("\n".join([utf8(x) for x in self._reference_list]))
+            QtWidgets.QApplication.clipboard().setText("\n".join([utf8(x) for x in self._reference_list]))
         else:
-            QtGui.QDesktopServices.openUrl(QtCore.QUrl(link))
+            QtWidgets.QDesktopServices.openUrl(QtCore.QUrl(link))
 
     def setup_buttons(self, installed, entry_widget):
         """
@@ -116,22 +116,22 @@ class CoqAccordionEntry(QtGui.QWidget):
 
         Also conenct the buttons to the appropriate methods.
         """
-        self.widget_layout = QtGui.QHBoxLayout()
+        self.widget_layout = QtWidgets.QHBoxLayout()
         entry_widget.header_layout.addLayout(self.widget_layout)
 
-        button_build = QtGui.QPushButton()
+        button_build = QtWidgets.QPushButton()
         button_build.setIcon(self._stack.parent().get_icon("View File"))
         button_build.setText("Build")
         button_build.setToolTip("Build new corpus")
-        button_remove = QtGui.QPushButton()
+        button_remove = QtWidgets.QPushButton()
         button_remove.setIcon(self._stack.parent().get_icon("Minus"))
         button_remove.setText("Remove")
         button_remove.setToolTip("Remove corpus")
-        button_install = QtGui.QPushButton()
+        button_install = QtWidgets.QPushButton()
         button_install.setIcon(self._stack.parent().get_icon("Plus"))
         button_install.setText("Install")
         button_install.setToolTip("Install corpus")
-        button_reinstall = QtGui.QPushButton()
+        button_reinstall = QtWidgets.QPushButton()
         button_reinstall.setIcon(self._stack.parent().get_icon("Connection Sync"))
         button_reinstall.setText("Reinstall")
         button_reinstall.setToolTip("Reinstall corpus")
@@ -181,26 +181,26 @@ class CoqAccordionEntry(QtGui.QWidget):
     def safe_install(self):
         if self._validation == "validated":
             msg = msg_validated_install
-            box = QtGui.QMessageBox.question
-            default = QtGui.QMessageBox.Yes
+            box = QtWidgets.QMessageBox.question
+            default = QtWidgets.QMessageBox.Yes
         elif self._validation == "unvalidated":
             msg = msg_unvalidated_install
-            default = QtGui.QMessageBox.No
-            box = QtGui.QMessageBox.warning
+            default = QtWidgets.QMessageBox.No
+            box = QtWidgets.QMessageBox.warning
         elif self._validation == "failed":
             msg = msg_failed_install
-            default = QtGui.QMessageBox.No
-            box = QtGui.QMessageBox.warning
+            default = QtWidgets.QMessageBox.No
+            box = QtWidgets.QMessageBox.warning
         elif self._validation == "rejected":
             msg = msg_rejected_install
-            default = QtGui.QMessageBox.No
-            box = QtGui.QMessageBox.critical
+            default = QtWidgets.QMessageBox.No
+            box = QtWidgets.QMessageBox.critical
         #msg = msg.format(corpus=self._name)
 
         #response = box(None,
             #"Unvalidated corpus installer – Coquery",
-            #msg, QtGui.QMessageBox.Yes| QtGui.QMessageBox.No, default)
-        if True or response == QtGui.QMessageBox.Yes:
+            #msg, QtWidgets.QMessageBox.Yes| QtWidgets.QMessageBox.No, default)
+        if True or response == QtWidgets.QMessageBox.Yes:
             self._stack.installCorpus.emit(self._builder_class)
 
     def setReferences(self, ref):
@@ -288,7 +288,7 @@ class CoqAccordionEntry(QtGui.QWidget):
         self.corpus_description.setText(
             "".join(string_list))
 
-class CorpusManager(QtGui.QDialog):
+class CorpusManager(QtWidgets.QDialog):
     removeCorpus = QtCore.Signal(object)
     installCorpus = QtCore.Signal(object)
     buildCorpus = QtCore.Signal(object)
@@ -347,10 +347,10 @@ class CorpusManager(QtGui.QDialog):
         """
         options.cfg.current_resources = options.get_available_resources(options.cfg.current_server)
         # clear existing installer list:
-        QtGui.QWidget().setLayout(self.ui.list_content.layout())
+        QtWidgets.QWidget().setLayout(self.ui.list_content.layout())
 
-        self.ui.list_layout = QtGui.QVBoxLayout(self.ui.list_content)
-        self.ui.list_layout.setMargin(0)
+        self.ui.list_layout = QtWidgets.QVBoxLayout(self.ui.list_content)
+        self.ui.list_layout.setContentsMargins(0, 0, 0, 0)
         self.ui.list_layout.setSpacing(0)
 
         for path, label in self.paths:
@@ -377,9 +377,9 @@ class CorpusManager(QtGui.QDialog):
                             IllegalFunctionInModuleError,
                             IllegalImportInModuleError,
                             ModuleIncompleteError) as e:
-                        QtGui.QMessageBox.critical(
+                        QtWidgets.QMessageBox.critical(
                             None, "Corpus validation error – Coquery",
-                            msg_invalid_installer.format(name=basename, code=str(e)), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                            msg_invalid_installer.format(name=basename, code=str(e)), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                         continue
                     except (ImportError, SyntaxError) as e:
                         msg = msg_corpus_broken.format(
@@ -387,9 +387,9 @@ class CorpusManager(QtGui.QDialog):
                             type=sys.exc_info()[0],
                             code=sys.exc_info()[1])
                         logger.error(msg)
-                        QtGui.QMessageBox.critical(
+                        QtWidgets.QMessageBox.critical(
                             None, "Corpus error – Coquery",
-                            msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                            msg, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                         continue
 
                     try:
@@ -401,9 +401,9 @@ class CorpusManager(QtGui.QDialog):
                             type=sys.exc_info()[0],
                             code=sys.exc_info()[1])
                         logger.error(msg)
-                        QtGui.QMessageBox.critical(
+                        QtWidgets.QMessageBox.critical(
                             None, "Corpus error – Coquery",
-                            msg, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                            msg, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                         continue
                     try:
                         builder_class = module.BuilderClass
@@ -489,7 +489,7 @@ class CorpusManager(QtGui.QDialog):
             # if a label was provided and at least one installer added, insert
             # the header at the remembered position:
             if label and count:
-                header = QtGui.QLabel("<b>{}</b>".format(label))
+                header = QtWidgets.QLabel("<b>{}</b>".format(label))
                 height = header.sizeHint().height()
                 if header_row == 0:
                     # no top margin if this is the first widget in the layout:
@@ -498,7 +498,7 @@ class CorpusManager(QtGui.QDialog):
                     # add spacing otherwise:
                     header.setContentsMargins(0, int(height * 0.75), 0, int(height * 0.25))
                 self.ui.list_layout.insertWidget(header_row, header)
-        self.ui.list_layout.addItem(QtGui.QSpacerItem(0, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding))
+        self.ui.list_layout.addItem(QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding))
 
     def update_accordion(self, detail_box):
         """
@@ -513,7 +513,7 @@ class CorpusManager(QtGui.QDialog):
         options.set_current_server(options.cfg.current_server)
 
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     installer_list = CorpusManager.display("../installer", lambda x: x, lambda x: x)
     #app.exec_()
 

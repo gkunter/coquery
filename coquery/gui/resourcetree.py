@@ -2,7 +2,7 @@
 """
 resourcetree.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -18,7 +18,7 @@ from coquery import options
 from coquery.defines import *
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from . import classes
 
 
@@ -31,9 +31,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
         self.setHeaderHidden(True)
         self.setRootIsDecorated(True)
 
-        sizePolicy = QtGui.QSizePolicy(
-            QtGui.QSizePolicy.Minimum,
-            QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum,
+            QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())

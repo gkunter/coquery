@@ -2,10 +2,10 @@
 """
 figureoptions.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -16,10 +16,10 @@ import seaborn as sns
 import matplotlib as mpl
 
 from coquery import options
-from .pyqt_compat import QtGui, QtCore
+from .pyqt_compat import QtWidgets, QtGui, QtCore
 from .ui.figureOptionsUi import Ui_FigureOptions
 
-class CoqColorItem(QtGui.QListWidgetItem):
+class CoqColorItem(QtWidgets.QListWidgetItem):
     def __init__(self, color):
         super(CoqColorItem, self).__init__()
         try:
@@ -45,7 +45,7 @@ class CoqColorItem(QtGui.QListWidgetItem):
         else:
             self.setForeground(QtGui.QBrush(QtGui.QColor("white")))
 
-class FigureOptions(QtGui.QDialog):
+class FigureOptions(QtWidgets.QDialog):
     def __init__(self, default=dict(), parent=None, icon=None):
         super(FigureOptions, self).__init__(parent)
         
@@ -75,7 +75,7 @@ class FigureOptions(QtGui.QDialog):
         
         self.ui.spin_number.setValue(self.options.get("color_number", 6))
         
-        #self.current_palette = QtGui.QStandardItemModel(self.ui.color_test_area)
+        #self.current_palette = QtWidgets.QStandardItemModel(self.ui.color_test_area)
         if self.palette_name == "custom":
             self.custom_palette = self.options.get("color_palette_values", [])
 
@@ -148,7 +148,7 @@ class FigureOptions(QtGui.QDialog):
 
     def change_color(self, index):
         item = self.ui.color_test_area.item(index.row())
-        col = QtGui.QColorDialog.getColor(QtGui.QColor(str(item.text())))
+        col = QtWidgets.QColorDialog.getColor(QtGui.QColor(str(item.text())))
         if col.isValid():
             item.set_color((col.red(), col.green(), col.blue()))
             self._change_to_custom()
@@ -268,13 +268,13 @@ class FigureOptions(QtGui.QDialog):
         self.set_element_font(element_name, font)
 
     def change_font(self):
-        new_font = QtGui.QFont(self.ui.combo_font_figure.currentText())
+        new_font = QtWidgets.QFont(self.ui.combo_font_figure.currentText())
         self.options["figure_font"] = new_font
         for x in dir(self.ui):
             if x.startswith("label_sample_"):
                 element_name = x.split("label_sample_")[-1]
                 pointsize = int(getattr(self.ui, "spin_size_{}".format(element_name)).value())
-                self.set_element_font(element_name, QtGui.QFont(new_font.family(), pointsize))
+                self.set_element_font(element_name, QtWidgets.QFont(new_font.family(), pointsize))
 
     def accept(self):
         self.options["label_main"] = str(self.ui.label_main.text())
@@ -308,7 +308,7 @@ class FigureOptions(QtGui.QDialog):
     def manage(default=dict(), parent=None, icon=None):
         dialog = FigureOptions(default=dict(default), parent=parent, icon=icon)
         result = dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             return dialog.options
         else:
             return None
@@ -318,7 +318,7 @@ class FigureOptions(QtGui.QDialog):
             self.reject()
             
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     print(FigureOptions.manage())
     
 if __name__ == "__main__":

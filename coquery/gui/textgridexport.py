@@ -2,7 +2,7 @@
 """
 textgridexport.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,11 +15,11 @@ import os
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from .classes import CoqListItem
 from .ui.textgridExportUi import Ui_TextgridExport
 
-class TextgridExportDialog(QtGui.QDialog):
+class TextgridExportDialog(QtWidgets.QDialog):
     def __init__(self, columns, parent=None):
         super(TextgridExportDialog, self).__init__(parent)
         self.ui = Ui_TextgridExport()
@@ -41,8 +41,8 @@ class TextgridExportDialog(QtGui.QDialog):
         self.ui.button_sound_path.setIcon(parent.get_icon("Folder"))
 
         # Add auto complete to file name edit:
-        completer = QtGui.QCompleter()
-        model = QtGui.QDirModel(completer)
+        completer = QtWidgets.QCompleter()
+        model = QtWidgets.QDirModel(completer)
         model.setFilter(QtCore.QDir.AllDirs | QtCore.QDir.NoDotAndDotDot)
         completer.setModel(model)
         self.ui.edit_output_path.setCompleter(completer)
@@ -76,19 +76,21 @@ class TextgridExportDialog(QtGui.QDialog):
         self.ui.spin_right_padding.setValue(float(options.settings.value("textgridexport_right_padding", 0)))
 
     def check_gui(self, *args, **kwargs):
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
         if not os.path.exists(utf8(self.ui.edit_output_path.text())):
             S = "QLineEdit { background-color: rgb(255, 255, 192) }"
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setDisabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setDisabled(True)
         else:
-            S = "QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name())
+            S = "QLineEdit {{ background-color: {} }} ".format(
+                options.cfg.app.palette().color(QtGui.QPalette.Base).name())
         self.ui.edit_output_path.setStyleSheet(S)
         if self.ui.check_copy_sounds.isChecked():
             if not os.path.exists(utf8(self.ui.edit_sound_path.text())):
                 S = "QLineEdit { background-color: rgb(255, 255, 192) }"
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setDisabled(True)
+                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setDisabled(True)
             else:
-                S = "QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name())
+                S = "QLineEdit {{ background-color: {} }} ".format(
+                    options.cfg.app.palette().color(QtGui.QPalette.Base).name())
             self.ui.edit_sound_path.setStyleSheet(S)
 
     def set_output_path(self):
@@ -103,7 +105,7 @@ class TextgridExportDialog(QtGui.QDialog):
 
     def select_file(self, path=""):
         """ Call a file selector, and add file name to query file input. """
-        name = QtGui.QFileDialog.getExistingDirectory(directory=path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        name = QtWidgets.QFileDialog.getExistingDirectory(directory=path, options=QtWidgets.QFileDialog.ReadOnly|QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.HideNameFilterDetails)
         # getOpenFileName() returns different types in PyQt and PySide, fix:
         if type(name) == tuple:
             name = name[0]
@@ -127,7 +129,7 @@ class TextgridExportDialog(QtGui.QDialog):
 
     def exec_(self):
         result = super(TextgridExportDialog, self).exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             columns = []
             columns = [x.data(QtCore.Qt.UserRole) for x
                        in self.ui.list_columns.selectedItems()]

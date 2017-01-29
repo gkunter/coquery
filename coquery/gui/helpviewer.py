@@ -2,10 +2,10 @@
 """
 helpviewer.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -16,10 +16,11 @@ import sys
 
 from coquery import options
 from . import classes
-from .pyqt_compat import QtCore, QtGui, QtHelp, get_toplevel_window
+from .pyqt_compat import (QtCore, QtWidgets, QtGui, QtHelp,
+                          get_toplevel_window)
 from .ui.helpViewerUi import Ui_HelpViewer
 
-class HelpViewer(QtGui.QMainWindow):
+class HelpViewer(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(HelpViewer, self).__init__(*args, **kwargs)
 
@@ -53,10 +54,6 @@ class HelpViewer(QtGui.QMainWindow):
         self.ui.action_print.setDisabled(True)
         self.ui.action_print.setIcon(QtGui.QIcon())
         self.ui.action_print.setText("")
-        
-        
-        
-        
         
         self.ui.content.setSource(QtCore.QUrl(
             os.path.join(options.cfg.base_path, "help", "doc", "index.html")))

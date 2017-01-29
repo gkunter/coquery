@@ -2,7 +2,7 @@
 """
 orphanageddatabases.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -21,10 +21,10 @@ from coquery.sqlhelper import sqlite_path
 
 from . import classes
 
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets
 from .ui.orphanagedDatabasesUi import Ui_OrphanagedDatabases
 
-class OrphanagedDatabasesDialog(QtGui.QDialog):
+class OrphanagedDatabasesDialog(QtWidgets.QDialog):
     def __init__(self, orphans=[], parent=None):
         super(OrphanagedDatabasesDialog, self).__init__(parent)
         self._links = {}
@@ -32,8 +32,8 @@ class OrphanagedDatabasesDialog(QtGui.QDialog):
         self.ui = Ui_OrphanagedDatabases()
         self.ui.setupUi(self)
 
-        self.ui.box_layout = QtGui.QVBoxLayout()
-        self.ui.box_text = QtGui.QLabel(msg_orphanaged_databases)
+        self.ui.box_layout = QtWidgets.QVBoxLayout()
+        self.ui.box_text = QtWidgets.QLabel(msg_orphanaged_databases)
         self.ui.box_text.setWordWrap(True)
         self.ui.box_layout.addWidget(self.ui.box_text)
 
@@ -45,7 +45,7 @@ class OrphanagedDatabasesDialog(QtGui.QDialog):
         self.ui.verticalLayout.insertWidget(2, self.ui.detail_box)
 
         for x in orphans:
-            item = QtGui.QListWidgetItem(x)
+            item = QtWidgets.QListWidgetItem(x)
             item.setCheckState(QtCore.Qt.Unchecked)
             self.ui.listWidget.addItem(item)
 
@@ -73,7 +73,7 @@ class OrphanagedDatabasesDialog(QtGui.QDialog):
         if l:
             dialog = OrphanagedDatabasesDialog(orphans=l, parent=None)
             result = dialog.exec_()
-            if result == QtGui.QDialog.Accepted:
+            if result == QtWidgets.QDialog.Accepted:
                 for x in range(dialog.ui.listWidget.count()):
                     item = dialog.ui.listWidget.item(x)
                     if item.checkState() == QtCore.Qt.Checked:

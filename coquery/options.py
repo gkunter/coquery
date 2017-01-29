@@ -446,7 +446,6 @@ class Options(object):
         except AttributeError:
             self.args.corpus = ""
 
-
         self.args.corpus = utf8(self.args.corpus)
         # if no corpus is selected and no GUI is requested, display the help
         # and exit.
@@ -1198,8 +1197,8 @@ def process_options():
     if use_cachetools:
         from . import cache
         cfg.query_cache = cache.CoqQueryCache()
-
     add_source_path(cfg.custom_installer_path)
+
 
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
@@ -1528,7 +1527,7 @@ use_nltk = has_module("nltk")
 use_mysql = has_module("pymysql")
 use_seaborn = has_module("seaborn")
 use_pdfminer = has_module("pdfminer")
-use_qt = has_module("PyQt4") or has_module("PySide")
+use_qt = has_module("PyQt5")
 use_chardet = has_module("chardet")
 use_tgt = has_module("tgt")
 use_docx = has_module("docx")

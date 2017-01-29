@@ -2,10 +2,10 @@
 """
 functionapply.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -17,11 +17,11 @@ from coquery import functions
 from coquery import managers
 from coquery.defines import *
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.addFunctionUi import Ui_FunctionsDialog
 from .classes import CoqListItem
 
-class FunctionItem(QtGui.QWidget):
+class FunctionItem(QtWidgets.QWidget):
     def __init__(self, func, checkable=True, *args, **kwargs):
         super(FunctionItem, self).__init__(*args, **kwargs)
         self.checkable = checkable
@@ -29,23 +29,23 @@ class FunctionItem(QtGui.QWidget):
         name = func.get_name()
         desc = FUNCTION_DESC.get(func._name, "(no description available")
         
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed) 
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0) 
         sizePolicy.setVerticalStretch(0) 
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth()) 
         self.setSizePolicy(sizePolicy) 
-        self.horizontalLayout = QtGui.QHBoxLayout(self)
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self)
 
         if checkable:
-            self.checkbox = QtGui.QCheckBox()
-        self.verticalLayout = QtGui.QVBoxLayout() 
-        self.verticalLayout.setSizeConstraint(QtGui.QLayout.SetFixedSize) 
-        self.verticalLayout.setMargin(0)
-        self.label_1 = QtGui.QLabel(name, self)
+            self.checkbox = QtWidgets.QCheckBox()
+        self.verticalLayout = QtWidgets.QVBoxLayout()
+        self.verticalLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.label_1 = QtWidgets.QLabel(name, self)
         self.verticalLayout.addWidget(self.label_1)
 
         if desc != None:
-            self.label_2 = QtGui.QLabel(desc, self)
+            self.label_2 = QtWidgets.QLabel(desc, self)
             self.verticalLayout.addWidget(self.label_2)
 
             font = self.label_1.font()
@@ -73,18 +73,18 @@ class FunctionItem(QtGui.QWidget):
         size_hint = self.verticalLayout.sizeHint()
         if self.checkable:
             height = max(size_hint.height(),
-                        QtGui.QLabel().sizeHint().height(),
-                        QtGui.QCheckBox().sizeHint().height(),
+                        QtWidgets.QLabel().sizeHint().height(),
+                        QtWidgets.QCheckBox().sizeHint().height(),
                         self.verticalLayout.sizeHint().height() * 1.1)
         else:
             height = max(size_hint.height(),
-                        QtGui.QLabel().sizeHint().height(),
+                        QtWidgets.QLabel().sizeHint().height(),
                         self.verticalLayout.sizeHint().height() * 1.1)
 
         size_hint.setHeight(height)
         return size_hint
 
-class FunctionDialog(QtGui.QDialog):
+class FunctionDialog(QtWidgets.QDialog):
     def __init__(self, columns=[], available_columns=[],
                  function_class=[], 
                  function_types=None,
@@ -102,8 +102,8 @@ class FunctionDialog(QtGui.QDialog):
 
         max_width = 0
         for x in functions.combine_map:
-            max_width = max(max_width, QtGui.QLabel(x).sizeHint().width() + 
-                            QtGui.QComboBox().sizeHint().width())
+            max_width = max(max_width, QtWidgets.QLabel(x).sizeHint().width() +
+                            QtWidgets.QComboBox().sizeHint().width())
         self.ui.combo_combine.setMaximumWidth(max_width)
         self.ui.combo_combine.setMinimumWidth(max_width)
         
@@ -130,7 +130,7 @@ class FunctionDialog(QtGui.QDialog):
         
         if available_columns == []:
             self.ui.widget_selection.hide()
-            sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+            sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
             sizePolicy.setHorizontalStretch(0)
             sizePolicy.setVerticalStretch(0)
             sizePolicy.setHeightForWidth(self.ui.list_functions.sizePolicy().hasHeightForWidth())
@@ -273,15 +273,15 @@ class FunctionDialog(QtGui.QDialog):
                 self.ui.combo_combine.setCurrentIndex(0)
             
             if func.parameters == 0 or self.max_parameters == 0:
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
                 self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
             else:
                 if not func.validate_input(utf8(self.ui.edit_function_value.text())):
                     self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
-                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+                    self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
                 else:
                     self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
-                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                    self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
 
             self.ui.list_functions.item(self.ui.list_functions.currentRow()).setSelected(True)
     
@@ -314,7 +314,7 @@ class FunctionDialog(QtGui.QDialog):
 
     def exec_(self):
         result = super(FunctionDialog, self).exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             if self.checkable:
                 l = []
                 for i in range(self.ui.list_functions.count()):

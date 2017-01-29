@@ -2,10 +2,10 @@
 """
 errorbox.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -18,10 +18,10 @@ import sys
 from coquery import options
 from coquery.defines import *
 from coquery.errors import *
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.errorUi import Ui_ErrorDialog
 
-class ErrorBox(QtGui.QDialog):
+class ErrorBox(QtWidgets.QDialog):
     def __init__(self, exc_info, exception, no_trace=False, message="", parent=None):
         
         super(ErrorBox, self).__init__(parent)
@@ -64,12 +64,12 @@ class ErrorBox(QtGui.QDialog):
 
 def alert_missing_module(name, parent=None):
     _, _, func, url = MODULE_INFORMATION[name]
-    QtGui.QMessageBox.critical(
+    QtWidgets.QMessageBox.critical(
         parent, "Missing Python module – Coquery",
         msg_missing_module.format(name=name, url = url, function=func))
             
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     viewer = ErrorBox(Exception())
     viewer.exec_()
     

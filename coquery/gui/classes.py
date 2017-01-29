@@ -25,8 +25,8 @@ from coquery.errors import *
 from coquery.defines import *
 from coquery.unicode import utf8
 
-from .pyqt_compat import (QtCore, QtGui, frameShadow, frameShape,
-                          get_toplevel_window)
+from .pyqt_compat import (QtCore, QtGui, QtWidgets,
+                          frameShadow, frameShape, get_toplevel_window)
 
 from xml.sax.saxutils import escape
 
@@ -91,7 +91,7 @@ class CoqThread(QtCore.QThread):
         return result
 
 
-class CoqHorizontalHeader(QtGui.QHeaderView):
+class CoqHorizontalHeader(QtWidgets.QHeaderView):
     sectionFinallyResized = QtCore.Signal(int, int, int)
 
     def __init__(self, *args, **kwargs):
@@ -116,10 +116,10 @@ class CoqHorizontalHeader(QtGui.QHeaderView):
             model = self.model()
             top = model.index(0, ix, QtCore.QModelIndex())
             bottom = model.index(0, ix, QtCore.QModelIndex())
-            selection = QtGui.QItemSelection(top, bottom)
+            selection = QtWidgets.QItemSelection(top, bottom)
             select.select(selection,
-                            QtGui.QItemSelectionModel.Toggle |
-                            QtGui.QItemSelectionModel.Columns)
+                            QtWidgets.QItemSelectionModel.Toggle |
+                            QtWidgets.QItemSelectionModel.Columns)
 
         self.button_pressed = False
 
@@ -128,7 +128,7 @@ class CoqHorizontalHeader(QtGui.QHeaderView):
         self.button_pressed = True
 
 
-class CoqHelpBrowser(QtGui.QTextBrowser):
+class CoqHelpBrowser(QtWidgets.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
         self.help_engine = help_engine
         super(CoqHelpBrowser, self).__init__(*args, **kwargs)
@@ -140,13 +140,13 @@ class CoqHelpBrowser(QtGui.QTextBrowser):
             return super(CoqHelpBrowser, self).loadResource(resource_type, name)
 
 
-class CoqFeatureList(QtGui.QListWidget):
+class CoqFeatureList(QtWidgets.QListWidget):
     def __init__(self, parent=None):
         super(CoqFeatureList, self).__init__(parent)
         self.setAcceptDrops(True)
         self.setDragDropMode(self.DragDrop)
         self.setSelectionMode(self.SingleSelection)
-        super(CoqFeatureList, self).addItem(QtGui.QListWidgetItem(""))
+        super(CoqFeatureList, self).addItem(QtWidgets.QListWidgetItem(""))
         self._item_height = (self.visualItemRect(self.item(0)).height() +
                             self.padding())
         self._item_width = (self.visualItemRect(self.item(0)).width() +
@@ -200,8 +200,8 @@ class CoqFeatureTray(CoqFeatureList):
         self.setMaximumHeight(self.itemHeight() + 2 * self.frameWidth())
         self.setMinimumHeight(self.itemHeight() + 2 * self.frameWidth())
 
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Ignored,
-                                       QtGui.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored,
+                                       QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -264,7 +264,7 @@ class CoqFeatureTray(CoqFeatureList):
         self.featureChanged.emit(item)
 
 
-class CoqRotatedButton(QtGui.QPushButton):
+class CoqRotatedButton(QtWidgets.QPushButton):
     """
     A rotated push button.
 
@@ -272,45 +272,45 @@ class CoqRotatedButton(QtGui.QPushButton):
     """
 
     def paintEvent(self, event):
-        painter = QtGui.QStylePainter(self)
+        painter = QtWidgets.QStylePainter(self)
         painter.rotate(270)
         painter.translate(-1 * self.height(), 0);
-        painter.drawControl(QtGui.QStyle.CE_PushButton,
+        painter.drawControl(QtWidgets.QStyle.CE_PushButton,
                             self.getSyleOptions())
 
     def minimumSizeHint(self):
         size = super(CoqRotatedButton, self).minimumSizeHint()
         size.transpose()
-        return QtCore.QSize(QtGui.QPushButton().minimumSizeHint().height(),
+        return QtCore.QSize(QtWidgets.QPushButton().minimumSizeHint().height(),
                             size.width())
 
     def sizeHint(self):
         size = super(CoqRotatedButton, self).sizeHint()
         size.transpose()
-        size.setWidth(QtGui.QLabel().sizeHint().height())
+        size.setWidth(QtWidgets.QLabel().sizeHint().height())
         return size
 
     def getSyleOptions(self):
-        options = QtGui.QStyleOptionButton()
+        options = QtWidgets.QStyleOptionButton()
         options.initFrom(self)
         size = options.rect.size()
         size.transpose()
         options.rect.setSize(size)
-        options.features = getattr(QtGui.QStyleOptionButton, "None")
+        options.features = QtWidgets.QStyleOptionButton.None_
         if self.isFlat():
-            options.features |= QtGui.QStyleOptionButton.Flat
+            options.features |= QtWidgets.QStyleOptionButton.Flat
         if self.menu():
-            options.features |= QtGui.QStyleOptionButton.HasMenu
+            options.features |= QtWidgets.QStyleOptionButton.HasMenu
         if self.autoDefault() or self.isDefault():
-            options.features |= QtGui.QStyleOptionButton.AutoDefaultButton
+            options.features |= QtWidgets.QStyleOptionButton.AutoDefaultButton
         if self.isDefault():
-            options.features |= QtGui.QStyleOptionButton.DefaultButton
+            options.features |= QtWidgets.QStyleOptionButton.DefaultButton
         if self.isDown() or (self.menu() and self.menu().isVisible()):
-            options.state |= QtGui.QStyle.State_Sunken
+            options.state |= QtWidgets.QStyle.State_Sunken
         if self.isChecked():
-            options.state |= QtGui.QStyle.State_On
+            options.state |= QtWidgets.QStyle.State_On
         if not self.isFlat() and not self.isDown():
-            options.state |= QtGui.QStyle.State_Raised
+            options.state |= QtWidgets.QStyle.State_Raised
 
         options.text = self.text()
         options.icon = self.icon()
@@ -318,7 +318,7 @@ class CoqRotatedButton(QtGui.QPushButton):
         return options
 
 
-class CoqInfoLabel(QtGui.QLabel):
+class CoqInfoLabel(QtWidgets.QLabel):
     entered = QtCore.Signal()
     left = QtCore.Signal()
 
@@ -328,11 +328,11 @@ class CoqInfoLabel(QtGui.QLabel):
 
         self.setText("")
         self.setPixmap(get_toplevel_window().get_icon("sign-info").pixmap(
-            QtCore.QSize(QtGui.QSpinBox().sizeHint().height(),
-                         QtGui.QSpinBox().sizeHint().height())))
+            QtCore.QSize(QtWidgets.QSpinBox().sizeHint().height(),
+                         QtWidgets.QSpinBox().sizeHint().height())))
 
 
-class CoqClickableLabel(QtGui.QLabel):
+class CoqClickableLabel(QtWidgets.QLabel):
     clicked = QtCore.Signal()
     textChanged = QtCore.Signal()
 
@@ -343,37 +343,35 @@ class CoqClickableLabel(QtGui.QLabel):
         super(CoqClickableLabel, self).setText(s)
         self.textChanged.emit()
 
-class CoqSwitch(QtGui.QWidget):
+class CoqSwitch(QtWidgets.QWidget):
     toggled = QtCore.Signal()
 
     def __init__(self, state=None, on="on", off="off", text="", *args, **kwargs):
         super(CoqSwitch, self).__init__(*args, **kwargs)
 
-        self._layout = QtGui.QHBoxLayout(self)
-        self._layout.setMargin(0)
+        self._layout = QtWidgets.QHBoxLayout(self)
         self._layout.setSpacing(-1)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
-        self._frame = QtGui.QFrame()
+        self._frame = QtWidgets.QFrame()
         self._frame.setFrameShape(frameShape)
-        self._frame.setFrameShadow(QtGui.QFrame.Sunken)
+        self._frame.setFrameShadow(QtWidgets.QFrame.Sunken)
         #size = QtCore.QSize(
-            #QtGui.QRadioButton().sizeHint().height() * 2,
-            #QtGui.QRadioButton().sizeHint().height())
+            #QtWidgets.QRadioButton().sizeHint().height() * 2,
+            #QtWidgets.QRadioButton().sizeHint().height())
         #self._frame.setMaximumSize(size)
         self._layout.addWidget(self._frame)
 
-        self._inner_layout = QtGui.QHBoxLayout(self._frame)
-        self._inner_layout.setMargin(0)
+        self._inner_layout = QtWidgets.QHBoxLayout(self._frame)
         self._inner_layout.setSpacing(-1)
         self._inner_layout.setContentsMargins(0, 0, 0, 0)
 
-        self._check = QtGui.QCheckBox(self)
+        self._check = QtWidgets.QCheckBox(self)
         self._check.setObjectName("_check")
         self._inner_layout.addWidget(self._check)
-        #self._slider = QtGui.QSlider(self)
+        #self._slider = QtWidgets.QSlider(self)
         #self._slider.setOrientation(QtCore.Qt.Horizontal)
-        #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         #sizePolicy.setHorizontalStretch(0)
         #sizePolicy.setVerticalStretch(0)
         #self._slider.setSizePolicy(sizePolicy)
@@ -386,7 +384,7 @@ class CoqSwitch(QtGui.QWidget):
         #self._slider.setMaximum(1)
         #self._slider.setPageStep(1)
         #self._slider.setSliderPosition(0)
-        #self._slider.setTickPosition(QtGui.QSlider.NoTicks)
+        #self._slider.setTickPosition(QtWidgets.QSlider.NoTicks)
         #self._slider.setTickInterval(1)
         #self._slider.setInvertedAppearance(True)
         #self._slider.setObjectName("_slider")
@@ -394,11 +392,11 @@ class CoqSwitch(QtGui.QWidget):
         #self._inner_layout.addWidget(self._slider)
 
         self._label = CoqClickableLabel(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
         self._label.setSizePolicy(sizePolicy)
-        self._label.setMinimumWidth(max(QtGui.QLabel(on).sizeHint().width(), QtGui.QLabel(off).sizeHint().width()))
+        self._label.setMinimumWidth(max(QtWidgets.QLabel(on).sizeHint().width(), QtWidgets.QLabel(off).sizeHint().width()))
 
         self._on_text = on
         self._off_text = off
@@ -550,7 +548,7 @@ class CoqExclusiveGroup(object):
                     element.setChecked(False)
 
 
-class CoqGroupBox(QtGui.QGroupBox):
+class CoqGroupBox(QtWidgets.QGroupBox):
     """
     """
 
@@ -642,7 +640,7 @@ class CoqGroupBox(QtGui.QGroupBox):
             image: url({path}/{sign_up});
         }}"""
 
-    toggled = QtCore.Signal(QtGui.QWidget)
+    toggled = QtCore.Signal(QtWidgets.QWidget)
 
     def set_style(self, **kwargs):
         if self.isChecked():
@@ -650,24 +648,25 @@ class CoqGroupBox(QtGui.QGroupBox):
         else:
             s = self.style_closed
 
-        icon_size = QtGui.QPushButton().sizeHint().height() - 6
+        icon_size = QtWidgets.QPushButton().sizeHint().height() - 6
         header_size = icon_size + 1
         pad = 10
         if "title_weight" not in kwargs:
             kwargs["title_weight"] = "normal"
+        palette = options.cfg.app.palette()
         s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
                     sign_up="sign-minimize.png",
                     sign_down="sign-maximize.png",
                     icon_size=icon_size, header_size=header_size,
                     pad_right=pad,
-                    button_light=options.cfg.app.palette().color(QtGui.QPalette.Light).name(),
-                    button_midlight=options.cfg.app.palette().color(QtGui.QPalette.Midlight).name(),
-                    button_button=options.cfg.app.palette().color(QtGui.QPalette.Button).name(),
-                    button_mid=options.cfg.app.palette().color(QtGui.QPalette.Mid).name(),
-                    button_dark=options.cfg.app.palette().color(QtGui.QPalette.Dark).name(),
-                    box_light=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
-                    box_dark=options.cfg.app.palette().color(QtGui.QPalette.Window).name(),
-                    focus=options.cfg.app.palette().color(QtGui.QPalette.Highlight).name(),
+                    button_light=palette.color(QtGui.QPalette.Light).name(),
+                    button_midlight=palette.color(QtGui.QPalette.Midlight).name(),
+                    button_button=palette.color(QtGui.QPalette.Button).name(),
+                    button_mid=palette.color(QtGui.QPalette.Mid).name(),
+                    button_dark=palette.color(QtGui.QPalette.Dark).name(),
+                    box_light=palette.color(QtGui.QPalette.Window).name(),
+                    box_dark=palette.color(QtGui.QPalette.Window).name(),
+                    focus=palette.color(QtGui.QPalette.Highlight).name(),
                     **kwargs)
         self.setStyleSheet(s)
 
@@ -705,7 +704,7 @@ class CoqGroupBox(QtGui.QGroupBox):
                 self._show_content(x)
             for i in range(element.count()):
                 item = element.itemAt(i)
-                if isinstance(item, QtGui.QWidgetItem):
+                if isinstance(item, QtWidgets.QWidgetItem):
                     self._hide_content(item.widget())
                 else:
                     self._hide_content(item)
@@ -722,7 +721,7 @@ class CoqGroupBox(QtGui.QGroupBox):
                 self._show_content(x)
             for i in range(element.count()):
                 item = element.itemAt(i)
-                if isinstance(item, QtGui.QWidgetItem):
+                if isinstance(item, QtWidgets.QWidgetItem):
                     self._show_content(item.widget())
                 else:
                     self._show_content(item)
@@ -750,16 +749,16 @@ class CoqGroupBox(QtGui.QGroupBox):
         self.toggled.emit(self)
 
 
-class CoqDetailBox(QtGui.QWidget):
+class CoqDetailBox(QtWidgets.QWidget):
     """
     Define a QLayout class that has the QPushButton 'header' as a clickable
     header, and a QFrame 'box' which can show any content in an exapnding box
     below the button.
     """
-    clicked = QtCore.Signal(QtGui.QWidget)
+    clicked = QtCore.Signal(QtWidgets.QWidget)
 
     def __init__(self, text="", box=None, alternative=None, *args, **kwargs):
-        if isinstance(text, QtGui.QWidget):
+        if isinstance(text, QtWidgets.QWidget):
             if args:
                 args = tuple(list(args).insert(0, text))
             else:
@@ -768,12 +767,12 @@ class CoqDetailBox(QtGui.QWidget):
         super(CoqDetailBox, self).__init__(*args, **kwargs)
 
         if not box:
-            self.box = QtGui.QFrame(self)
+            self.box = QtWidgets.QFrame(self)
         else:
             self.box = box
 
-        self.frame = QtGui.QFrame(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Fixed)
+        self.frame = QtWidgets.QFrame(self)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
@@ -781,10 +780,10 @@ class CoqDetailBox(QtGui.QWidget):
         self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
 
-        self.header_layout = QtGui.QHBoxLayout()
+        self.header_layout = QtWidgets.QHBoxLayout()
 
-        self.header = QtGui.QPushButton(self.frame)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+        self.header = QtWidgets.QPushButton(self.frame)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.header.sizePolicy().hasHeightForWidth())
@@ -793,13 +792,13 @@ class CoqDetailBox(QtGui.QWidget):
         self.header.clicked.connect(self.onClick)
         self.header_layout.addWidget(self.header)
 
-        self.verticalLayout_2 = QtGui.QVBoxLayout(self.frame)
-        self.verticalLayout_2.setMargin(0)
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.frame)
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.addItem(self.header_layout)
         self.verticalLayout_2.addWidget(self.box)
 
-        self.verticalLayout = QtGui.QVBoxLayout(self)
+        self.verticalLayout = QtWidgets.QVBoxLayout(self)
         self.verticalLayout.addWidget(self.frame)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -873,7 +872,7 @@ class CoqDetailBox(QtGui.QWidget):
         return self._expanded
 
 
-class CoqSpinner(QtGui.QWidget):
+class CoqSpinner(QtWidgets.QWidget):
     """
     A QWidget subclass that contains an animated spinner.
     """
@@ -891,16 +890,15 @@ class CoqSpinner(QtGui.QWidget):
         sizes = [24, 32, 64, 96, 128]
         distances = [abs(x - size) for x in sizes]
         opt_size = sizes[distances.index(min(distances))]
-        anim = QtGui.QMovie(os.path.join(options.cfg.base_path, "icons", "progress_{0}x{0}.gif".format(opt_size)))
+        anim = QtWidgets.QMovie(os.path.join(options.cfg.base_path, "icons", "progress_{0}x{0}.gif".format(opt_size)))
         anim.setScaledSize(QtCore.QSize(size, size))
         return anim
 
     def __init__(self, size=None, *args, **kwargs):
         super(CoqSpinner, self).__init__(*args, **kwargs)
-        self._layout = QtGui.QHBoxLayout(self)
-        self._label = QtGui.QLabel()
+        self._layout = QtWidgets.QHBoxLayout(self)
+        self._label = QtWidgets.QLabel()
         self._layout.setSpacing(0)
-        self._layout.setMargin(0)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.addWidget(self._label)
         self._label.hide()
@@ -920,7 +918,7 @@ class CoqSpinner(QtGui.QWidget):
         self._anim.stop()
 
 
-class CoqListItem(QtGui.QListWidgetItem):
+class CoqListItem(QtWidgets.QListWidgetItem):
     def __init__(self, *args, **kwargs):
         super(CoqListItem, self).__init__(*args, **kwargs)
         self._objectName = ""
@@ -932,7 +930,7 @@ class CoqListItem(QtGui.QListWidgetItem):
         return self._objectName
 
 
-class CoqTableItem(QtGui.QTableWidgetItem):
+class CoqTableItem(QtWidgets.QTableWidgetItem):
     def __init__(self, *args, **kwargs):
         super(CoqTableItem, self).__init__(*args, **kwargs)
         self._objectName = ""
@@ -944,7 +942,7 @@ class CoqTableItem(QtGui.QTableWidgetItem):
         return self._objectName
 
 
-class CoqTreeItem(QtGui.QTreeWidgetItem):
+class CoqTreeItem(QtWidgets.QTreeWidgetItem):
     """
     Define a tree element class that stores the output column options in
     the options tree.
@@ -1055,7 +1053,7 @@ class CoqTreeLinkItem(CoqTreeItem):
         #self.setToolTip(column, "External table: {}\nLinked by: {}".format(text, self.link.feature_name))
 
 
-class CoqTreeWidget(QtGui.QTreeWidget):
+class CoqTreeWidget(QtWidgets.QTreeWidget):
     """
     Define a tree widget that stores the available output columns in a tree
     with check boxes for each variable.
@@ -1149,7 +1147,7 @@ class CoqTreeWidget(QtGui.QTreeWidget):
         return check_list
 
 
-class CoqTableWidget(QtGui.QTableWidget):
+class CoqTableWidget(QtWidgets.QTableWidget):
     def mimeData(self, *args):
         val = super(CoqTableWidget, self).mimeData(*args)
         val.setText(",".join([x.data(QtCore.Qt.UserRole) for x in args[0]]))
@@ -1203,7 +1201,7 @@ class LogTableModel(QtCore.QAbstractTableModel):
         return len(self.header)
 
 
-class LogProxyModel(QtGui.QSortFilterProxyModel):
+class LogProxyModel(QtCore.QSortFilterProxyModel):
     """
     Define a QSortFilterProxyModel that manages access to the logging
     messages.
@@ -1235,14 +1233,14 @@ class LogProxyModel(QtGui.QSortFilterProxyModel):
                 return header[index]
 
 
-class CoqTextEdit(QtGui.QTextEdit):
+class CoqTextEdit(QtWidgets.QTextEdit):
     """
     Defines a QTextEdit class that accepts dragged objects.
     """
     def __init__(self, *args):
         super(CoqTextEdit, self).__init__(*args)
         self.setAcceptDrops(True)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -1307,7 +1305,7 @@ class CoqTextEdit(QtGui.QTextEdit):
         e.accept()
 
 
-class CoqTextTag(QtGui.QFrame):
+class CoqTextTag(QtWidgets.QFrame):
     """ Define a QFrame that functions as a text tag. """
 
     def __init__(self, *args):
@@ -1322,16 +1320,16 @@ class CoqTextTag(QtGui.QFrame):
         return self.label.text(*args)
 
     def setupUi(self):
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
-        self.horizontalLayout = QtGui.QHBoxLayout(self)
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self)
         self.horizontalLayout.setContentsMargins(2, 1, 2, 1)
 
-        self.label = QtGui.QLabel(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        self.label = QtWidgets.QLabel(self)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
@@ -1339,8 +1337,8 @@ class CoqTextTag(QtGui.QFrame):
         self.label.setLineWidth(0)
 
         self.horizontalLayout.addWidget(self.label)
-        self.close_button = QtGui.QPushButton(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        self.close_button = QtWidgets.QPushButton(self)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.close_button.sizePolicy().hasHeightForWidth())
@@ -1387,9 +1385,9 @@ class CoqTextTag(QtGui.QFrame):
         mimeData = QtCore.QMimeData()
         mimeData.setText(self.content())
 
-        pixmap = QtGui.QPixmap.grabWidget(self)
+        pixmap = QtWidgets.QPixmap.grabWidget(self)
 
-        drag = QtGui.QDrag(self)
+        drag = QtWidgets.QDrag(self)
         drag.setMimeData(mimeData)
         drag.setPixmap(pixmap)
         drag.setHotSpot(e.pos())
@@ -1405,8 +1403,8 @@ class CoqTextTag(QtGui.QFrame):
         return True
 
 
-class CoqListWidget(QtGui.QListWidget):
-    itemDropped = QtCore.Signal(QtGui.QListWidgetItem)
+class CoqListWidget(QtWidgets.QListWidget):
+    itemDropped = QtCore.Signal(QtWidgets.QListWidgetItem)
     featureRemoved = QtCore.Signal(str)
 
     def __init__(self, *args, **kwargs):
@@ -1457,7 +1455,7 @@ class CoqListWidget(QtGui.QListWidget):
             except AttributeError:
                 return None
 
-        new_item = QtGui.QListWidgetItem(label)
+        new_item = QtWidgets.QListWidgetItem(label)
 
         self.columns.append((new_item, rc_feature))
         self.addItem(new_item)
@@ -1470,7 +1468,7 @@ class CoqListWidget(QtGui.QListWidget):
         if self.get_item(rc_feature) is not None:
             return
         label = getattr(get_toplevel_window().resource, rc_feature)
-        new_item = QtGui.QListWidgetItem(label)
+        new_item = QtWidgets.QListWidgetItem(label)
         self.columns.insert(i, (new_item, rc_feature))
         self.insertItem(i, new_item)
         self.setCurrentItem(new_item)
@@ -1495,14 +1493,14 @@ class CoqListWidget(QtGui.QListWidget):
             self.featureRemoved.emit(rc_feature)
 
 
-class CoqTagEdit(QtGui.QLineEdit):
+class CoqTagEdit(QtWidgets.QLineEdit):
     """ Define a QLineEdit class that is used to enter query filters. """
 
     filter_examples = []
 
     def __init__(self, *args):
         super(CoqTagEdit, self).__init__(*args)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -1513,13 +1511,13 @@ class CoqTagEdit(QtGui.QLineEdit):
             self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
 
 
-class CoqTagContainer(QtGui.QWidget):
+class CoqTagContainer(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(CoqTagContainer, self).__init__(parent)
         self.layout = CoqFlowLayout(spacing=5)
         self.setLayout(self.layout)
         # make this widget take up all available space:
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -1529,7 +1527,7 @@ class CoqTagContainer(QtGui.QWidget):
         self.layout.addWidget(item)
 
 
-class CoqTagBox(QtGui.QWidget):
+class CoqTagBox(QtWidgets.QWidget):
     """ Defines a QWidget class that contains and manages filter tags. """
 
     def __init__(self, parent=None, label="Filter"):
@@ -1557,14 +1555,14 @@ class CoqTagBox(QtGui.QWidget):
 
     def setupUi(self):
         # make this widget take up all available space:
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
 
-        self.scroll_area = QtGui.QScrollArea()
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+        self.scroll_area = QtWidgets.QScrollArea()
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.scroll_area.sizePolicy().hasHeightForWidth())
@@ -1572,8 +1570,8 @@ class CoqTagBox(QtGui.QWidget):
         self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         self.scroll_area.setWidgetResizable(True)
 
-        self.scroll_content = QtGui.QWidget()
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        self.scroll_content = QtWidgets.QWidget()
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.scroll_content.sizePolicy().hasHeightForWidth())
@@ -1583,20 +1581,20 @@ class CoqTagBox(QtGui.QWidget):
         self.scroll_content.setLayout(self.cloud_area)
         self.scroll_area.setWidget(self.scroll_content)
 
-        self.edit_label = QtGui.QLabel(self._label)
+        self.edit_label = QtWidgets.QLabel(self._label)
         self.edit_tag = CoqTagEdit()
 
-        self.edit_layout = QtGui.QHBoxLayout(spacing=5)
+        self.edit_layout = QtWidgets.QHBoxLayout(spacing=5)
         self.edit_layout.addWidget(self.edit_label)
         self.edit_layout.addWidget(self.edit_tag)
 
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.edit_tag.sizePolicy().hasHeightForWidth())
         self.edit_tag.setSizePolicy(sizePolicy)
 
-        self.layout = QtGui.QVBoxLayout(self)
+        self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.scroll_area)
         self.layout.addLayout(self.edit_layout)
         self.layout.setStretch(1, 0)
@@ -1689,9 +1687,9 @@ class CoqTagBox(QtGui.QWidget):
         #self.ghost_tag = self._tagType(self)
         #self.ghost_tag.setContent(tag.content())
 
-        self.ghost_tag = QtGui.QLabel(self)
+        self.ghost_tag = QtWidgets.QLabel(self)
         ghost_pixmap = drag.pixmap().copy()
-        painter = QtGui.QPainter(ghost_pixmap)
+        painter = QtWidgets.QPainter(ghost_pixmap)
         painter.setCompositionMode(painter.CompositionMode_DestinationIn)
         painter.fillRect(ghost_pixmap.rect(), QtGui.QColor(0, 0, 0, 96))
         painter.end()
@@ -1719,7 +1717,7 @@ class CoqTagBox(QtGui.QWidget):
         self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
 
 
-class CoqTableView(QtGui.QTableView):
+class CoqTableView(QtWidgets.QTableView):
     resizeRow = QtCore.Signal(int, int)
 
     def __init__(self, *args, **kwargs):
@@ -2028,7 +2026,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         """ Return the number of columns. """
         return self.content.columns.size
 
-class CoqTabBar(QtGui.QTabBar):
+class CoqTabBar(QtWidgets.QTabBar):
     def __init__(self, *args, **kwargs):
         super(CoqTabBar, self).__init__(*args, **kwargs)
         self.addTab("Disactivated columns")
@@ -2044,15 +2042,12 @@ class CoqHiddenTableModel(CoqTableModel):
             return super(CoqHiddenTableModel, self).data(index, role)
 
 
-class CoqFlowLayout(QtGui.QLayout):
+class CoqFlowLayout(QtWidgets.QLayout):
     """ Define a QLayout with flowing widgets that reorder automatically. """
 
     def __init__(self, parent=None, margin=0, spacing=-1):
         super(CoqFlowLayout, self).__init__(parent)
-        try:
-            self.setMargin(margin)
-        except AttributeError:
-            pass
+        self.setContentsMargins(margin, margin, margin, margin)
         self.setSpacing(spacing)
         self.itemList = []
 

@@ -20,10 +20,10 @@ from coquery.unicode import utf8
 from coquery.links import Link
 
 from .classes import CoqTreeItem
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.linkselectUi import Ui_LinkSelect
 
-class LinkSelect(QtGui.QDialog):
+class LinkSelect(QtWidgets.QDialog):
     def __init__(self, res_from=None, rc_from=None, only_resources=False, parent=None):
         super(LinkSelect, self).__init__(parent)
         self.res_from = res_from
@@ -45,7 +45,7 @@ class LinkSelect(QtGui.QDialog):
         self.ui.tree_resource.currentItemChanged.connect(self.resource_changed)
         self.ui.tree_external.currentItemChanged.connect(self.external_resource_changed)
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
 
         try:
             self.resize(options.settings.value("linkselect_size"))
@@ -60,7 +60,7 @@ class LinkSelect(QtGui.QDialog):
         self.ui.tree_resource.setCurrentItemByString(self.rc_from)
 
     def check_dialog(self):
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
         self.ui.widget_link_info.hide()
         from_item = self.ui.tree_resource.currentItem()
         to_item = self.ui.tree_external.currentItem()
@@ -69,7 +69,7 @@ class LinkSelect(QtGui.QDialog):
         if to_item.childCount() or from_item.childCount():
             return
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
         self.ui.widget_link_info.show()
 
     def set_to_labels(self, **kwargs):
@@ -187,7 +187,7 @@ class CorpusSelect(LinkSelect):
         self.ui.combo_corpus.setFocus()
 
         self.ui.tree_external.setSelectionMode(self.ui.tree_external.NoSelection)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
         if subtitle:
             self.ui.group_external_corpus.setTitle(subtitle)
         if title:

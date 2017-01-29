@@ -2,7 +2,7 @@
 """
 independencetestviewer.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -18,11 +18,11 @@ import numpy as np
 from coquery import options
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtGui, QtCore, get_toplevel_window
+from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
 from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
 
 
-class IndependenceTestViewer(QtGui.QDialog):
+class IndependenceTestViewer(QtWidgets.QDialog):
     html_template = """
         <body>
             <h1><span style="font-weight:600;">Corpus: {corpus}</span></h1>
@@ -314,7 +314,7 @@ class IndependenceTestViewer(QtGui.QDialog):
             self.reject()
 
     def copy_to_clipboard(self, mode):
-        cb = QtGui.QApplication.clipboard()
+        cb = QtWidgets.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         if mode == "text":
             cb.setText(self.ui.textBrowser.toPlainText())

@@ -12,11 +12,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 from coquery.general import CoqObject
-from .pyqt_compat import QtGui, QtCore
+from .pyqt_compat import QtWidgets, QtCore
 
 from .ui.findWidgetUi import Ui_FindWidget
 
-class CoqFindWidget(QtGui.QWidget):
+class CoqFindWidget(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
         super(CoqFindWidget, self).__init__(*args, **kwargs)
         self.ui = Ui_FindWidget()

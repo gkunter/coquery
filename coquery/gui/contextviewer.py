@@ -18,13 +18,13 @@ import tgt
 from coquery import options
 from coquery.unicode import utf8
 from . import classes
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets
 from .ui.contextViewerUi import Ui_ContextView
 
 from coquery.sound import Sound
 
 
-class ContextView(QtGui.QWidget):
+class ContextView(QtWidgets.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, icon=None, parent=None):
 
         super(ContextView, self).__init__(parent)
@@ -46,7 +46,7 @@ class ContextView(QtGui.QWidget):
         self.ui.button_ids = classes.CoqDetailBox("{} – Token ID {}".format(corpus.resource.name, token_id))
         self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", utf8(not self.ui.button_ids.isExpanded())))
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
-        self.ui.form_information = QtGui.QFormLayout(self.ui.button_ids.box)
+        self.ui.form_information = QtWidgets.QFormLayout(self.ui.button_ids.box)
 
         ##S = "/home/kunibert/Dev/coquery/s1601a.wav"
         #S = "/home/kunibert/Dev/coquery/07_PEERS_s0901b.wav"
@@ -109,8 +109,8 @@ class ContextView(QtGui.QWidget):
         Add the label 'name' with value 'content' to the context viewer.
         """
         layout_row = self.ui.form_information.count()
-        self.ui.source_name = QtGui.QLabel(self)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        self.ui.source_name = QtWidgets.QLabel(self)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.ui.source_name.sizePolicy().hasHeightForWidth())
@@ -123,10 +123,10 @@ class ContextView(QtGui.QWidget):
             QtCore.Qt.LinksAccessibleByMouse |
             QtCore.Qt.TextSelectableByKeyboard |
             QtCore.Qt.TextSelectableByMouse)
-        self.ui.form_information.setWidget(layout_row, QtGui.QFormLayout.LabelRole, self.ui.source_name)
-        self.ui.source_content = QtGui.QLabel(self)
+        self.ui.form_information.setWidget(layout_row, QtWidgets.QFormLayout.LabelRole, self.ui.source_name)
+        self.ui.source_content = QtWidgets.QLabel(self)
         self.ui.source_content.setWordWrap(True)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.ui.source_content.sizePolicy().hasHeightForWidth())
@@ -138,7 +138,7 @@ class ContextView(QtGui.QWidget):
             QtCore.Qt.LinksAccessibleByMouse |
             QtCore.Qt.TextSelectableByKeyboard |
             QtCore.Qt.TextSelectableByMouse)
-        self.ui.form_information.setWidget(layout_row, QtGui.QFormLayout.FieldRole, self.ui.source_content)
+        self.ui.form_information.setWidget(layout_row, QtWidgets.QFormLayout.FieldRole, self.ui.source_content)
 
         if name:
             if content is None:
@@ -189,35 +189,35 @@ class ContextView(QtGui.QWidget):
             self.context = context
 
     def onException(self):
-        QtGui.QMessageBox.critical(self, "Disk error", "Error retrieving context")
+        QtWidgets.QMessageBox.critical(self, "Disk error", "Error retrieving context")
 
     def finalize_context(self):
         font = options.cfg.context_font
 
-        if int(font.style()) == int(QtGui.QFont.StyleItalic):
+        if int(font.style()) == int(QtWidgets.QFont.StyleItalic):
             style = "italic"
-        elif int(font.style()) == int(QtGui.QFont.StyleOblique):
+        elif int(font.style()) == int(QtWidgets.QFont.StyleOblique):
             style = "oblique"
         else:
             style = "normal"
 
-        if font.stretch() == int(QtGui.QFont.UltraCondensed):
+        if font.stretch() == int(QtWidgets.QFont.UltraCondensed):
             stretch = "ultra-condensed"
-        elif font.stretch() == int(QtGui.QFont.ExtraCondensed):
+        elif font.stretch() == int(QtWidgets.QFont.ExtraCondensed):
             stretch = "extra-condensed"
-        elif font.stretch() == int(QtGui.QFont.Condensed):
+        elif font.stretch() == int(QtWidgets.QFont.Condensed):
             stretch = "condensed"
-        elif font.stretch() == int(QtGui.QFont.SemiCondensed):
+        elif font.stretch() == int(QtWidgets.QFont.SemiCondensed):
             stretch = "semi-condensed"
-        elif font.stretch() == int(QtGui.QFont.Unstretched):
+        elif font.stretch() == int(QtWidgets.QFont.Unstretched):
             stretch = "normal"
-        elif font.stretch() == int(QtGui.QFont.SemiExpanded):
+        elif font.stretch() == int(QtWidgets.QFont.SemiExpanded):
             stretch = "semi-expanded"
-        elif font.stretch() == int(QtGui.QFont.Expanded):
+        elif font.stretch() == int(QtWidgets.QFont.Expanded):
             stretch = "expanded"
-        elif font.stretch() == int(QtGui.QFont.ExtraExpanded):
+        elif font.stretch() == int(QtWidgets.QFont.ExtraExpanded):
             stretch = "extra-expanded"
-        elif font.stretch() == int(QtGui.QFont.UltraExpanded):
+        elif font.stretch() == int(QtWidgets.QFont.UltraExpanded):
             stretch = "ultra-expanded"
 
         weight = int(font.weight()) * 10

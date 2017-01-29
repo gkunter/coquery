@@ -2,10 +2,10 @@
 """
 availablemodules.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -17,10 +17,10 @@ import sys
 from coquery import options
 from coquery.defines import * 
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.availableModulesUi import Ui_AvailableModules
 
-class AvailableModulesDialog(QtGui.QDialog):
+class AvailableModulesDialog(QtWidgets.QDialog):
     @staticmethod
     def has(module_flag):
         return "yes" if module_flag else "no"
@@ -55,9 +55,9 @@ class AvailableModulesDialog(QtGui.QDialog):
         for i, (name, flag) in enumerate(modules):
             _, _, description, url = MODULE_INFORMATION[name]
             
-            name_item = QtGui.QTableWidgetItem(name)
-            status_item = QtGui.QTableWidgetItem(self.has(flag))
-            desc_item = QtGui.QTableWidgetItem(re.sub("<[^<]+?>", "", description))
+            name_item = QtWidgets.QTableWidgetItem(name)
+            status_item = QtWidgets.QTableWidgetItem(self.has(flag))
+            desc_item = QtWidgets.QTableWidgetItem(re.sub("<[^<]+?>", "", description))
             self._links[id(name_item)] = url
             
             if flag:
