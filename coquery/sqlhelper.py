@@ -116,6 +116,8 @@ def test_configuration(name):
     """
     d = _conf_dict(name)
     if d["type"] == SQL_MYSQL:
+        if not options.use_mysql:
+            return (False, None)
         try:
             engine = sqlalchemy.create_engine(sql_url(name))
             with engine.connect() as connection:
