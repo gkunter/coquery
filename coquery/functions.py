@@ -211,13 +211,19 @@ class Function(CoqObject):
             if len(val.columns) > 1:
                 val = val.apply(self.select, axis="columns")
         except (KeyError, ValueError):
-            val = pd.Series(data=[np.nan] * len(df))
+            val = self.constant(df, None)
 
         return val
 
     @classmethod
     def validate_input(cls, value):
         return bool(value) or cls.allow_null
+
+    def constant(self, df, value):
+        """
+        Return a Series with constant values.
+        """
+        return pd.Series(data=[value] * len(df), index=df.index)
 
 
 #############################################################################
@@ -418,7 +424,7 @@ class Freq(BaseFreq):
             return pd.Series(index=df.index)
         try:
             if df["coquery_dummy"].isnull().all():
-                return pd.Series([0] * len(df), index=df.index)
+                return self.constant(df, 0)
         except KeyError:
             # this happens if the data frame does not have the column
             # 'coquery_dummy'
@@ -431,7 +437,7 @@ class Freq(BaseFreq):
             # if the function is applied over no columns (e.g. because all
             # columns are hidden), the function returns a Series containing
             # simply the length of the data frame:
-            val = pd.Series([len(df)] * len(df), index=df.index)
+            val = self.constant(df, len(df))
             return val
 
         # There is an ugly, ugly bug/feature in Pandas up to at least 0.18.0
@@ -581,7 +587,6 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
         ResourceClass, CorpusClass, LexiconClass, _ = options.cfg.current_resources[options.cfg.reference_corpus]
-
         current_lexicon = LexiconClass()
         current_corpus = CorpusClass()
         current_resource = ResourceClass(current_lexicon, current_corpus)
@@ -593,7 +598,6 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
             sqlhelper.sql_url(options.cfg.current_server,
                               current_resource.db_name))
 
-
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         val = df[word_columns].apply(lambda x: self._func(x,
@@ -601,10 +605,9 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
                                                           engine), axis="columns")
         val.index = df.index
         val.columns = ["{}_{}_{}".format(
-            self._name, x, options.cfg.reference_corpus) for x in val.columns]
+            self._name, x, ref_corpus) for x in val.columns]
         engine.dispose()
         return val
-        return pd.Series([0] * len(df), index=df.index)
 
 
 class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
@@ -614,7 +617,6 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
     def evaluate(self, df, *args, **kwargs):
         val = super(ReferenceCorpusFrequencyPMW, self).evaluate(df, *args, **kwargs)
         ResourceClass, CorpusClass, LexiconClass, _ = options.cfg.current_resources[options.cfg.reference_corpus]
-
         current_lexicon = LexiconClass()
         current_corpus = CorpusClass()
         current_resource = ResourceClass(current_lexicon, current_corpus)
@@ -654,7 +656,7 @@ class FilteredRows(BaseFilter):
             pre = manager._len_pre_filter
         if pre is None:
             pre = len(df)
-        val = pd.Series([pre] * len(df), index=df.index)
+        val = self.constant(df, pre)
         return val
 
 
@@ -670,7 +672,7 @@ class PassingRows(BaseFilter):
             post = manager._len_post_filter
         if post is None:
             post = len(df)
-        val = pd.Series([post] * len(df), index=df.index)
+        val = self.constant(df, post)
         return val
 
 
@@ -734,15 +736,16 @@ class Entropy(Proportion):
             entropy = 0.0
         else:
             entropy = -sum(_df["COQ_PROP"].apply(lambda p: p * np.log2(p)))
-        return pd.Series([entropy] * len(df), index=df.index)
-
+        val = self.constant(df, entropy)
+        return val
 
 class Tokens(Function):
     _name = "statistics_tokens"
     no_column_labels = True
 
     def evaluate(self, df, *args, **kwargs):
-        return pd.Series([len(df.dropna(how="all"))] * len(df), index=df.index)
+        val = self.constant(df, len(df.dropna(how="all")))
+        return val
 
 
 class Types(Function):
@@ -751,8 +754,8 @@ class Types(Function):
 
     def evaluate(self, df, *args, **kwargs):
         cols = self.columns(df, **kwargs)
-        length = len(df[cols].drop_duplicates())
-        return pd.Series([length] * len(df), index=df.index)
+        val = self.constant(df, len(df[cols].drop_duplicates()))
+        return val
 
 
 class TypeTokenRatio(Types):
@@ -835,7 +838,8 @@ class CorpusSize(Function):
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
         corpus_size = session.Corpus.get_corpus_size()
-        return pd.Series([corpus_size] * len(df), index=df.index)
+        val = self.constant(df, corpus_size)
+        return val
 
 
 class SubcorpusSize(CorpusSize):
@@ -944,9 +948,9 @@ class ContextColumns(Function):
                 "coquery_invisible_origin_id" not in df.columns or
                 "coquery_invisible_number_of_tokens" not in df.columns or
                 df["coquery_invisible_number_of_tokens"].isnull().any()):
-                    return pd.Series(data=[None] * len(df),
-                                    index=df.index,
-                                    name="coquery_invisible_dummy")
+                    val = self.constant(df, None)
+                    val.name = "coquery_invisible_dummy"
+                    return val
             else:
                 self._sentence_column = None
                 if options.cfg.context_restrict:
@@ -1025,13 +1029,12 @@ class LogicFunction(Function):
 
     def _func_columns(self, cols):
         if len(cols) == 1:
-            return pd.Series(data=[np.nan] * len(cols),
-                             index=cols.index)
+            return self.constant(cols, np.nan)
         else:
             val = cols[0]
             for x in cols[1:]:
                 val = self._comp(val, x)
-            return pd.Series(data=[val] * len(cols), index=cols.index)
+            return self.constant(cols, val)
 
     def evaluate(self, df, *args, **kwargs):
         try:
@@ -1042,7 +1045,7 @@ class LogicFunction(Function):
             if len(val.columns) > 1:
                 val = val.apply(self.select, axis="columns")
         except (KeyError, ValueError):
-            val = pd.Series(data=[np.nan] * len(df))
+            val = self.constant(df, np.nan)
 
         return val
 
