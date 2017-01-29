@@ -87,7 +87,6 @@ class CoqThread(QtCore.QThread):
                 self.parent().exception = e
             self.taskException.emit(e)
             print("CoqThread.run():", e)
-            raise e
         self.taskFinished.emit()
         return result
 
