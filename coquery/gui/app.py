@@ -994,7 +994,11 @@ class CoqueryApp(QtGui.QMainWindow):
     def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
 
-        properties = options.settings.value("column_properties", {})
+        properties = {}
+        try:
+            properties = options.settings.value("column_properties", {})
+        finally:
+            options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
                                                self.Session.data_table,
@@ -1514,7 +1518,11 @@ class CoqueryApp(QtGui.QMainWindow):
             self.last_results_saved = False
 
         # make sure that the right column colors are used
-        properties = options.settings.value("column_properties", {})
+        properties = {}
+        try:
+            properties = options.settings.value("column_properties", {})
+        finally:
+            options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
         options.cfg.column_color = current_properties.get("colors", {})
 
