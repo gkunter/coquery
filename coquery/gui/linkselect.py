@@ -118,6 +118,8 @@ class LinkSelect(QtGui.QDialog):
             corpus = utf8(self.ui.combo_corpus.itemText(index))
         else:
             corpus = utf8(index)
+        if not corpus:
+            return
 
         resource, _, _ = options.get_resource(corpus)
         self.ui.tree_external.setup_resource(resource,
