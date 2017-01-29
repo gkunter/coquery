@@ -63,8 +63,12 @@ class Session(object):
 
             self.Resource = current_resource
 
-            self.db_engine = sqlalchemy.create_engine(
-                sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
+            try:
+                self.db_engine = sqlalchemy.create_engine(
+                    sqlhelper.sql_url(options.cfg.current_server,
+                                      self.Resource.db_name))
+            except ImportError as e:
+                self.db_engine = None
 
             logger.info("Corpus '{}' on connection '{}'".format(
                 self.Resource.name, options.cfg.current_server))
