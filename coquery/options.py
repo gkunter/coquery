@@ -914,7 +914,11 @@ class Options(object):
 
         # Use QSettings?
         if settings:
-            column_properties = settings.value("column_properties", {})
+            column_properties = {}
+            try:
+                column_properties = settings.value("column_properties", {})
+            finally:
+                settings.setValue("column_properties", column_properties)
             current_properties = column_properties.get(self.args.corpus, {})
             self.args.column_color = current_properties.get("colors", {})
 
@@ -1129,7 +1133,11 @@ def save_configuration():
 
 
 def get_column_properties():
-    column_properties = settings.value("column_properties", {})
+    column_properties = {}
+    try:
+        column_properties = settings.value("column_properties", {})
+    finally:
+        settings.setValue("column_properties", column_properties)
     return column_properties.get(cfg.corpus, {})
 
 def get_con_configuration():
