@@ -924,7 +924,10 @@ class Options(object):
                 column_properties = settings.value("column_properties", {})
             finally:
                 settings.setValue("column_properties", column_properties)
-            current_properties = column_properties.get(self.args.corpus, {})
+            if column_properties:
+                current_properties = column_properties.get(self.args.corpus, {})
+            else:
+                current_properties = {}
             self.args.column_color = current_properties.get("colors", {})
 
             for x in [str(x) for x in settings.allKeys()]:
