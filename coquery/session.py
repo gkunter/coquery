@@ -328,14 +328,6 @@ class Session(object):
         #self.row_visibility[query_type] = pd.Series(
             #data=[True] * len(df.index), index=df.index)
 
-    @staticmethod
-    def apply_substitutions(df):
-        subst = options.get_column_properties().get("substitutions", {})
-        if subst:
-            return df.replace(subst)
-        else:
-            return df
-
     def retranslate_header(self, label):
         """
         Return the column name in the current content data frame that matches

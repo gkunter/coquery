@@ -996,6 +996,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
+        manager = self.Session.get_manager()
 
         properties = {}
         try:
@@ -1004,7 +1005,7 @@ class CoqueryApp(QtGui.QMainWindow):
             options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
-                                               self.Session.data_table,
+                                               manager.unique_values,
                                                current_properties,
                                                columns,
                                                self)

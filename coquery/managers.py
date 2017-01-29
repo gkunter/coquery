@@ -194,6 +194,31 @@ class Manager(CoqObject):
         print("\tdone")
         return df
 
+    def substitute(self, df, session, stage="first"):
+        subst = options.get_column_properties().get("substitutions", {})
+        if stage == "first":
+            self.unique_values = {}
+            self._unresolved_subst = {}
+            if subst:
+                for col in subst:
+                    if col not in df.columns:
+                        self._unresolved_subst[col] = subst[col]
+                    else:
+                        self.unique_values[col] = df[col].dropna().unique()
+                try:
+                    return df.replace(subst)
+                except TypeError as e:
+                    print(e)
+        elif stage == "second":
+            if self._unresolved_subst:
+                for col in self._unresolved_subst:
+                    self.unique_values[col] = df[col].dropna().unique()
+                try:
+                    return df.replace(self._unresolved_subst)
+                except TypeError as e:
+                    print(e)
+        return df
+
     def remove_sorter(self, column):
         self.sorters.remove(self.get_sorter(column))
         for i, x in enumerate(self.sorters):
@@ -514,8 +539,8 @@ class Manager(CoqObject):
             Apply all main functions (including context functions) as well as
             user functions.
 
-        2.  substitute(df)
-            Apply the substitution table from the current session.
+        2.  substitute(df, stage="first")
+            Apply the substitution table from the current session
 
         3.  filter_groups(df)
             For each group, apply the group filters.
@@ -533,10 +558,13 @@ class Manager(CoqObject):
             Take the data frame, and transform it according to the current
             transformation.
 
-        8.  filter(df, stage=FILTER_STAGE_FINAL)
+        8.  substitute(df, stage="second")
+            Apply the substitution table for the remaining columns
+
+        9.  filter(df, stage=FILTER_STAGE_FINAL)
             Apply remaining filters to the transformed data frame.
 
-        9.  select(df)
+        10. select(df)
             Discard the columns that are not needed for the current
             transformation.
         """
@@ -569,11 +597,10 @@ class Manager(CoqObject):
         if options.cfg.stopword_list:
             df = self.filter_stopwords(df, session)
 
+        df = self.substitute(df, session, "first")
         df = df[[x for x in df.columns if not x.startswith("func_")]]
         df = self.mutate(df, session)
-
         self.mutated_columns = df.columns
-        df = session.apply_substitutions(df)
 
         self.group_functions = FunctionList([])
         if options.cfg.group_columns:
@@ -582,6 +609,7 @@ class Manager(CoqObject):
             df = self.mutate_groups(df, session)
         df = self.filter(df, session, stage=FILTER_STAGE_BEFORE_TRANSFORM)
         df = self.summarize(df, session)
+        df = self.substitute(df, session, "second")
         df = self.filter(df, session, stage=FILTER_STAGE_FINAL)
         df = self.select(df, session)
         self._functions = (session.column_functions.get_list() +
