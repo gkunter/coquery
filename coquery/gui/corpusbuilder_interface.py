@@ -2,7 +2,7 @@
 """
 corpusbuilder_interface.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -314,17 +314,18 @@ class InstallerGui(QtGui.QDialog):
             super(InstallerGui, self).reject()
 
     def check_input(self):
+        button = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes)
         if self.ui.group_only_module.isChecked():
             self.ui.input_path.setStyleSheet('')
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+            button.setEnabled(True)
         else:
             path = str(self.ui.input_path.text())
             if os.path.isdir(path):
                 self.ui.input_path.setStyleSheet('')
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(True)
+                button.setEnabled(True)
             else:
                 self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                button.setEnabled(False)
 
     def start_install(self):
         """
@@ -629,6 +630,9 @@ class BuilderGui(InstallerGui):
             self.ui.corpus_name.setStyleSheet("")
         super(BuilderGui, self).validate_dialog()
 
+        button = self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes)
+        button.setEnabled(True)
+
         if hasattr(self.ui, "corpus_name"):
             self.ui.issue_label.setText("")
             try:
@@ -644,25 +648,25 @@ class BuilderGui(InstallerGui):
             if not str(self.ui.corpus_name.text()):
                 self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.issue_label.setText("The corpus name cannot be empty.")
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                button.setEnabled(False)
             # make sure that there is no corpus with that name already:
             elif str(self.ui.corpus_name.text()) in options.cfg.current_resources:
                 self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.issue_label.setText("There is already another corpus with this name..")
-                self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                button.setEnabled(False)
             else:
                 # make sure that the database exists if only the module
                 # install is requested:
                 if self.ui.group_only_module.isChecked() and not db_exists:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is no database that uses this name.")
-                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                    button.setEnabled(False)
                 # make sure that no database exists if the complete
                 # install is requested:
                 elif self.ui.group_read_files.isChecked() and db_exists:
                     self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                     self.ui.issue_label.setText("There is already another database that uses this name.")
-                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Yes).setEnabled(False)
+                    button.setEnabled(False)
 
     def select_path(self):
         if self._onefile:
