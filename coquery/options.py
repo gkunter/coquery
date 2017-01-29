@@ -747,7 +747,6 @@ class Options(object):
             if re.match("reference\d+$", key):
                 configuration, corpus = val.split(",")
                 self.args.reference_corpus[configuration] = corpus
-        print(self.args.reference_corpus)
         # select active SQL configuration, or use Default as fallback
         try:
             if self.args.current_server == None:
