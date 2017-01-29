@@ -263,6 +263,7 @@ class Options(object):
         self.args.server_configuration = dict()
         self.args.current_server = None
         self.args.current_resources = None
+        self.args.reference_corpus = {}
         self.args.main_window = None
         self.args.first_run = False
         self.args.number_of_tokens = 50
@@ -666,7 +667,6 @@ class Options(object):
     def read_configuration(self):
         defaults = {
             "default_corpus": "",
-            "reference_corpus": "",
             "query_mode": QUERY_MODE_TOKENS,
             "query_string": "",
             "query_cache_size": 500 * 1024 * 1024,
@@ -705,7 +705,8 @@ class Options(object):
             else:
                 self.args.first_run = False
 
-        for x in ["main", "sql", "gui", "output", "filter", "context", "links"]:
+        for x in ["main", "sql", "gui", "output", "filter", "context",
+                  "links", "reference_corpora"]:
             if x not in config_file.sections():
                 config_file.add_section(x)
 
@@ -741,6 +742,12 @@ class Options(object):
             except KeyError:
                 pass
 
+        # read reference corpora
+        for key, val in config_file.items("reference_corpora"):
+            if re.match("reference\d+$", key):
+                configuration, corpus = val.split(",")
+                self.args.reference_corpus[configuration] = corpus
+        print(self.args.reference_corpus)
         # select active SQL configuration, or use Default as fallback
         try:
             if self.args.current_server == None:
@@ -758,7 +765,6 @@ class Options(object):
         if self.args.gui:
             # Read MAIN section:
             self.args.corpus = config_file.str("main", "default_corpus", d=defaults)
-            self.args.reference_corpus = config_file.str("main", "reference_corpus", d=defaults)
             self.args.MODE = config_file.str("main", "query_mode", d=defaults)
             last_query = config_file.str("main", "query_string", d=defaults)
 
@@ -948,7 +954,7 @@ def save_configuration():
     if not "main" in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
-    config.set("main", "reference_corpus", cfg.reference_corpus)
+
     config.set("main", "query_mode", cfg.MODE)
     if cfg.query_list and cfg.save_query_string:
         config.set("main", "query_string", encode_query_string("\n".join(cfg.query_list)))
@@ -997,6 +1003,13 @@ def save_configuration():
             config.add_section("output")
         for feature in cfg.selected_features:
             config.set("output", feature, True)
+
+    # store reference corpora:
+    if not "reference_corpora" in config.sections():
+        config.add_section("reference_corpora")
+    for i, item in enumerate(cfg.reference_corpus.items()):
+        config.set("reference_corpora",
+                   "reference{}".format(i), ",".join(item))
 
     if not "filter" in config.sections():
         config.add_section("filter")

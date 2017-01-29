@@ -586,7 +586,13 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
-        ResourceClass, CorpusClass, LexiconClass, _ = options.cfg.current_resources[options.cfg.reference_corpus]
+        ref_corpus = get(options.cfg.reference_corpus,
+                         options.cfg.current_server, None)
+        if not ref_corpus or ref_corpus not in options.cfg.current_resource:
+            return self.constant(df, None)
+
+        res = options.cfg.current_resources[ref_corpus]
+        ResourceClass, CorpusClass, LexiconClass, _ = res
         current_lexicon = LexiconClass()
         current_corpus = CorpusClass()
         current_resource = ResourceClass(current_lexicon, current_corpus)
@@ -616,7 +622,13 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
 
     def evaluate(self, df, *args, **kwargs):
         val = super(ReferenceCorpusFrequencyPMW, self).evaluate(df, *args, **kwargs)
-        ResourceClass, CorpusClass, LexiconClass, _ = options.cfg.current_resources[options.cfg.reference_corpus]
+        ref_corpus = options.cfg.reference_corpus.get(
+                            options.cfg.current_server, None)
+        if not ref_corpus or ref_corpus not in options.cfg.current_resource:
+            return self.constant(df, None)
+
+        res = options.cfg.current_resources[ref_corpus]
+        ResourceClass, CorpusClass, LexiconClass, _ = res
         current_lexicon = LexiconClass()
         current_corpus = CorpusClass()
         current_resource = ResourceClass(current_lexicon, current_corpus)

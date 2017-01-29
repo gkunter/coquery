@@ -618,10 +618,13 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_corpus_documentation.setEnabled(enabled)
         self.ui.action_statistics.setEnabled(enabled)
 
-        if options.cfg.reference_corpus:
-            self.ui.action_reference_corpus.setText("Change &reference corpus... ({})".format(options.cfg.reference_corpus))
+        ref_corpus = options.cfg.reference_corpus.get(
+                        options.cfg.current_server, "")
+        if ref_corpus and ref_corpus in options.cfg.current_resources:
+            s = "Change &reference corpus... ({})".format(ref_corpus)
         else:
-            self.ui.action_reference_corpus.setText("Set &reference corpus...")
+            s = "Set &reference corpus..."
+        self.ui.action_reference_corpus.setText(s)
 
     def show_results_menu(self):
         enable = hasattr(self, "table_model")
@@ -1077,12 +1080,12 @@ class CoqueryApp(QtGui.QMainWindow):
         #title = _translate("MainWindow", "Select reference corpus – Coquery", None)
         title = "Select reference corpus"
         subtitle = "&Available corpora"
+        ref_corpus = options.cfg.reference_corpus.get(
+                        options.cfg.current_server, "")
         corpus = linkselect.CorpusSelect.pick(
-            current=options.cfg.reference_corpus,
-            exclude_corpus=current_corpus,
-            title=title, subtitle=subtitle)
+            current=ref_corpus, title=title, subtitle=subtitle)
         if corpus:
-            options.cfg.reference_corpus = corpus
+            options.cfg.reference_corpus[options.cfg.current_server] = corpus
 
     ###
     ### group columns methods
