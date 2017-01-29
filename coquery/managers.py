@@ -385,7 +385,6 @@ class Manager(CoqObject):
         self._len_pre_filter = len(df)
         print("\tfilter()")
         for filt in self._filters:
-            print("\t\t", filt)
             if filt.stage == stage:
                 df = filt.apply(df)
         print("\tdone")
