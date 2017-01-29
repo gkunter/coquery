@@ -1084,7 +1084,8 @@ class CoqueryApp(QtGui.QMainWindow):
         ref_corpus = options.cfg.reference_corpus.get(
                         options.cfg.current_server, "")
         corpus = linkselect.CorpusSelect.pick(
-            current=ref_corpus, title=title, subtitle=subtitle)
+            current=ref_corpus, exclude_corpous=[],
+            title=title, subtitle=subtitle)
         if corpus:
             options.cfg.reference_corpus[options.cfg.current_server] = corpus
 
