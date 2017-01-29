@@ -1,6 +1,8 @@
 """
 linkselect.py is part of Coquery.
+
 Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
@@ -84,13 +86,21 @@ class LinkSelect(QtGui.QDialog):
     def exec_(self, *args, **kwargs):
         result = super(LinkSelect, self).exec_(*args, **kwargs)
         if result == self.Accepted:
+            kwargs = {
+                "res_from": self.corpus_name,
+                "res_to": utf8(self.ui.combo_corpus.currentText()),
+                "case": bool(self.ui.checkBox.checkState())}
             from_item = self.ui.tree_resource.currentItem()
+            try:
+                kwargs["rc_from"] = utf8(from_item.objectName())
+            except AttributeError:
+                kwargs["rc_from"] = None
             to_item = self.ui.tree_external.currentItem()
-            return Link(res_from=self.corpus_name,
-                        rc_from=utf8(from_item.objectName()),
-                        res_to=utf8(self.ui.combo_corpus.currentText()),
-                        rc_to=utf8(to_item.objectName()),
-                        case=bool(self.ui.checkBox.checkState()))
+            try:
+                kwargs["rc_to"] = utf8(to_item.objectName())
+            except AttributeError:
+                kwargs["rc_to"] = None
+            return Link(**kwargs)
         else:
             return None
 
@@ -189,7 +199,7 @@ class CorpusSelect(LinkSelect):
         dialog.setVisible(True)
         link = dialog.exec_()
         if link:
-            return link.res_from
+            return link.res_to
         else:
             return None
 
