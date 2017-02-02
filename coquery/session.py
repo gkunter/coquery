@@ -176,6 +176,9 @@ class Session(object):
         """
         self.start_timer()
 
+        if self.db_engine == None:
+            raise SQLNoConnectorError
+
         self.connect_to_db()
 
         self.data_table = pd.DataFrame()
