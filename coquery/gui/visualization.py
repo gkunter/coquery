@@ -52,15 +52,10 @@ from . import classes
 from .ui.visualizerUi import Ui_Visualizer
 from .pyqt_compat import QtWidgets, QtCore, pyside, get_toplevel_window
 
-# Tell matplotlib whether PySide or PyQt4 is used:
-if pyside:
-    mpl.use("Qt4Agg")
-    mpl.rcParams["backend.qt4"] = "PySide"
-
 # import required matplotlib classes
 from matplotlib.backend_bases import key_press_handler
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5 import SubplotToolQt
 
 class CoqNavigationToolbar(NavigationToolbar):
