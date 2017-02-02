@@ -30,7 +30,7 @@ if pyside:
     mpl.rcParams["backend.qt4"] = "PySide"
 
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt4agg import (
+from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
 import seaborn as sns
