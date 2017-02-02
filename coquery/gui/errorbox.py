@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 
 import sys
+import traceback
 
 from coquery import options
 from coquery.defines import *
@@ -68,6 +69,60 @@ def alert_missing_module(name, parent=None):
         parent, "Missing Python module – Coquery",
         msg_missing_module.format(name=name, url = url, function=func))
             
+
+class ExceptionBox(QtWidgets.QDialog):
+    def __init__(self, cls, exception, tb, parent=None):
+        def get_error_repr(trace):
+            trace_strings = []
+            indent = ""
+            source_line = ""
+            for tup in traceback.extract_tb(trace):
+                file_name, line_no, func_name, text = tup
+                if file_name.startswith(sys.path[0]):
+                    trace_strings.append(
+                        "{}Function <code>{}()</code> in {}, line {}:".format(
+                            indent,
+                            func_name.replace("<", "&lt;"),
+                            file_name[len(sys.path[0])+1:],
+                            line_no))
+                    source_line = text
+                    indent += "&nbsp;&nbsp;"
+            trace_strings.append("<br>%s>&nbsp;<code>%s</code>" % (indent, source_line))
+            return "<br>".join(trace_strings)
+
+        super(ExceptionBox, self).__init__(parent)
+
+        self.ui = Ui_ErrorDialog()
+        self.ui.setupUi(self)
+        self.setWindowIcon(options.cfg.icon)
+        self.ui.icon_label.setPixmap(QtGui.QIcon.fromTheme("dialog-error").pixmap(32, 32))
+
+        error_text = ("<table><tr><td><b>{}&nbsp;</b></td><td>{}<br></td></tr>"
+                      "<tr><td><b>Trace&nbsp;</b></td><td>{}</td></tr></table>"
+                      .format(
+                            type(exception).__name__,
+                            exception,
+                            get_error_repr(tb)))
+        self.ui.trace_area.setText(error_text)
+
+        try:
+            self.resize(options.settings.value("errorbox_size"))
+        except TypeError:
+            pass
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.accept()
+
+    def closeEvent(self, *args):
+        options.settings.setValue("errorbox_size", self.size())
+
+
+def catch_exceptions(cls, exception, tb):
+    ExceptionBox(cls, exception, tb).exec_()
+
+sys.excepthook = catch_exceptions
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
     viewer = ErrorBox(Exception())
