@@ -5,7 +5,7 @@ visualizationDesigner.py is part of Coquery.
 Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -123,6 +123,7 @@ class VisualizationDesigner(QtGui.QDialog):
             item.setIcon(app.get_icon(icon, size="64x64"))
         item.setSizeHint(QtCore.QSize(180,
                                         64 + 0 * QtGui.QLabel().sizeHint().height()))
+        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
         self.ui.list_figures.addItem(item)
 
     def load_figure_types(self):
