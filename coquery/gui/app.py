@@ -2278,7 +2278,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
             df = pd.concat([self.table_model.content,
                     self.table_model.invisible_content["coquery_invisible_corpus_id"]],
                     axis=1)
-        except AttributeError:
+        except (AttributeError, KeyError):
             df = pd.DataFrame()
         dialog = visualizationdesigner.VisualizationDesigner(
             df, df.dtypes, self.Session)
@@ -2324,8 +2324,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(
                 self, "Visualization error – Coquery",
                 str(e))
-        except Exception as e:
-            errorbox.ErrorBox.show(sys.exc_info())
 
     def save_configuration(self):
         self.getGuiValues()
