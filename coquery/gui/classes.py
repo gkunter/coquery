@@ -890,7 +890,7 @@ class CoqSpinner(QtWidgets.QWidget):
         sizes = [24, 32, 64, 96, 128]
         distances = [abs(x - size) for x in sizes]
         opt_size = sizes[distances.index(min(distances))]
-        anim = QtWidgets.QMovie(os.path.join(options.cfg.base_path, "icons", "progress_{0}x{0}.gif".format(opt_size)))
+        anim = QtGui.QMovie(os.path.join(options.cfg.base_path, "icons", "progress_{0}x{0}.gif".format(opt_size)))
         anim.setScaledSize(QtCore.QSize(size, size))
         return anim
 
