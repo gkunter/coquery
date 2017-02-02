@@ -90,7 +90,7 @@ def check_valid_host(s):
         return True
     return False
 
-class CoqFileFilter(QtWidgets.QSortFilterProxyModel):
+class CoqFileFilter(QtCore.QSortFilterProxyModel):
     def filterAcceptsRow(self, sourceRow, sourceParent):
         index0 = self.sourceModel().index(sourceRow, 0, sourceParent)
         return False
@@ -546,7 +546,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         """
 
         if self.ui.radio_sqlite.isChecked():
-            self.connected.emit()
+            self.connected.emit("")
             return True
 
         if self.ui.radio_mysql.isChecked() and not options.use_mysql:
