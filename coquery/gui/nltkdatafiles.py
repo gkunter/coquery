@@ -2,10 +2,10 @@
 """
 nltkdatafiles.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -20,12 +20,12 @@ from coquery import options
 from coquery.unicode import utf8
 from . import classes
 from . import errorbox
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets
 from .ui.nltkDatafilesUi import Ui_NLTKDatafiles
 
 _NLTK_dir = None
 
-class NLTKDatafiles(QtGui.QDialog):
+class NLTKDatafiles(QtWidgets.QDialog):
     updateLabel = QtCore.Signal(str)
     progressTheBar = QtCore.Signal()
     
@@ -37,9 +37,9 @@ class NLTKDatafiles(QtGui.QDialog):
         self.ui.setupUi(self)
         self._missing = missing
         self.ui.textBrowser.setText("<code>{}</code>".format("<br/>".join(missing)))
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Open).clicked.disconnect()
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Open).clicked.connect(self.from_directory)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Open).setText("From directory...")
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Open).clicked.disconnect()
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Open).clicked.connect(self.from_directory)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Open).setText("From directory...")
         self.ui.progressBar.hide()
         self.download_dir = None
         
@@ -50,7 +50,7 @@ class NLTKDatafiles(QtGui.QDialog):
 
     def from_directory(self):
         global _NLTK_dir
-        name = QtGui.QFileDialog.getExistingDirectory(directory=options.cfg.textgrids_file_path, options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+        name = QtWidgets.QFileDialog.getExistingDirectory(directory=options.cfg.textgrids_file_path, options=QtWidgets.QFileDialog.ReadOnly|QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.HideNameFilterDetails)
         if type(name) == tuple:
             name = name[0]
 
@@ -134,6 +134,6 @@ class NLTKDatafiles(QtGui.QDialog):
     @staticmethod
     def ask(missing, parent=None):
         dialog = NLTKDatafiles(missing, parent=parent)        
-        return dialog.exec_() == QtGui.QDialog.Accepted
+        return dialog.exec_() == QtWidgets.QDialog.Accepted
         
 

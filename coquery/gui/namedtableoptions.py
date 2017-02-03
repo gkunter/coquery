@@ -2,7 +2,7 @@
 """
 namedtableoptions.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,7 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from coquery import options
 from coquery.errors import *
-from .pyqt_compat import QtGui
+from .pyqt_compat import QtWidgets
 
 from .csvoptions import quote_chars, CSVOptionDialog, CSVOptions
 from .ui.namedTableOptionsUi import Ui_NamedTableOptions
@@ -51,8 +51,8 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         for key, value in fields:
             button_name = "button_{}".format(value.lower())
             edit_name = "edit_{}".format(value.lower())
-            setattr(self.ui, button_name, QtGui.QPushButton(key))
-            setattr(self.ui, edit_name, QtGui.QLineEdit())
+            setattr(self.ui, button_name, QtWidgets.QPushButton(key))
+            setattr(self.ui, edit_name, QtWidgets.QLineEdit())
 
             getattr(self.ui, name).clicked.connect(
                 lambda: self.map_query_item_type(value))
@@ -85,7 +85,7 @@ class NamedTableOptionsDialog(CSVOptionDialog):
             has_word = "word" in self.map
         except:
             has_word = False
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(has_word)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(has_word)
 
     def select_file(self):
         name = super(NamedTableOptionsDialog, self).select_file()

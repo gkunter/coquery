@@ -2,7 +2,7 @@
 """
 columnproperties.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,21 +15,21 @@ import collections
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from .ui.columnPropertiesUi import Ui_ColumnProperties
 
 
-class ColumnPropertiesDialog(QtGui.QDialog):
+class ColumnPropertiesDialog(QtWidgets.QDialog):
     _color_map = {QtGui.QColor(name).name().lower(): name for name
                   in QtGui.QColor.colorNames()}
-    def __init__(self, df, raw_df, preset, columns=None, parent=None):
+    def __init__(self, df, pre_subst, preset, columns=None, parent=None):
         super(ColumnPropertiesDialog, self).__init__(parent)
 
         self.ui = Ui_ColumnProperties()
         self.ui.setupUi(self)
 
         self.df = df
-        self.raw_df = raw_df
+        self.pre_subst = pre_subst
         self.unique_cache = {}
         try:
             self.alias = preset["alias"]
@@ -69,20 +69,41 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         except TypeError:
             pass
 
+    def _key_dtype(self, key, col):
+        if col in self.pre_subst:
+            dtype = self.pre_subst[col].dtype
+        else:
+            dtype = self.df.dtypes[col]
+        # ensure that the keys have the same dtype as the values:
+        if dtype == object:
+            return key
+        elif dtype == float:
+            return float(key)
+        elif dtype == int:
+            return int(key)
+        elif dtype == bool:
+            return bool(key)
+        raise TypeError
+
     def exec_(self, *args, **kwargs):
         session = get_toplevel_window().Session
         result = super(ColumnPropertiesDialog, self).exec_(*args, **kwargs)
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             d = {}
             d["alias"] = {k: v for k, v in self.alias.items()
                           if session.translate_header(k) != v}
             subst = {}
-            for key in self.substitutions:
-                tmp = {k: v for k, v in self.substitutions[key].items()
+            for col in self.substitutions:
+                # Construct a dict of substitutions. Only those substitutions
+                # are valid where the value is not empty and where the value
+                # is not also one of the keys:
+                tmp = {self._key_dtype(k, col): v for k, v
+                       in self.substitutions[col].items()
                        if v not in [None, ""] and
-                       v not in self.substitutions[key]}
+                       v not in self.substitutions[col]}
                 if tmp:
-                    subst[key] = tmp
+                    subst[col] = tmp
+
             d["substitutions"] = subst
             d["colors"] = self.colors
             vis_cols = [x.data(QtCore.Qt.UserRole) for x
@@ -133,20 +154,22 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         self.ui.edit_column_name.textChanged.connect(self.change_alias)
         self.ui.table_substitutions.cellChanged.connect(
             self.change_substitution)
-        button = self.ui.buttonbox_label.button(QtGui.QDialogButtonBox.Reset)
+        button = self.ui.buttonbox_label.button(QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(lambda: self.ui.edit_column_name.setText(""))
         self.ui.button_change_color.clicked.connect(self.set_color)
         self.ui.label_example.clicked.connect(self.set_color)
-        button = self.ui.buttonbox_color.button(QtGui.QDialogButtonBox.Reset)
+        button = self.ui.buttonbox_color.button(QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_color)
-        button = self.ui.buttonbox_substitution.button(QtGui.QDialogButtonBox.Reset)
+        button = self.ui.buttonbox_substitution.button(QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_substitution)
 
     def reset_substitution(self):
         current_item = self.ui.widget_selection.currentItem()
         column = current_item.data(QtCore.Qt.UserRole)
         for i in range(self.ui.table_substitutions.rowCount()):
-            key = utf8(self.ui.table_substitutions.item(i, 0).text())
+            key = self._key_dtype(
+                    utf8(self.ui.table_substitutions.item(i, 0).text()),
+                    column)
             value = None
             self.ui.table_substitutions.item(i, 1).setText(value)
             self.substitutions[column][key] = value
@@ -181,9 +204,9 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         current_item = self.ui.widget_selection.currentItem()
         column = current_item.data(QtCore.Qt.UserRole)
         try:
-            color = QtGui.QColorDialog.getColor(QtGui.QColor(self.colors[column]))
+            color = QtWidgets.QColorDialog.getColor(QtGui.QColor(self.colors[column]))
         except KeyError:
-            color = QtGui.QColorDialog.getColor()
+            color = QtWidgets.QColorDialog.getColor()
 
         if color.isValid():
             self.set_example(color)
@@ -229,11 +252,15 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         self.ui.table_substitutions.setRowCount(len(self.substitutions[col]))
         sorted_items = sorted(self.substitutions[col].items())
         for i, (key, value) in enumerate(sorted_items):
-            original = QtGui.QTableWidgetItem(key)
+            original = QtWidgets.QTableWidgetItem(utf8(key))
             original.setFlags(original.flags() & ~QtCore.Qt.ItemIsEditable)
             self.ui.table_substitutions.setItem(i, 0, original)
 
-            substitute = QtGui.QTableWidgetItem(value)
+            if value is None:
+                substitute = QtWidgets.QTableWidgetItem(None)
+            else:
+                substitute = QtWidgets.QTableWidgetItem(utf8(value))
+
             self.ui.table_substitutions.setItem(i, 1, substitute)
 
         self.ui.table_substitutions.blockSignals(False)
@@ -242,7 +269,8 @@ class ColumnPropertiesDialog(QtGui.QDialog):
         if column in self.unique_cache:
             val = self.unique_cache[column]
         else:
-            val = self.raw_df[column].dropna().unique()
+            val = self.pre_subst.get(column,
+                                     self.df[column].dropna().unique())
             self.unique_cache[column] = val
         return val
 

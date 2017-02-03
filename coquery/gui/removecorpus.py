@@ -2,10 +2,10 @@
 """
 removecorpus.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -15,10 +15,10 @@ import sys
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets
 from .ui.removeCorpusUi import Ui_RemoveCorpus
 
-class RemoveCorpusDialog(QtGui.QDialog):
+class RemoveCorpusDialog(QtWidgets.QDialog):
     def __init__(self, entry, configuration_name, parent=None):
         
         super(RemoveCorpusDialog, self).__init__(parent)
@@ -28,8 +28,8 @@ class RemoveCorpusDialog(QtGui.QDialog):
 
         self.ui.label.setText(utf8(self.ui.label.text()).format(entry.name, configuration_name))
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.accept)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Cancel).clicked.connect(self.reject)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.accept)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(self.reject)
         self.ui.check_rm_database.toggled.connect(lambda: self.check_boxes(self.ui.check_rm_database))
         self.ui.check_rm_module.toggled.connect(lambda: self.check_boxes(self.ui.check_rm_module))
 
@@ -77,7 +77,7 @@ class RemoveCorpusDialog(QtGui.QDialog):
         
             
         result = dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             return (
                 dialog.ui.check_rm_module.isChecked(),
                 dialog.ui.check_rm_database.isChecked(),

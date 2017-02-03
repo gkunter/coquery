@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+menus.py is part of Coquery.
+
+Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import unicode_literals
 
 import logging
@@ -7,10 +18,10 @@ from coquery.defines import *
 from coquery.unicode import utf8
 from coquery import managers
 
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from . import classes
 
-class CoqResourceMenu(QtGui.QMenu):
+class CoqResourceMenu(QtWidgets.QMenu):
     viewEntriesRequested = QtCore.Signal(classes.CoqTreeItem)
     viewUniquesRequested = QtCore.Signal(classes.CoqTreeItem)
     addLinkRequested = QtCore.Signal(classes.CoqTreeItem)
@@ -26,18 +37,18 @@ class CoqResourceMenu(QtGui.QMenu):
         
         # if shown as context menu, use column name as header:
         if context:
-            head = QtGui.QLabel("<b>{}</b>".format(label))
+            head = QtWidgets.QLabel("<b>{}</b>".format(label))
             head.setAlignment(QtCore.Qt.AlignCenter)
-            action = QtGui.QWidgetAction(parent)
+            action = QtWidgets.QWidgetAction(parent)
             action.setDefaultWidget(head)
             self.addAction(action)
 
-        add_link = QtGui.QAction("&Link an external table", parent)
-        add_grouping = QtGui.QAction("Add to &group columns", parent)
-        remove_link = QtGui.QAction("&Remove linked table", parent)
-        remove_grouping = QtGui.QAction("Remove from &group columns", parent)
-        view_entries = QtGui.QAction("View all &values", parent)
-        view_uniques = QtGui.QAction("View &unique values", parent)
+        add_link = QtWidgets.QAction("&Link an external table", parent)
+        add_grouping = QtWidgets.QAction("Add to &group columns", parent)
+        remove_link = QtWidgets.QAction("&Remove linked table", parent)
+        remove_grouping = QtWidgets.QAction("Remove from &group columns", parent)
+        view_entries = QtWidgets.QAction("View all &values", parent)
+        view_uniques = QtWidgets.QAction("View &unique values", parent)
 
         # linked table:
         if hasattr(item, "link"):
@@ -68,11 +79,11 @@ class CoqResourceMenu(QtGui.QMenu):
                     self.addAction(add_grouping)
                     add_grouping.triggered.connect(lambda: self.addGroupRequested.emit(rc_feature))
         else:
-            unavailable = QtGui.QAction(_translate("MainWindow", "No option available for tables.", None), self)
+            unavailable = QtWidgets.QAction(_translate("MainWindow", "No option available for tables.", None), self)
             unavailable.setDisabled(True)
             self.addAction(unavailable)      
 
-class CoqColumnMenu(QtGui.QMenu):
+class CoqColumnMenu(QtWidgets.QMenu):
     hideColumnRequested = QtCore.Signal(list)
     addFunctionRequested = QtCore.Signal(list)
     removeFunctionRequested = QtCore.Signal(list)
@@ -95,24 +106,24 @@ class CoqColumnMenu(QtGui.QMenu):
 
         self.add_header(columns)
 
-        column_properties = QtGui.QAction("&Properties...", parent)
+        column_properties = QtWidgets.QAction("&Properties...", parent)
         column_properties.triggered.connect(lambda: self.propertiesRequested.emit(columns))
         self.addAction(column_properties)
 
         # add 'add function'
-        add_function = QtGui.QAction("&Add function...", parent)
+        add_function = QtWidgets.QAction("&Add function...", parent)
         add_function.triggered.connect(lambda: self.addFunctionRequested.emit(columns))
         self.addAction(add_function)
 
-        hide_column = QtGui.QAction("&Hide column{}".format(suffix), parent)
+        hide_column = QtWidgets.QAction("&Hide column{}".format(suffix), parent)
         hide_column.setIcon(parent.get_icon("Forward"))
         hide_column.triggered.connect(lambda: self.hideColumnRequested.emit(columns))
         self.addAction(hide_column)
 
         if len(columns) == 1:
             rc_feature = columns[0]
-            add_grouping = QtGui.QAction("Add to &group columns", parent)
-            remove_grouping = QtGui.QAction("Remove from &group columns", parent)
+            add_grouping = QtWidgets.QAction("Add to &group columns", parent)
+            remove_grouping = QtWidgets.QAction("Remove from &group columns", parent)
 
             if self.parent().ui.list_group_columns.find_resource(rc_feature) is not None:
                 self.addAction(remove_grouping)
@@ -128,8 +139,8 @@ class CoqColumnMenu(QtGui.QMenu):
             #if len(columns) == 1:
                 #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
                 #self.addAction(edit_function)
-            #edit_function = QtGui.QAction("&Edit function...", parent)
-            remove_function = QtGui.QAction("&Remove function{}".format(suffix), parent)
+            #edit_function = QtWidgets.QAction("&Edit function...", parent)
+            remove_function = QtWidgets.QAction("&Remove function{}".format(suffix), parent)
             remove_function.triggered.connect(lambda: self.removeFunctionRequested.emit(columns))
             self.addAction(remove_function)
 
@@ -138,11 +149,11 @@ class CoqColumnMenu(QtGui.QMenu):
         # add sorting actions, but only if only one column is selected
         if len(columns) == 1:
             column = columns[0]
-            group = QtGui.QActionGroup(self, exclusive=True)
+            group = QtWidgets.QActionGroup(self, exclusive=True)
 
-            sort_none = group.addAction(QtGui.QAction("Do not sort", self, checkable=True))
-            sort_asc = group.addAction(QtGui.QAction("&Ascending", self, checkable=True))
-            sort_desc = group.addAction(QtGui.QAction("&Descending", self, checkable=True))
+            sort_none = group.addAction(QtWidgets.QAction("Do not sort", self, checkable=True))
+            sort_asc = group.addAction(QtWidgets.QAction("&Ascending", self, checkable=True))
+            sort_desc = group.addAction(QtWidgets.QAction("&Descending", self, checkable=True))
             sort_asc.setIcon(parent.get_icon("Ascending Sorting"))
             sort_desc.setIcon(parent.get_icon("Descending Sorting"))
 
@@ -156,8 +167,8 @@ class CoqColumnMenu(QtGui.QMenu):
             self.addAction(sort_desc)
 
             if parent.table_model.content[[column]].dtypes[0] == "object":
-                sort_asc_rev = group.addAction(QtGui.QAction("&Ascending, reverse", self, checkable=True))
-                sort_desc_rev = group.addAction(QtGui.QAction("&Descending, reverse", self, checkable=True))
+                sort_asc_rev = group.addAction(QtWidgets.QAction("&Ascending, reverse", self, checkable=True))
+                sort_desc_rev = group.addAction(QtWidgets.QAction("&Descending, reverse", self, checkable=True))
                 sort_asc_rev.setIcon(parent.get_icon("Ascending Reverse Sorting"))
                 sort_desc_rev.setIcon(parent.get_icon("Descending Reverse Sorting"))
                 sort_asc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, True)))
@@ -186,8 +197,8 @@ class CoqColumnMenu(QtGui.QMenu):
         session = get_toplevel_window().Session
         display_name = "<br/>".join([session.translate_header(x) for x
                                      in columns])
-        action = QtGui.QWidgetAction(self.parent())
-        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
+        action = QtWidgets.QWidgetAction(self.parent())
+        label = QtWidgets.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
         self.addAction(action)
@@ -203,17 +214,17 @@ class CoqHiddenColumnMenu(CoqColumnMenu):
 
         self.add_header(columns)
 
-        #column_properties = QtGui.QAction("&Properties...", parent)
+        #column_properties = QtWidgets.QAction("&Properties...", parent)
         #column_properties.triggered.connect(lambda: self.propertiesRequested.emit(columns))
         #self.addAction(column_properties)
 
         ## add 'add function'
-        #add_function = QtGui.QAction("&Add function...", parent)
+        #add_function = QtWidgets.QAction("&Add function...", parent)
         #add_function.triggered.connect(lambda: self.addFunctionRequested.emit(columns))
         #self.addAction(add_function)
 
         suffix = "s" if len(columns) > 1 else ""
-        show_column = QtGui.QAction("&Show column{}".format(suffix), parent)
+        show_column = QtWidgets.QAction("&Show column{}".format(suffix), parent)
         show_column.setIcon(parent.get_icon("Back"))
         show_column.triggered.connect(lambda: self.showColumnRequested.emit(columns))
         self.addAction(show_column)

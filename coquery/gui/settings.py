@@ -2,7 +2,7 @@
 """
 settings.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,10 +14,10 @@ import sys
 from coquery import options
 from coquery.errors import remove_source_path, add_source_path
 from coquery.unicode import utf8
-from .pyqt_compat import QtGui, QtCore, get_toplevel_window
+from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
 from .ui.settingsUi import Ui_SettingsDialog
 
-class Settings(QtGui.QDialog):
+class Settings(QtWidgets.QDialog):
     def __init__(self, _options, parent=None):
         super(Settings, self).__init__(parent)
         self._options = _options
@@ -89,7 +89,7 @@ class Settings(QtGui.QDialog):
         options.settings.setValue("settings_size", self.size())
         
     def reset_font(self, label):
-        font = QtGui.QLabel().font()
+        font = QtWidgets.QLabel().font()
         label.setText(font.family())
         label.setFont(font)
         if label == self.ui.label_sample_figure:
@@ -106,7 +106,7 @@ class Settings(QtGui.QDialog):
             font = self._table_font
         elif label == self.ui.label_sample_context:
             font = self._context_font
-        new_font, accepted = QtGui.QFontDialog.getFont(font, self.parent())
+        new_font, accepted = QtWidgets.QFontDialog.getFont(font, self.parent())
         if not accepted:
             return
         
@@ -116,16 +116,16 @@ class Settings(QtGui.QDialog):
             self._table_font = new_font
         elif label == self.ui.label_sample_context:
             self._context_font = new_font
-        #new_font.setPointSize(QtGui.QLabel().font().pointSize())
-        #new_font.setStyle(QtGui.QFont.StyleNormal)
-        #new_font.setWeight(QtGui.QFont.Normal)
+        #new_font.setPointSize(QtWidgets.QLabel().font().pointSize())
+        #new_font.setStyle(QtWidgets.QFont.StyleNormal)
+        #new_font.setWeight(QtWidgets.QFont.Normal)
         label.setFont(new_font)
         label.setText(new_font.family())
         
     def select_installer_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory(
+        name = QtWidgets.QFileDialog.getExistingDirectory(
             directory=self.ui.edit_installer_path.text(),
-            options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+            options=QtWidgets.QFileDialog.ReadOnly|QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.HideNameFilterDetails)
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -133,9 +133,9 @@ class Settings(QtGui.QDialog):
             self.ui.edit_installer_path.setText(name)
         
     def select_visualizer_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory(
+        name = QtWidgets.QFileDialog.getExistingDirectory(
             directory=self.ui.edit_visualizer_path.text(),
-            options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+            options=QtWidgets.QFileDialog.ReadOnly|QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.HideNameFilterDetails)
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -143,9 +143,9 @@ class Settings(QtGui.QDialog):
             self.ui.edit_visualizer_path.setText(name)
 
     def select_cache_path(self):
-        name = QtGui.QFileDialog.getExistingDirectory(
+        name = QtWidgets.QFileDialog.getExistingDirectory(
             directory=self.ui.edit_cache_path.text(),
-            options=QtGui.QFileDialog.ReadOnly|QtGui.QFileDialog.ShowDirsOnly|QtGui.QFileDialog.HideNameFilterDetails)
+            options=QtWidgets.QFileDialog.ReadOnly|QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.HideNameFilterDetails)
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -277,7 +277,7 @@ class Settings(QtGui.QDialog):
     def manage(options, parent=None):
         dialog = Settings(options, parent)
         result = dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             dialog.change_options()
         return result
         
@@ -286,7 +286,7 @@ class Settings(QtGui.QDialog):
             self.close()
             
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     print(Settings.manage(None))
     
 if __name__ == "__main__":

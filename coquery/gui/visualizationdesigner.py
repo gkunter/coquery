@@ -5,7 +5,7 @@ visualizationDesigner.py is part of Coquery.
 Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -21,7 +21,7 @@ from coquery.errors import VisualizationModuleError
 from coquery.functions import Freq
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtGui, QtCore, get_toplevel_window, pyside
+from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window, pyside
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -30,7 +30,7 @@ if pyside:
     mpl.rcParams["backend.qt4"] = "PySide"
 
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt4agg import (
+from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
 import seaborn as sns
@@ -58,7 +58,7 @@ visualizer_mapping = (
     ("Scatterplot", "Scatter Plot", "scatterplot", "ScatterPlot"),
     )
 
-class VisualizationDesigner(QtGui.QDialog):
+class VisualizationDesigner(QtWidgets.QDialog):
     moduleLoaded = QtCore.Signal(str, str)
     visualizers = {}
 
@@ -94,13 +94,13 @@ class VisualizationDesigner(QtGui.QDialog):
         """
         self.ui.list_figures.setDragEnabled(False)
         self.ui.list_figures.setDragDropMode(self.ui.list_figures.NoDragDrop)
-        w = app.style().pixelMetric(QtGui.QStyle.PM_ScrollBarExtent)
+        w = app.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent)
         self.ui.list_figures.setMinimumWidth(180 + w)
         self.ui.list_figures.setMaximumWidth(180 + w)
 
         # add canvas layout:
-        self.ui.layout_view = QtGui.QVBoxLayout()
-        self.ui.layout_view.setMargin(0)
+        self.ui.layout_view = QtWidgets.QVBoxLayout()
+        self.ui.layout_view.setContentsMargins(0, 0, 0, 0)
         self.ui.layout_view.setSpacing(0)
         self.ui.tab_view.setLayout(self.ui.layout_view)
 
@@ -116,13 +116,14 @@ class VisualizationDesigner(QtGui.QDialog):
         self.resize_previews()
 
     def add_figure_type(self, label, icon):
-        item = QtGui.QListWidgetItem(label)
+        item = QtWidgets.QListWidgetItem(label)
         try:
             item.setIcon(app.get_icon(icon, small_n_flat=False))
         except Exception as e:
             item.setIcon(app.get_icon(icon, size="64x64"))
         item.setSizeHint(QtCore.QSize(180,
-                                        64 + 0 * QtGui.QLabel().sizeHint().height()))
+                                        64 + 0 * QtWidgets.QLabel().sizeHint().height()))
+        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
         self.ui.list_figures.addItem(item)
 
     def load_figure_types(self):
@@ -170,7 +171,7 @@ class VisualizationDesigner(QtGui.QDialog):
             #new_item.setData(QtCore.Qt.UserRole,
                              #"func_{}".format(func._name))
             #new_item.setData(QtCore.Qt.FontRole,
-                             #QtGui.QFont(QtGui.QLabel().font().family(),
+                             #QtWidgets.QFont(QtWidgets.QLabel().font().family(),
                                          #italic=True))
             #self.ui.table_numerical.addItem(new_item)
 
@@ -194,8 +195,8 @@ class VisualizationDesigner(QtGui.QDialog):
         # figure canvas:
         self.canvas = FigureCanvas(figure)
         self.canvas.setParent(self)
-        self.canvas.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                                  QtGui.QSizePolicy.Expanding)
+        self.canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                  QtWidgets.QSizePolicy.Expanding)
         self.canvas.updateGeometry()
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.ui.layout_view.addWidget(self.toolbar)
@@ -204,15 +205,15 @@ class VisualizationDesigner(QtGui.QDialog):
         # preview canvases:
         self.preview_canvas = FigureCanvas(figure)
         self.preview_canvas.setParent(self)
-        self.preview_canvas.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                                          QtGui.QSizePolicy.Expanding)
+        self.preview_canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                          QtWidgets.QSizePolicy.Expanding)
         self.preview_canvas.updateGeometry()
         self.ui.layout_preview.addWidget(self.preview_canvas)
 
         self.preview_canvas2 = FigureCanvas(figure)
         self.preview_canvas2.setParent(self)
-        self.preview_canvas2.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                                          QtGui.QSizePolicy.Expanding)
+        self.preview_canvas2.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                          QtWidgets.QSizePolicy.Expanding)
         self.preview_canvas2.updateGeometry()
         self.ui.layout_preview_colors.addWidget(self.preview_canvas2)
 
@@ -525,7 +526,7 @@ class VisualizationDesigner(QtGui.QDialog):
 
     def exec_(self):
         result = super(VisualizationDesigner, self).exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             return result
         else:
             return None
@@ -540,7 +541,7 @@ def get_visualizer_module(name):
         msg = "<code style='color: darkred'>{type}: {code}</code>".format(
             type=type(e).__name__, code=sys.exc_info()[1])
         logger.error(msg)
-        QtGui.QMessageBox.critical(
+        QtWidgets.QMessageBox.critical(
             None, "Visualization error – Coquery",
             VisualizationModuleError(name, msg).error_message)
         return

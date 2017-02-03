@@ -1,6 +1,8 @@
 """
 linkselect.py is part of Coquery.
+
 Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
@@ -18,10 +20,10 @@ from coquery.unicode import utf8
 from coquery.links import Link
 
 from .classes import CoqTreeItem
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.linkselectUi import Ui_LinkSelect
 
-class LinkSelect(QtGui.QDialog):
+class LinkSelect(QtWidgets.QDialog):
     def __init__(self, res_from=None, rc_from=None, only_resources=False, parent=None):
         super(LinkSelect, self).__init__(parent)
         self.res_from = res_from
@@ -43,7 +45,7 @@ class LinkSelect(QtGui.QDialog):
         self.ui.tree_resource.currentItemChanged.connect(self.resource_changed)
         self.ui.tree_external.currentItemChanged.connect(self.external_resource_changed)
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
 
         try:
             self.resize(options.settings.value("linkselect_size"))
@@ -58,7 +60,7 @@ class LinkSelect(QtGui.QDialog):
         self.ui.tree_resource.setCurrentItemByString(self.rc_from)
 
     def check_dialog(self):
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
         self.ui.widget_link_info.hide()
         from_item = self.ui.tree_resource.currentItem()
         to_item = self.ui.tree_external.currentItem()
@@ -67,7 +69,7 @@ class LinkSelect(QtGui.QDialog):
         if to_item.childCount() or from_item.childCount():
             return
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
         self.ui.widget_link_info.show()
 
     def set_to_labels(self, **kwargs):
@@ -84,13 +86,21 @@ class LinkSelect(QtGui.QDialog):
     def exec_(self, *args, **kwargs):
         result = super(LinkSelect, self).exec_(*args, **kwargs)
         if result == self.Accepted:
+            kwargs = {
+                "res_from": self.corpus_name,
+                "res_to": utf8(self.ui.combo_corpus.currentText()),
+                "case": bool(self.ui.checkBox.checkState())}
             from_item = self.ui.tree_resource.currentItem()
+            try:
+                kwargs["rc_from"] = utf8(from_item.objectName())
+            except AttributeError:
+                kwargs["rc_from"] = None
             to_item = self.ui.tree_external.currentItem()
-            return Link(res_from=self.corpus_name,
-                        rc_from=utf8(from_item.objectName()),
-                        res_to=utf8(self.ui.combo_corpus.currentText()),
-                        rc_to=utf8(to_item.objectName()),
-                        case=bool(self.ui.checkBox.checkState()))
+            try:
+                kwargs["rc_to"] = utf8(to_item.objectName())
+            except AttributeError:
+                kwargs["rc_to"] = None
+            return Link(**kwargs)
         else:
             return None
 
@@ -118,6 +128,8 @@ class LinkSelect(QtGui.QDialog):
             corpus = utf8(self.ui.combo_corpus.itemText(index))
         else:
             corpus = utf8(index)
+        if not corpus:
+            return
 
         resource, _, _ = options.get_resource(corpus)
         self.ui.tree_external.setup_resource(resource,
@@ -175,7 +187,7 @@ class CorpusSelect(LinkSelect):
         self.ui.combo_corpus.setFocus()
 
         self.ui.tree_external.setSelectionMode(self.ui.tree_external.NoSelection)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
         if subtitle:
             self.ui.group_external_corpus.setTitle(subtitle)
         if title:
@@ -187,7 +199,7 @@ class CorpusSelect(LinkSelect):
         dialog.setVisible(True)
         link = dialog.exec_()
         if link:
-            return link.res_from
+            return link.res_to
         else:
             return None
 

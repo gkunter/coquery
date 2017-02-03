@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>720</width>
-    <height>868</height>
+    <height>836</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,7 +27,7 @@
          <verstretch>1</verstretch>
         </sizepolicy>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,3,0">
+       <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
         <property name="leftMargin">
          <number>0</number>
         </property>
@@ -37,229 +37,82 @@
         <property name="rightMargin">
          <number>0</number>
         </property>
-        <property name="bottomMargin">
-         <number>6</number>
-        </property>
-        <item>
-         <widget class="QGroupBox" name="box_corpus_select">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="box_input_settings">
           <property name="title">
-           <string>&amp;Data selection</string>
+           <string>Quer&amp;y strings</string>
           </property>
-          <layout class="QVBoxLayout" name="output_columns">
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
-             <property name="spacing">
-              <number>10</number>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="0" column="0" alignment="Qt::AlignTop">
+            <widget class="QRadioButton" name="radio_query_string">
+             <property name="text">
+              <string/>
              </property>
-             <item>
-              <widget class="QLabel" name="label_2">
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="CoqTextEdit" name="edit_query_string">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" alignment="Qt::AlignTop">
+            <widget class="QRadioButton" name="radio_query_file">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <layout class="QGridLayout" name="gridLayout_6" columnstretch="1,0">
+             <item row="0" column="0">
+              <widget class="CoqClickableLabel" name="edit_file_name">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="frameShape">
+                <enum>QFrame::StyledPanel</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Sunken</enum>
+               </property>
                <property name="text">
-                <string>&amp;Corpus:</string>
-               </property>
-               <property name="buddy">
-                <cstring>combo_corpus</cstring>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="combo_corpus">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::WheelFocus</enum>
-               </property>
-               <property name="editable">
-                <bool>false</bool>
-               </property>
-               <property name="insertPolicy">
-                <enum>QComboBox::InsertAlphabetically</enum>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QComboBox::AdjustToContents</enum>
-               </property>
-               <property name="frame">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_7">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_11" stretch="1,0">
-          <item>
-           <widget class="QGroupBox" name="box_input_settings">
-            <property name="title">
-             <string>Quer&amp;y strings</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_3">
-             <item row="0" column="0" alignment="Qt::AlignTop">
-              <widget class="QRadioButton" name="radio_query_string">
-               <property name="text">
-                <string/>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
+                <string>(no &amp;query file selected)</string>
                </property>
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="CoqTextEdit" name="edit_query_string">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0" alignment="Qt::AlignTop">
-              <widget class="QRadioButton" name="radio_query_file">
+              <widget class="QPushButton" name="button_change_file">
                <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <layout class="QGridLayout" name="gridLayout_6" columnstretch="1,0">
-               <item row="0" column="0">
-                <widget class="CoqClickableLabel" name="edit_file_name">
-                 <property name="enabled">
-                  <bool>true</bool>
-                 </property>
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="frameShape">
-                  <enum>QFrame::StyledPanel</enum>
-                 </property>
-                 <property name="frameShadow">
-                  <enum>QFrame::Sunken</enum>
-                 </property>
-                 <property name="text">
-                  <string>(no &amp;query file selected)</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QPushButton" name="button_change_file">
-                 <property name="text">
-                  <string>C&amp;hange...</string>
-                 </property>
-                 <property name="shortcut">
-                  <string>Alt+B</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="groupBox_2">
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
-             <item>
-              <spacer name="horizontalSpacer">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>10</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QPushButton" name="button_run_query">
-               <property name="text">
-                <string>&amp;New query</string>
+                <string>C&amp;hange...</string>
                </property>
                <property name="shortcut">
-                <string>Ctrl+N</string>
-               </property>
-               <property name="autoDefault">
-                <bool>true</bool>
-               </property>
-               <property name="default">
-                <bool>true</bool>
+                <string>Alt+B</string>
                </property>
               </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="button_stop_query">
-               <property name="text">
-                <string>&amp;Stop</string>
-               </property>
-               <property name="autoDefault">
-                <bool>false</bool>
-               </property>
-               <property name="default">
-                <bool>false</bool>
-               </property>
-               <property name="flat">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>10</height>
-                </size>
-               </property>
-              </spacer>
              </item>
             </layout>
-           </widget>
-          </item>
-         </layout>
+           </item>
+          </layout>
+         </widget>
         </item>
-        <item>
+        <item row="0" column="2" rowspan="2">
          <widget class="QGroupBox" name="group_management">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -721,6 +574,12 @@
               </property>
               <item>
                <widget class="QPushButton" name="button_apply_management">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string>&amp;Apply</string>
                 </property>
@@ -734,6 +593,12 @@
               </item>
               <item>
                <widget class="QPushButton" name="button_cancel_management">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string>Cancel</string>
                 </property>
@@ -744,6 +609,158 @@
               </item>
              </layout>
             </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QGroupBox" name="groupBox_2">
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_run_query">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&amp;New query</string>
+             </property>
+             <property name="shortcut">
+              <string>Ctrl+N</string>
+             </property>
+             <property name="autoDefault">
+              <bool>true</bool>
+             </property>
+             <property name="default">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_stop_query">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&amp;Stop</string>
+             </property>
+             <property name="autoDefault">
+              <bool>false</bool>
+             </property>
+             <property name="default">
+              <bool>false</bool>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="0" rowspan="2">
+         <widget class="QGroupBox" name="box_corpus_select">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>&amp;Data selection</string>
+          </property>
+          <layout class="QVBoxLayout" name="output_columns">
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>&amp;Corpus:</string>
+               </property>
+               <property name="buddy">
+                <cstring>combo_corpus</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="combo_corpus">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::WheelFocus</enum>
+               </property>
+               <property name="editable">
+                <bool>false</bool>
+               </property>
+               <property name="insertPolicy">
+                <enum>QComboBox::InsertAlphabetically</enum>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::AdjustToContents</enum>
+               </property>
+               <property name="frame">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_7">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </widget>
@@ -950,7 +967,7 @@ p, li { white-space: pre-wrap; }
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
-     <string>&amp;Preferences</string>
+     <string>&amp;Options</string>
     </property>
     <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>

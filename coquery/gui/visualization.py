@@ -2,17 +2,16 @@
 """ 
 visualization.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
 
 """
 This module provides the base classes required for data visualization:
@@ -51,17 +50,12 @@ from coquery.errors import *
 
 from . import classes
 from .ui.visualizerUi import Ui_Visualizer
-from .pyqt_compat import QtGui, QtCore, pyside, get_toplevel_window
-
-# Tell matplotlib whether PySide or PyQt4 is used:
-if pyside:
-    mpl.use("Qt4Agg")
-    mpl.rcParams["backend.qt4"] = "PySide"
+from .pyqt_compat import QtWidgets, QtCore, pyside, get_toplevel_window
 
 # import required matplotlib classes
 from matplotlib.backend_bases import key_press_handler
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qt5 import SubplotToolQt
 
 class CoqNavigationToolbar(NavigationToolbar):
@@ -72,7 +66,7 @@ class CoqNavigationToolbar(NavigationToolbar):
     def __init__(self, canvas, parent, coordinates=True):
         super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
         if options.cfg.experimental:
-            self.check_freeze = QtGui.QCheckBox()
+            self.check_freeze = QtWidgets.QCheckBox()
             self.check_freeze.setText("Freeze visualization")
             self.check_freeze.setObjectName("check_freeze")
             self.addWidget(self.check_freeze)
@@ -80,7 +74,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         self._buttons = {}
 
         for x in self.children():
-            if isinstance(x, QtGui.QToolButton):
+            if isinstance(x, QtWidgets.QToolButton):
                 self._buttons[str(x.text())] = x
 
         self._buttons["Forward"].setIcon(get_toplevel_window().get_icon("Circled Chevron Right Filled"))
@@ -140,7 +134,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         self.margin_dialog.show()
         get_toplevel_window().widget_list.append(self.margin_dialog)
         
-class VisualizerDialog(QtGui.QWidget):
+class VisualizerDialog(QtWidgets.QWidget):
     """ Defines a QDialog that is used to visualize the data in the main 
     data preview area. It connects the dataChanged signal of the abstract 
     data table and the sectionMoved signal of the header of the table view to 
@@ -166,20 +160,20 @@ class VisualizerDialog(QtGui.QWidget):
         self.margin_dialoglog_stack = []
 
         self.frozen = False
-        self.spinner = QtGui.QSpinBox()
+        self.spinner = QtWidgets.QSpinBox()
         self.spinner.setFrame(True)
-        self.spinner.setButtonSymbols(QtGui.QAbstractSpinBox.UpDownArrows)
+        self.spinner.setButtonSymbols(QtWidgets.QAbstractSpinBox.UpDownArrows)
         self.spinner.setMaximum(10)
         self.spinner.setMinimum(1)
         self.spinner.setSuffix(" year(s)")
-        self.spinner_label = QtGui.QLabel("Bandwidth: ")
+        self.spinner_label = QtWidgets.QLabel("Bandwidth: ")
         self.spinner.valueChanged.connect(self.update_plot)
         
-        self.combo_x_function = QtGui.QComboBox()
-        self.label_x_function = QtGui.QLabel("Variable on &X axis:")
+        self.combo_x_function = QtWidgets.QComboBox()
+        self.label_x_function = QtWidgets.QLabel("Variable on &X axis:")
         self.label_x_function.setBuddy(self.combo_x_function)
-        self.combo_y_function = QtGui.QComboBox()
-        self.label_y_function = QtGui.QLabel("Variable on &Y axis:")
+        self.combo_y_function = QtWidgets.QComboBox()
+        self.label_y_function = QtWidgets.QLabel("Variable on &Y axis:")
         self.label_y_function.setBuddy(self.combo_y_function)
         
         self.toolbar = None
@@ -412,9 +406,9 @@ class VisualizerDialog(QtGui.QWidget):
 
     def plotexception(self, e):
         print(e)
-        QtGui.QMessageBox.critical(self, "Error while plotting – Coquery", 
+        QtWidgets.QMessageBox.critical(self, "Error while plotting – Coquery",
             msg_visualization_error.format(self.exception),
-            QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
     def startplot(self):
         self.ui.box_visualize.hide()
@@ -449,7 +443,7 @@ class VisualizerDialog(QtGui.QWidget):
 if __name__ == "__main__":
     unittest.main()
             
-    #app = QtGui.QApplication(sys.argv)
+    #app = QtWidgets.QApplication(sys.argv)
 
     #TreeMap.MosaicPlot(table)
     #TreeMap.MosaicPlot([x for x in table if x[0] == "WIS" and x[1] == "female"])

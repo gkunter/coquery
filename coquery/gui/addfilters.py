@@ -2,7 +2,7 @@
 """
 addfilter.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,13 +15,13 @@ from __future__ import unicode_literals
 from coquery import options
 from coquery.defines import *
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.addFilterUi import Ui_FiltersDialog
 from .classes import CoqTableItem, CoqListItem
 from coquery.filters import Filter
 
 
-class FilterDialog(QtGui.QDialog):
+class FilterDialog(QtWidgets.QDialog):
     def __init__(self, filter_list, columns, dtypes, session, parent=None):
         super(FilterDialog, self).__init__(parent)
         self.ui = Ui_FiltersDialog()
@@ -65,6 +65,8 @@ class FilterDialog(QtGui.QDialog):
 
         self.ui.list_columns.currentRowChanged.connect(self.update_filter)
         self.ui.edit_value.textChanged.connect(self.update_filter)
+        self.ui.check_before_transformation.toggled.connect(
+            self.update_filter)
         for radio in [x for x in dir(self.ui) if x.startswith("radio_OP_")]:
             getattr(self.ui, radio).toggled.connect(self.update_filter)
 
@@ -100,6 +102,8 @@ class FilterDialog(QtGui.QDialog):
         else:
             self.ui.button_add.setDisabled(True)
             self.ui.button_remove.setEnabled(True)
+            self.ui.check_before_transformation.setChecked(
+                filt.stage == FILTER_STAGE_BEFORE_TRANSFORM)
 
         if self.ui.list_columns.count() == 0:
             self.ui.button_add.setDisabled(True)
@@ -110,9 +114,9 @@ class FilterDialog(QtGui.QDialog):
             if filt is not None:
                 new_list.add(filt.get_hash())
         if self.old_list == new_list:
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setDisabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setDisabled(True)
         else:
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
 
     def update_filter(self):
         """
@@ -129,8 +133,8 @@ class FilterDialog(QtGui.QDialog):
             return
         self.blockSignals(True)
         selected = self.ui.table_filters.item(row, 0)
-        feature, operator, value = self.get_values()
-        filt = Filter(feature, operator, value)
+        feature, operator, value, stage = self.get_values()
+        filt = Filter(feature, operator, value, stage)
         selected.setObjectName(filt)
         selected.setText(self.format_filter(filt))
         self.update_buttons(selected)
@@ -156,6 +160,8 @@ class FilterDialog(QtGui.QDialog):
                 if utf8(self.ui.list_columns.item(i).text()) == column_label:
                     self.ui.list_columns.setCurrentRow(i)
                     break
+            self.ui.check_before_transformation.setChecked(
+                filt.stage == FILTER_STAGE_BEFORE_TRANSFORM)
 
     def format_filter(self, filt):
         """
@@ -164,7 +170,10 @@ class FilterDialog(QtGui.QDialog):
         col = get_toplevel_window().Session.translate_header(filt.feature)
         value = filt.fix(filt.value)
         op = OPERATOR_LABELS[filt.operator]
-        return "{} {} {}".format(col, op, value)
+        S = "{} {} {}".format(col, op, value)
+        if filt.stage == FILTER_STAGE_BEFORE_TRANSFORM:
+            S = "{} (before transformation)".format(S)
+        return S
 
     def get_values(self):
         """
@@ -173,13 +182,15 @@ class FilterDialog(QtGui.QDialog):
         Returns:
         --------
         tup : tuple
-            A tuple with the three elements column, operator, value.
+            A tuple with the elements (column, operator, value, stage).
 
             'column' a string containing the resource feature name of the
             currently selected column.
             'operator' is an integer corresponding to one of the values
             defined in ``defines.py``.
             'value' is a string containing the content of the value textedit.
+            'stage' is either FILTER_STAGE_FINAL or
+            FILTER_STAGE_BEFORE_TRANSFORM (defined in ``defines.py``)
         """
         feature = utf8(self.ui.list_columns.currentItem().objectName())
         value = utf8(self.ui.edit_value.text())
@@ -187,7 +198,11 @@ class FilterDialog(QtGui.QDialog):
             if x.startswith("radio_OP") and getattr(self.ui, x).isChecked():
                 op_label = x.partition("_")[-1]
                 operator = globals()[op_label]
-        return feature, operator, value
+        if self.ui.check_before_transformation.isChecked():
+            stage = FILTER_STAGE_BEFORE_TRANSFORM
+        else:
+            stage = FILTER_STAGE_FINAL
+        return feature, operator, value, stage
 
     def add_filter(self):
         """
@@ -197,8 +212,8 @@ class FilterDialog(QtGui.QDialog):
         values. If the filter is added, the currently selected filter row is
         set to the 'New filter' row, and the button status is updated.
         """
-        feature, operator, value = self.get_values()
-        filt = Filter(feature, operator, value)
+        feature, operator, value, stage = self.get_values()
+        filt = Filter(feature, operator, value, stage)
         hashed = filt.get_hash()
         S = set()
         rows = self.ui.table_filters.rowCount()
@@ -210,6 +225,7 @@ class FilterDialog(QtGui.QDialog):
             self.ui.table_filters.insertRow(rows - 1)
             self.ui.table_filters.setItem(rows - 1, 0, item)
             self.ui.table_filters.selectRow(rows)
+            self.ui.check_before_transformation.setChecked(False)
             self.update_buttons(self.ui.table_filters.currentItem())
 
     def remove_filter(self):
@@ -236,7 +252,7 @@ class FilterDialog(QtGui.QDialog):
 
     def exec_(self):
         result = super(FilterDialog, self).exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             l = []
             for i in range(self.ui.table_filters.rowCount() - 1):
                 filt = self.ui.table_filters.item(0, i).objectName()

@@ -263,10 +263,12 @@ class Options(object):
         self.args.server_configuration = dict()
         self.args.current_server = None
         self.args.current_resources = None
+        self.args.reference_corpus = {}
         self.args.main_window = None
         self.args.first_run = False
-        self.args.number_of_tokens = 0
-        self.args.last_number_of_tokens = 0
+        self.args.number_of_tokens = 50
+        self.args.limit_matches = False
+        self.args.last_number_of_tokens = 50
         self.args.output_separator = ","
 
         self.args.table_links = defaultdict(list)
@@ -443,7 +445,6 @@ class Options(object):
                 self.args.corpus = ""
         except AttributeError:
             self.args.corpus = ""
-
 
         self.args.corpus = utf8(self.args.corpus)
         # if no corpus is selected and no GUI is requested, display the help
@@ -665,7 +666,6 @@ class Options(object):
     def read_configuration(self):
         defaults = {
             "default_corpus": "",
-            "reference_corpus": "",
             "query_mode": QUERY_MODE_TOKENS,
             "query_string": "",
             "query_cache_size": 500 * 1024 * 1024,
@@ -704,7 +704,8 @@ class Options(object):
             else:
                 self.args.first_run = False
 
-        for x in ["main", "sql", "gui", "output", "filter", "context", "links"]:
+        for x in ["main", "sql", "gui", "output", "filter", "context",
+                  "links", "reference_corpora"]:
             if x not in config_file.sections():
                 config_file.add_section(x)
 
@@ -740,6 +741,11 @@ class Options(object):
             except KeyError:
                 pass
 
+        # read reference corpora
+        for key, val in config_file.items("reference_corpora"):
+            if re.match("reference\d+$", key):
+                configuration, corpus = val.split(",")
+                self.args.reference_corpus[configuration] = corpus
         # select active SQL configuration, or use Default as fallback
         try:
             if self.args.current_server == None:
@@ -757,7 +763,6 @@ class Options(object):
         if self.args.gui:
             # Read MAIN section:
             self.args.corpus = config_file.str("main", "default_corpus", d=defaults)
-            self.args.reference_corpus = config_file.str("main", "reference_corpus", d=defaults)
             self.args.MODE = config_file.str("main", "query_mode", d=defaults)
             last_query = config_file.str("main", "query_string", d=defaults)
 
@@ -837,12 +842,13 @@ class Options(object):
             self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
             self.args.text_source_path = config_file.str("gui", "text_source_path", fallback="")
 
-            self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=False)
-            self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=False)
+            self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=True)
+            self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=True)
 
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
-            # FIXME: number_of_tokens should not be stored in options.cfg!
             self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
+            self.args.limit_matches = config_file.bool("gui", "limit_matches", fallback=False)
+
             s = config_file.str("gui", "show_log_messages", d=defaults)
             try:
                 self.args.show_log_messages = [x.strip() for x in s.split(",") if x]
@@ -912,8 +918,15 @@ class Options(object):
 
         # Use QSettings?
         if settings:
-            column_properties = settings.value("column_properties", {})
-            current_properties = column_properties.get(self.args.corpus, {})
+            column_properties = {}
+            try:
+                column_properties = settings.value("column_properties", {})
+            finally:
+                settings.setValue("column_properties", column_properties)
+            if column_properties:
+                current_properties = column_properties.get(self.args.corpus, {})
+            else:
+                current_properties = {}
             self.args.column_color = current_properties.get("colors", {})
 
             for x in [str(x) for x in settings.allKeys()]:
@@ -942,7 +955,7 @@ def save_configuration():
     if not "main" in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
-    config.set("main", "reference_corpus", cfg.reference_corpus)
+
     config.set("main", "query_mode", cfg.MODE)
     if cfg.query_list and cfg.save_query_string:
         config.set("main", "query_string", encode_query_string("\n".join(cfg.query_list)))
@@ -991,6 +1004,13 @@ def save_configuration():
             config.add_section("output")
         for feature in cfg.selected_features:
             config.set("output", feature, True)
+
+    # store reference corpora:
+    if not "reference_corpora" in config.sections():
+        config.add_section("reference_corpora")
+    for i, item in enumerate(cfg.reference_corpus.items()):
+        config.set("reference_corpora",
+                   "reference{}".format(i), ",".join(item))
 
     if not "filter" in config.sections():
         config.add_section("filter")
@@ -1107,6 +1127,10 @@ def save_configuration():
             config.set("gui", "number_of_tokens", cfg.number_of_tokens)
         except AttributeError:
             config.set("gui", "number_of_tokens", 0)
+        try:
+            config.set("gui", "limit_matches", cfg.limit_matches)
+        except AttributeError:
+            config.set("gui", "limit_matches", False)
 
         try:
             config.set("gui", "save_query_string", cfg.save_query_string)
@@ -1123,7 +1147,11 @@ def save_configuration():
 
 
 def get_column_properties():
-    column_properties = settings.value("column_properties", {})
+    column_properties = {}
+    try:
+        column_properties = settings.value("column_properties", {})
+    finally:
+        settings.setValue("column_properties", column_properties)
     return column_properties.get(cfg.corpus, {})
 
 def get_con_configuration():
@@ -1169,8 +1197,8 @@ def process_options():
     if use_cachetools:
         from . import cache
         cfg.query_cache = cache.CoqQueryCache()
-
     add_source_path(cfg.custom_installer_path)
+
 
 def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
     """
@@ -1499,7 +1527,7 @@ use_nltk = has_module("nltk")
 use_mysql = has_module("pymysql")
 use_seaborn = has_module("seaborn")
 use_pdfminer = has_module("pdfminer")
-use_qt = has_module("PyQt4") or has_module("PySide")
+use_qt = has_module("PyQt5")
 use_chardet = has_module("chardet")
 use_tgt = has_module("tgt")
 use_docx = has_module("docx")

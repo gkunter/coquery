@@ -2,10 +2,10 @@
 """
 mysql_guide.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -14,17 +14,17 @@ from __future__ import unicode_literals
 import sys
 
 from coquery import options
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.mysql_guideUi import Ui_mysql_guide
 
-class MySqlGuide(QtGui.QWizard):
+class MySqlGuide(QtWidgets.QWizard):
     def __init__(self, parent=None):
         
         super(MySqlGuide, self).__init__()
         
         self.ui = Ui_mysql_guide()
         self.ui.setupUi(self)
-        logo = QtGui.QPixmap("{}/logo/logo.png".format(sys.path[0]))
+        logo = QtWidgets.QPixmap("{}/logo/logo.png".format(sys.path[0]))
         self.ui.logo_label.setPixmap(logo.scaledToHeight(200))
         self.show()
         try:

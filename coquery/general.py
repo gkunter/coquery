@@ -119,7 +119,7 @@ def get_home_dir(create=True):
             basepath = os.environ["XDG_CONFIG_HOME"]
         except KeyError:
             basepath = os.path.expanduser("~/.config")
-    elif sys.platform in set("win32", "cygwin"):
+    elif sys.platform in set(("win32", "cygwin")):
         try:
             basepath = os.environ["APPDATA"]
         except KeyError:

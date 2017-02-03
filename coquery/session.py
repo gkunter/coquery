@@ -63,8 +63,12 @@ class Session(object):
 
             self.Resource = current_resource
 
-            self.db_engine = sqlalchemy.create_engine(
-                sqlhelper.sql_url(options.cfg.current_server, self.Resource.db_name))
+            try:
+                self.db_engine = sqlalchemy.create_engine(
+                    sqlhelper.sql_url(options.cfg.current_server,
+                                      self.Resource.db_name))
+            except ImportError as e:
+                self.db_engine = None
 
             logger.info("Corpus '{}' on connection '{}'".format(
                 self.Resource.name, options.cfg.current_server))
@@ -171,6 +175,9 @@ class Session(object):
             contain an origin ID or a corpus ID (unless requested).
         """
         self.start_timer()
+
+        if self.db_engine == None:
+            raise SQLNoConnectorError
 
         self.connect_to_db()
 
@@ -327,14 +334,6 @@ class Session(object):
             #df = self.output_object
         #self.row_visibility[query_type] = pd.Series(
             #data=[True] * len(df.index), index=df.index)
-
-    @staticmethod
-    def apply_substitutions(df):
-        subst = options.get_column_properties().get("substitutions", {})
-        if subst:
-            return df.replace(subst)
-        else:
-            return df
 
     def retranslate_header(self, label):
         """

@@ -2,10 +2,10 @@
 """
 logfile.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -15,12 +15,12 @@ import sys
 
 from coquery import options
 from . import classes
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets
 from .ui.logfileUi import Ui_logfileDialog
 
 button_map = {"ERROR": "check_errors", "WARNING": "check_warnings", "INFO": "check_info"}
 
-class LogfileViewer(QtGui.QDialog):
+class LogfileViewer(QtWidgets.QDialog):
     def __init__(self, parent=None):
         
         super(LogfileViewer, self).__init__(parent)
@@ -72,7 +72,7 @@ class LogfileViewer(QtGui.QDialog):
     
             
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     viewer = LogfileViewer("")
     viewer.exec_()
     

@@ -33,7 +33,7 @@ except NameError:
 
 
 class Filter(CoqObject):
-    def __init__(self, feature, operator, value):
+    def __init__(self, feature, operator, value, stage=FILTER_STAGE_FINAL):
         if operator not in OPERATOR_STRINGS:
             raise ValueError("Invalid filter operator '{}'".format(operator))
         if not feature:
@@ -45,13 +45,16 @@ class Filter(CoqObject):
         self.operator = operator
         self.value = value
         self.dtype = None
+        self.stage = stage
 
     def __repr__(self):
-        return "Filter(feature='{}', operator={}, value={}, dtype={})".format(
+        return "Filter(feature='{}', operator={}, value={}, dtype={}, stage={})".format(
             self.feature,
             [x for x in globals() if eval(x) == self.operator][0],
             "'{}'".format(self.value) if isinstance(self.value, string_types) else self.value,
-            self.dtype)
+            self.dtype,
+            ("FILTER_STAGE_FINAL" if self.stage == FILTER_STAGE_FINAL else
+             "FILTER_STAGE_BEFORE_TRANSFORM"))
 
     def fix(self, x):
         """

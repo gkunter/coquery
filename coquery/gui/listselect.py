@@ -2,7 +2,7 @@
 """
 listselect.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,17 +13,17 @@ from __future__ import unicode_literals
 
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from . import classes
 
 
-class CoqListSelect(QtGui.QWidget):
+class CoqListSelect(QtWidgets.QWidget):
     """
     A QWidget that presents two exclusive list (a list of available and a
     list of selected items), with controls to move between the two.
     """
     itemSelectionChanged = QtCore.Signal()
-    currentItemChanged = QtCore.Signal(QtGui.QListWidgetItem)
+    currentItemChanged = QtCore.Signal(QtWidgets.QListWidgetItem)
 
     def __init__(self, *args, **kwargs):
         from .ui import coqListSelectUi
@@ -55,8 +55,8 @@ class CoqListSelect(QtGui.QWidget):
     @staticmethod
     def _fill_list_widget(w, l, translate):
         for x in l:
-            if not isinstance(x, QtGui.QListWidgetItem):
-                item = QtGui.QListWidgetItem(translate(x))
+            if not isinstance(x, QtWidgets.QListWidgetItem):
+                item = QtWidgets.QListWidgetItem(translate(x))
                 item.setData(QtCore.Qt.UserRole, x)
             else:
                 item = translate(x)

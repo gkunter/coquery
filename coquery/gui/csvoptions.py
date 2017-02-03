@@ -2,7 +2,7 @@
 """
 csvoptions.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -19,7 +19,7 @@ import numpy as np
 
 from coquery import options
 from coquery.errors import *
-from .pyqt_compat import QtGui, QtCore, get_toplevel_window
+from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
 from .ui.csvOptionsUi import Ui_FileOptions
 
 
@@ -118,7 +118,7 @@ quote_chars = {
     "": "None"}
 
 
-class CSVOptionDialog(QtGui.QDialog):
+class CSVOptionDialog(QtWidgets.QDialog):
     def __init__(self, default=None, parent=None, icon=None, ui=None):
         super(CSVOptionDialog, self).__init__(parent)
         self.file_name = default.file_name
@@ -182,8 +182,8 @@ class CSVOptionDialog(QtGui.QDialog):
         self.set_new_separator()
 
         # Add auto complete to file name edit:
-        completer = QtGui.QCompleter()
-        completer.setModel(QtGui.QDirModel(completer))
+        completer = QtWidgets.QCompleter()
+        completer.setModel(QtWidgets.QDirModel(completer))
         self.ui.edit_file_name.setCompleter(completer)
 
         try:
@@ -213,7 +213,7 @@ class CSVOptionDialog(QtGui.QDialog):
     def getOptions(default=None, parent=None, icon=None):
         dialog = CSVOptionDialog(default=default, parent=parent, icon=icon)
         return dialog.exec_()
-        if result == QtGui.QDialog.Accepted:
+        if result == QtWidgets.QDialog.Accepted:
             return result
         else:
             return None
@@ -305,7 +305,7 @@ class CSVOptionDialog(QtGui.QDialog):
                         encoding=encoding)
                 except (ValueError, pd.parser.CParserError) as e:
                     # the table could still not be read. Raise an error.
-                    QtGui.QMessageBox.critical(
+                    QtWidgets.QMessageBox.critical(
                         self.parent(), "Query file error",
                         msg_csv_file_error.format(self.file_name))
                     raise e
@@ -316,7 +316,7 @@ class CSVOptionDialog(QtGui.QDialog):
             elif self._last_encoding != encoding:
                 # we should alert the user that they should use a different
                 # encoding.
-                QtGui.QMessageBox.critical(
+                QtWidgets.QMessageBox.critical(
                     self.parent(), "Query file error",
                     msg_csv_encoding_error.format(file=self.file_name,
                                                   encoding=encoding))
@@ -324,7 +324,7 @@ class CSVOptionDialog(QtGui.QDialog):
                 self.set_encoding_selection(self._last_encoding)
                 encoding = self._last_encoding
             else:
-                QtGui.QMessageBox.critical(
+                QtWidgets.QMessageBox.critical(
                     self.parent(), "Query file error",
                     msg_csv_file_error.format(self.file_name))
                 raise e
@@ -338,7 +338,7 @@ class CSVOptionDialog(QtGui.QDialog):
 
     def select_file(self):
         """ Call a file selector, and add file name to query file input. """
-        name = QtGui.QFileDialog.getOpenFileName(directory=options.cfg.query_file_path)
+        name = QtWidgets.QFileDialog.getOpenFileName(directory=options.cfg.query_file_path)
 
         # getOpenFileName() returns different types in PyQt and PySide, fix:
         if type(name) == tuple:
@@ -353,11 +353,11 @@ class CSVOptionDialog(QtGui.QDialog):
     def update_content(self):
         if not os.path.exists(utf8(self.ui.edit_file_name.text())):
             self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
             self.file_table = pd.DataFrame()
         else:
             self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
             self.split_file_content()
 
         self.table_model = MyTableModel(self, self.file_table, self.ui.ignore_lines.value())

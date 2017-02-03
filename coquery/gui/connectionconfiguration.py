@@ -2,10 +2,10 @@
 """
 Connectionconfiguration.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -25,7 +25,7 @@ from coquery import options
 from coquery.errors import *
 from coquery.defines import *
 
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui
 from . import classes
 from .ui.connectionConfigurationUi import Ui_ConnectionConfig
 
@@ -90,13 +90,13 @@ def check_valid_host(s):
         return True
     return False
 
-class CoqFileFilter(QtGui.QSortFilterProxyModel):
+class CoqFileFilter(QtCore.QSortFilterProxyModel):
     def filterAcceptsRow(self, sourceRow, sourceParent):
         index0 = self.sourceModel().index(sourceRow, 0, sourceParent)
         return False
         return self.sourceModel().isDir(index0)
 
-class ConnectionConfiguration(QtGui.QDialog):
+class ConnectionConfiguration(QtWidgets.QDialog):
     noConnection = QtCore.Signal(Exception)
     accessDenied = QtCore.Signal(Exception)
     configurationError = QtCore.Signal(Exception)
@@ -130,7 +130,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         #self.ui.checkbox_layout.addWidget(self.ui.switch_default_path)
         #self.ui.label_checkbox.buddy = self.ui.switch_default_path
         
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
 
         # set up button signals
         self.ui.button_create_user.clicked.connect(self.create_user)
@@ -147,11 +147,12 @@ class ConnectionConfiguration(QtGui.QDialog):
         
         # set the validator for the configuration name QLineEdit so that
         # only an alphanumeric string (including '_') can be entered:
-        self.ui.configuration_name.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
+        self.ui.configuration_name.setValidator(
+            QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
         
         # fill tree widget with existing server configurations:
         for x in sorted(self.config_dict):
-            current_item = QtGui.QTreeWidgetItem()
+            current_item = QtWidgets.QTreeWidgetItem()
             current_item.setText(0, x)
             self.ui.tree_configuration.insertTopLevelItem(0, current_item)
         
@@ -245,7 +246,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         self.ui.radio_mysql.setEnabled(False)
         self.ui.label_7.setEnabled(False)
         
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
         
         name = str(self.ui.configuration_name.text())
 
@@ -256,7 +257,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         else:
             # exit if the configuration name is "Default", because this name 
             # is # reserved:
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
             return
 
         if self.state == "noConnection" or self.state == "configurationError":
@@ -306,7 +307,7 @@ class ConnectionConfiguration(QtGui.QDialog):
                         self.ui.button_replace.setEnabled(True)
                     else:
                         # Enable the Ok button:
-                        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
                 elif d["type"] == SQL_SQLITE:
                     ## The SQLite db path can be empty (then, the default path 
                     ## will be used). Otherwise, it has to be an existing 
@@ -316,8 +317,8 @@ class ConnectionConfiguration(QtGui.QDialog):
                         #if (d["path"] != self.config_dict[name]["path"]):
                             #self.ui.button_replace.setEnabled(True)
                         ## Enable the Ok button:
-                        #self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
-                    self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+                        #self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
+                    self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
                     
                 # Select item in tree:
                 self.current_item = self.ui.tree_configuration.findItems(name, QtCore.Qt.MatchExactly, 0)[0]
@@ -338,15 +339,15 @@ class ConnectionConfiguration(QtGui.QDialog):
         else:
             sql_path = d["path"]
 
-        dialog = QtGui.QFileDialog(directory=sql_path, )
-        #dialog.setFileMode(QtGui.QFileDialog.Directory)
+        dialog = QtWidgets.QFileDialog(directory=sql_path, )
+        #dialog.setFileMode(QtWidgets.QFileDialog.Directory)
         #try:
-            #dialog.setOption(QtGui.QFileDialog.ShowDirsOnly, True)
-            #dialog.setOption(QtGui.QFileDialog.HideNameFilterDetails, True)
+            #dialog.setOption(QtWidgets.QFileDialog.ShowDirsOnly, True)
+            #dialog.setOption(QtWidgets.QFileDialog.HideNameFilterDetails, True)
         #except AttributeError:
-            #dialog.setFileMode(QtGui.QFileDialog.Directory | QtGui.QFileDialog.DirectoryOnly)
-        #dialog.setAcceptMode(QtGui.QFileDialog.AcceptOpen)
-        name = QtGui.QFileDialog.getExistingDirectory(directory=sql_path, caption="Choose database directory – Coquery")
+            #dialog.setFileMode(QtWidgets.QFileDialog.Directory | QtWidgets.QFileDialog.DirectoryOnly)
+        #dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptOpen)
+        name = QtWidgets.QFileDialog.getExistingDirectory(directory=sql_path, caption="Choose database directory – Coquery")
         if name:
             if type(name) == tuple:
                 name = name[0]
@@ -426,7 +427,7 @@ class ConnectionConfiguration(QtGui.QDialog):
     def add_configuration(self):
         name = str(self.ui.configuration_name.text())
         self.config_dict[name] = self.get_values()
-        self.current_item = QtGui.QTreeWidgetItem()
+        self.current_item = QtWidgets.QTreeWidgetItem()
         self.current_item.setText(0, name)
         self.ui.tree_configuration.insertTopLevelItem(0, self.current_item)
         self.ui.tree_configuration.setCurrentItem(self.current_item)
@@ -480,7 +481,7 @@ class ConnectionConfiguration(QtGui.QDialog):
                     root_name,
                     root_password)))
             except sqlalchemy.exc.SQLAlchemyError as e:
-                QtGui.QMessageBox.critical(self, "Access as root failed", "<p>A root access to the MySQL server could not be established.</p><p>Please check the MySQL root name and the MySQL root password, and try again to create a user.") 
+                QtWidgets.QMessageBox.critical(self, "Access as root failed", "<p>A root access to the MySQL server could not be established.</p><p>Please check the MySQL root name and the MySQL root password, and try again to create a user.")
                 return
             S = """
             CREATE USER '{user}'@'{hostname}' IDENTIFIED BY '{password}';
@@ -492,13 +493,13 @@ class ConnectionConfiguration(QtGui.QDialog):
                 try:
                     connection.execute(S)
                 except sqlalchemy.exc.SQLAlchemyError:
-                    QtGui.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
+                    QtWidgets.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
                     return
                 except Exception as e:
                     print(e)
                     raise e
                 else:
-                    QtGui.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
+                    QtWidgets.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
             engine.dispose()
             self.ui.user.setText(name)
             self.ui.password.setText(password)
@@ -545,7 +546,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         """
 
         if self.ui.radio_sqlite.isChecked():
-            self.connected.emit()
+            self.connected.emit("")
             return True
 
         if self.ui.radio_mysql.isChecked() and not options.use_mysql:
@@ -630,7 +631,7 @@ class ConnectionConfiguration(QtGui.QDialog):
         return dialog.exec_()
 
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     viewer = ConnectionConfiguration.choose(None, {})
     viewer.exec_()
     

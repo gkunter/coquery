@@ -2,10 +2,10 @@
 """
 pyqt_compat.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -17,40 +17,14 @@ import warnings
 pyside = False
 pyqt = False
 
-try:
-    import PySide.QtCore as QtCore
-    import PySide.QtGui as QtGui
-    import PySide.QtHelp as QtHelp
-    pyside = True
-except ImportError:
-    try:
-        import sip
-        sip.setapi('QVariant', 2)        
-        import PyQt4.QtCore as QtCore
-        import PyQt4.QtGui as QtGui
-        import PyQt4.QtHelp as QtHelp
-        pyqt = True
-    except ImportError:
-        raise ImportError('Neither PyQt4 nor PySide available')
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 
-if pyqt:
-    QtCore.Signal = QtCore.pyqtSignal
-    QtCore.Slot = QtCore.pyqtSlot
-    QtCore.Property = QtCore.pyqtProperty
-    QtCore.QString = str
-else:
-    QtCore.pyqtSignal = QtCore.Signal
-    QtCore.pyqtSlot = QtCore.Slot
-    QtCore.pyqtProperty = QtCore.Property
-    QtCore.QVariant = lambda x: x   
-    QtCore.QString = str
-    if "setMargin" not in dir(QtGui.QHBoxLayout):
-        QtGui.QHBoxLayout.setMargin = lambda x, y: True
-    if "setMargin" not in dir(QtGui.QVBoxLayout):
-        QtGui.QVBoxLayout.setMargin = lambda x, y: True
-    if "setMargin" not in dir(QtGui.QGridLayout):
-        QtGui.QGridLayout.setMargin = lambda x, y: True
-
+QtCore.Signal = QtCore.pyqtSignal
+QtCore.Slot = QtCore.pyqtSlot
+QtCore.Property = QtCore.pyqtProperty
+QtCore.QString = str
 
 class CoqSettings(QtCore.QSettings):
     def value(self, key, default=None):
@@ -73,18 +47,18 @@ def QWebView(*args, **kwargs):
     return QtWebKit.QWebView(*args, **kwargs)
 
 if sys.platform == 'win32':
-    frameShadow = QtGui.QFrame.Raised
-    frameShape = QtGui.QFrame.Panel
+    frameShadow = QtWidgets.QFrame.Raised
+    frameShape = QtWidgets.QFrame.Panel
 else:
-    frameShadow = QtGui.QFrame.Raised
-    frameShape = QtGui.QFrame.StyledPanel
+    frameShadow = QtWidgets.QFrame.Raised
+    frameShape = QtWidgets.QFrame.StyledPanel
     
 def get_toplevel_window(name="MainWindow"):
     """
     Retrieves the top-level widget with the given name. By default, retrieve
     the main window.
     """
-    for widget in QtGui.qApp.topLevelWidgets():
+    for widget in QtWidgets.qApp.topLevelWidgets():
         if widget.objectName() == "MainWindow":
             return widget
     return None

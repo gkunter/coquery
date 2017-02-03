@@ -1,16 +1,23 @@
+# -*- coding: utf-8 -*-
+"""
+textgridview.py is part of Coquery.
+
+Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import division
 
 import types
 import numpy as np
 import sys
 
-from .pyqt_compat import QtGui, pyside
+from .pyqt_compat import QtWidgets
 
 import matplotlib as mpl
-if pyside:
-    mpl.use("Qt4Agg")
-    mpl.rcParams["backend.qt4"] = "PySide"
-
 from matplotlib.figure import Figure
 from matplotlib.widgets import SpanSelector
 from matplotlib.patches import Rectangle
@@ -51,7 +58,7 @@ class CoqFigure(Figure):
         self.subplots_adjust(hspace=0)
 
 
-class CoqTextgridView(QtGui.QWidget):
+class CoqTextgridView(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
         super(CoqTextgridView, self).__init__(*args, **kwargs)
         self._dynamic_range = 50
@@ -67,8 +74,8 @@ class CoqTextgridView(QtGui.QWidget):
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.toolbar.press_zoom = types.MethodType(press_zoom, self.toolbar)
 
-        self.canvas.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                                  QtGui.QSizePolicy.Expanding)
+        self.canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                  QtWidgets.QSizePolicy.Expanding)
         self.canvas.updateGeometry()
 
         gs = mpl.gridspec.GridSpec(3, 1, height_ratios=[2.5, 5, 2.5])
@@ -97,8 +104,8 @@ class CoqTextgridView(QtGui.QWidget):
             self.ax_spectrogram, self.on_select, 'horizontal', useblit=True,
             rectprops=dict(alpha=0.25, facecolor='red'), span_stays=True)
 
-        layout = QtGui.QVBoxLayout()
-        layout.setMargin(0)
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         self.setLayout(layout)

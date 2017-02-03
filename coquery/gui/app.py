@@ -32,7 +32,7 @@ from coquery.links import get_by_hash
 
 from . import classes
 from . import errorbox
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui import coqueryUi
 from .resourcetree import CoqResourceTree
 from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
@@ -108,7 +108,7 @@ class GuiHandler(logging.StreamHandler):
         self.log_data.append(record)
 
 
-class CoqueryApp(QtGui.QMainWindow):
+class CoqueryApp(QtWidgets.QMainWindow):
     """ Coquery as standalone application. """
 
     corpusListUpdated = QtCore.Signal()
@@ -122,7 +122,7 @@ class CoqueryApp(QtGui.QMainWindow):
         """ Initialize the main window. This sets up any widget that needs
         special care, and also sets up some special attributes that relate
         to the GUI, including default appearances of the columns."""
-        QtGui.QMainWindow.__init__(self, parent)
+        QtWidgets.QMainWindow.__init__(self, parent)
         options.cfg.main_window = self
 
         self.file_content = None
@@ -151,21 +151,21 @@ class CoqueryApp(QtGui.QMainWindow):
         if options.cfg.first_run and not options.cfg.current_resources:
             self._first_corpus = True
 
-        size = QtGui.QApplication.desktop().screenGeometry()
+        size = QtWidgets.QApplication.desktop().screenGeometry()
         # Retrieve font and metrics for the CoqItemDelegates
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
-        options.cfg.figure_font = options.settings.value("figure_font", QtGui.QLabel().font())
-        options.cfg.table_font = options.settings.value("table_font", QtGui.QLabel().font())
-        options.cfg.context_font = options.settings.value("context_font", QtGui.QLabel().font())
+        options.cfg.figure_font = options.settings.value("figure_font", QtWidgets.QLabel().font())
+        options.cfg.table_font = options.settings.value("table_font", QtWidgets.QLabel().font())
+        options.cfg.context_font = options.settings.value("context_font", QtWidgets.QLabel().font())
 
         # ensure that the fonts are always set:
         if not utf8(options.cfg.figure_font.family()):
-            options.cfg.figure_font = QtGui.QLabel().font()
+            options.cfg.figure_font = QtWidgets.QLabel().font()
         if not utf8(options.cfg.table_font.family()):
-            options.cfg.table_font = QtGui.QLabel().font()
+            options.cfg.table_font = QtWidgets.QLabel().font()
         if not utf8(options.cfg.context_font.family()):
-            options.cfg.context_font = QtGui.QLabel().font()
+            options.cfg.context_font = QtWidgets.QLabel().font()
 
         self.ui = coqueryUi.Ui_MainWindow()
 
@@ -216,13 +216,13 @@ class CoqueryApp(QtGui.QMainWindow):
         except AttributeError:
             pass
 
-        separator = QtGui.QFrame()
-        separator.setFrameShape(QtGui.QFrame.HLine)
-        separator.setFrameShadow(QtGui.QFrame.Sunken)
+        separator = QtWidgets.QFrame()
+        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFrameShadow(QtWidgets.QFrame.Sunken)
 
         self.ui.aggregate_radio_list = []
         for label in SUMMARY_MODES:
-            radio = QtGui.QRadioButton(label)
+            radio = QtWidgets.QRadioButton(label)
             radio.toggled.connect(self.enable_apply_button)
             ix = SUMMARY_MODES.index(label)
             self.ui.layout_aggregate.addWidget(radio)
@@ -253,11 +253,12 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.change_toolbox(options.cfg.last_toolbox)
         self.ui.list_toolbox.resizeColumnsToContents()
-        self.ui.list_toolbox.horizontalHeader().setResizeMode(QtGui.QHeaderView.Stretch)
-        self.ui.list_toolbox.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Interactive)
-        self.ui.list_toolbox.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Interactive)
+        header = self.ui.list_toolbox.horizontalHeader()
+        header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Interactive)
 
-        height = QtGui.QLabel().sizeHint().height() + 1
+        height = QtWidgets.QLabel().sizeHint().height() + 1
         self.ui.list_group_columns.setMaximumHeight(
             height * 5 + 2 * self.ui.list_group_columns.frameWidth())
         self.ui.list_group_columns.setMinimumHeight(
@@ -265,7 +266,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
 
         # use a file system model for the file name auto-completer::
-        self.dirModel = QtGui.QFileSystemModel(parent=self)
+        self.dirModel = QtWidgets.QFileSystemModel(parent=self)
         # make sure that the model is updated on changes to the file system:
         self.dirModel.setRootPath(QtCore.QDir.currentPath())
         self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
@@ -275,7 +276,7 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_group_up.setDisabled(True)
         self.ui.button_group_down.setDisabled(True)
         #self.ui.list_group_columns.setDragEnabled(True)
-        #self.ui.list_group_columns.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
+        #self.ui.list_group_columns.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         self.ui.list_group_columns.viewport().setAcceptDrops(True)
         self.ui.list_group_columns.setDropIndicatorShown(False)
 
@@ -307,12 +308,12 @@ class CoqueryApp(QtGui.QMainWindow):
 
         self.set_columns_widget()
 
-        self.ui.status_message = QtGui.QLabel("{} {}".format(NAME, VERSION))
-        self.ui.status_progress = QtGui.QProgressBar()
+        self.ui.status_message = QtWidgets.QLabel("{} {}".format(NAME, VERSION))
+        self.ui.status_progress = QtWidgets.QProgressBar()
         self.ui.status_progress.hide()
 
-        self.ui.multi_query_progress = QtGui.QProgressBar()
-        self.ui.combo_config = QtGui.QComboBox()
+        self.ui.multi_query_progress = QtWidgets.QProgressBar()
+        self.ui.combo_config = QtWidgets.QComboBox()
         self.ui.multi_query_progress.setFormat("Running query... (%v of %m)")
         self.ui.multi_query_progress.hide()
         self.updateMultiProgress.connect(self.ui.multi_query_progress.setValue)
@@ -320,14 +321,14 @@ class CoqueryApp(QtGui.QMainWindow):
         self.updateStatusMessage.connect(lambda s: self.ui.status_message.setText(s))
 
         self.statusBar().layout().setContentsMargins(0, 0, 4, 0)
-        self.statusBar().setMinimumHeight(QtGui.QProgressBar().sizeHint().height())
-        self.statusBar().setMaximumHeight(QtGui.QProgressBar().sizeHint().height())
-        self.statusBar().setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.statusBar().setMinimumHeight(QtWidgets.QProgressBar().sizeHint().height())
+        self.statusBar().setMaximumHeight(QtWidgets.QProgressBar().sizeHint().height())
+        self.statusBar().setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.statusBar().layout().addWidget(self.ui.status_message, 1)
         self.statusBar().layout().addWidget(self.ui.multi_query_progress, 1)
         self.statusBar().layout().addWidget(self.ui.status_progress, 1)
-        self.statusBar().layout().addItem(QtGui.QSpacerItem(20, 0, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
-        self.statusBar().layout().addWidget(QtGui.QLabel(_translate("MainWindow", "Connection: ", None)))
+        self.statusBar().layout().addItem(QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
+        self.statusBar().layout().addWidget(QtWidgets.QLabel(_translate("MainWindow", "Connection: ", None)))
         self.statusBar().layout().addWidget(self.ui.combo_config)
         self.statusBar().layout().setStretchFactor(self.ui.status_message, 1)
         self.statusBar().layout().setStretchFactor(self.ui.status_progress, 1)
@@ -441,28 +442,45 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.menu_Results.aboutToShow.connect(self.show_results_menu)
         self.ui.menuCorpus.aboutToShow.connect(self.show_corpus_menu)
         self.ui.menuFile.aboutToShow.connect(self.show_file_menu)
+        self.ui.menuSettings.aboutToShow.connect(self.show_options_menu)
 
         # add match limit widget to settings menu:
         self.ui.menuSettings.addSeparator()
-        _widget = QtGui.QWidget()
-        _hlayout = QtGui.QHBoxLayout(_widget)
-        _limit_action = QtGui.QWidgetAction(self)
-        _label = QtGui.QLabel("Limit matches: ")
-        self.ui.spin_query_limit = QtGui.QSpinBox()
-        self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
+
+        self.ui.action_limit_query = QtWidgets.QWidgetAction(self)
+        self.ui.action_limit_query.setCheckable(True)
+        self.ui.action_limit_query.setText("&Limit queried matches")
+        self.ui.action_limit_query.triggered.connect(self.toggle_limit_matches)
+        self.ui.menuSettings.addAction(self.ui.action_limit_query)
+
+        _widget = QtWidgets.QWidget()
+        _hlayout = QtWidgets.QHBoxLayout(_widget)
+        _hlayout.setContentsMargins(0, 0, 0, 0)
+        _hlayout.setSpacing(0)
+
+        self.ui.label_limit_matches = classes.CoqClickableLabel("Matches per &query")
+        self.ui.spin_query_limit = QtWidgets.QSpinBox()
         self.ui.spin_query_limit.valueChanged.connect(_set_number_of_tokens)
-        self.ui.spin_query_limit.setSpecialValueText("all")
+        self.ui.spin_query_limit.setMinimum(1)
         self.ui.spin_query_limit.setMaximum(9999)
+        self.ui.label_limit_matches.setBuddy(self.ui.spin_query_limit)
+
+        _hlayout.addItem(QtWidgets.QSpacerItem(QtWidgets.QCheckBox().sizeHint().width() * 2,
+                                           0, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
+        _hlayout.addWidget(self.ui.label_limit_matches)
+        _hlayout.addWidget(self.ui.spin_query_limit)
+
+        self.ui.action_number_of_matches = QtWidgets.QWidgetAction(self)
+        self.ui.action_number_of_matches = QtWidgets.QWidgetAction(self)
+        self.ui.action_number_of_matches.setDefaultWidget(_widget)
+
         self.ui.spin_query_limit.editingFinished.connect(
             lambda: self.ui.menuSettings.hide())
 
-        _hlayout.addWidget(_label)
-        _hlayout.addWidget(self.ui.spin_query_limit)
-        _hlayout.addWidget(QtGui.QLabel("per query"))
+        self.ui.menuSettings.addAction(self.ui.action_number_of_matches)
 
-        _action = QtGui.QWidgetAction(self)
-        _action.setDefaultWidget(_widget)
-        self.ui.menuSettings.addAction(_action)
+        self.ui.action_toggle_columns.setVisible(False)
+        self.ui.action_toggle_management.setVisible(False)
 
     def setup_hooks(self):
         """
@@ -493,15 +511,15 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.widget_find.installEventFilter(self.next_find)
         self.next_find.keyPressed.connect(self.ui.widget_find.go_to_next)
 
-        self.find_next = QtGui.QShortcut(
+        self.find_next = QtWidgets.QShortcut(
             QtGui.QKeySequence(QtGui.QKeySequence.FindNext), self)
         self.find_next.activated.connect(self.ui.widget_find.go_to_next)
-        self.find_prev = QtGui.QShortcut(
+        self.find_prev = QtWidgets.QShortcut(
             QtGui.QKeySequence(QtGui.QKeySequence.FindPrevious), self)
         self.find_prev.activated.connect(self.ui.widget_find.go_to_prev)
 
         if sys.platform != "darwin":
-            self.new_query = QtGui.QShortcut(QtGui.QKeySequence("Alt+N"), self)
+            self.new_query = QtWidgets.QShortcut(QtGui.QKeySequence("Alt+N"), self)
             self.new_query.activated.connect(self.run_query)
 
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
@@ -595,16 +613,19 @@ class CoqueryApp(QtGui.QMainWindow):
             self.ui.action_copy_to_clipboard.setEnabled(True)
 
     def show_corpus_menu(self):
-        if self.ui.combo_corpus.count():
-            self.ui.action_corpus_documentation.setEnabled(True)
-            self.ui.action_statistics.setEnabled(True)
+        enabled = bool(self.ui.combo_corpus.count())
+        self.ui.action_reference_corpus.setEnabled(enabled)
+        self.ui.action_link_external.setEnabled(enabled)
+        self.ui.action_corpus_documentation.setEnabled(enabled)
+        self.ui.action_statistics.setEnabled(enabled)
+
+        ref_corpus = options.cfg.reference_corpus.get(
+                        options.cfg.current_server, "")
+        if ref_corpus and ref_corpus in options.cfg.current_resources:
+            s = "Change &reference corpus... ({})".format(ref_corpus)
         else:
-            self.ui.action_corpus_documentation.setEnabled(False)
-            self.ui.action_statistics.setEnabled(False)
-        if options.cfg.reference_corpus:
-            self.ui.action_reference_corpus.setText("Change &reference corpus... ({})".format(options.cfg.reference_corpus))
-        else:
-            self.ui.action_reference_corpus.setText("Set &reference corpus...")
+            s = "Set &reference corpus..."
+        self.ui.action_reference_corpus.setText(s)
 
     def show_results_menu(self):
         enable = hasattr(self, "table_model")
@@ -633,6 +654,11 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.action_tree_map.setVisible(False)
         self.ui.action_word_cloud.setVisible(False)
 
+    def show_options_menu(self):
+        self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
+        self.ui.action_limit_query.setChecked(options.cfg.limit_matches)
+        self.ui.action_number_of_matches.setEnabled(options.cfg.limit_matches)
+
     ###
     ### widget appearance methods
     ###
@@ -647,6 +673,9 @@ class CoqueryApp(QtGui.QMainWindow):
             self.column_tree.show()
         else:
             self.column_tree.hide()
+
+    def toggle_limit_matches(self):
+        options.cfg.limit_matches = not options.cfg.limit_matches
 
     def toggle_data_management(self):
         options.cfg.show_data_management = not options.cfg.show_data_management
@@ -761,7 +790,7 @@ class CoqueryApp(QtGui.QMainWindow):
             else:
                 duration_str = "{}.{} s".format(duration, str(diff.microseconds)[:3])
 
-        if QtGui.QLabel().palette().window().color().red() > 127:
+        if QtWidgets.QLabel().palette().window().color().red() > 127:
             col = "#ff0000"
         else:
             col = "#7f0000"
@@ -773,7 +802,7 @@ class CoqueryApp(QtGui.QMainWindow):
             rows = self.unfiltered_tokens
         s = "Total rows: {num:<8} Displayed rows: {uniq:<8} Duration of last operation: {dur}"
 
-        if options.cfg.number_of_tokens and rows != 0:
+        if options.cfg.limit_matches and rows != 0:
             s = "<font color='{{col}}'>Note: </font> Match limit ({{lim:<8}}) enabled. {s}".format(s=s)
 
         self.showMessage(s.format(
@@ -968,11 +997,16 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
+        manager = self.Session.get_manager()
 
-        properties = options.settings.value("column_properties", {})
+        properties = {}
+        try:
+            properties = options.settings.value("column_properties", {})
+        finally:
+            options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
-                                               self.Session.data_table,
+                                               manager.unique_values,
                                                current_properties,
                                                columns,
                                                self)
@@ -1048,12 +1082,13 @@ class CoqueryApp(QtGui.QMainWindow):
         #title = _translate("MainWindow", "Select reference corpus – Coquery", None)
         title = "Select reference corpus"
         subtitle = "&Available corpora"
+        ref_corpus = options.cfg.reference_corpus.get(
+                        options.cfg.current_server, "")
         corpus = linkselect.CorpusSelect.pick(
-            current=options.cfg.reference_corpus,
-            exclude_corpus=current_corpus,
+            current=ref_corpus, exclude_corpus=[],
             title=title, subtitle=subtitle)
         if corpus:
-            options.cfg.reference_corpus = corpus
+            options.cfg.reference_corpus[options.cfg.current_server] = corpus
 
     ###
     ### group columns methods
@@ -1206,7 +1241,7 @@ class CoqueryApp(QtGui.QMainWindow):
                         token_id = meta_data["coquery_invisible_corpus_id"]
                     token_width = meta_data["coquery_invisible_number_of_tokens"]
                 except KeyError:
-                    QtGui.QMessageBox.critical(self, "Context error", msg_no_context_available)
+                    QtWidgets.QMessageBox.critical(self, "Context error", msg_no_context_available)
                     return
 
             # do not show contexts if the user clicks on user data columns
@@ -1291,11 +1326,11 @@ class CoqueryApp(QtGui.QMainWindow):
                                  getattr(self.Session.Resource,
                                          QUERY_ITEM_WORD))
             msg = msg_no_word_information.format(rc_feature)
-            QtGui.QMessageBox.warning(self,
+            QtWidgets.QMessageBox.warning(self,
                                       "No word information available for stopwords – Coquery",
                                       msg,
-                                      QtGui.QMessageBox.Ok,
-                                      QtGui.QMessageBox.Ok)
+                                      QtWidgets.QMessageBox.Ok,
+                                      QtWidgets.QMessageBox.Ok)
 
         self.ui.data_preview.setFocus()
         if self._target_label:
@@ -1325,9 +1360,19 @@ class CoqueryApp(QtGui.QMainWindow):
             self.enable_corpus_widgets()
             self.ui.centralwidget.setEnabled(True)
 
+        item_types = []
+        if hasattr(self, "resource"):
+            # remember selected query item types:
+            for item_type in [QUERY_ITEM_WORD, QUERY_ITEM_LEMMA,
+                                QUERY_ITEM_POS, QUERY_ITEM_TRANSCRIPT,
+                                QUERY_ITEM_GLOSS]:
+                rc_feature = getattr(self.resource, item_type, None)
+                if rc_feature in options.cfg.selected_features:
+                    item_types.append(item_type)
+
         if options.cfg.first_run:
             if self._first_corpus:
-                self.selected_features = ["word_label"]
+                self.selected_features = set(["word_label"])
                 self._first_corpus = False
 
         if self.ui.combo_corpus.count():
@@ -1336,6 +1381,12 @@ class CoqueryApp(QtGui.QMainWindow):
             self.column_tree.setup_resource(self.resource)
         else:
             self.column_tree.clear()
+
+        # restore remembered query item types
+        for item_type in item_types:
+            rc_feature = getattr(self.resource, item_type, None)
+            if rc_feature:
+                self.selected_features.add(rc_feature)
 
         # try to transfer as many features from previous selections to the
         # new resource tree:
@@ -1473,7 +1524,11 @@ class CoqueryApp(QtGui.QMainWindow):
             self.last_results_saved = False
 
         # make sure that the right column colors are used
-        properties = options.settings.value("column_properties", {})
+        properties = {}
+        try:
+            properties = options.settings.value("column_properties", {})
+        finally:
+            options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
         options.cfg.column_color = current_properties.get("colors", {})
 
@@ -1594,7 +1649,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 caption = "Save selected query results – Coquery"
             else:
                 caption = "Save query results – Coquery"
-            name = QtGui.QFileDialog.getSaveFileName(
+            name = QtWidgets.QFileDialog.getSaveFileName(
                 caption=caption,
                 directory=options.cfg.results_file_path)
             if type(name) == tuple:
@@ -1624,7 +1679,7 @@ class CoqueryApp(QtGui.QMainWindow):
                 tab = tab.iloc[list(selected_rows)][list(selected_columns)]
 
             if clipboard:
-                cb = QtGui.QApplication.clipboard()
+                cb = QtWidgets.QApplication.clipboard()
                 cb.clear(mode=cb.Clipboard)
                 cb.setText(
                     tab.to_csv(sep=str("\t"),
@@ -1638,9 +1693,9 @@ class CoqueryApp(QtGui.QMainWindow):
                            header=[self.Session.translate_header(x) for x in tab.columns],
                            encoding=options.cfg.output_encoding)
         except IOError:
-            QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+            QtWidgets.QMessageBox.critical(self, "Disk error", msg_disk_error)
         except (UnicodeEncodeError, UnicodeDecodeError):
-            QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+            QtWidgets.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
         else:
             if not selection and not clipboard:
                 self.last_results_saved = True
@@ -1700,7 +1755,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
     def exception_during_query(self):
         if isinstance(self.exception, UnsupportedQueryItemError):
-            QtGui.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         else:
             errorbox.ErrorBox.show(self.exc_info, self.exception)
         self.showMessage("Query failed.")
@@ -1877,7 +1932,7 @@ class CoqueryApp(QtGui.QMainWindow):
             The screen position for which the context menu is requested
         """
 
-        menu = QtGui.QMenu("Row options", self)
+        menu = QtWidgets.QMenu("Row options", self)
         if len(selection) == 0:
             if point:
                 header = self.ui.data_preview.verticalHeader()
@@ -1890,8 +1945,8 @@ class CoqueryApp(QtGui.QMainWindow):
             display_name = "Row menu"
         else:
             display_name = "(no row selected)"
-        action = QtGui.QWidgetAction(self)
-        label = QtGui.QLabel("<b>{}</b>".format(display_name), self)
+        action = QtWidgets.QWidgetAction(self)
+        label = QtWidgets.QLabel("<b>{}</b>".format(display_name), self)
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
         menu.addAction(action)
@@ -1904,11 +1959,11 @@ class CoqueryApp(QtGui.QMainWindow):
             #if not row_vis.all():
                 #if length > 1:
                     #if ~row_vis.all():
-                        #action = QtGui.QAction("&Show rows", self)
+                        #action = QtWidgets.QAction("&Show rows", self)
                     #else:
-                        #action = QtGui.QAction("&Show hidden rows", self)
+                        #action = QtWidgets.QAction("&Show hidden rows", self)
                 #else:
-                    #action = QtGui.QAction("&Show row", self)
+                    #action = QtWidgets.QAction("&Show row", self)
                 #action.triggered.connect(lambda: self.set_row_visibility(selection, True))
                 #action.setIcon(self.get_icon("sign-maximize"))
                 #menu.addAction(action)
@@ -1916,11 +1971,11 @@ class CoqueryApp(QtGui.QMainWindow):
             #if row_vis.any():
                 #if length > 1:
                     #if row_vis.all():
-                        #action = QtGui.QAction("&Hide rows", self)
+                        #action = QtWidgets.QAction("&Hide rows", self)
                     #else:
-                        #action = QtGui.QAction("&Hide visible rows", self)
+                        #action = QtWidgets.QAction("&Hide visible rows", self)
                 #else:
-                    #action = QtGui.QAction("&Hide row", self)
+                    #action = QtWidgets.QAction("&Hide row", self)
                 #action.triggered.connect(lambda: self.set_row_visibility(selection, False))
                 #action.setIcon(self.get_icon("sign-minimize"))
                 #menu.addAction(action)
@@ -1929,11 +1984,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
             # Check if any row has a custom color:
             if any([x in options.cfg.row_color for x in selection]):
-                action = QtGui.QAction("&Reset color", self)
+                action = QtWidgets.QAction("&Reset color", self)
                 action.triggered.connect(lambda: self.reset_row_color(selection))
                 menu.addAction(action)
 
-            action = QtGui.QAction("&Change color...", self)
+            action = QtWidgets.QAction("&Change color...", self)
             action.triggered.connect(lambda: self.change_row_color(selection))
             menu.addAction(action)
         return menu
@@ -2051,7 +2106,7 @@ class CoqueryApp(QtGui.QMainWindow):
         #self.table_model.layoutChanged.emit()
 
     def change_row_color(self, selection):
-        col = QtGui.QColorDialog.getColor()
+        col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             for x in selection:
                 options.cfg.row_color[pd.np.int64(x)] = col.name()
@@ -2102,8 +2157,8 @@ class CoqueryApp(QtGui.QMainWindow):
         self.ui.button_stop_query.setDisabled(not state)
 
     def stop_query(self):
-        response = QtGui.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
-        if response == QtGui.QMessageBox.Yes:
+        response = QtWidgets.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if response == QtWidgets.QMessageBox.Yes:
             # FIXME: This isn't working well at all. A possible solution
             # using SQLAlchemy may be found here:
             # http://stackoverflow.com/questions/9437498
@@ -2129,7 +2184,7 @@ class CoqueryApp(QtGui.QMainWindow):
         options.cfg.to_file = shift_pressed
         if options.cfg.to_file:
             caption = "Choose output file... – Coquery"
-            name = QtGui.QFileDialog.getSaveFileName(
+            name = QtWidgets.QFileDialog.getSaveFileName(
                 caption=caption,
                 directory=options.cfg.output_file_path,
                 filter="CSV files (*.csv)")
@@ -2140,10 +2195,10 @@ class CoqueryApp(QtGui.QMainWindow):
             options.cfg.output_file_path = name
             options.cfg.output_path = name
         if self.user_columns:
-            response = QtGui.QMessageBox.warning(
+            response = QtWidgets.QMessageBox.warning(
                 self, "You have entered user data", msg_userdata_warning,
-                QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
-            if response == QtGui.QMessageBox.No:
+                QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.Yes)
+            if response == QtWidgets.QMessageBox.No:
                 return
 
         self.getGuiValues()
@@ -2157,19 +2212,19 @@ class CoqueryApp(QtGui.QMainWindow):
                 self.new_session = SessionCommandLine()
             else:
                 if not self.verify_file_name():
-                    QtGui.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                    QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
                 self.new_session = SessionInputFile()
         except TokenParseError as e:
-            QtGui.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLNoConfigurationError:
-            QtGui.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLInitializationError as e:
-            QtGui.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error.format(code=e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error.format(code=e), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except CollocationNoContextError as e:
-            QtGui.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except RuntimeError as e:
-            QtGui.QMessageBox.critical(self, "Runtime error – Coquery", str(e), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "Runtime error – Coquery", str(e), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
@@ -2196,10 +2251,10 @@ class CoqueryApp(QtGui.QMainWindow):
         from coquery.session import StatisticsSession
 
         if not self.last_results_saved:
-            response = QtGui.QMessageBox.warning(
+            response = QtWidgets.QMessageBox.warning(
                 self, "Discard unsaved data", msg_warning_statistics,
-                QtGui.QMessageBox.No, QtGui.QMessageBox.Yes)
-            if response == QtGui.QMessageBox.No:
+                QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.Yes)
+            if response == QtWidgets.QMessageBox.No:
                 return
 
         self.getGuiValues()
@@ -2214,12 +2269,16 @@ class CoqueryApp(QtGui.QMainWindow):
         self.query_thread.start()
 
     def visualization_designer(self):
+        if not options.use_seaborn:
+            errorbox.alert_missing_module("Seaborn", self)
+            return
+
         from . import visualizationdesigner
         try:
             df = pd.concat([self.table_model.content,
                     self.table_model.invisible_content["coquery_invisible_corpus_id"]],
                     axis=1)
-        except AttributeError:
+        except (AttributeError, KeyError):
             df = pd.DataFrame()
         dialog = visualizationdesigner.VisualizationDesigner(
             df, df.dtypes, self.Session)
@@ -2246,7 +2305,7 @@ class CoqueryApp(QtGui.QMainWindow):
             msg = "<code style='color: darkred'>{type}: {code}</code>".format(
                 type=type(e).__name__, code=sys.exc_info()[1])
             logger.error(msg)
-            QtGui.QMessageBox.critical(
+            QtWidgets.QMessageBox.critical(
                 self, "Visualization error – Coquery",
                 VisualizationModuleError(name, msg).error_message)
             return
@@ -2262,11 +2321,9 @@ class CoqueryApp(QtGui.QMainWindow):
                 **kwargs)
 
         except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
-            QtGui.QMessageBox.critical(
+            QtWidgets.QMessageBox.critical(
                 self, "Visualization error – Coquery",
                 str(e))
-        except Exception as e:
-            errorbox.ErrorBox.show(sys.exc_info())
 
     def save_configuration(self):
         self.getGuiValues()
@@ -2279,7 +2336,7 @@ class CoqueryApp(QtGui.QMainWindow):
             try:
                 url = resource.url
             except AttributeError:
-                QtGui.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                QtWidgets.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             else:
                 import webbrowser
                 webbrowser.open(url)
@@ -2310,11 +2367,11 @@ class CoqueryApp(QtGui.QMainWindow):
 
         response = removecorpus.RemoveCorpusDialog.select(
             entry, options.cfg.current_server)
-        if response and QtGui.QMessageBox.question(
+        if response and QtWidgets.QMessageBox.question(
             self,
             "Remove corpus – Coquery",
             "Do you really want to remove the selected corpus components?",
-            QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel) == QtGui.QMessageBox.Ok:
+            QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel) == QtWidgets.QMessageBox.Ok:
             rm_module, rm_database, rm_installer = response
             success = True
 
@@ -2331,11 +2388,11 @@ class CoqueryApp(QtGui.QMainWindow):
                     sqlhelper.drop_database(options.cfg.current_server, database)
                 except Exception as e:
                     raise e
-                    QtGui.QMessageBox.critical(
+                    QtWidgets.QMessageBox.critical(
                         self,
                         "Database error – Coquery",
                         msg_remove_corpus_error.format(corpus=resource.name, code=e),
-                        QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                        QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     success = False
 
             # Remove the corpus module:
@@ -2344,7 +2401,7 @@ class CoqueryApp(QtGui.QMainWindow):
                     if os.path.exists(module):
                         os.remove(module)
                 except IOError:
-                    QtGui.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtGui.QMessageBox.Ok, QtGui.QMessageBox.Ok)
+                    QtWidgets.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     success = False
                 else:
                     success = True
@@ -2483,8 +2540,8 @@ class CoqueryApp(QtGui.QMainWindow):
             event.accept()
 
         if not self.last_results_saved and options.cfg.ask_on_quit:
-            response = QtGui.QMessageBox.warning(self, "Unsaved results", msg_unsaved_data, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
-            if response == QtGui.QMessageBox.Yes:
+            response = QtWidgets.QMessageBox.warning(self, "Unsaved results", msg_unsaved_data, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+            if response == QtWidgets.QMessageBox.Yes:
                 shutdown()
             else:
                 event.ignore()
@@ -2500,7 +2557,7 @@ class CoqueryApp(QtGui.QMainWindow):
         settings_changed = settings.Settings.manage(options.cfg, self)
         if settings_changed:
             self.ui.data_preview.setFont(options.cfg.table_font)
-            self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtGui.QLabel().sizeHint().height() + 2)
+            self.ui.data_preview.verticalHeader().setDefaultSectionSize(QtWidgets.QLabel().sizeHint().height() + 2)
 
             if options.cfg.word_wrap != last_wrap:
                 self.ui.data_preview.setWordWrap(options.cfg.word_wrap)
@@ -2652,7 +2709,7 @@ class CoqueryApp(QtGui.QMainWindow):
 
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
-                if type(self.ui.edit_query_string) == QtGui.QLineEdit:
+                if type(self.ui.edit_query_string) == QtWidgets.QLineEdit:
                     options.cfg.query_list = [utf8(self.ui.edit_query_string.text())]
                 else:
                     options.cfg.query_list = [utf8(self.ui.edit_query_string.toPlainText())]

@@ -19,7 +19,7 @@ from .functions import *
 from .functionlist import FunctionList
 from .general import CoqObject, get_visible_columns
 from . import options
-
+from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
 
 class Sorter(CoqObject):
     def __init__(self, column, ascending=True, reverse=False, position=0):
@@ -205,6 +205,31 @@ class Manager(CoqObject):
         print("\tdone")
         return df
 
+    def substitute(self, df, session, stage="first"):
+        subst = options.get_column_properties().get("substitutions", {})
+        if stage == "first":
+            self.unique_values = {}
+            self._unresolved_subst = {}
+            if subst:
+                for col in subst:
+                    if col not in df.columns:
+                        self._unresolved_subst[col] = subst[col]
+                    else:
+                        self.unique_values[col] = df[col].dropna().unique()
+                try:
+                    return df.replace(subst)
+                except TypeError as e:
+                    print(e)
+        elif stage == "second":
+            if self._unresolved_subst:
+                for col in self._unresolved_subst:
+                    self.unique_values[col] = df[col].dropna().unique()
+                try:
+                    return df.replace(self._unresolved_subst)
+                except TypeError as e:
+                    print(e)
+        return df
+
     def remove_sorter(self, column):
         self.sorters.remove(self.get_sorter(column))
         for i, x in enumerate(self.sorters):
@@ -388,7 +413,7 @@ class Manager(CoqObject):
             pass
         return df.reset_index(drop=True)
 
-    def filter(self, df, session):
+    def filter(self, df, session, stage):
         if (len(df) == 0 or not self._filters):
             return df
 
@@ -396,8 +421,8 @@ class Manager(CoqObject):
         self._len_pre_filter = len(df)
         print("\tfilter()")
         for filt in self._filters:
-            print("\t\t", filt)
-            df = filt.apply(df)
+            if filt.stage == stage:
+                df = filt.apply(df)
         print("\tdone")
         df = df.reset_index(drop=True)
         self._len_post_filter = len(df)
@@ -516,6 +541,44 @@ class Manager(CoqObject):
         return df[valid]
 
     def process(self, df, session, recalculate=True):
+        """
+        Process the data frame.
+
+        Processing a data frame involves the following stages:
+
+        1.  mutate(df)
+            Apply all main functions (including context functions) as well as
+            user functions.
+
+        2.  substitute(df, stage="first")
+            Apply the substitution table from the current session
+
+        3.  filter_groups(df)
+            For each group, apply the group filters.
+
+        4.  arrange_groups(df)
+            Sort the entries within each group.
+
+        5.  mutate_groups(df)
+            Apply group functions to each group.
+
+        6.  filter(df, stage=FILTER_STAGE_BEFORE_TRANSFORM)
+            Apply the filters to the ungrouped data frame.
+
+        7.  summarize(df)
+            Take the data frame, and transform it according to the current
+            transformation.
+
+        8.  substitute(df, stage="second")
+            Apply the substitution table for the remaining columns
+
+        9.  filter(df, stage=FILTER_STAGE_FINAL)
+            Apply remaining filters to the transformed data frame.
+
+        10. select(df)
+            Discard the columns that are not needed for the current
+            transformation.
+        """
         print("process()")
         df = df.reset_index(drop=True)
 
@@ -545,19 +608,20 @@ class Manager(CoqObject):
         if options.cfg.stopword_list:
             df = self.filter_stopwords(df, session)
 
+        df = self.substitute(df, session, "first")
         df = df[[x for x in df.columns if not x.startswith("func_")]]
         df = self.mutate(df, session)
-
         self.mutated_columns = df.columns
-        df = session.apply_substitutions(df)
 
         self.group_functions = FunctionList([])
         if options.cfg.group_columns:
             df = self.filter_groups(df, session)
             df = self.arrange_groups(df, session)
             df = self.mutate_groups(df, session)
-        df = self.filter(df, session)
+        df = self.filter(df, session, stage=FILTER_STAGE_BEFORE_TRANSFORM)
         df = self.summarize(df, session)
+        df = self.substitute(df, session, "second")
+        df = self.filter(df, session, stage=FILTER_STAGE_FINAL)
         df = self.select(df, session)
         self._functions = (session.column_functions.get_list() +
                            self.group_functions.get_list() +

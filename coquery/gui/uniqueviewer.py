@@ -2,10 +2,10 @@
 """
 uniqueviewer.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -22,10 +22,10 @@ from coquery.unicode import utf8
 
 from . import errorbox
 from . import classes
-from .pyqt_compat import QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.uniqueViewerUi import Ui_UniqueViewer
 
-class UniqueViewer(QtGui.QDialog):
+class UniqueViewer(QtWidgets.QDialog):
     def __init__(self, rc_feature=None, db_name=None, uniques=True, parent=None):
         super(UniqueViewer, self).__init__(parent)
         
@@ -36,12 +36,12 @@ class UniqueViewer(QtGui.QDialog):
         self.ui.verticalLayout.insertWidget(0, self.ui.button_details)
 
         if uniques:
-            self.ui.label = QtGui.QLabel("Number of values: {}")
+            self.ui.label = QtWidgets.QLabel("Number of values: {}")
         else:
-            self.ui.label = QtGui.QLabel("<table><tr><td>Number of values:</td><td>{}</td></tr><tr><td>Number of unique values:</td><td>{}</td></tr>")
+            self.ui.label = QtWidgets.QLabel("<table><tr><td>Number of values:</td><td>{}</td></tr><tr><td>Number of unique values:</td><td>{}</td></tr>")
             self.ui.label.setWordWrap(True)
             self.setWindowTitle("Entry viewer – Coquery")
-        self.ui.detail_layout = QtGui.QHBoxLayout()
+        self.ui.detail_layout = QtWidgets.QHBoxLayout()
         self.ui.detail_layout.addWidget(self.ui.label)
         self.ui.button_details.box.setLayout(self.ui.detail_layout)
 
@@ -51,7 +51,7 @@ class UniqueViewer(QtGui.QDialog):
             pass
 
         #self.ui.progress_spinner = classes.CoqSpinner(128)
-        #sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.MinimumExpanding)
+        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.MinimumExpanding)
         #sizePolicy.setHorizontalStretch(0)
         #sizePolicy.setVerticalStretch(0)
         #sizePolicy.setHeightForWidth(self.ui.progress_spinner.sizePolicy().hasHeightForWidth())
@@ -61,7 +61,7 @@ class UniqueViewer(QtGui.QDialog):
 
         self.ui.buttonBox.setDisabled(True)
         self.ui.button_details.setDisabled(True)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.save_list)
 
         self.rc_feature = rc_feature
         self.db_name = db_name
@@ -113,7 +113,7 @@ class UniqueViewer(QtGui.QDialog):
         self.ui.tableWidget.setRowCount(len(self.df.index))
         self.ui.tableWidget.setColumnCount(1)
         for row, x in enumerate(self.df[self.column]):
-            self.ui.tableWidget.setItem(row, 0, QtGui.QTableWidgetItem(utf8(x)))
+            self.ui.tableWidget.setItem(row, 0, QtWidgets.QTableWidgetItem(utf8(x)))
 
     def finalize(self):
         #self.ui.progress_spinner.stop()
@@ -164,7 +164,7 @@ class UniqueViewer(QtGui.QDialog):
         errorbox.ErrorBox.show(self.exc_info, self.exception)
 
     def save_list(self):
-        name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.uniques_file_path)
+        name = QtWidgets.QFileDialog.getSaveFileName(directory=options.cfg.uniques_file_path)
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -176,9 +176,9 @@ class UniqueViewer(QtGui.QDialog):
                            header=["{}.{}".format(self.table, self.column)],
                            encoding=options.cfg.output_encoding)
             except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+                QtWidgets.QMessageBox.critical(self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
-                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+                QtWidgets.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
 
     def get_uniques(self):
         self.ui.progress_bar.setRange(0,0)
@@ -204,7 +204,7 @@ class UniqueViewer(QtGui.QDialog):
         
         
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     UniqueViewer.show(None, None)
     
 if __name__ == "__main__":
