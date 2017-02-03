@@ -120,18 +120,17 @@ def test_configuration(name):
             engine = sqlalchemy.create_engine(sql_url(name))
             with engine.connect() as connection:
                 result = connection.execute("SELECT VERSION()")
+            result.close()
+            try:
+                engine.dispose()
+            except UnboundLocalError:
+                pass
         except sqlalchemy.exc.SQLAlchemyError as e:
             res = (False, e)
         except Exception as e:
             raise e
         else:
             res = (True, result.fetchall()[0][0])
-        finally:
-            result.close()
-            try:
-                engine.dispose()
-            except UnboundLocalError:
-                pass
         return res
     elif d["type"] == SQL_SQLITE:
         if os.access(sqlite_path(name), os.X_OK | os.R_OK):
