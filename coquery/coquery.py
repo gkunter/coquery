@@ -88,7 +88,6 @@ def main():
     except Exception as e:
         print_exception(e)
         sys.exit(1)
-
     # In verbose mode, debugging messages will be printed as well. Also, all
     # logging messages will be printed to the console, and not only to the
     # log file.
@@ -105,7 +104,7 @@ def main():
 
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
-        from .gui.pyqt_compat import QtGui, QtCore
+        from .gui.pyqt_compat import QtWidgets, QtCore
         from .gui.app import CoqueryApp
         from .gui.app import GuiHandler
 
@@ -114,10 +113,10 @@ def main():
         logger.addHandler(options.cfg.gui_logger)
 
         if sys.platform == "darwin":
-            QtGui.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
-            QtGui.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
-            QtGui.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
-        options.cfg.app = QtGui.QApplication(sys.argv)
+            QtWidgets.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
+            QtWidgets.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
+            QtWidgets.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
+        options.cfg.app = QtWidgets.QApplication(sys.argv)
 
         Coq = CoqueryApp()
         options.cfg.gui = Coq
