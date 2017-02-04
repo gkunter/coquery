@@ -581,23 +581,24 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
-        ref_corpus = get(options.cfg.reference_corpus,
+        ref_corpus = options.cfg.reference_corpus.get(
                          options.cfg.current_server, None)
-        if not ref_corpus or ref_corpus not in options.cfg.current_resource:
+        if not ref_corpus or ref_corpus not in options.cfg.current_resources:
             return self.constant(df, None)
 
         res = options.cfg.current_resources[ref_corpus]
         ResourceClass, CorpusClass, LexiconClass, _ = res
-        current_lexicon = LexiconClass()
-        current_corpus = CorpusClass()
-        current_resource = ResourceClass(current_lexicon, current_corpus)
-        current_corpus.resource = current_resource
-        current_corpus.lexicon = current_lexicon
-        current_lexicon.resource = current_resource
+        self.current_lexicon = LexiconClass()
+        self.current_corpus = CorpusClass()
+        self.current_resource = ResourceClass(self.current_lexicon,
+                                              self.current_corpus)
+        self.current_corpus.resource = self.current_resource
+        self.current_corpus.lexicon = self.current_lexicon
+        self.current_lexicon.resource = self.current_resource
 
         engine = sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server,
-                              current_resource.db_name))
+                              self.current_resource.db_name))
 
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
@@ -624,17 +625,8 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
         if not ref_corpus or ref_corpus not in options.cfg.current_resource:
             return self.constant(df, None)
 
-        res = options.cfg.current_resources[ref_corpus]
-        ResourceClass, CorpusClass, LexiconClass, _ = res
-        current_lexicon = LexiconClass()
-        current_corpus = CorpusClass()
-        current_resource = ResourceClass(current_lexicon, current_corpus)
-        current_corpus.resource = current_resource
-        current_corpus.lexicon = current_lexicon
-        current_lexicon.resource = current_resource
-
         if len(val) > 0:
-            corpus_size = current_corpus.get_corpus_size()
+            corpus_size = self.current_corpus.get_corpus_size()
         val = val.apply(lambda x: x / (corpus_size / self.words))
         val.index = df.index
         return val
@@ -652,8 +644,11 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
         obs = pd.np.array(
             [[x.freq1, x.freq2],
              [size - x.freq1 * width, ext_size - x.freq2 * width]])
-        tmp = stats.chi2_contingency(obs,
-                                    lambda_="log-likelihood")
+        try:
+            tmp = stats.chi2_contingency(obs,
+                                         lambda_="log-likelihood")
+        except ValueError:
+            return pd.np.nan
         return tmp[0]
 
     def evaluate(self, df, *args, **kwargs):
