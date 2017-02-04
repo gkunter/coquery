@@ -48,9 +48,9 @@ def set_logger(log_file_path):
 def check_system():
     if options.missing_modules:
         if options.use_qt:
-            from .gui.pyqt_compat import QtGui
-            app = QtGui.QApplication(sys.argv)
-            QtGui.QMessageBox.critical(None,
+            from .gui.pyqt_compat import QtWidgets
+            app = QtWidgets.QApplication(sys.argv)
+            QtWidgets.QMessageBox.critical(None,
                 "Missing dependencies – Coquery",
                 msg_missing_modules.format("<br/>".join([str(x) for x in options.missing_modules])))
             print_exception(msg_missing_modules.format(", ".join(options.missing_modules)))
@@ -64,7 +64,6 @@ def main():
 
     check_system()
     options.process_options()
-
     start_time = time.time()
     logger.info("--- Started (%s %s) ---" % (NAME, VERSION))
     logger.info("{}".format(sys.version))
@@ -88,6 +87,7 @@ def main():
     except Exception as e:
         print_exception(e)
         sys.exit(1)
+
     # In verbose mode, debugging messages will be printed as well. Also, all
     # logging messages will be printed to the console, and not only to the
     # log file.
