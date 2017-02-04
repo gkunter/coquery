@@ -16,10 +16,10 @@ import sys
 from coquery import options
 from coquery.defines import * 
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from .ui.aboutUi import Ui_AboutDialog
 
-class AboutDialog(QtGui.QDialog):
+class AboutDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         
         super(AboutDialog, self).__init__(parent)
