@@ -21,7 +21,7 @@ class FunctionList(CoqObject):
     def __init__(self, l=[], *args, **kwargs):
         self._list = l
 
-    def apply(self, df, session, manager=None):
+    def lapply(self, df, session, manager=None):
         """
         Apply all functions in the list to the data frame.
         """
