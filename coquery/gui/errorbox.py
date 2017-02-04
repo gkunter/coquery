@@ -94,7 +94,6 @@ class ExceptionBox(QtWidgets.QDialog):
 
         self.ui = Ui_ErrorDialog()
         self.ui.setupUi(self)
-        self.setWindowIcon(options.cfg.icon)
         self.ui.icon_label.setPixmap(QtGui.QIcon.fromTheme("dialog-error").pixmap(32, 32))
 
         error_text = ("<table><tr><td><b>{}&nbsp;</b></td><td>{}<br></td></tr>"
