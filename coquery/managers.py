@@ -42,6 +42,7 @@ class Manager(CoqObject):
         self._len_post_group_filter = {}
         self.drop_on_na = None
         self.stopwords_failed = False
+        self.dropped_na_count = 0
         self.reset_hidden_columns()
 
         self.manager_summary_functions = FunctionList()
@@ -379,7 +380,6 @@ class Manager(CoqObject):
 
     def summarize(self, df, session):
         print("\tsummarize()")
-        self.dropped_na_count = 0
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
         df = self.manager_summary_functions.lapply(df, session=session, manager=self)
