@@ -23,13 +23,25 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
        <string>Results table</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
        <item>
         <widget class="QGroupBox" name="group_case">
          <property name="title">
@@ -188,6 +200,32 @@
        <string>Queries</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
+       <item>
+        <widget class="QCheckBox" name="check_regular_expressions">
+         <property name="text">
+          <string>Interpret query strings as &amp;regular expressions</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="check_regular_expressions">
+         <property name="text">
+          <string>Interpret queries as &amp;regular expressions</string>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="QCheckBox" name="check_ignore_case_query">
          <property name="text">
@@ -222,16 +260,7 @@
           <property name="spacing">
            <number>0</number>
           </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
+          <property name="margin">
            <number>0</number>
           </property>
           <item>
@@ -323,6 +352,18 @@
        <string>Fonts</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,1" columnstretch="0,1,0,0">
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
        <item row="1" column="0">
         <widget class="QLabel" name="label_5">
          <property name="sizePolicy">
@@ -475,6 +516,18 @@
        <string>Quitting</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_5">
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
        <item>
         <widget class="QCheckBox" name="check_ask_on_quit">
          <property name="text">
@@ -516,6 +569,18 @@
        <string>Paths</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_6">
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
        <item>
         <widget class="QGroupBox" name="group_paths">
          <property name="title">
@@ -554,7 +619,8 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -593,7 +659,8 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -632,7 +699,8 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
