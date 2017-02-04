@@ -112,11 +112,11 @@ def main():
         options.cfg.gui_logger.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
         logger.addHandler(options.cfg.gui_logger)
 
+        options.cfg.app = QtWidgets.QApplication(sys.argv)
         if sys.platform == "darwin":
             QtWidgets.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
             QtWidgets.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
             QtWidgets.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
-        options.cfg.app = QtWidgets.QApplication(sys.argv)
 
         Coq = CoqueryApp()
         options.cfg.gui = Coq
