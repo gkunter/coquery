@@ -661,15 +661,6 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
         fun = Freq(columns=word_columns, group=self.group)
 
         # do not calculate the frequencies again if the data frame already
-
-        session = kwargs["session"]
-
-        word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
-        word_columns = [x for x in df.columns if word_feature in x]
-
-        fun = Freq(columns=word_columns, group=self.group)
-
-        # do not calculate the frequencies again if the data frame already
         # contains an identical frequency column:
         if self.find_function(df, fun):
             if options.cfg.verbose:

@@ -23,7 +23,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -216,6 +216,13 @@
         <widget class="QCheckBox" name="check_regular_expressions">
          <property name="text">
           <string>Interpret query strings as &amp;regular expressions</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="check_regular_expressions">
+         <property name="text">
+          <string>Interpret queries as &amp;regular expressions</string>
          </property>
         </widget>
        </item>
