@@ -155,9 +155,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
         # Retrieve font and metrics for the CoqItemDelegates
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
-        options.cfg.figure_font = options.settings.value("figure_font", QtWidgets.QLabel().font())
-        options.cfg.table_font = options.settings.value("table_font", QtWidgets.QLabel().font())
-        options.cfg.context_font = options.settings.value("context_font", QtWidgets.QLabel().font())
+        options.cfg.figure_font = options.settings.value(
+            "figure_font", QtWidgets.QLabel().font())
+        options.cfg.table_font = options.settings.value(
+            "table_font", QtWidgets.QLabel().font())
+        options.cfg.context_font = options.settings.value(
+            "context_font", QtWidgets.QLabel().font())
 
         # ensure that the fonts are always set:
         if not utf8(options.cfg.figure_font.family()):
@@ -323,7 +326,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.statusBar().layout().setContentsMargins(0, 0, 4, 0)
         self.statusBar().setMinimumHeight(QtWidgets.QProgressBar().sizeHint().height())
         self.statusBar().setMaximumHeight(QtWidgets.QProgressBar().sizeHint().height())
-        self.statusBar().setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.statusBar().setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                       QtWidgets.QSizePolicy.Minimum)
         self.statusBar().layout().addWidget(self.ui.status_message, 1)
         self.statusBar().layout().addWidget(self.ui.multi_query_progress, 1)
         self.statusBar().layout().addWidget(self.ui.status_progress, 1)
@@ -1599,8 +1603,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
         old_list = options.cfg.filter_list
 
         try:
-            columns = self.table_model.content.columns
-            dtypes = self.table_model.content.dtypes
+            columns = (self.table_model.content.columns +
+                       self.hidden_model.content.columns)
+            dtypes = (self.table_model.content.dtypes +
+                      self.hidden_model.content.dtypes)
         except AttributeError:
             columns = []
             dtypes = []
@@ -1670,10 +1676,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
             # restrict to selection?
             if selection or clipboard:
-                selection = self.ui.data_preview.selectionModel().selection()
+                sel = self.ui.data_preview.selectionModel().selection()
                 selected_rows = set([])
                 selected_columns = set([])
-                for x in selection.indexes():
+                for x in self.indexes():
                     selected_rows.add(x.row())
                     selected_columns.add(x.column())
                 tab = tab.iloc[list(selected_rows)][list(selected_columns)]
@@ -1845,7 +1851,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         else:
             rc_feature = rc_feature
 
-        _, hashed, table, feature = resource.split_resource_feature(rc_feature)
+        hashed, table, feature = resource.split_resource_feature(rc_feature)
         if hashed is None:
             db_name = resource.db_name
         else:
@@ -2938,6 +2944,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
                          functions.ReferenceCorpusFrequency,
                          functions.ReferenceCorpusFrequencyPTW,
                          functions.ReferenceCorpusFrequencyPMW,
+                         functions.ReferenceCorpusLLKeyness,
+                         functions.ReferenceCorpusDiffKeyness,
                          functions.RowNumber,
                          functions.Percent, functions.Proportion,
                          functions.Tokens, functions.Types,

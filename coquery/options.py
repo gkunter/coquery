@@ -392,7 +392,7 @@ class Options(object):
                     d[shorthand] = rc_feature
                     break
             if shorthand in d:
-                _, _, tab, _ = resource.split_resource_feature(d[shorthand])
+                _, tab, _ = resource.split_resource_feature(d[shorthand])
                 table = getattr(resource, "{}_table".format(tab))
                 feature = getattr(resource, d[shorthand])
                 group.add_argument(shorthand,
@@ -478,8 +478,6 @@ class Options(object):
                     group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
                     group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
             except (KeyError, TypeError, AttributeError) as e:
-                print("Exception raised with feature '{}' () from corpus {}:".format(
-                    rc_feature, column, self.args.corpus))
                 print(e)
 
         if D:
@@ -672,6 +670,7 @@ class Options(object):
             "use_cache": use_cachetools,
             "query_case_sensitive": False,
             "output_case_sensitive": False,
+            "regexp": False,
             "output_to_lower": True,
             "drop_duplicates": True,
             "na_string": DEFAULT_MISSING_VALUE,
@@ -774,6 +773,7 @@ class Options(object):
             self.args.query_cache_size = config_file.int("main", "query_cache_size", d=defaults)
             self.args.query_case_sensitive = config_file.bool("main", "query_case_sensitive", d=defaults)
             self.args.output_case_sensitive = config_file.bool("main", "output_case_sensitive", d=defaults)
+            self.args.regexp = config_file.bool("main", "regexp", d=defaults)
             self.args.output_to_lower = config_file.bool("main", "output_to_lower", d=defaults)
             self.args.drop_on_na = config_file.bool("main", "drop_on_na", d=defaults)
             self.args.na_string = config_file.str("main", "na_string", d=defaults)
@@ -789,7 +789,6 @@ class Options(object):
             self.args.skip_lines = config_file.int("main", "csv_line_skip", d=defaults)
             self.args.quote_char = config_file.str("main", "csv_quote_char", d=defaults)
             self.args.xkcd = config_file.bool("main", "xkcd", fallback=False)
-
             # read CONTEXT section:
             self.args.context_left = config_file.int("context", "context_left", d=defaults)
             self.args.context_right = config_file.int("context", "context_right", d=defaults)
@@ -969,6 +968,7 @@ def save_configuration():
     config.set("main", "context_mode", cfg.context_mode)
     config.set("main", "output_case_sensitive", cfg.output_case_sensitive)
     config.set("main", "query_case_sensitive", cfg.query_case_sensitive)
+    config.set("main", "regexp", cfg.regexp)
     config.set("main", "drop_on_na", cfg.drop_on_na)
     config.set("main", "na_string", cfg.na_string)
     try:
@@ -1176,6 +1176,22 @@ def get_con_configuration():
             return (d["host"], d["port"], d["type"], d["user"], d["password"])
         elif d["type"] == SQL_SQLITE:
             return (None, None, SQL_SQLITE, None, None)
+    else:
+        return None
+
+def get_configuration_type():
+    """
+    Return the type of the current configuration.
+
+    Returns
+    -------
+    s : str or None
+        Depending on the type of the currenct configuration, `s` equals
+        either the constant SQL_MYSQL or SQL_SQLITE from defines.py. If
+        no configuration is available, return None.
+    """
+    if cfg.current_server in cfg.server_configuration:
+        return cfg.server_configuration[cfg.current_server]["type"]
     else:
         return None
 
