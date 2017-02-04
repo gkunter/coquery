@@ -44,6 +44,7 @@ class Manager(CoqObject):
         self.stopwords_failed = False
         self.dropped_na_count = 0
         self.reset_hidden_columns()
+        self.unique_values = {}
 
         self.manager_summary_functions = FunctionList()
         self.user_summary_functions = FunctionList()
