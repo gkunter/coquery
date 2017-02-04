@@ -574,44 +574,42 @@ class BaseReferenceCorpus(Function):
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
     _name = "statistics_reference_corpus_frequency"
-    single_column = False
+    single_column = True
 
     def __init__(self, *args, **kwargs):
         super(ReferenceCorpusFrequency, self).__init__(*args, **kwargs)
 
-    def _func(self, x, corpus, engine):
-
-        val = x.apply(corpus.get_frequency, engine=engine)
-        return val
-
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
-        ref_corpus = get(options.cfg.reference_corpus,
+        ref_corpus = options.cfg.reference_corpus.get(
                          options.cfg.current_server, None)
-        if not ref_corpus or ref_corpus not in options.cfg.current_resource:
+        if not ref_corpus or ref_corpus not in options.cfg.current_resources:
             return self.constant(df, None)
 
         res = options.cfg.current_resources[ref_corpus]
         ResourceClass, CorpusClass, LexiconClass, _ = res
-        current_lexicon = LexiconClass()
-        current_corpus = CorpusClass()
-        current_resource = ResourceClass(current_lexicon, current_corpus)
-        current_corpus.resource = current_resource
-        current_corpus.lexicon = current_lexicon
-        current_lexicon.resource = current_resource
+        self.current_lexicon = LexiconClass()
+        self.current_corpus = CorpusClass()
+        self.current_resource = ResourceClass(self.current_lexicon,
+                                              self.current_corpus)
+        self.current_corpus.resource = self.current_resource
+        self.current_corpus.lexicon = self.current_lexicon
+        self.current_lexicon.resource = self.current_resource
 
         engine = sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server,
-                              current_resource.db_name))
+                              self.current_resource.db_name))
 
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
-        val = df[word_columns].apply(lambda x: self._func(x,
-                                                          current_corpus,
-                                                          engine), axis="columns")
+        # concatenate the word columns, separated by space
+        self.s = (df[word_columns].astype(str)
+                                  .apply(lambda x: x + " ").sum(axis=1))
+
+        # get the frequency from the reference corpus for the concatenated
+        # columns:
+        val = self.s.apply(lambda x: self.current_corpus.get_frequency(x, engine))
         val.index = df.index
-        val.columns = ["{}_{}_{}".format(
-            self._name, x, ref_corpus) for x in val.columns]
         engine.dispose()
         return val
 
@@ -627,17 +625,8 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
         if not ref_corpus or ref_corpus not in options.cfg.current_resource:
             return self.constant(df, None)
 
-        res = options.cfg.current_resources[ref_corpus]
-        ResourceClass, CorpusClass, LexiconClass, _ = res
-        current_lexicon = LexiconClass()
-        current_corpus = CorpusClass()
-        current_resource = ResourceClass(current_lexicon, current_corpus)
-        current_corpus.resource = current_resource
-        current_corpus.lexicon = current_lexicon
-        current_lexicon.resource = current_resource
-
         if len(val) > 0:
-            corpus_size = current_corpus.get_corpus_size()
+            corpus_size = self.current_corpus.get_corpus_size()
         val = val.apply(lambda x: x / (corpus_size / self.words))
         val.index = df.index
         return val
@@ -646,6 +635,60 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
 class ReferenceCorpusFrequencyPTW(ReferenceCorpusFrequencyPMW):
     words = 1000
     _name = "reference_per_thousand_words"
+
+
+class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
+    _name = "reference_ll_keyness"
+
+    def _func(self, x, size, ext_size, width):
+        obs = pd.np.array(
+            [[x.freq1, x.freq2],
+             [size - x.freq1 * width, ext_size - x.freq2 * width]])
+        try:
+            tmp = stats.chi2_contingency(obs,
+                                         lambda_="log-likelihood")
+        except ValueError:
+            return pd.np.nan
+        return tmp[0]
+
+    def evaluate(self, df, *args, **kwargs):
+
+        session = kwargs["session"]
+
+        word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
+        word_columns = [x for x in df.columns if word_feature in x]
+
+        fun = Freq(columns=word_columns, group=self.group)
+
+        # do not calculate the frequencies again if the data frame already
+        # contains an identical frequency column:
+        if self.find_function(df, fun):
+            if options.cfg.verbose:
+                print(self._name, "using df.Freq()")
+            freq = df[fun.get_id()]
+        else:
+            if options.cfg.verbose:
+                print(self._name, "calculating df.Freq()")
+            freq = fun.evaluate(df)
+        size = session.Resource.corpus.get_corpus_size()
+
+        ext_freq = super(ReferenceCorpusLLKeyness, self).evaluate(df, *args, **kwargs)
+        if len(ext_freq) > 0:
+            ext_size = self.current_corpus.get_corpus_size()
+
+        _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq})
+
+        val = _df.apply(lambda x: self._func(x, size=size, ext_size=ext_size,
+                                             width=len(word_columns)),
+                        axis="columns")
+        return val
+
+
+class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
+    _name = "reference_diff_keyness"
+
+    def _func(self, x, size, ext_size, width):
+        return (x.freq1/size - x.freq2/ext_size) * 100 / (x.freq2/ext_size)
 
 
 #############################################################################
