@@ -181,6 +181,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     encoding = "utf-8"
     expected_files = []
     lexical_features = []
+    annotations = {}
     # special files are expected files that will not be stored in the file
     # table. For example, a corpus may include a file with speaker
     # information which needs to be evaluated during installation, and which
@@ -200,6 +201,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._time_features = []
         self._lexical_features = []
         self._speaker_features = []
+        self._annotations = {}
         self._id_count = {}
         self._primary_keys = {}
         self._interrupted = False
@@ -582,6 +584,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         self._speaker_features.append(rc_feature)
 
+    def add_annotation(self, inner, outer):
+        """
+        Add a link between the inner and the outer table by time annotations.
+        """
+        self._annotations[inner] = outer
+
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
         the class attribute self._lexicon_code. This function is needed
@@ -611,6 +619,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             lines.insert(0, "    speaker_features = {}\n".format(
                 "[{}]".format(", ".join(
                     ['"{}"'.format(x) for x in self._speaker_features]))))
+        if self._annotations:
+            lines.insert(0, "    annotations = {}\n".format(self._annotations))
+
         return "".join(lines)
     
     def get_method_code(self, method):
