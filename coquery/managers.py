@@ -146,14 +146,25 @@ class Manager(CoqObject):
                 [x(sweep=True, group=group_cols) for x
                  in session.group_functions])
 
-        grouped = df.groupby(group_cols)
+        #grouped = df.groupby(group_cols)
 
-        sub_list = []
-        for sub in grouped.groups:
-            sub_list.append(self.group_functions.apply(
-                                df.iloc[grouped.groups[sub]],
-                                session=session, manager=self))
-        df = pd.concat(sub_list, axis=0)
+        #sub_list = []
+        #for sub in grouped.groups:
+            #sub_list.append(self.group_functions.apply(
+                                #df.iloc[grouped.groups[sub]],
+                                #session=session, manager=self))
+        #df = pd.concat(sub_list, axis=0)
+        print(len(df.groupby(group_cols).groups))
+        subst = options.get_column_properties().get("substitutions", {})
+        if subst:
+            df = (df.replace(subst).groupby(group_cols)
+                    .apply(lambda x: self.group_functions.lapply(
+                                        x, session=session, manager=self)))
+        else:
+            df = (df.groupby(group_cols)
+                    .apply(lambda x: self.group_functions.lapply(
+                                        x, session=session, manager=self)))
+
         df = df.reset_index(drop=True)
 
         print("\tDone mutate_groups")
@@ -169,7 +180,7 @@ class Manager(CoqObject):
         print("\tmutate()")
         # apply manager functions, including context functions:
         manager_functions = FunctionList(self._get_main_functions(df, session))
-        df = manager_functions.apply(df, session=session, manager=self)
+        df = manager_functions.lapply(df, session=session, manager=self)
 
         if options.cfg.context_mode != CONTEXT_NONE:
             (_, _, cached_context) = self._context_cache[options.cfg.context_mode]
@@ -189,7 +200,7 @@ class Manager(CoqObject):
 
         # apply user functions, i.e. functions that were added to
         # individual columns:
-        df = FunctionList(session.column_functions).apply(df, session=session, manager=self)
+        df = FunctionList(session.column_functions).lapply(df, session=session, manager=self)
         df = df.reset_index(drop=True)
         print("\tdone")
         return df
@@ -371,9 +382,9 @@ class Manager(CoqObject):
         self.dropped_na_count = 0
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
-        df = self.manager_summary_functions.apply(df, session=session, manager=self)
+        df = self.manager_summary_functions.lapply(df, session=session, manager=self)
         if not self.ignore_user_functions:
-            df = self.user_summary_functions.apply(df,
+            df = self.user_summary_functions.lapply(df,
                                                    session=session,
                                                    manager=self)
 
