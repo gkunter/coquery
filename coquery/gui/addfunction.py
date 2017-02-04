@@ -28,12 +28,13 @@ class FunctionItem(QtWidgets.QWidget):
 
         name = func.get_name()
         desc = FUNCTION_DESC.get(func._name, "(no description available")
-        
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0) 
-        sizePolicy.setVerticalStretch(0) 
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth()) 
-        self.setSizePolicy(sizePolicy) 
+
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy)
         self.horizontalLayout = QtWidgets.QHBoxLayout(self)
 
         if checkable:
