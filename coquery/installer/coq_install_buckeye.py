@@ -323,7 +323,9 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_time_feature(self.corpus_endtime)
         for x in ["corpus_word", "corpus_pos", "corpus_transcript", "corpus_lemmatranscript"]:
             self.add_lexical_feature(x)
-        
+
+        self.add_annotation("segment", "corpus")
+
         self._file_id = 0
         self._token_id = 0
 
