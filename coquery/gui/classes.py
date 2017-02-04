@@ -116,10 +116,10 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
             model = self.model()
             top = model.index(0, ix, QtCore.QModelIndex())
             bottom = model.index(0, ix, QtCore.QModelIndex())
-            selection = QtWidgets.QItemSelection(top, bottom)
+            selection = QtCore.QItemSelection(top, bottom)
             select.select(selection,
-                            QtWidgets.QItemSelectionModel.Toggle |
-                            QtWidgets.QItemSelectionModel.Columns)
+                            QtCore.QItemSelectionModel.Toggle |
+                            QtCore.QItemSelectionModel.Columns)
 
         self.button_pressed = False
 
