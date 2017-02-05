@@ -474,50 +474,57 @@ class Manager(CoqObject):
         them into the preferred order.
         """
         print("\tselect()")
-
-        # 'coquery_dummy' is used to manage frequency queries with zero
-        # matches. It is never displayed:
-        vis_cols = [x for x in df.columns if x != "coquery_dummy"]
-
         resource = session.Resource
 
-        lexical_features = []
-        corpus_features = []
-        functions = []
-        others = []
+        l = []
+        for x in resource.get_preferred_output_order():
+            l += resource.format_resource_feature(
+                    x, session.get_max_token_count())
+        columns = []
+        for x in l:
+            if x in df.columns:
+                columns.append(x)
+        for x in df.columns:
+            if x not in columns:
+                columns.append(x)
 
-        for col in list(vis_cols):
-            if col.startswith("coq_"):
-                this_res = resource
-                this_rc_feature = resource.extract_resource_feature(col)
-            elif col.startswith("db_"):
-                fields = col.split("_")
-                last_index = len(fields) - fields[::-1].index("coq") - 1
-                db_name = "_".join(fields[1:last_index])
-                this_res = options.get_resource_of_database(db_name)
-                this_rc_feature = "_".join(fields[last_index + 1:-1])
-            elif col.startswith("func_"):
-                functions.append(col)
-                continue
-            else:
-                others.append(col)
-                continue
-            if this_res.is_lexical(this_rc_feature):
-                lexical_features.append(col)
-            else:
-                corpus_features.append(col)
+        # align context columns around word columns:
+        first_word_pos = -1
+        last_word_pos = -1
+        word_column = "coq_{}_".format(
+            getattr(session.Resource, QUERY_ITEM_WORD))
+        left_context_columns = []
+        right_context_columns = []
+        # find word columns as well as context columns:
+        for i, col in enumerate(columns):
+            if col.startswith(word_column):
+                if first_word_pos == -1:
+                    first_word_pos = i
+                last_word_pos = i
+            elif col.startswith("coq_context_l"):
+                left_context_columns.append(col)
+            elif col.startswith("coq_context_r"):
+                right_context_columns.append(col)
 
-        resource_order = resource.get_preferred_output_order()
-        for feature in resource_order[::-1]:
-            lex_list = [col for col in lexical_features if feature in col]
-            lex_list = sorted(lex_list)[::-1]
-            for lex in lex_list:
-                lexical_features.remove(lex)
-                lexical_features.insert(0, lex)
+        # insert right context columns after word columns:
+        if right_context_columns and first_word_pos > -1:
+            for col in right_context_columns[::-1]:
+                columns.remove(col)
+                columns.insert(last_word_pos + 1, col)
+        # insert left context columns before word columns:
+        if left_context_columns and first_word_pos > -1:
+            for col in left_context_columns[::-1]:
+                columns.remove(col)
+                columns.insert(first_word_pos, col)
 
-        vis_cols = lexical_features + corpus_features + others + functions
+        try:
+            columns.remove("coquery_dummy")
+        except ValueError:
+            pass
+
+        df = df[columns]
         print("\tdone")
-        return df[vis_cols]
+        return df
 
     def filter_stopwords(self, df, session):
         self.stopwords_failed = False
