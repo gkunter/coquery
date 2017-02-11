@@ -21,9 +21,8 @@ import matplotlib as mpl
 from matplotlib.figure import Figure
 from matplotlib.widgets import SpanSelector
 from matplotlib.patches import Rectangle
-from matplotlib.backends.backend_qt4agg import (
-    FigureCanvasQTAgg as FigureCanvas,
-    NavigationToolbar2QT as NavigationToolbar)
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import seaborn as sns
 
 from scipy.signal import gaussian

@@ -104,7 +104,7 @@ def main():
 
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
-        from .gui.pyqt_compat import QtWidgets, QtCore
+        from .gui.pyqt_compat import QtWidgets, QtGui, QtCore
         from .gui.app import CoqueryApp
         from .gui.app import GuiHandler
 
@@ -114,9 +114,9 @@ def main():
 
         options.cfg.app = QtWidgets.QApplication(sys.argv)
         if sys.platform == "darwin":
-            QtWidgets.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
-            QtWidgets.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
-            QtWidgets.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
+            QtGui.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
+            QtGui.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
+            QtGui.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
 
         Coq = CoqueryApp()
         options.cfg.gui = Coq

@@ -1469,10 +1469,13 @@ class CoqueryApp(QtWidgets.QMainWindow):
             if x not in self.Session.output_object.columns:
                 manager.hidden_columns.remove(x)
         hidden_cols = pd.Index(manager.hidden_columns)
-        vis_cols = self.Session.output_object.columns.difference(hidden_cols)
+
+        vis_cols = [x for x in self.Session.output_object.columns
+                    if not x in hidden_cols]
 
         to_show = self.Session.output_object[vis_cols]
         to_hide = self.Session.output_object[hidden_cols]
+
         self.table_model = classes.CoqTableModel(
             to_show, session=self.Session)
         self.hidden_model = classes.CoqHiddenTableModel(
@@ -1603,7 +1606,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         old_list = options.cfg.filter_list
 
         try:
-            columns = (self.table_model.content.columns +
+            columns = (self.table_model.content.columns |
                        self.hidden_model.content.columns)
             dtypes = (self.table_model.content.dtypes +
                       self.hidden_model.content.dtypes)

@@ -16,11 +16,16 @@ import argparse
 import codecs
 import re
 import logging
+import os
+import sys
 
 from coquery import options
 from coquery import sqlhelper
-from coquery.defines import *
-from coquery.errors import *
+from coquery.defines import (NAME,
+                             msg_invalid_metadata,
+                             msg_install_abort,
+                             msg_corpus_path_not_valid)
+from coquery.errors import SQLNoConfigurationError, DependencyError
 from coquery.unicode import utf8
 
 from . import classes
@@ -61,8 +66,8 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.button_metafile.clicked.connect(self.select_metafile)
         self.ui.label_metafile.clicked.connect(self.select_metafile)
 
-        self.ui.group_read_files.toggled.connect(lambda x: self.activate_read(True))
-        self.ui.group_only_module.toggled.connect(lambda x: self.activate_read(False))
+        self.ui.radio_read_files.toggled.connect(lambda x: self.activate_read(True))
+        self.ui.radio_only_module.toggled.connect(lambda x: self.activate_read(False))
         self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
 
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setText(self.button_label)
@@ -80,11 +85,6 @@ class InstallerGui(QtWidgets.QDialog):
         self.progressUpdate.connect(self.update_progress)
 
         self.generalUpdate.connect(self.general_update)
-
-        self.ui.label_ngram_info.setText("")
-        self.ui.label_ngram_info.setPixmap(self.parent().get_icon("Info").pixmap(
-            QtCore.QSize(self.ui.spin_n.sizeHint().height(),
-                         self.ui.spin_n.sizeHint().height())))
 
         notes = builder_class.get_installation_note()
         if notes:
@@ -109,8 +109,8 @@ class InstallerGui(QtWidgets.QDialog):
 
         if not options.cfg.experimental:
             try:
-                self.ui.widget_ngram.hide()
-                self.ui.check_ngram.setChecked(False)
+                self.ui.widget_n_gram.hide()
+                self.ui.check_n_gram.setChecked(False)
             except AttributeError:
                 # ignore exceptions raised if widgets do not exist
                 pass
@@ -120,8 +120,8 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.corpus_name.setStyleSheet("")
 
     def restore_settings(self):
-        self.ui.group_read_files.blockSignals(True)
-        self.ui.group_only_module.blockSignals(True)
+        self.ui.radio_read_files.blockSignals(True)
+        self.ui.radio_only_module.blockSignals(True)
         try:
             self.resize(options.settings.value("corpusinstaller_size"))
         except TypeError:
@@ -134,17 +134,17 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.input_path.setText(utf8(options.settings.value(target, "")))
 
         val = options.settings.value("corpusinstaller_read_files", "true")
-        self.activate_read(val == "true" or val == True)
+        self.activate_read(val == "true" or val is True)
         val = options.settings.value("corpusinstaller_use_metafile", "false")
-        self.ui.check_use_metafile.setChecked(val == "true" or val == True)
+        self.ui.check_use_metafile.setChecked(val == "true" or val is True)
         val = options.settings.value("corpusinstaller_use_nltk", "false")
-        self.ui.use_pos_tagging.setChecked(val == "true" or val == True)
+        self.ui.use_pos_tagging.setChecked(val == "true" or val is True)
         val = options.settings.value("corpusinstaller_use_ngram_table", "false")
-        self.ui.check_ngram.setChecked(val == "true" or val == True)
+        self.ui.check_ngram.setChecked(val == "true" or val is True)
         self.ui.spin_n.setValue(
             int(options.settings.value("corpusinstaller_n_gram_width", 2)))
-        self.ui.group_read_files.blockSignals(False)
-        self.ui.group_only_module.blockSignals(False)
+        self.ui.radio_read_files.blockSignals(False)
+        self.ui.radio_only_module.blockSignals(False)
 
     def accept(self):
         super(InstallerGui, self).accept()
@@ -155,7 +155,7 @@ class InstallerGui(QtWidgets.QDialog):
             target = "corpusinstaller_corpus_source"
         options.settings.setValue(target, utf8(self.ui.input_path.text()))
         options.settings.setValue("corpusinstaller_read_files",
-                                  self.ui.group_read_files.isChecked())
+                                  self.ui.radio_read_files.isChecked())
         options.settings.setValue("corpusinstaller_use_metafile",
                                   self.ui.check_use_metafile.isChecked())
         options.settings.setValue("corpusinstaller_use_nltk",
@@ -170,7 +170,7 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(True)
         self.ui.issue_label.setText("")
 
-        if self.ui.group_read_files.isChecked() and check_path:
+        if self.ui.radio_read_files.isChecked() and check_path:
             path = utf8(self.ui.input_path.text())
             if not path:
                 self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
@@ -250,16 +250,14 @@ class InstallerGui(QtWidgets.QDialog):
             self.reject()
 
     def activate_read(self, activate):
-        self.ui.group_read_files.blockSignals(True)
-        self.ui.group_only_module.blockSignals(True)
-        self.ui.group_read_files.setChecked(activate)
-        self.ui.group_only_module.setChecked(not activate)
-        if activate:
-            self.validate_dialog()
-        else:
-            self.ui.issue_label.setText("")
-        self.ui.group_read_files.blockSignals(False)
-        self.ui.group_only_module.blockSignals(False)
+        self.ui.radio_read_files.blockSignals(True)
+        self.ui.radio_only_module.blockSignals(True)
+        self.ui.radio_read_files.setChecked(activate)
+        self.ui.radio_only_module.setChecked(not activate)
+        self.ui.widget_read_files.setEnabled(activate)
+        self.validate_dialog()
+        self.ui.radio_read_files.blockSignals(False)
+        self.ui.radio_only_module.blockSignals(False)
 
     def show_progress(self):
         self.ui.progress_box.show()
@@ -316,7 +314,7 @@ class InstallerGui(QtWidgets.QDialog):
 
     def check_input(self):
         button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
-        if self.ui.group_only_module.isChecked():
+        if self.ui.radio_only_module.isChecked():
             self.ui.input_path.setStyleSheet('')
             button.setEnabled(True)
         else:
@@ -341,7 +339,7 @@ class InstallerGui(QtWidgets.QDialog):
         the invalid path.
         """
 
-        if self.ui.group_read_files.isChecked():
+        if self.ui.radio_read_files.isChecked():
             l = self.builder_class.get_file_list(
                     str(self.ui.input_path.text()), self.builder_class.file_filter)
             try:
@@ -387,7 +385,7 @@ class InstallerGui(QtWidgets.QDialog):
         namespace.use_nltk = False
         namespace.metadata = utf8(self.ui.label_metafile.text())
 
-        if self.ui.group_only_module.isChecked():
+        if self.ui.radio_only_module.isChecked():
             namespace.o = False
             namespace.i = False
             namespace.l = False
@@ -446,7 +444,7 @@ class BuilderGui(InstallerGui):
             selected_column=None)
 
         if self._onefile:
-            self.ui.group_read_files.setTitle("Build new corpus from data table")
+            self.ui.label_read_files.setText("Build new corpus from data table")
             self.ui.label_input_path.setText("Use table file:")
             self.ui.button_input_path.setIcon(self.ui.button_metafile.icon())
             self.ui.button_input_path.setText("Change")
@@ -454,10 +452,11 @@ class BuilderGui(InstallerGui):
             self.ui.button_input_path.clicked.connect(self.file_options)
             self.ui.input_path.clicked.connect(self.file_options)
             self.ui.widget_ngram.hide()
-            self.ui.group_only_module.hide()
-            self.ui.group_read_files.setChecked(True)
+            self.ui.radio_only_module.hide()
+            self.ui.label_only_module.hide()
+            self.ui.radio_read_files.setChecked(True)
         else:
-            self.ui.group_read_files.setTitle("Build new corpus from text files")
+            self.ui.label_read_files.setText("Build new corpus from text files")
             self.ui.label_input_path.setText("Path to text files:")
             self.ui.input_path.clicked.connect(self.select_path)
             self.ui.label_pos_tagging.show()
@@ -627,48 +626,52 @@ class BuilderGui(InstallerGui):
 
         self.validate_dialog()
 
-    def validate_dialog(self, check_path=True):
-        if hasattr(self.ui, "corpus_name"):
-            self.ui.corpus_name.setStyleSheet("")
-        super(BuilderGui, self).validate_dialog()
-
-        button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
-        button.setEnabled(True)
-
-        if hasattr(self.ui, "corpus_name"):
-            self.ui.issue_label.setText("")
-            try:
-                db_host, db_port, db_type, db_user, db_password = options.get_con_configuration()
-            except ValueError:
-                raise SQLNoConfigurationError
-
-            db_exists = sqlhelper.has_database(
-                options.cfg.current_server,
-                "coq_{}".format(str(self.ui.corpus_name.text()).lower()))
-            # regardless of whether only the module or the whole corpus
-            # is requested, the corpus needs a name:
-            if not str(self.ui.corpus_name.text()):
+    def validate_dialog(self, check_path=False):
+        def validate_name_not_empty():
+            if not utf8(self.ui.corpus_name.text()):
                 self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.issue_label.setText("The corpus name cannot be empty.")
                 button.setEnabled(False)
-            # make sure that there is no corpus with that name already:
-            elif str(self.ui.corpus_name.text()) in options.cfg.current_resources:
+
+        def validate_name_is_unique():
+            if utf8(self.ui.corpus_name.text()) in options.cfg.current_resources:
                 self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.issue_label.setText("There is already another corpus with this name..")
                 button.setEnabled(False)
+
+        def validate_db_does_not_exist():
+            db_exists = sqlhelper.has_database(
+                options.cfg.current_server,
+                "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
+            if db_exists:
+                self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                self.ui.issue_label.setText("There is already another corpus that uses a database with this name.")
+                button.setEnabled(False)
+
+        def validate_db_does_exist():
+            db_exists = sqlhelper.has_database(
+                options.cfg.current_server,
+                "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
+            if not db_exists:
+                self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                self.ui.issue_label.setText("There is no database that uses this name.")
+                button.setEnabled(False)
+
+        super(BuilderGui, self).validate_dialog(check_path)
+
+        button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
+        button.setEnabled(True)
+        self.ui.issue_label.setText("")
+        if hasattr(self.ui, "corpus_name"):
+            self.ui.corpus_name.setStyleSheet("")
+
+        if hasattr(self.ui, "corpus_name"):
+            validate_name_not_empty()
+            if self.ui.radio_only_module.isChecked():
+                validate_db_does_exist()
             else:
-                # make sure that the database exists if only the module
-                # install is requested:
-                if self.ui.group_only_module.isChecked() and not db_exists:
-                    self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                    self.ui.issue_label.setText("There is no database that uses this name.")
-                    button.setEnabled(False)
-                # make sure that no database exists if the complete
-                # install is requested:
-                elif self.ui.group_read_files.isChecked() and db_exists:
-                    self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                    self.ui.issue_label.setText("There is already another database that uses this name.")
-                    button.setEnabled(False)
+                validate_name_is_unique()
+                validate_db_does_not_exist()
 
     def select_path(self):
         if self._onefile:

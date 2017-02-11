@@ -13,16 +13,16 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
-import tgt
-
 from coquery import options
 from coquery.unicode import utf8
 from . import classes
-from .pyqt_compat import QtCore, QtWidgets
+from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.contextViewerUi import Ui_ContextView
 
 from coquery.sound import Sound
 
+if options.use_tgt:
+    import tgt
 
 class ContextView(QtWidgets.QWidget):
     def __init__(self, corpus, token_id, source_id, token_width, icon=None, parent=None):
@@ -194,30 +194,30 @@ class ContextView(QtWidgets.QWidget):
     def finalize_context(self):
         font = options.cfg.context_font
 
-        if int(font.style()) == int(QtWidgets.QFont.StyleItalic):
+        if int(font.style()) == int(QtGui.QFont.StyleItalic):
             style = "italic"
-        elif int(font.style()) == int(QtWidgets.QFont.StyleOblique):
+        elif int(font.style()) == int(QtGui.QFont.StyleOblique):
             style = "oblique"
         else:
             style = "normal"
 
-        if font.stretch() == int(QtWidgets.QFont.UltraCondensed):
+        if font.stretch() == int(QtGui.QFont.UltraCondensed):
             stretch = "ultra-condensed"
-        elif font.stretch() == int(QtWidgets.QFont.ExtraCondensed):
+        elif font.stretch() == int(QtGui.QFont.ExtraCondensed):
             stretch = "extra-condensed"
-        elif font.stretch() == int(QtWidgets.QFont.Condensed):
+        elif font.stretch() == int(QtGui.QFont.Condensed):
             stretch = "condensed"
-        elif font.stretch() == int(QtWidgets.QFont.SemiCondensed):
+        elif font.stretch() == int(QtGui.QFont.SemiCondensed):
             stretch = "semi-condensed"
-        elif font.stretch() == int(QtWidgets.QFont.Unstretched):
+        elif font.stretch() == int(QtGui.QFont.Unstretched):
             stretch = "normal"
-        elif font.stretch() == int(QtWidgets.QFont.SemiExpanded):
+        elif font.stretch() == int(QtGui.QFont.SemiExpanded):
             stretch = "semi-expanded"
-        elif font.stretch() == int(QtWidgets.QFont.Expanded):
+        elif font.stretch() == int(QtGui.QFont.Expanded):
             stretch = "expanded"
-        elif font.stretch() == int(QtWidgets.QFont.ExtraExpanded):
+        elif font.stretch() == int(QtGui.QFont.ExtraExpanded):
             stretch = "extra-expanded"
-        elif font.stretch() == int(QtWidgets.QFont.UltraExpanded):
+        elif font.stretch() == int(QtGui.QFont.UltraExpanded):
             stretch = "ultra-expanded"
 
         weight = int(font.weight()) * 10
