@@ -15,11 +15,12 @@ from __future__ import unicode_literals
 import os
 from coquery import options
 from coquery.unicode import utf8
+from coquery import sound
 from . import classes
-from .pyqt_compat import QtCore, QtWidgets, QtGui
+from coquery import textgrids
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
+from .textgridview import CoqTextgridView
 from .ui.contextViewerUi import Ui_ContextView
-
-from coquery.sound import Sound
 
 if options.use_tgt:
     import tgt
@@ -48,13 +49,10 @@ class ContextView(QtWidgets.QWidget):
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
         self.ui.form_information = QtWidgets.QFormLayout(self.ui.button_ids.box)
 
-        ##S = "/home/kunibert/Dev/coquery/s1601a.wav"
-        #S = "/home/kunibert/Dev/coquery/07_PEERS_s0901b.wav"
-        #sound = Sound(S)
-        #textgrid = tgt.read_textgrid("/home/kunibert/Dev/coquery/07_PEERS_s0901b.TextGrid")
-        #self.ui.textgrid_area.setSound(sound)
-        #self.ui.textgrid_area.setTextgrid(textgrid)
-        #self.ui.textgrid_area.display()
+        self.audio = None
+        if not corpus.resource.audio_features:
+            self.ui.tab_widget.removeTab(1)
+            self.ui.tab_widget.tabBar().hide()
 
         self.ui.spin_dynamic_range.valueChanged.connect(self.ui.textgrid_area.change_dynamic_range)
         self.ui.spin_window_length.valueChanged.connect(self.ui.textgrid_area.change_window_length)
@@ -63,7 +61,11 @@ class ContextView(QtWidgets.QWidget):
         for table, fields in sorted(L):
             self.add_source_label(table)
             for label in sorted(fields.keys()):
-                self.add_source_label(label, fields[label])
+                if label not in corpus.resource.audio_features:
+                    self.add_source_label(label, fields[label])
+                else:
+                    self.audio = sound.Sound(fields[label])
+
 
         words = options.settings.value("contextviewer_words", None)
         if words is not None:
@@ -180,16 +182,22 @@ class ContextView(QtWidgets.QWidget):
         self.context_thread.start()
 
     def retrieve_context(self):
-        context = self.corpus.get_rendered_context(
+        try:
+            context = self.corpus.get_rendered_context(
                 self.token_id,
                 self.source_id,
                 self.token_width,
                 self.ui.slider_context_width.value(), self)
+        except Exception as e:
+            print(e)
+            raise e
         if not self.context_thread.quitted:
             self.context = context
 
     def onException(self):
-        QtWidgets.QMessageBox.critical(self, "Disk error", "Error retrieving context")
+        QtWidgets.QMessageBox.critical(self,
+                                       "Context error – Coquery",
+                                       "Error retrieving context")
 
     def finalize_context(self):
         font = options.cfg.context_font
@@ -230,13 +238,44 @@ class ContextView(QtWidgets.QWidget):
         styles.append("font-weight: {}".format(weight))
         styles.append("font-strech: {}".format(stretch))
 
-        if font.underline():
-            self.context = "<u>{}</u>".format(self.context)
-        if font.strikeOut():
-            self.context = "<s>{}</s>".format(self.context)
+        text = self.context["text"]
 
-        s = "<div style='{}'>{}</div>".format("; ".join(styles), self.context)
+        if font.underline():
+            text = "<u>{}</u>".format(text)
+        if font.strikeOut():
+            text = "<s>{}</s>".format(text)
+
+        s = "<div style='{}'>{}</div>".format("; ".join(styles), text)
         self.ui.context_area.setText(s)
+
+        if self.context["audio"]:
+            audio = self.audio.extract_sound(self.context["start_time"],
+                                             self.context["end_time"])
+            textgrid = self.prepare_textgrid(self.context["df"],
+                                             self.context["start_time"])
+            self.ui.verticalLayout_5.removeWidget(self.ui.textgrid_area)
+            self.ui.textgrid_area.clear()
+            del self.ui.textgrid_area
+            self.ui.textgrid_area = CoqTextgridView(self.ui.tab_textgrid)
+            self.ui.verticalLayout_5.insertWidget(0, self.ui.textgrid_area)
+            self.ui.verticalLayout_5.setStretch(0, 1)
+            self.ui.textgrid_area.setSound(audio)
+            self.ui.textgrid_area.setTextgrid(textgrid)
+            self.ui.textgrid_area.display(offset=self.context["start_time"])
+
+    def prepare_textgrid(self, df, offset):
+        grid = tgt.TextGrid()
+        tier = tgt.IntervalTier()
+        tier.name = "Context"
+        grid.add_tier(tier)
+        for x in df.index:
+            start = df.loc[x]["coq_word_starttime_1"]
+            end = df.loc[x]["coq_word_endtime_1"]
+            text = df.loc[x]["coq_word_label_1"]
+            interval = tgt.Interval(start - offset, end - offset)
+            interval.text = text
+            tier.add_interval(interval)
+        return grid
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
