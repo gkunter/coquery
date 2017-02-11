@@ -34,6 +34,7 @@ except NameError:
 
 class Filter(CoqObject):
     def __init__(self, feature, operator, value, stage=FILTER_STAGE_FINAL):
+        super(Filter, self).__init__()
         if operator not in OPERATOR_STRINGS:
             raise ValueError("Invalid filter operator '{}'".format(operator))
         if not feature:
