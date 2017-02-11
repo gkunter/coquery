@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-from coquery.general import CoqObject
 from .pyqt_compat import QtWidgets, QtCore
 
 from .ui.findWidgetUi import Ui_FindWidget

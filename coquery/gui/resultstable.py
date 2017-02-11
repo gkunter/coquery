@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-results.py is part of Coquery.
+resultstable.py is part of Coquery.
 
 Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
@@ -8,22 +8,18 @@ Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
 from __future__ import unicode_literals
 
 import logging
-
 from coquery import options
 from coquery.defines import *
 from coquery.unicode import utf8
 from coquery import managers
-
 from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from . import classes
 
 _left_align = int(QtCore.Qt.AlignLeft) | int(QtCore.Qt.AlignVCenter)
 _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)
-
 
 class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
     fill = False
@@ -215,10 +211,32 @@ class CoqLikelihoodDelegate(CoqResultCellDelegate):
     def __init__(self, *args, **kwargs):
         super(CoqLikelihoodDelegate, self).__init__(*args, **kwargs)
         self.threshold = kwargs.get("threshold")
+        self.color_base = self._app.palette().color(QtGui.QPalette.Base)
+        self.color_dark = self._app.palette().color(QtGui.QPalette.Button)
+        self.color_darkest = self._app.palette().color(QtGui.QPalette.Mid)
+        self.color_highlight = self._app.palette().color(QtGui.QPalette().Highlight)
+
+    def paint(self, painter, option, index):
+        self.col_label = self._table.header[index.column()].rpartition("_")[-1]
+        self.group_value = self._table.content.iloc[:,0][index.row()]
+        self.offs = self.col_label.count(":") + 1
+
+        super(CoqLikelihoodDelegate, self).paint(painter, option, index)
+        if (self.col_label.startswith(self.group_value) and
+            self.col_label != self.group_value):
+            painter.save()
+            try:
+                rect = option.rect
+                painter.drawLine(rect.topLeft(), rect.topRight())
+                painter.drawLine(rect.bottomLeft(), rect.bottomRight())
+                painter.drawLine(rect.topLeft(), rect.bottomLeft())
+                painter.drawLine(rect.topRight(), rect.bottomRight())
+            finally:
+                painter.restore()
 
     def get_background(self, option, index):
         if option.state & QtWidgets.QStyle.State_Selected:
-            return self._app.palette().color(QtGui.QPalette().Highlight)
+            return self.color_highlight
         else:
             try:
                 value = float(index.data(QtCore.Qt.UserRole+1))
@@ -230,11 +248,13 @@ class CoqLikelihoodDelegate(CoqResultCellDelegate):
                 else:
                     return QtGui.QColor("#91bfdb")
             else:
-                return self.bg_color
+                if index.column() - self.offs == index.row():
+                    return self.color_dark
+                else:
+                    return self.color_base
 
 
 class CoqResultsTableView(classes.CoqTableView):
-
     def __init__(self, *args, **kwargs):
         super(CoqResultsTableView, self).__init__(*args, **kwargs)
         self.next_ix = None

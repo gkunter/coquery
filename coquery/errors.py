@@ -39,6 +39,7 @@ def get_source_paths():
 class GenericException(Exception):
     def __init__(self, *par):
         self.par = ", ".join([utf8(x) for x in par])
+        self.error_message = "Error"
 
     def __str__(self):
         if self.par:

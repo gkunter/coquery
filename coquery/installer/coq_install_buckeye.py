@@ -58,6 +58,7 @@ class BuilderClass(BaseCorpusBuilder):
     file_name = "Filename"
     file_path = "Path"
     file_duration = "Duration"
+    file_audio = "Audio"
 
     segment_table = "Segments"
     segment_id = "SegmentId"
@@ -281,6 +282,7 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.file_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "VARCHAR(18) NOT NULL"),
              Column(self.file_duration, "REAL NOT NULL"),
+             Column(self.file_audio, "BLOB NOT NULL"),
              Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
         self.create_table_description(self.speaker_table,
@@ -319,6 +321,7 @@ class BuilderClass(BaseCorpusBuilder):
         # class 'corpus_code' defined above:
         self._corpus_code = corpus_code
         
+        self.add_audio_feature(self.file_audio)
         self.add_time_feature(self.corpus_starttime)
         self.add_time_feature(self.corpus_endtime)
         for x in ["corpus_word", "corpus_pos", "corpus_transcript", "corpus_lemmatranscript"]:
@@ -414,15 +417,23 @@ class BuilderClass(BaseCorpusBuilder):
                     _io = BytesIO(zip_file.read(small_zip_name))
                 small_zip_file = zipfile.ZipFile(_io)
                 self._process_words_file(small_zip_file, speaker_name)
+                self._value_file_audio = self._get_audio(small_zip_file,
+                                                        speaker_name)
 
                 self._value_file_name = "{}/{}".format(os.path.basename(filename), speaker_name)
                 self._value_file_path = os.path.split(filename)[0]
                 self._value_file_duration = self._duration
                 d = {self.file_name: self._value_file_name,
                     self.file_duration: self._value_file_duration,
-                    self.file_path: self._value_file_path}
+                    self.file_path: self._value_file_path,
+                    self.file_audio: self._value_file_audio}
                 self._file_id = self.table(self.file_table).get_or_insert(d)
                 self.commit_data()
+
+    def _get_audio(self, speaker_zip, filename):
+        file_name, _ = os.path.splitext(filename)
+        audio_file = "{}.wav".format(file_name)
+        return speaker_zip.read(audio_file)
 
     def _get_segments(self, speaker_zip, filename):
         file_body = False

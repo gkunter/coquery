@@ -89,7 +89,7 @@ class InstallerGui(QtWidgets.QDialog):
         notes = builder_class.get_installation_note()
         if notes:
             self.ui.notes_box = classes.CoqDetailBox("Installation notes")
-            self.ui.verticalLayout.addWidget(self.ui.notes_box)
+            self.ui.verticalLayout_5.insertWidget(2, self.ui.notes_box)
 
             self.ui.notes_label = QtWidgets.QLabel(notes)
             self.ui.notes_label.setWordWrap(True)

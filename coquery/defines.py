@@ -180,6 +180,10 @@ COLUMN_NAMES = {
     "coq_statistics_averagefrequency": "Average frequency",
         }
 
+ROW_NAMES = {
+    "row_total": "ALL",
+    }
+
 FUNCTION_DESC = {
     "statistics_passing_rows": "Count the number of rows that passed the filter",
     "statistics_filtered_rows": "Count the number of rows that were removed by a filter",
@@ -195,7 +199,14 @@ FUNCTION_DESC = {
     "statistics_percent": "Calculate the percentage for each match",
     "statistics_tokens": "Count the number of tokens",
     "statistics_types": "Count the number of types",
-    "statistics_ttr": "Calculate the type-token ratio"}
+    "statistics_ttr": "Calculate the type-token ratio",
+    "LENGTH": "Count the number of characters",
+    "CONCAT": "Concatenate the columns, separated by <i>Argument</i>",
+    "COUNT": "Count the number of occurrences of <i>Argument</i> (regexp)",
+    "MATCH": "Test whether the columns match <i>Argument</i> (regexp)",
+    "EXTRACT": "Extract from the columns the string that matches <i>Argument</i> (regexp)"
+
+        }
 
 PREFERRED_ORDER = ["corpus_word", "word_label",
                    "corpus_pos", "word_pos", "pos_label",
@@ -217,6 +228,10 @@ SQL_ENGINES = [SQL_MYSQL, SQL_SQLITE]
 # - short description
 # - URL
 MODULE_INFORMATION = {
+    "matplotlib": ("Python 2D plotting library",
+                   "2.0.0",
+                   "required for visualizations",
+                   "http://http://matplotlib.org/"),
     "PySide": ("The Python Qt bindings project",
                "1.2.2",
                "Provides access to the Qt toolkit used for the GUI",

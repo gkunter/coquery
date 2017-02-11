@@ -28,21 +28,22 @@ from .defines import NAME
 
 
 class CoqQueryCache(object):
-    def __init__(self):
+    def __init__(self, do_not_read=False):
         self._cache = None
-        path = os.path.join(options.cfg.cache_path, "coq_cache.db")
-        if os.path.exists(path):
-            try:
-                self._cache = pickle.load(open(path, "rb"))
-                if options.cfg.verbose:
-                    S = "Using query cache (current size: {}, max size: {})."
-                    S = S.format(self._cache.currsize, self._cache.maxsize)
-                    logger.info(S)
-                    print(S)
-            except (IOError, ValueError, EOFError):
-                S = "Cannot read query cache, creating a new one (size: {})."
-                S = S.format(options.cfg.query_cache_size)
-                logger.warning(S)
+        if not do_not_read:
+            path = os.path.join(options.cfg.cache_path, "coq_cache.db")
+            if os.path.exists(path):
+                try:
+                    self._cache = pickle.load(open(path, "rb"))
+                    s = "Using query cache (current size: {}, max size: {})."
+                    if options.cfg.verbose:
+                        s = s.format(self._cache.currsize, self._cache.maxsize)
+                        logger.info(s)
+                        print(s)
+                except (IOError, ValueError, EOFError):
+                    S = "Cannot read query cache, creating a new one (size: {})."
+                    S = S.format(options.cfg.query_cache_size)
+                    logger.warning(S)
 
         if self._cache is None:
             self._cache = cachetools.LFUCache(

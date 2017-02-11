@@ -107,14 +107,17 @@ class ExceptionBox(QtWidgets.QDialog):
         try:
             self.resize(options.settings.value("errorbox_size"))
         except TypeError:
+            print("couldn't resize")
             pass
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.accept()
 
-    def closeEvent(self, *args):
+    def exec_(self, *args, **kwargs):
+        result = super(ExceptionBox, self).exec_(*args, **kwargs)
         options.settings.setValue("errorbox_size", self.size())
+        return result
 
 
 def catch_exceptions(cls, exception, tb):

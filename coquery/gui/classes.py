@@ -168,16 +168,16 @@ class CoqFeatureList(QtWidgets.QListWidget):
         return 0
 
     def dragEnterEvent(self, e):
-        if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
+        if ("application/x-qabstractitemmodeldatalist" in
+            e.mimeData().formats()):
             e.accept()
         else:
             super(CoqFeatureList, self).dragEnterEvent(e)
 
     def dropEvent(self, e):
-        e.setDropAction(QtCore.Qt.MoveAction)
         super(CoqFeatureList, self).dropEvent(e)
-        self.item(0).setSizeHint(QtCore.QSize(self.itemWidth(),
-                                              self.itemHeight()))
+        e.setDropAction(QtCore.Qt.MoveAction)
+        e.accept()
 
 
 class CoqFeatureTray(CoqFeatureList):

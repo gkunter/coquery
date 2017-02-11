@@ -119,6 +119,7 @@ class Function(CoqObject):
             True if the function sweeps through the coluns, and False if it
             sticks to one row at a time during evaluation
         """
+        super(Function, self).__init__()
         self.column_list = columns
         self._hidden = hidden
         self.sweep = sweep
@@ -267,7 +268,7 @@ class StringLength(StringFunction):
 
 
 class StringChain(StringFunction):
-    _name = "CHAIN"
+    _name = "CONCAT"
     parameters = 1
     allow_null = True
     combine_modes = ["join"]
@@ -419,7 +420,6 @@ class Freq(BaseFreq):
         else:
             if options.cfg.verbose:
                 print(self._name, "calculating df.Freq()")
-
         if len(df) == 0:
             return pd.Series(index=df.index)
         try:
@@ -429,17 +429,14 @@ class Freq(BaseFreq):
             # this happens if the data frame does not have the column
             # 'coquery_dummy'
             pass
-
         # ignore external columns:
         columns = [x for x in self.columns(df, **kwargs) if not x.startswith("db_")]
-
         if len(columns) == 0:
             # if the function is applied over no columns (e.g. because all
             # columns are hidden), the function returns a Series containing
             # simply the length of the data frame:
             val = self.constant(df, len(df))
             return val
-
         # There is an ugly, ugly bug/feature in Pandas up to at least 0.18.0
         # which makes grouping unreliable if there are columns with missing
         # values.
@@ -470,12 +467,10 @@ class Freq(BaseFreq):
                         break
 
                 df[x] = df[x].fillna(replace_dict[x])
-
         d = {columns[0]: "count"}
         d.update(
             {x: "first" for x in
                 [y for y in df.columns.values if y not in columns and not y.startswith(("coquery_invisible"))]})
-
         val = df.merge(df.groupby(columns)
                          .agg(d)
                          .rename(columns={columns[0]: self.get_id()})
@@ -488,7 +483,6 @@ class Freq(BaseFreq):
 
         for x in replace_dict:
             df[x] = df[x].replace(replace_dict[x], pd.np.nan)
-
         return val
 
 
@@ -905,6 +899,7 @@ class SubcorpusSize(CorpusSize):
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
+        manager = kwargs["manager"]
         fun = SubcorpusSize(session=session, columns=self.columns(df, **kwargs), group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
@@ -919,7 +914,8 @@ class SubcorpusSize(CorpusSize):
 
         val = df.apply(session.Corpus.get_subcorpus_size,
                        columns=column_list,
-                       axis=1)
+                       axis=1,
+                       subst=manager.get_column_substitutions)
 
         return val
 
@@ -1075,6 +1071,9 @@ class LogicFunction(Function):
     @staticmethod
     def get_description():
         return "Logical functions"
+
+    def _comp(self, x, y):
+        return False
 
     def _func_value(self, cols):
         if cols.dtype == object:

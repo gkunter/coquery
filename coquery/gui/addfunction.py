@@ -35,28 +35,31 @@ class FunctionItem(QtWidgets.QWidget):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
-        self.horizontalLayout = QtWidgets.QHBoxLayout(self)
+        self.outerLayout = QtWidgets.QHBoxLayout(self)
+        self.outerLayout.setContentsMargins(4, 2, 4, 2)
+        self.outerLayout.setSpacing(4)
 
         if checkable:
             self.checkbox = QtWidgets.QCheckBox()
-        self.verticalLayout = QtWidgets.QVBoxLayout()
-        self.verticalLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.innerLayout = QtWidgets.QVBoxLayout()
+        self.innerLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        self.innerLayout.setContentsMargins(0, 0, 0, 0)
+        self.innerLayout.setSpacing(0)
         self.label_1 = QtWidgets.QLabel(name, self)
-        self.verticalLayout.addWidget(self.label_1)
+        self.innerLayout.addWidget(self.label_1)
 
-        if desc != None:
+        if desc is not None:
             self.label_2 = QtWidgets.QLabel(desc, self)
-            self.verticalLayout.addWidget(self.label_2)
+            self.innerLayout.addWidget(self.label_2)
 
             font = self.label_1.font()
             font.setPointSize(font.pointSize() * 0.8)
             self.label_2.setFont(font)
             
         if checkable:
-            self.horizontalLayout.addWidget(self.checkbox)
-        self.horizontalLayout.addLayout(self.verticalLayout)
-        self.horizontalLayout.setStretch(1, 1)
+            self.outerLayout.addWidget(self.checkbox)
+        self.outerLayout.addLayout(self.innerLayout)
+        self.outerLayout.setStretch(1, 1)
 
     def setCheckState(self, *args, **kwargs):
         if self.checkable:
@@ -71,16 +74,16 @@ class FunctionItem(QtWidgets.QWidget):
             return False
         
     def sizeHint(self):
-        size_hint = self.verticalLayout.sizeHint()
+        size_hint = self.innerLayout.sizeHint()
         if self.checkable:
             height = max(size_hint.height(),
                         QtWidgets.QLabel().sizeHint().height(),
                         QtWidgets.QCheckBox().sizeHint().height(),
-                        self.verticalLayout.sizeHint().height() * 1.1)
+                        self.innerLayout.sizeHint().height() * 1.1)
         else:
             height = max(size_hint.height(),
                         QtWidgets.QLabel().sizeHint().height(),
-                        self.verticalLayout.sizeHint().height() * 1.1)
+                        self.innerLayout.sizeHint().height() * 1.1)
 
         size_hint.setHeight(height)
         return size_hint
@@ -186,12 +189,18 @@ class FunctionDialog(QtWidgets.QDialog):
         self.ui.list_functions.blockSignals(True)
         self.ui.list_classes.blockSignals(True)
         self.ui.list_functions.clear()
-        for x in self.function_list:
+        for x in sorted(self.function_list,
+                        key=lambda x: x.get_name(), reverse=True):
             desc = FUNCTION_DESC.get(x._name, "no description available")
-            item = CoqListItem("{} – {}".format(x.get_name(), desc))
+            item = CoqListItem()
+            item.setData(QtCore.Qt.UserRole, x.get_name())
+            item_widget = FunctionItem(x, checkable=False)
+            item.setSizeHint(item_widget.sizeHint())
             item.setObjectName(x)
+
             self.ui.list_functions.addItem(item)
-            
+            self.ui.list_functions.setItemWidget(item, item_widget)
+
         self.ui.list_classes.setCurrentRow(i)
         self.ui.list_functions.blockSignals(False)
         self.ui.list_classes.blockSignals(False)

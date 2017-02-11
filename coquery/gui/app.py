@@ -41,7 +41,6 @@ from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
 if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
     sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
 
-
 class focusFilter(QtCore.QObject):
     """
     Define an event filter that emits a focus signal whenever the widget
@@ -118,7 +117,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
     updateStatusMessage = QtCore.Signal(str)
     abortRequested = QtCore.Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
         special care, and also sets up some special attributes that relate
         to the GUI, including default appearances of the columns."""
@@ -134,15 +133,13 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.user_columns = False
         self.last_index = None
         self.corpus_manager = None
-        self._group_functions = functionlist.FunctionList()
-        self._column_functions = functionlist.FunctionList()
         self._target_label = None
         self._hidden = None
         self._old_sizes = None
         self.reaggregating = False
 
         self.widget_list = []
-        self.Session = None
+        self.Session = session
 
         self.selected_features = set()
         self._forgotten_features = set()
@@ -858,11 +855,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
             _set_icon(1, None)
             _set_icon(2, None)
             if self.ui.list_group_columns.columns:
-                if options.cfg.group_functions:
+                if self.Session.group_functions:
                     _set_icon(2, active_icon)
                 if options.cfg.group_filter_list:
                     _set_icon(1, filter_icon)
-            elif options.cfg.group_functions or options.cfg.group_filter_list:
+            elif (self.Session.group_functions.get_list() or
+                  options.cfg.group_filter_list):
                 _set_icon(2, problem_icon)
 
         elif row == TOOLBOX_AGGREGATE:
@@ -873,11 +871,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
         elif row == TOOLBOX_SUMMARY:
             try:
-                session = self.Session
-                manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+                manager = managers.get_manager(options.cfg.MODE,
+                                               self.Session.Resource.name)
             except:
-                manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
-            l = manager.user_summary_functions.get_list()
+                manager = managers.get_manager(options.cfg.MODE,
+                                               utf8(self.ui.combo_corpus.currentText()))
+            l = self.Session.summary_functions.get_list()
 
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
             _set_icon(2, active_icon if l else None)
@@ -1287,8 +1286,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.button_cancel_management.setDisabled(False)
         self.ui.button_cancel_management.setFlat(False)
 
-        self.Session._column_functions = self._column_functions
-
         if start:
             self.Session.start_timer()
         self.showMessage("Managing data...")
@@ -1320,6 +1317,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.button_apply_management.setFlat(True)
         self.ui.button_cancel_management.setDisabled(True)
         self.ui.button_cancel_management.setFlat(True)
+
+        self.set_query_button(True)
+
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)
 
@@ -1336,10 +1336,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
                                       QtWidgets.QMessageBox.Ok,
                                       QtWidgets.QMessageBox.Ok)
 
+        options.cfg.app.alert(self, 0)
         self.ui.data_preview.setFocus()
         if self._target_label:
             self.jump_to_column(self._target_label)
             self._target_label = None
+        self.ui.button_run_query.blockSignals(False)
 
     def kill_reaggregation(self):
         self.aggr_thread.terminate()
@@ -1771,6 +1773,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.set_query_button(True)
         self.set_stop_button(False)
         self.stop_progress_indicator()
+        self.ui.button_run_query.blockSignals(False)
 
     def _display_progress(self, n=None):
         self.ui.status_progress.setRange(0, 0)
@@ -1797,6 +1800,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.query_thread = None
         if to_file:
             self.showMessage("Query results written to {}.".format(options.cfg.output_path))
+            self.set_query_button(True)
+            self.set_stop_button(False)
+            self.stop_progress_indicator()
+            options.cfg.app.alert(self, 0)
         else:
             try:
                 self.Session.db_engine.dispose()
@@ -1805,6 +1812,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
             self.Session = self.new_session
             del self.new_session
             self.user_columns = False
+            self.set_stop_button(False)
             self.reaggregate()
 
             if self.Session.is_statistics_session():
@@ -1812,13 +1820,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
             else:
                 self.ui.tool_widget.widget(TOOLBOX_GROUPING).setEnabled(True)
 
-        self.set_query_button(True)
-        self.set_stop_button(False)
-        self.stop_progress_indicator()
-
         # Create an alert in the system taskbar to indicate that the query has
         # completed:
-        options.cfg.app.alert(self, 0)
         logger.info("Done")
         print("run_query: done")
 
@@ -2185,6 +2188,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
             self.set_query_button(True)
             self.set_stop_button(False)
             self.stop_progress_indicator()
+            self.ui.button_run_query.blockSignals(False)
 
     def run_query(self):
         from coquery.session import SessionCommandLine, SessionInputFile
@@ -2247,14 +2251,17 @@ class CoqueryApp(QtWidgets.QMainWindow):
             else:
                 self.showMessage("Writing to file...")
 
-            self.new_session.group_functions = options.cfg.group_functions
-            self.new_session.column_functions = self._column_functions
+            self.new_session.group_functions = self.Session.group_functions
+            self.new_session.column_functions = self.Session.column_functions
+            self.new_session.summary_functions = self.Session.summary_functions
+
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
             self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
             self.query_thread.taskException.connect(self.exception_during_query)
             print("run_queries: start")
             self.query_thread.start()
+            self.ui.button_run_query.blockSignals(True)
 
     def run_statistics(self):
         from coquery.session import StatisticsSession
@@ -2886,7 +2893,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         label_stopwords = _translate("MainWindow", "Active stop words: {}", None)
 
         # grouping button labels:
-        l = options.cfg.group_functions
+        l = self.Session.group_functions.get_list()
         self.ui.button_add_group_function.setText(
             label_group_functions.format(get_str(l)))
         l = options.cfg.group_filter_list
@@ -2894,7 +2901,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
             label_group_filters.format(get_str(l)))
 
         # summary button labels:
-        l = options.cfg.summary_functions
+        l = self.Session.summary_functions.get_list()
         self.ui.button_add_summary_function.setText(
             label_summary_functions.format(get_str(l)))
         l = options.cfg.filter_list
@@ -2937,7 +2944,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
                          functions.Entropy, functions.Percent,
                          functions.Proportion, functions.Tokens,
                          functions.Types, functions.TypeTokenRatio]
-                checked = options.cfg.group_functions
+                checked = [type(x) for x in self.Session.group_functions.get_list()]
             else:
                 types = [
                          functions.FilteredRows, functions.PassingRows,
@@ -2954,7 +2961,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
                          functions.Tokens, functions.Types,
                          functions.TypeTokenRatio,
                          functions.CorpusSize, functions.SubcorpusSize]
-                checked = options.cfg.summary_functions
+                checked = [type(x) for x in self.Session.summary_functions.get_list()]
 
             kwargs.update({
                 "function_types": types,
@@ -2981,25 +2988,23 @@ class CoqueryApp(QtWidgets.QMainWindow):
             return
 
         if group:
-            manager.group_functions.set_list([x(sweep=True, hidden=True, group=True) for x in response])
-            options.cfg.group_functions = [type(x) for x in manager.group_functions.get_list()]
-            self.Session.group_functions = options.cfg.group_functions
-            self.enable_apply_button()
+            # FIXME: allow different columns as group columns
+            l = [x(sweep=True, hidden=True, group=options.cfg.group_columns) for x in response]
+            self.Session.group_functions.set_list(l)
         elif summary:
-            manager.set_summary_functions(response)
-            options.cfg.summary_functions = [type(x) for x in manager.user_summary_functions.get_list()]
-            self.enable_apply_button()
+            l = [x(sweep=True, hidden=True, group=False) for x in response]
+            self.Session.summary_functions.set_list(l)
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
-            self._column_functions.add_function(fun)
+            self.Session.column_functions.add_function(fun)
             self.reaggregate(start=True)
 
         self.enable_apply_button()
 
     def edit_function(self, column):
         from . import addfunction
-        func = self._column_functions.find_function(column)
+        func = self.Session.column_functions.find_function(column)
 
         dtypes = pd.Series([self.table_model.get_dtype(x) for x in func.columns(self.table_model.content)])
         try:
@@ -3017,24 +3022,24 @@ class CoqueryApp(QtWidgets.QMainWindow):
         if response:
             fun_type, value, aggr, label = response
             new_func = fun_type(columns=func.columns(self.table_model.content), value=value, aggr=aggr, label=label)
-            self._column_functions.replace_function(func, new_func)
+            self.Session.column_functions.replace_function(func, new_func)
             self.update_columns()
 
     def remove_functions(self, columns):
         manager = self.Session.get_manager()
         for col in columns:
-            func = self._column_functions.find_function(col)
+            func = self.Session.column_functions.find_function(col)
             if func:
-                self._column_functions.remove_function(func)
+                self.Session.column_functions.remove_function(func)
             else:
-                # this exception can happen if the function is a summary
+                # this can happen if the function is a summary
                 # or a grouping function:
-                summary_func = manager.user_summary_functions.find_function(col)
-                group_func = self._group_functions.find_function(col)
+                summary_func = self.Session.summary_functions.find_function(col)
                 if summary_func:
-                    manager.user_summary_functions.remove_function(summary_func)
+                    self.Session.summary_functions.remove_function(summary_func)
                 else:
-                    self._group_functions.remove_function(group_func)
+                    group_func = self.Session.group_functions.find_function(col)
+                    self.Session.group_functions.remove_function(group_func)
             try:
                 options.cfg.column_names.remove(func.get_id())
             except AttributeError:

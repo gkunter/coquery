@@ -19,6 +19,7 @@ import tempfile
 from coquery.corpusbuilder import *
 from coquery.defines import *
 from coquery import options
+from coquery.general import get_chunk
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "????.txt"
@@ -147,20 +148,6 @@ class BuilderClass(BaseCorpusBuilder):
             return None
 
     def build_load_files(self):
-        chunk_size = 250000
-        def get_chunk(iterable):
-            """
-            Yield a chunk from the big file given as 'iterable'.
-            
-            This function is based on a rather elegant solution posted on 
-            Stack Overflow: http://stackoverflow.com/a/24862655
-            """
-            iterable = iter(iterable)
-            while True:
-                yield itertools.chain(
-                    [next(iterable)], 
-                    itertools.islice(iterable, chunk_size - 1))
-        
         files = sorted(self.get_file_list(self.arguments.path, self.file_filter))
 
         if self._widget:

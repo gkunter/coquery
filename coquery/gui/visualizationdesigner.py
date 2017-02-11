@@ -16,7 +16,7 @@ import logging
 import sys
 
 from coquery import options
-from coquery.defines import NAME
+from coquery.defines import NAME, ROW_NAMES
 from coquery.errors import VisualizationModuleError
 from coquery.functions import Freq
 from coquery.unicode import utf8
@@ -24,10 +24,10 @@ from coquery.unicode import utf8
 from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window, pyside
 
 import matplotlib as mpl
+mpl.use("Qt5Agg")
+mpl.rcParams["backend"] = "Qt5Agg"
 import matplotlib.pyplot as plt
-if pyside:
-    mpl.use("Qt4Agg")
-    mpl.rcParams["backend.qt4"] = "PySide"
+
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
@@ -56,23 +56,27 @@ visualizer_mapping = (
     #("Kernel density", "Normal Distribution Histogram", "densityplot"),
     #("Cumulative distribution", "Positive Dynamic", "densityplot"),
     ("Scatterplot", "Scatter Plot", "scatterplot", "ScatterPlot"),
+    ("Regression plot", "Scatter Plot", "scatterplot", "RegressionPlot"),
     )
 
 class VisualizationDesigner(QtWidgets.QDialog):
     moduleLoaded = QtCore.Signal(str, str)
+    allLoaded = QtCore.Signal()
     visualizers = {}
 
     def __init__(self, df, dtypes, session, parent=None):
         super(VisualizationDesigner, self).__init__(parent)
         self.session = session
-        self.df = df
+
+        # discard special rows such as contingency total:
+        self.df = df.loc[[x for x in df.index if x not in ROW_NAMES.values()]]
+
         self.dtypes = dtypes
 
         self._palette_name = "Paired"
 
         self.ui = Ui_VisualizationDesigner()
         self.ui.setupUi(self)
-        self.finetune_ui()
 
         self.populate_figure_types()
         self.populate_variable_lists()
@@ -85,6 +89,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.check_grid_layout()
         self.check_clear_buttons()
         self.check_orientation()
+        self.finetune_ui()
 
         self.setup_connections()
 
@@ -92,6 +97,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
         """
         Finetune the UI: set widths, set translators, set icons.
         """
+        self.ui.label_dimensions.setText(
+            utf8(self.ui.label_dimensions.text()).format(
+                len(self.df),
+                len(self.categorical) + len(self.numerical)))
+
         self.ui.list_figures.setDragEnabled(False)
         self.ui.list_figures.setDragDropMode(self.ui.list_figures.NoDragDrop)
         w = app.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent)
@@ -139,9 +149,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 visualizer = getattr(module, vis_class)
                 VisualizationDesigner.visualizers[label] = visualizer
             self.moduleLoaded.emit(label, icon)
+        self.allLoaded.emit()
 
     def populate_figure_types(self):
         self.moduleLoaded.connect(self.add_figure_type)
+        self.allLoaded.connect(self.check_figure_types)
         self.figure_loader = QtCore.QThread(self)
         self.figure_loader.run = self.load_figure_types
         self.figure_loader.start()

@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import math
 import numpy as np
+import scipy
 
 from coquery import options
 from coquery.unicode import utf8
@@ -50,9 +51,9 @@ class IndependenceTestViewer(QtWidgets.QDialog):
                 </tr>
             </table></p>
             <h2>Log-likelihood ratio test of independence</h2>
-            <p><span style=" font-style:italic;">G</span> = {g2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {g2_op} {p_g2}</p>
+            <p><span style="font-style:italic;">G</span> = {g2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {g2_op} {p_g2} {sign}</p>
             <h2>Chi-square test of independence</h2>
-            <p><span style=" font-style:italic;">χ</span><sup>2</sup> = {chi2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {chi2_op} {p_chi2}</p>
+            <p><span style="font-style:italic;">χ</span><sup>2</sup> = {chi2}, <span style=" font-style:italic;">df</span> = 1, <span style=" font-style:italic;">p</span> {chi2_op} {p_chi2}</p>
             {yates}
             <h2>Effect size estimations</h2>
             <p><span style=" font-style:italic;">&phi;</span> = {phi}, indicating a {strength} effect size (see Cohen 1992, <a href='https://dx.doi.org/10.1037%2F0033-2909.112.1.155'>doi:10.1037/0033-2909.112.1.155</a>)</p>
@@ -88,43 +89,10 @@ class IndependenceTestViewer(QtWidgets.QDialog):
 
     $\\phi = {phi}$, indicating a {strength} effect size (see Cohen 1992, doi:10.1037/0033-2909.112.1.155)
 
-    Odds ratio $OR = {odds_ratio}$, (95~\\% confidence interval: {odds_ci_lower} to {odds_ci_upper}, $z = {odds_z}, p {odds_op} {p_odds}$). This means that the odds of encountering \\texttt{{{label_1}}} are {odds_prose} times {odds_relation} than the odds of encountering \\texttt{{{label_2}}}.
+    Odds ratio $OR = {odds_ratio}$, (95~\\% confidence interval: {odds_ci_lower} to {odds_ci_upper}, $z = {odds_z}, p {odds_op} {p_odds}$). {odds_explain}.
     """
 
     def __init__(self, data=dict(), parent=None, icon=None):
-        def estimate_p(val, chi=True):
-            """
-            Return an approximation of the p value for the parameter.
-
-            Returns
-            -------
-            value : str
-                A string, giving an estimate of p. Possible values are:
-                "< 0.001"
-                "< 0.01"
-                "< 0.05"
-                "≥ 0.05"
-            """
-            if chi:
-                if val > 10.828:
-                    return "< 0.001"
-                elif val > 6.634:
-                    return "< 0.01"
-                elif val > 3.841:
-                    return "< 0.05"
-                else:
-                    return "≥ 0.05"
-            else:
-                val = abs(val)
-                if val > 3.290:
-                    return "< 0.001"
-                elif val > 2.575:
-                    return "< 0.01"
-                elif val > 1.960:
-                    return "< 0.05"
-                else:
-                    return "≥ 0.05"
-
         def estimate_strength(phi):
             """
             Apply standard interpretation of effect sizes (Cohen 1988, 1992)
@@ -140,6 +108,7 @@ class IndependenceTestViewer(QtWidgets.QDialog):
 
         super(IndependenceTestViewer, self).__init__(parent)
         session = get_toplevel_window().Session
+        manager = session.get_manager()
         self.parent = parent
         self.ui = Ui_IndependenceTestViewer()
         self.ui.setupUi(self)
@@ -157,44 +126,25 @@ class IndependenceTestViewer(QtWidgets.QDialog):
 
         str_flt = "{{:0.{digits}f}}".format(digits=options.cfg.digits)
 
-        if options.use_scipy:
-            from scipy import stats
-            expected = stats.contingency.expected_freq(obs)
-            if np.min(expected) < 5:
-                yates = "<p>Tests use Yates' correction for continuity.</p>"
+        expected = scipy.stats.contingency.expected_freq(obs)
+        if np.min(expected) < 5:
+            yates = "<p>Tests use Yates' correction for continuity.</p>"
 
-            g2, p_g2, _, _ = stats.chi2_contingency(
-                obs, correction=bool(yates), lambda_="log-likelihood")
-            g2_op = "="
-            chi2_op = "="
-            chi2, p_chi2, _, _ = stats.chi2_contingency(
-                obs, correction=bool(yates))
-        else:
-            manager = session.get_manager()
-            g2 = manager.g_test(freq_1, freq_2, total_1, total_2)
-            g2_op, p_g2 = estimate_p(g2).split()
-            p_g2 = float(p_g2)
+        g2, p_g2, _, _ = scipy.stats.chi2_contingency(
+            obs, correction=bool(yates), lambda_="log-likelihood")
+        g2_op = "="
+        chi2_op = "="
+        chi2, p_chi2, _, _ = scipy.stats.chi2_contingency(
+            obs, correction=bool(yates))
 
-            # calculate chi-square:
-            total_freq = freq_1 + freq_2
-            total_corpus = total_1 + total_2 - total_freq
-            total_table = total_freq + total_corpus
-
-            expected = np.array([
-                [total_freq * total_1 / total_table,
-                 total_freq * total_2 / total_table],
-                [total_corpus * total_1 / total_table,
-                 total_corpus * total_2 / total_table]
-                ])
-
-            if yates:
-                correct = 0.5
-            else:
-                correct = 0
-            chi2 = (np.vectorize(lambda x: x**2)(
-                abs(obs - expected) - correct)/expected).sum()
-            chi2_op, p_chi2 = estimate_p(chi2).split()
-            p_chi2 = float(p_chi2)
+        sign_template = "({res} at adjusted <span style='font-style:italic;'>α</span> = {adj_a}{ref})"
+        sign_string = sign_template.format(
+                        res=("not significant"
+                             if p_g2 > manager.alpha else "significant"),
+                        adj_a=(str_flt.format(manager.alpha)
+                               if manager.alpha < 0.05 else 0.05),
+                        ref=(", Benjamini and Hochberg 1995"
+                             if manager.alpha < 0.05 else ""))
 
         # Calculate Cramér's Phi for the 2x2 case:
         try:
@@ -223,22 +173,18 @@ class IndependenceTestViewer(QtWidgets.QDialog):
         odds_ci_upper = math.exp(math.log(odds_ratio) + 1.96 * odds_se)
         odds_z = math.log(odds_ratio) / odds_se
 
-        if options.use_scipy:
-            p_odds = stats.norm.sf(abs(odds_z)) * 2
-            odds_op = "="
-        else:
-            odds_op, p_odds = estimate_p(odds_z, chi=False).split()
-            p_odds = float(p_odds)
+        p_odds = scipy.stats.norm.sf(abs(odds_z)) * 2
+        odds_op = "="
 
         if p_odds < 0.05:
-            odds_explain = "This means that the odds of encountering <code>{label_1}</code> are {odds_prose} times {odds_relation} than the odds of encountering <code>{label_2}</code>.".format(
+            odds_explain = "This means that the odds of encountering tokens which match the query in the subcorpus '<code>{label_1}</code>' is {odds_prose} times {odds_relation} than the odds of encountering matching tokens in the subcorpus '<code>{label_2}</code>'.".format(
                 odds_prose=str_flt.format(
                     odds_ratio if odds_ratio > 1 else 1/odds_ratio),
                 odds_relation="higher" if odds_ratio > 1 else "lower",
                 label_1=label_1, label_2=label_2
                 )
         else:
-            odds_explain = "The high value of <span style=' font-style:italic;'>p</span> suggests that the odds of encountering <code>{label_1}</code> are not notably different from the odds of encountering <code>{label_2}</code>.".format(
+            odds_explain = "The high value of <span style=' font-style:italic;'>p</span> suggests that the odds of encountering tokens which match the query in the subcorpus '<code>{label_1}</code>' is not significantly different from the odds of encountering matching tokens in the subcorpus '<code>{label_2}</code>'.".format(
                 label_1=label_1, label_2=label_2)
 
         corpus = utf8(get_toplevel_window().ui.combo_corpus.currentText())
@@ -251,6 +197,8 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             nfreq_2=str_flt.format(100*freq_2/total_2),
             g2=str_flt.format(g2),
             p_g2=str_flt.format(p_g2),
+            sign=sign_string,
+            adj_a=str_flt.format(manager.alpha),
             g2_op=g2_op.replace("<", "&lt;"),
             chi2=str_flt.format(chi2),
             p_chi2=str_flt.format(p_chi2),
@@ -274,6 +222,8 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             nfreq_2=str_flt.format(100*freq_2/total_2),
             g2=str_flt.format(g2),
             p_g2=str_flt.format(p_g2),
+            sign=sign_string,
+            adj_a=str_flt.format(manager.alpha),
             g2_op=g2_op,
             chi2=str_flt.format(chi2),
             p_chi2=str_flt.format(p_chi2),
@@ -288,6 +238,7 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             odds_z=str_flt.format(odds_z),
             odds_op=odds_op,
             p_odds=str_flt.format(p_odds),
+            odds_explain=odds_explain,
             yates=yates))
 
         self.ui.textBrowser.setHtml(self._html)

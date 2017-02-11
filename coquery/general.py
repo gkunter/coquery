@@ -16,6 +16,8 @@ import hashlib
 import sys
 import os
 import tempfile
+import itertools
+import pandas as pd
 
 from .unicode import utf8
 from .defines import LANGUAGES
@@ -46,7 +48,9 @@ def collapse_words(word_list):
     open_quote["``"] = False
     last_token = ""
     for i, current_token in enumerate(context_list):
-        if current_token and not (isinstance(current_token, float) and np.isnan(current_token)):
+        if (current_token and
+            not (isinstance(current_token, float) and
+                 pd.np.isnan(current_token))):
             if '""""' in current_token:
                 current_token = '"'
         
@@ -144,15 +148,16 @@ def get_home_dir(create=True):
 
 
 class CoqObject(object):
+
     """
     This class is a subclass of the default Python ``object`` class. It adds 
     the method ``get_hash()``, which returns a hash based on the current 
     instance attributes.
     """
-    
     def get_hash(self):
         l = []
-        for x in sorted(dir(self)):
+        l_QObject = dir(super(CoqObject, self))
+        for x in sorted([x for x in dir(self) if x not in l_QObject]):
             if not x.startswith("_") and not hasattr(getattr(self, x), "__call__"):
                 attr = getattr(self, x)
                 # special handling of containers:
@@ -217,7 +222,7 @@ def code_by_language(code):
     return LANGUAGES["639-1"][ix]
 
 
-def get_chunk(iterable):
+def get_chunk(iterable, chunk_size=250000):
     """
     Yield a chunk from the big file given as 'iterable'.
     
@@ -229,6 +234,7 @@ def get_chunk(iterable):
         yield itertools.chain(
             [next(iterable)], 
             itertools.islice(iterable, chunk_size - 1))
+
 
 # Memory status functions:
 

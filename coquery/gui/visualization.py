@@ -43,6 +43,8 @@ indicate the position within the corpus for each token in the result table.
 
 import logging
 import matplotlib as mpl
+mpl.use("Qt5Agg")
+mpl.rcParams["backend"] = "Qt5Agg"
 
 from coquery import options
 from coquery.defines import *

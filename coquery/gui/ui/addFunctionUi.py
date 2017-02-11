@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'addFunction.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -39,9 +39,13 @@ class Ui_FunctionsDialog(object):
         self.horizontalLayout.addWidget(self.list_classes)
         self.list_functions = QtWidgets.QListWidget(FunctionsDialog)
         self.list_functions.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.list_functions.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.list_functions.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.list_functions.setWordWrap(True)
         self.list_functions.setObjectName("list_functions")
         self.horizontalLayout.addWidget(self.list_functions)
+        self.horizontalLayout.setStretch(0, 1)
+        self.horizontalLayout.setStretch(1, 2)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.parameter_box = QtWidgets.QWidget(FunctionsDialog)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)

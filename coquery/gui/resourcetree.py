@@ -134,7 +134,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
             return leaf
 
         def fill_grouped():
-            rc_features = [x for x in resource.get_resource_features()
+            rc_features = [x for x in resource.get_queryable_features()
                            if (not x.endswith(("_id", "_table")) and
                                not x.startswith(("tag_")) and
                                not x.startswith(skip))]
@@ -199,6 +199,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 query_root.sortChildren(0, QtCore.Qt.AscendingOrder)
 
         def fill_tables():
+            queryable_features = resource.get_queryable_features()
             table_dict = resource.get_table_dict()
             # Ignore denormalized tables:
             tables = [x for x in table_dict.keys()
@@ -239,7 +240,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 if resource_list:
                     root = create_root(table)
                     self.addTopLevelItem(root)
-                    for rc_feature in resource_list:
+                    for rc_feature in [x for x in resource_list if
+                                       x in queryable_features]:
                         root.addChild(create_item(rc_feature, root))
 
         self.blockSignals(True)
