@@ -2,7 +2,7 @@
 """
 sound.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -29,7 +29,7 @@ _use_winsound = False
 _use_simpleaudio = False
 
 if sys.version_info < (3, 0):
-    if sys.platform == "linux2":
+    if sys.platform.startswith("linux"):
         try:
             import alsaaudio
         except ImportError:
@@ -44,20 +44,29 @@ if sys.version_info < (3, 0):
         else:
             _use_winsound = True
 else:
-    try:
-        import simpleaudio
-    except ImportError:
-        warnings.warn("Could not load audio module 'simpleaudio'.")
-    else:
-        _use_simpleaudio = True
+    if sys.platform.startswith("linux"):
+        try:
+            import alsaaudio
+        except ImportError:
+            warnings.warn("Could not load audio module 'alsaaudio'.")
+        else:
+            _use_alsaaudio = True
+    #try:
+        #import simpleaudio
+    #except ImportError:
+        #warnings.warn("Could not load audio module 'simpleaudio'.")
+    #else:
+        #_use_simpleaudio = True
 
 if not(_use_alsaaudio or _use_simpleaudio or _use_winsound):
     warnings.warn("No audio module available.")
 
-
 class Sound(object):
     def __init__(self, source, start=0, end=None):
-        in_wav = wave.open(source, "rb")
+        if type(source) is bytes:
+            in_wav = wave.open(io.BytesIO(source))
+        else:
+            in_wav = wave.open(source, "rb")
         self.framerate = in_wav.getframerate()
         self.channels = in_wav.getnchannels()
         self.samplewidth = in_wav.getsampwidth()
@@ -92,7 +101,8 @@ class Sound(object):
         return len(self) / self.framerate
 
     def to_index(self, t):
-        return int(self.framerate * t * self.samplewidth)
+        val = int(self.framerate * t) * self.samplewidth
+        return val
 
     def to_time(self, i):
         return i / (self.framerate * self.samplewidth)
@@ -111,19 +121,24 @@ class Sound(object):
         _output.setnchannels(self.channels)
         _output.setsampwidth(self.samplewidth)
         _output.setframerate(self.framerate)
+        raw = self.raw[start_pos:end_pos]
         _output.writeframes(self.raw[start_pos:end_pos])
         _output.close()
         _buffer.seek(0)
         return Sound(_buffer)
 
     def play(self, start=0, end=None, async=True):
-        thread = SoundThread(sound=self, start=start, end=end)
+        self.thread = SoundThread(sound=self, start=start, end=end)
         if not async:
-            thread.run()
+            self.thread.run()
             return None
         else:
-            thread.start()
-            return thread
+            self.thread.start()
+            return self.thread
+
+    def stop(self):
+        self.thread.pause_device()
+        self.thread.stop_device()
 
     def write(self, target, start=0, end=None):
         start_pos = self.to_index(start)
