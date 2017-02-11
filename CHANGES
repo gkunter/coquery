@@ -1,4 +1,11 @@
-(feature_dplyr branch)
+(0.10.0)
+* big change for corpora that provide audio:
+    - add spectrogram and waveform contexts
+    - store audio in databases
+    - allow audio playback
+* internal: rewrite SQL code generator
+* regular expression queries
+* introduction of _NULL special query item (issue #97)
 * collect hidden columns in a side bar
 * add new visualizations: scatterplot, violin plot, box plot
 * allow vertical plots where sensible
@@ -45,15 +52,12 @@
     - simplify query file widget
     - add Result table management sidebar
     - Column selection and Result table management sidebar can be hidden
-
-
-(development version, still unreleased)
 * add Module information dialog
 * add support for encoding detection when reading plain text files
 * allow to build 'corpora' from CSV files
 * show both left and right conditional probabilities in Collocations aggregation
-* add G2 test matrix
-* add test statistics (log-likelihood test, chi-square test) and effects 
+* add G2 test matrix (using corrected probabilities for highlighting)
+* add test statistics (log-likelihood test, chi-square test) and effect
   sizes (phi coefficient, odds ratio)
 
 0.9.2 1 May 2016
