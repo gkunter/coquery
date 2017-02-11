@@ -61,7 +61,6 @@ class FilterDialog(QtWidgets.QDialog):
         self.ui.button_add.clicked.connect(self.add_filter)
         self.ui.button_remove.clicked.connect(self.remove_filter)
         self.ui.table_filters.clicked.connect(self.update_values)
-        self.ui.table_filters.currentItemChanged.connect(lambda x, _: self.update_buttons(x))
 
         self.ui.list_columns.currentRowChanged.connect(self.update_filter)
         self.ui.edit_value.textChanged.connect(self.update_filter)
@@ -149,19 +148,37 @@ class FilterDialog(QtWidgets.QDialog):
         is changed.
         """
         selected = self.ui.table_filters.currentItem()
+
         if selected.objectName() is not None:
             filt = selected.objectName()
-            getattr(self.ui,
-                    self.radio_operators[filt.operator]).setChecked(True)
-            self.ui.edit_value.setText(utf8(filt.value))
-            column_label = get_toplevel_window().Session.translate_header(
-                filt.feature)
+            session = get_toplevel_window().Session
+            column_label = session.translate_header(filt.feature)
+
             for i in range(self.ui.list_columns.count()):
                 if utf8(self.ui.list_columns.item(i).text()) == column_label:
-                    self.ui.list_columns.setCurrentRow(i)
-                    break
+                    item = self.ui.list_columns.item(i)
+                    row_number = i
+
+            radio = getattr(self.ui,
+                            self.radio_operators[filt.operator])
+            edit = self.ui.edit_value
+
+            radio.blockSignals(True)
+            edit.blockSignals(True)
+            self.ui.list_columns.blockSignals(True)
+
+            radio.setChecked(True)
+            edit.setText(utf8(filt.value))
+            self.ui.list_columns.setCurrentRow(row_number)
+
+            radio.blockSignals(False)
+            edit.blockSignals(False)
+            self.ui.list_columns.blockSignals(False)
+
             self.ui.check_before_transformation.setChecked(
                 filt.stage == FILTER_STAGE_BEFORE_TRANSFORM)
+
+        self.update_buttons(selected)
 
     def format_filter(self, filt):
         """
