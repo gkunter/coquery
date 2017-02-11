@@ -1581,7 +1581,7 @@ class CorpusClass(object):
         if s in ["%", "_"]:
             s = "\\" + s
 
-        if tup in self._frequency_cache:
+        if s in self._frequency_cache:
             return self._frequency_cache[s]
 
         if not s:
