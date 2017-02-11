@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'visualizationDesigner.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.7.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -527,14 +527,11 @@ class Ui_VisualizationDesigner(object):
         self.groupBox_10.setObjectName("groupBox_10")
         self.verticalLayout_24 = QtWidgets.QVBoxLayout(self.groupBox_10)
         self.verticalLayout_24.setObjectName("verticalLayout_24")
-        self.label_38 = QtWidgets.QLabel(self.groupBox_10)
-        self.label_38.setObjectName("label_38")
-        self.verticalLayout_24.addWidget(self.label_38)
         self.horizontalLayout_24 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_24.setObjectName("horizontalLayout_24")
-        self.button_reverse_order = QtWidgets.QPushButton(self.groupBox_10)
-        self.button_reverse_order.setObjectName("button_reverse_order")
-        self.horizontalLayout_24.addWidget(self.button_reverse_order)
+        self.label_38 = QtWidgets.QLabel(self.groupBox_10)
+        self.label_38.setObjectName("label_38")
+        self.horizontalLayout_24.addWidget(self.label_38)
         spacerItem11 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_24.addItem(spacerItem11)
         self.verticalLayout_24.addLayout(self.horizontalLayout_24)
@@ -559,6 +556,9 @@ class Ui_VisualizationDesigner(object):
         self.horizontalLayout_23.addWidget(self.spin_number)
         spacerItem12 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_23.addItem(spacerItem12)
+        self.button_reverse_order = QtWidgets.QPushButton(self.groupBox_10)
+        self.button_reverse_order.setObjectName("button_reverse_order")
+        self.horizontalLayout_23.addWidget(self.button_reverse_order)
         self.verticalLayout_24.addLayout(self.horizontalLayout_23)
         self.horizontalLayout_5.addWidget(self.groupBox_10)
         self.tab_widget.addTab(self.tab_colors, "")
@@ -661,8 +661,8 @@ class Ui_VisualizationDesigner(object):
         self.button_remove_custom.setText(_translate("VisualizationDesigner", "Remove"))
         self.group_preview_colors.setTitle(_translate("VisualizationDesigner", "Preview"))
         self.label_38.setText(_translate("VisualizationDesigner", "Click to modify color, drag to change order:"))
-        self.button_reverse_order.setText(_translate("VisualizationDesigner", "Reverse order"))
         self.label_37.setText(_translate("VisualizationDesigner", "Number of colors:"))
+        self.button_reverse_order.setText(_translate("VisualizationDesigner", "Reverse order"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_colors), _translate("VisualizationDesigner", "Colors"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_view), _translate("VisualizationDesigner", "View"))
 

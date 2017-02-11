@@ -23,7 +23,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -45,7 +45,7 @@
        <item>
         <widget class="QGroupBox" name="group_case">
          <property name="title">
-          <string>Case</string>
+          <string>&amp;Case</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
@@ -58,7 +58,7 @@
           <item>
            <widget class="QRadioButton" name="radio_output_case_lower">
             <property name="text">
-             <string>Lower &amp;case</string>
+             <string>&amp;Lower case</string>
             </property>
            </widget>
           </item>
@@ -75,7 +75,7 @@
        <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
-          <string>Display</string>
+          <string>&amp;Display</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_7">
           <item>
@@ -89,7 +89,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>&amp;Display </string>
+               <string>Displa&amp;y </string>
               </property>
               <property name="buddy">
                <cstring>spin_digits</cstring>
@@ -213,60 +213,67 @@
         <number>6</number>
        </property>
        <item>
-        <widget class="QCheckBox" name="check_regular_expressions">
-         <property name="text">
-          <string>Interpret query strings as &amp;regular expressions</string>
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>&amp;Options</string>
          </property>
+         <layout class="QVBoxLayout" name="verticalLayout_8">
+          <item>
+           <widget class="QCheckBox" name="check_regular_expressions">
+            <property name="text">
+             <string>Interpret query strings as &amp;regular expressions</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="check_ignore_case_query">
+            <property name="text">
+             <string>Ignore &amp;case in query strings</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="check_drop_empty_queries">
+            <property name="text">
+             <string>Discard rows with only em&amp;pty cells</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="check_align_quantified">
+            <property name="text">
+             <string>Align &amp;quantified token columns</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="check_regular_expressions">
-         <property name="text">
-          <string>Interpret queries as &amp;regular expressions</string>
+        <widget class="QGroupBox" name="widget_cache">
+         <property name="title">
+          <string>&amp;Cache</string>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="check_ignore_case_query">
-         <property name="text">
-          <string>Ignore &amp;case in query strings</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="check_drop_empty_queries">
-         <property name="text">
-          <string>Discard rows with only em&amp;pty cells</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="check_align_quantified">
-         <property name="text">
-          <string>Align &amp;quantified token columns</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="Line" name="line">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QWidget" name="widget_cache" native="true">
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <property name="spacing">
            <number>0</number>
           </property>
-          <property name="margin">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
            <number>0</number>
           </property>
           <item>
            <widget class="QCheckBox" name="check_use_cache">
             <property name="text">
-             <string>Use query &amp;cache, size: </string>
+             <string>&amp;Use cache, size: </string>
             </property>
            </widget>
           </item>
