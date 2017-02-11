@@ -140,6 +140,7 @@ class Visualizer(vis.BaseVisualizer):
 
 
 class ScatterPlot(vis.Visualizer):
+    fit_reg = False
 
     def plot_facet(self, data, color, **kwargs):
         x = kwargs.get("x")
@@ -162,10 +163,12 @@ class ScatterPlot(vis.Visualizer):
                 if category == x:
                     ax = sns.regplot(x=df.index.values, y=df[numeric],
                                      color=cols[i],
+                                     fit_reg=self.fit_reg,
                                      ax=kwargs.get("ax", plt.gca()))
                 else:
                     ax = sns.regplot(x=df[numeric], y=df.index.values,
                                      color=cols[i],
+                                     fit_reg=self.fit_reg,
                                      ax=kwargs.get("ax", plt.gca()))
         else:
             if x is None:
@@ -179,6 +182,7 @@ class ScatterPlot(vis.Visualizer):
                 val_y = data[y]
             col = sns.color_palette(kwargs["palette"], n_colors=1)
             ax = sns.regplot(val_x, val_y,
+                             fit_reg=self.fit_reg,
                              ax=kwargs.get("ax", plt.gca()))
 
     def get_grid(self, **kwargs):
@@ -195,5 +199,8 @@ class ScatterPlot(vis.Visualizer):
             return False
         else:
             return True
+
+class RegressionPlot(ScatterPlot):
+    fit_reg = True
 
 logger = logging.getLogger(NAME)
