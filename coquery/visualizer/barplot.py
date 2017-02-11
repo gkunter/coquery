@@ -327,6 +327,7 @@ class BarPlot(vis.Visualizer):
         self._ax = kwargs.get("ax", plt.gca())
         self._x = kwargs.get("x")
         self._y = kwargs.get("y")
+        self._z = kwargs.get("z")
         self._levels_x = kwargs.get("levels_x")
         self._levels_y = kwargs.get("levels_y")
         self._hue = kwargs.get("hue")
@@ -336,25 +337,56 @@ class BarPlot(vis.Visualizer):
         df = kwargs.get("data")
         params = {"palette": self._palette, "ax": self._ax}
 
-        # check if one of the columns is a numeric column:
-        if self._x and self.dtype(self._x, df) != object:
-            numeric = self._x
-            self._x = None
-            self._levels_x = None
-        elif self._y and self.dtype(self._y, df) != object:
-            numeric = self._y
-            self._y = None
-            self._levels_y = None
+        print(self.dtype(self._x, df))
+        print(self.dtype(self._y, df))
+
+        cat, num, _ = self.count_parameters(self._x, self._y, self._z,
+                                            df, session)
+        print(num, cat, _)
+        if num:
+            numeric = num[0]
+            if len(cat) < 2:
+                if cat[0] == self._y:
+                    self._x = None
+                    self._levels_x = None
+                else:
+                    self._y = None
+                    self._levels_x = None
+            else:
+                if self._x == numeric:
+                    self._x = self._z
+                    self._levels_x = self._hue_order
+                    self._z = None
+                    self._hue_order = None
+                elif self._y == numeric:
+                    self._y = self._z
+                    self._levels_y = self._hue_order
+                    self._z = None
+                    self._hue_order = None
+
         else:
-            # if there is no numeric column, use the provided function, or
-            # Freq() as the default function:
-            numeric = "COQ_FUNC"
-            data_columns = [col for col in (self._x, self._y) if col]
-            func = kwargs.get("func", Freq)
-            fun = func(columns=data_columns, session=session)
-            df[numeric] = fun.evaluate(df, session)
-            df = (df.drop("coquery_invisible_corpus_id", axis=1)
-                    .drop_duplicates().fillna(0).reset_index(drop=True))
+        ## check if one of the columns is a numeric column:
+        #if self._x and self.dtype(self._x, df) != object:
+            #numeric = self._x
+            #self._x = None
+            #self._levels_x = None
+        #elif self._y and self.dtype(self._y, df) != object:
+            #numeric = self._y
+            #self._y = None
+            #self._levels_y = None
+        #else:
+            #if self._z and self.dtype(self._z, df) != object:
+                #numeric = self._z
+            #else:
+                # if there is no numeric column, use the provided function,
+                #  or Freq() as the default function:
+                numeric = "COQ_FUNC"
+                data_columns = [col for col in (self._x, self._y) if col]
+                func = kwargs.get("func", Freq)
+                fun = func(columns=data_columns, session=session)
+                df[numeric] = fun.evaluate(df, session)
+                df = (df.drop("coquery_invisible_corpus_id", axis=1)
+                        .drop_duplicates().fillna(0).reset_index(drop=True))
 
         params.update({"data": df,
                        "x": self._x, "y": self._y, "order": None,
@@ -371,6 +403,7 @@ class BarPlot(vis.Visualizer):
             params.update({"x": numeric, "y": self._y,
                            "order": self._levels_y,
                            "hue": self._x, "hue_order": self._levels_x})
+        print(params, "\n")
         return params
 
     def plot_facet(self, **kwargs):
@@ -410,6 +443,7 @@ class StackedBars(BarPlot):
         hue = params["hue"]
         numeric = "COQ_FUNC"
 
+        print(data.dtypes[x])
         if data.dtypes[x] != object:
             numeric = x
             axis = y
