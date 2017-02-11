@@ -56,7 +56,7 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
      <item>
       <widget class="QListWidget" name="list_classes"/>
      </item>
@@ -64,6 +64,12 @@
       <widget class="QListWidget" name="list_functions">
        <property name="selectionBehavior">
         <enum>QAbstractItemView::SelectRows</enum>
+       </property>
+       <property name="verticalScrollMode">
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
+       </property>
+       <property name="horizontalScrollMode">
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
        <property name="wordWrap">
         <bool>true</bool>

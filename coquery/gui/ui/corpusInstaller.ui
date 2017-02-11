@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>480</height>
+    <height>492</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -52,7 +52,7 @@
      <item row="1" column="1">
       <widget class="QLabel" name="label_only_module">
        <property name="text">
-        <string>Only &amp;install corpus module</string>
+        <string>Only install corpus &amp;module</string>
        </property>
        <property name="buddy">
         <cstring>radio_only_module</cstring>
@@ -75,48 +75,71 @@
      </item>
      <item row="0" column="1">
       <widget class="QWidget" name="widget_read_files" native="true">
-       <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
-        <property name="rightMargin">
-         <number>4</number>
-        </property>
-        <property name="horizontalSpacing">
-         <number>8</number>
-        </property>
-        <item row="1" column="1">
-         <widget class="CoqClickableLabel" name="input_path">
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="frameShadow">
-           <enum>QFrame::Sunken</enum>
-          </property>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_read_files">
           <property name="text">
-           <string>(no path or file selected)</string>
+           <string>Build corpus from &amp;text files</string>
+          </property>
+          <property name="buddy">
+           <cstring>radio_read_files</cstring>
           </property>
          </widget>
         </item>
-        <item row="1" column="2">
-         <widget class="QPushButton" name="button_input_path">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>&amp;Browse</string>
-          </property>
-          <property name="icon">
-           <iconset theme="folder">
-            <normaloff/>
-           </iconset>
-          </property>
-          <property name="shortcut">
-           <string>Alt+B</string>
-          </property>
-         </widget>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1,0">
+          <item>
+           <widget class="QLabel" name="label_input_path">
+            <property name="text">
+             <string>&amp;Directory containg text files:</string>
+            </property>
+            <property name="buddy">
+             <cstring>input_path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="CoqClickableLabel" name="input_path">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Sunken</enum>
+            </property>
+            <property name="text">
+             <string>(no path or file selected)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="button_input_path">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>&amp;Browse</string>
+            </property>
+            <property name="icon">
+             <iconset theme="folder">
+              <normaloff>.</normaloff>.</iconset>
+            </property>
+            <property name="shortcut">
+             <string>Alt+B</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
-        <item row="2" column="0" colspan="3">
+        <item>
          <widget class="QGroupBox" name="groupBox">
           <property name="title">
            <string>Options</string>
@@ -154,8 +177,7 @@
                </property>
                <property name="icon">
                 <iconset theme="document-open">
-                 <normaloff/>
-                </iconset>
+                 <normaloff>.</normaloff>.</iconset>
                </property>
               </widget>
              </item>
@@ -191,7 +213,16 @@
            <item>
             <widget class="QWidget" name="widget_ngram" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <property name="margin">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
                <number>0</number>
               </property>
               <item>
@@ -242,20 +273,6 @@
           </layout>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_input_path">
-          <property name="text">
-           <string>&amp;Directory containg text files:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="3">
-         <widget class="QLabel" name="label_read_files">
-          <property name="text">
-           <string>Build corpus from &amp;text files</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </widget>
      </item>
@@ -264,7 +281,16 @@
    <item>
     <widget class="QWidget" name="widget_options" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_3">
-      <property name="margin">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
        <number>0</number>
       </property>
      </layout>
@@ -299,7 +325,16 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="margin">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
        <number>10</number>
       </property>
       <item>
