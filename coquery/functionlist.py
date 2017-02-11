@@ -19,16 +19,13 @@ from .general import CoqObject
 
 class FunctionList(CoqObject):
     def __init__(self, l=[], *args, **kwargs):
+        super(FunctionList, self).__init__()
         self._list = l
 
-    def lapply(self, df, session, manager=None):
+    def lapply(self, df=None, session=None, manager=None):
         """
         Apply all functions in the list to the data frame.
         """
-
-        # apply value substitution to df:
-        subst = options.get_column_properties().get("substitutions", {})
-
         # in order to allow zero frequencies for empty result tables, empty
         # data frames can be retained if a function demands it. This is
         # handled by keeping track of the drop_on_na attribute. As soon as
@@ -43,18 +40,13 @@ class FunctionList(CoqObject):
                 drop_on_na = manager.drop_on_na
         else:
             drop_on_na = True
-
         for fun in list(self._list):
             if options.cfg.drop_on_na:
                 drop_on_na = True
             else:
                 drop_on_na = drop_on_na and fun.drop_on_na
-
             try:
-                if subst:
-                    val = fun.evaluate(df.replace(subst), session=session, manager=manager)
-                else:
-                    val = fun.evaluate(df, session=session, manager=manager)
+                val = fun.evaluate(df, session=session, manager=manager)
             except KeyError as e:
                 print(e)
                 self._list.remove(fun)
@@ -66,7 +58,6 @@ class FunctionList(CoqObject):
                     df[fun.get_id()] = val
                 else:
                     df = pd.concat([df, val], axis="columns")
-
         # tell the manager whether rows with NA will be dropped:
         if manager:
             manager.drop_on_na = drop_on_na
@@ -80,7 +71,6 @@ class FunctionList(CoqObject):
 
     def find_function(self, fun_id):
         for x in self._list:
-            print("\t", x.get_id())
             if x.get_id() == fun_id:
                 return x
         return None
@@ -109,4 +99,6 @@ class FunctionList(CoqObject):
         return self._list.__iter__(*args, **kwargs)
 
     def __repr__(self, *args, **kwargs):
-        return self._list.__repr__(*args, **kwargs)
+        s = super(FunctionList, self).__repr__(*args, **kwargs)
+        return "{}({})".format(
+            s, self._list.__repr__(*args, **kwargs))
