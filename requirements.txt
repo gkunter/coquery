@@ -4,3 +4,4 @@ matplotlib
 pandas
 seaborn
 tgt
+scipy
