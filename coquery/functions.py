@@ -562,6 +562,8 @@ class Rank(Freq):
 ## Reference corpus functions
 #############################################################################
 
+import hashlib
+
 class BaseReferenceCorpus(Function):
     _name = "virtual"
 
@@ -582,27 +584,27 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
         res = options.cfg.current_resources[ref_corpus]
         ResourceClass, CorpusClass, LexiconClass, _ = res
-        self.current_lexicon = LexiconClass()
-        self.current_corpus = CorpusClass()
-        self.current_resource = ResourceClass(self.current_lexicon,
-                                              self.current_corpus)
-        self.current_corpus.resource = self.current_resource
-        self.current_corpus.lexicon = self.current_lexicon
-        self.current_lexicon.resource = self.current_resource
+        self._current_lexicon = LexiconClass()
+        self._current_corpus = CorpusClass()
+        self._current_resource = ResourceClass(self._current_lexicon,
+                                              self._current_corpus)
+        self._current_corpus.resource = self._current_resource
+        self._current_corpus.lexicon = self._current_lexicon
+        self._current_lexicon.resource = self._current_resource
 
         engine = sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server,
-                              self.current_resource.db_name))
+                              self._current_resource.db_name))
 
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         # concatenate the word columns, separated by space
-        self.s = (df[word_columns].astype(str)
+        self._s = (df[word_columns].astype(str)
                                   .apply(lambda x: x + " ").sum(axis=1))
 
         # get the frequency from the reference corpus for the concatenated
         # columns:
-        val = self.s.apply(lambda x: self.current_corpus.get_frequency(x, engine))
+        val = self._s.apply(lambda x: self._current_corpus.get_frequency(x, engine))
         val.index = df.index
         engine.dispose()
         return val
@@ -620,7 +622,7 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
             return self.constant(df, None)
 
         if len(val) > 0:
-            corpus_size = self.current_corpus.get_corpus_size()
+            corpus_size = self._current_corpus.get_corpus_size()
         val = val.apply(lambda x: x / (corpus_size / self.words))
         val.index = df.index
         return val
@@ -668,7 +670,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
 
         ext_freq = super(ReferenceCorpusLLKeyness, self).evaluate(df, *args, **kwargs)
         if len(ext_freq) > 0:
-            ext_size = self.current_corpus.get_corpus_size()
+            ext_size = self._current_corpus.get_corpus_size()
 
         _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq})
 
