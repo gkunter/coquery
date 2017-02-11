@@ -14,15 +14,41 @@ from __future__ import absolute_import
 
 import collections
 
-# Python 3.x: import configparser
-# Python 2.x: import ConfigParser as configparser
 try:
+    # Python 2.x: import ConfigParser as _configparser
     from ConfigParser import ConfigParser as _configparser, RawConfigParser
     from ConfigParser import NoOptionError, ParsingError, NoSectionError
-
 except ImportError:
+    # Python 3.x: import configparser as _configparser
     from configparser import ConfigParser as _configparser, RawConfigParser
     from configparser import NoOptionError, ParsingError, NoSectionError
+
+import sys
+import os
+import argparse
+import logging
+import warnings
+import codecs
+import ast
+import inspect
+import glob
+import importlib
+import imp
+
+# make ast work in all Python versions:
+if not hasattr(ast, "TryExcept"):
+    ast.TryExcept = ast.Try
+if not hasattr(ast, "TryFinally"):
+    ast.TryFinally = ast.Try
+
+import hashlib
+from collections import defaultdict
+
+from coquery import general
+from coquery import filters
+from .unicode import utf8
+from .defines import *
+from .errors import *
 
 class CoqConfigParser(_configparser, object):
     """
@@ -102,32 +128,7 @@ class UnicodeConfigParser(RawConfigParser):
     def optionxform(self, strOut):
         return strOut
 
-import sys
-import os
-import argparse
-import logging
-import warnings
-import codecs
-import ast
-import inspect
-import glob
-import importlib
-import imp
 
-# make ast work in all Python versions:
-if not hasattr(ast, "TryExcept"):
-    ast.TryExcept = ast.Try
-if not hasattr(ast, "TryFinally"):
-    ast.TryFinally = ast.Try
-
-import hashlib
-from collections import defaultdict
-
-from coquery import general
-from coquery import filters
-from .unicode import utf8
-from .defines import *
-from .errors import *
 
 # Define a HelpFormatter class that works with Unicode corpus names both in
 # Python 2.7 and Python 3.x:
@@ -933,10 +934,10 @@ class Options(object):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
             self.args.summary_functions = settings.value("summary_functions", [])
-            if type(self.args.summary_functions) != list:
+            if type(self.args.summary_functions) is not list:
                 self.args.summary_functions = []
             self.args.group_functions = settings.value("group_functions", [])
-            if type(self.args.group_functions) != list:
+            if type(self.args.group_functions) is not list:
                 self.args.group_functions = []
 
 
@@ -1146,14 +1147,6 @@ def save_configuration():
         config.write(output_file)
 
 
-def get_column_properties():
-    column_properties = {}
-    try:
-        column_properties = settings.value("column_properties", {})
-    finally:
-        settings.setValue("column_properties", column_properties)
-    return column_properties.get(cfg.corpus, {})
-
 def get_con_configuration():
     """
     Returns a tuple containing the currently active connection configuration.
@@ -1199,12 +1192,15 @@ def process_options():
     global cfg
     global settings
 
-    try:
-        from .gui.pyqt_compat import QtCore, CoqSettings
-        settings = CoqSettings(
-                    os.path.join(general.get_home_dir(), "coquery.ini"),
-                    QtCore.QSettings.IniFormat)
-    except IOError:
+    if use_qt:
+        try:
+            from .gui.pyqt_compat import QtCore, CoqSettings
+            settings = CoqSettings(
+                        os.path.join(general.get_home_dir(), "coquery.ini"),
+                        QtCore.QSettings.IniFormat)
+        except IOError:
+            settings = None
+    else:
         settings = None
 
     options = Options()
@@ -1212,7 +1208,7 @@ def process_options():
     options.get_options()
     if use_cachetools:
         from . import cache
-        cfg.query_cache = cache.CoqQueryCache()
+        cfg.query_cache = cache.CoqQueryCache(cfg.use_cache)
     add_source_path(cfg.custom_installer_path)
 
 
@@ -1549,7 +1545,6 @@ use_tgt = has_module("tgt")
 use_docx = has_module("docx")
 use_odfpy = has_module("odf")
 use_bs4 = has_module("bs4")
-use_scipy = has_module("scipy")
 use_cachetools = has_module("cachetools")
 use_statsmodels = has_module("statsmodels")
 use_alsaaudio = has_module("alsaaudio")
