@@ -13,6 +13,7 @@ from coquery.visualizer import visualizer as vis
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 def _annotate_heatmap(self, ax, mesh):
     import numpy as np
@@ -76,7 +77,7 @@ class Visualizer(vis.BaseVisualizer):
                 robust=True,
                 annot=True,
                 cbar=False,
-                cmap=self.options["color_palette"],
+                cmap=cmap,
                 fmt="g",
                 vmax=vmax,
                 #ax=plt.gca(),
@@ -94,14 +95,14 @@ class Visualizer(vis.BaseVisualizer):
                 robust=True,
                 annot=True,
                 cbar=False,
-                cmap=self.options["color_palette"],
+                cmap=cmap,
                 fmt="g",
                 linewidths=1)
         else:
             plot_facet = plot
-
             vmax = pd.crosstab(
                 [self._table[x] for x in [self._row_factor, self._groupby[0]] if x != None],
                 [self._table[x] for x in [self._col_factor, self._groupby[1]] if x != None]).values.max()
 
+        cmap = ListedColormap(self.options["color_palette_values"])
         self.map_data(plot_facet)
