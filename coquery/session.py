@@ -92,8 +92,14 @@ class Session(object):
         self._manager_cache = {}
         self._first_saved_dataframe = True
 
+        # Column functions are functions that the user specified from the
+        # results table
         self.column_functions = functionlist.FunctionList()
-        self.group_functions = []
+        # group functions are functions applied to each group (duh)
+        self.group_functions = functionlist.FunctionList()
+        # Summary functions are functions that the user specified to be
+        # applied after the summary
+        self.summary_functions = functionlist.FunctionList()
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -201,8 +207,6 @@ class Session(object):
         number_of_queries = len(self.query_list)
         manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
-        manager.set_group_filters(options.cfg.group_filter_list)
-        manager.set_summary_functions(options.cfg.summary_functions)
 
         dtype_list = []
 
@@ -334,6 +338,16 @@ class Session(object):
         manager.set_filters(options.cfg.filter_list)
         manager.set_group_filters(options.cfg.group_filter_list)
 
+        column_properties = {}
+        try:
+            column_properties = options.settings.value("column_properties",
+                                                       {})
+        finally:
+            options.settings.setValue("column_properties",
+                                      column_properties)
+        prop = column_properties.get(options.cfg.corpus, {})
+        manager.set_column_substitutions(prop.get("substitutions", {}))
+
         self.output_object = manager.process(self.data_table, self, recalculate)
 
         #self._manager_cache[(self, manager)] = self.output_object
@@ -413,7 +427,7 @@ class Session(object):
         if header.startswith("statistics_g_test"):
             label = header.partition("statistics_g_test_")[-1]
             # if options.cfg.verbose: print(6)
-            return "G²('{}', y)".format(label)
+            return "G('{}', y)".format(label)
 
         if header.startswith("coq_userdata"):
             return "Userdata{}".format(header.rpartition("_")[-1])

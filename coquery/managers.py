@@ -14,15 +14,33 @@ from __future__ import unicode_literals
 import logging
 import collections
 import math
+import pandas as pd
+import re
+import scipy
 
-from .functions import *
+
+from .defines import (QUERY_MODE_TYPES, QUERY_MODE_FREQUENCIES,
+                      QUERY_MODE_CONTINGENCY, QUERY_MODE_COLLOCATIONS,
+                      QUERY_MODE_CONTRASTS,
+                      COLUMN_NAMES, ROW_NAMES,
+                      CONTEXT_NONE, CONTEXT_COLUMNS, CONTEXT_KWIC,
+                      CONTEXT_STRING,
+                      QUERY_ITEM_WORD,
+                      NAME)
+from .functions import (Freq,
+                        ContextColumns, ContextKWIC, ContextString,
+                        MutualInformation, ConditionalProbability,
+                        SubcorpusSize)
 from .functionlist import FunctionList
 from .general import CoqObject, get_visible_columns
 from . import options
 from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
 
+
+
 class Sorter(CoqObject):
     def __init__(self, column, ascending=True, reverse=False, position=0):
+        super(Sorter, self).__init__()
         self.column = column
         self.ascending = ascending
         self.reverse = reverse
@@ -34,7 +52,9 @@ class Manager(CoqObject):
     ignore_user_functions = False
 
     def __init__(self):
+        super(Manager, self).__init__()
         self._functions = []
+        self._subst = {}
         self.sorters = []
         self._len_pre_filter = None
         self._len_post_filter = None
@@ -46,8 +66,7 @@ class Manager(CoqObject):
         self.reset_hidden_columns()
         self.unique_values = {}
 
-        self.manager_summary_functions = FunctionList()
-        self.user_summary_functions = FunctionList()
+        self.manager_functions = FunctionList()
 
         self._group_filters = []
         self._filters = []
@@ -83,6 +102,12 @@ class Manager(CoqObject):
 
     def set_group_filters(self, filter_list):
         self._group_filters = filter_list
+
+    def set_column_substitutions(self, d):
+        self._subst = d
+
+    def get_column_substitutions(self, d):
+        return self._subst
 
     def _get_main_functions(self, df, session):
         """
@@ -144,27 +169,13 @@ class Manager(CoqObject):
         print("\tmutate_groups({})".format(options.cfg.group_columns))
 
         group_cols = self.get_group_columns(df, session)
-        self.group_functions = FunctionList(
-                [x(sweep=True, group=group_cols) for x
-                 in session.group_functions])
-
-        #grouped = df.groupby(group_cols)
-
-        #sub_list = []
-        #for sub in grouped.groups:
-            #sub_list.append(self.group_functions.apply(
-                                #df.iloc[grouped.groups[sub]],
-                                #session=session, manager=self))
-        #df = pd.concat(sub_list, axis=0)
-        print(len(df.groupby(group_cols).groups))
-        subst = options.get_column_properties().get("substitutions", {})
-        if subst:
-            df = (df.replace(subst).groupby(group_cols)
-                    .apply(lambda x: self.group_functions.lapply(
+        if self._subst:
+            df = (df.replace(self._subst).groupby(group_cols)
+                    .apply(lambda x: session.group_functions.lapply(
                                         x, session=session, manager=self)))
         else:
             df = (df.groupby(group_cols)
-                    .apply(lambda x: self.group_functions.lapply(
+                    .apply(lambda x: session.group_functions.lapply(
                                         x, session=session, manager=self)))
 
         df = df.reset_index(drop=True)
@@ -180,9 +191,12 @@ class Manager(CoqObject):
             return df
 
         print("\tmutate()")
-        # apply manager functions, including context functions:
-        manager_functions = FunctionList(self._get_main_functions(df, session))
-        df = manager_functions.lapply(df, session=session, manager=self)
+        # apply mutate functions, including context functions:
+        mutate_functions = FunctionList(self._get_main_functions(df, session))
+        kwargs = {"session": session, "manager": self}
+        kwargs.update({"df": df if not self._subst
+                                else df.replace(self._subst)})
+        df = mutate_functions.lapply(**kwargs)
 
         if options.cfg.context_mode != CONTEXT_NONE:
             (_, _, cached_context) = self._context_cache[options.cfg.context_mode]
@@ -202,24 +216,27 @@ class Manager(CoqObject):
 
         # apply user functions, i.e. functions that were added to
         # individual columns:
-        df = FunctionList(session.column_functions).lapply(df, session=session, manager=self)
+        kwargs = {"session": session, "manager": self}
+        kwargs.update({"df": df if not self._subst
+                                else df.replace(self._subst)})
+        df = FunctionList(session.column_functions).lapply(**kwargs)
+
         df = df.reset_index(drop=True)
         print("\tdone")
         return df
 
     def substitute(self, df, session, stage="first"):
-        subst = options.get_column_properties().get("substitutions", {})
         if stage == "first":
             self.unique_values = {}
             self._unresolved_subst = {}
-            if subst:
-                for col in subst:
+            if self._subst:
+                for col in self._subst:
                     if col not in df.columns:
-                        self._unresolved_subst[col] = subst[col]
+                        self._unresolved_subst[col] = self._subst[col]
                     else:
                         self.unique_values[col] = df[col].dropna().unique()
                 try:
-                    return df.replace(subst)
+                    return df.replace(self._subst)
                 except TypeError as e:
                     print(e)
         elif stage == "second":
@@ -383,12 +400,15 @@ class Manager(CoqObject):
         print("\tsummarize()")
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
-        df = self.manager_summary_functions.lapply(df, session=session, manager=self)
-        if not self.ignore_user_functions:
-            df = self.user_summary_functions.lapply(df,
-                                                   session=session,
-                                                   manager=self)
+        kwargs = {"session": session, "manager": self}
+        kwargs.update({"df": df if not self._subst
+                                else df.replace(self._subst)})
+        df = self.manager_functions.lapply(**kwargs)
 
+        if not self.ignore_user_functions:
+            kwargs.update({"df": df if not self._subst
+                                    else df.replace(self._subst)})
+            df = session.summary_functions.lapply(**kwargs)
         cols = [x for x in vis_cols
                 if x.startswith("coq_") and not x.startswith("coq_context_")]
 
@@ -399,11 +419,6 @@ class Manager(CoqObject):
             df = df.loc[ix]
         print("\tdone")
         return df
-
-    def set_summary_functions(self, l):
-        if l is None:
-            l = []
-        self.user_summary_functions.set_list([x(sweep=True) for x in l])
 
     def distinct(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
@@ -624,7 +639,6 @@ class Manager(CoqObject):
         df = self.mutate(df, session)
         self.mutated_columns = df.columns
 
-        self.group_functions = FunctionList([])
         if options.cfg.group_columns:
             df = self.filter_groups(df, session)
             df = self.arrange_groups(df, session)
@@ -635,9 +649,9 @@ class Manager(CoqObject):
         df = self.filter(df, session, stage=FILTER_STAGE_FINAL)
         df = self.select(df, session)
         self._functions = (session.column_functions.get_list() +
-                           self.group_functions.get_list() +
-                           self.manager_summary_functions.get_list() +
-                           self.user_summary_functions.get_list())
+                           session.group_functions.get_list() +
+                           session.summary_functions.get_list() +
+                           self.manager_functions.get_list())
 
         print("done")
         return df
@@ -655,8 +669,8 @@ class FrequencyList(Manager):
         vis_cols = get_visible_columns(df, manager=self, session=session)
         freq_function = Freq(columns=vis_cols)
 
-        if not self.user_summary_functions.has_function(freq_function):
-            self.manager_summary_functions = FunctionList([freq_function])
+        if not session.summary_functions.has_function(freq_function):
+            self.manager_functions = FunctionList([freq_function])
         df = super(FrequencyList, self).summarize(df, session)
         return self.distinct(df, session)
 
@@ -671,7 +685,7 @@ class ContingencyTable(FrequencyList):
                 l.append(col)
 
         # make sure that the frequency column is shown last:
-        freq = self.manager_summary_functions.get_list()[0].get_id()
+        freq = self.manager_functions.get_list()[0].get_id()
         l.remove(freq)
         l.append(freq)
         df = df[l]
@@ -684,7 +698,7 @@ class ContingencyTable(FrequencyList):
             if row[1] == "All":
                 if agg_fnc[row[0]] == sum:
                     s = "{}(TOTAL)"
-                elif agg_fnc[row[0]] == np.mean:
+                elif agg_fnc[row[0]] == pd.np.mean:
                     s = "{}(MEAN)"
                 else:
                     s = "{}({}=ANY)"
@@ -703,7 +717,7 @@ class ContingencyTable(FrequencyList):
         cat_col = list(df[vis_cols]
                        .select_dtypes(include=[object]).columns.values)
         num_col = (list(df[vis_cols]
-                        .select_dtypes(include=[np.number]).columns.values) +
+                        .select_dtypes(include=[pd.np.number]).columns.values) +
                    ["coquery_invisible_number_of_tokens",
                     "coquery_invisible_corpus_id",
                     "coquery_invisible_origin_id"])
@@ -721,7 +735,7 @@ class ContingencyTable(FrequencyList):
             elif col.startswith(("func_statistics_frequency_")):
                 agg_fnc[col] = sum
             else:
-                agg_fnc[col] = np.mean
+                agg_fnc[col] = pd.np.mean
 
         if len(cat_col) > 1:
             # Create pivot table:
@@ -778,7 +792,7 @@ class ContingencyTable(FrequencyList):
                 d[x] = fnc(piv[x])
         row_total = pd.DataFrame([pd.Series(d)],
                                 columns=piv.columns,
-                                index=[COLUMN_NAMES["statistics_column_total"]]).fillna("")
+                                index=[ROW_NAMES["row_total"]]).fillna("")
         piv = piv.append(row_total)
         return piv
 
@@ -950,7 +964,7 @@ class ContrastMatrix(FrequencyList):
         """
         # first, get the frequency list:
         df = super(ContrastMatrix, self).summarize(df, session)
-        self._freq_function = self.manager_summary_functions.get_list()[0]
+        self._freq_function = self.manager_functions.get_list()[0]
         l = [x if x != self._freq_function.get_id() else "coquery_invisible_count"
              for x in df.columns]
         df.columns = l
@@ -960,12 +974,12 @@ class ContrastMatrix(FrequencyList):
                     in get_visible_columns(df, manager=self, session=session)
                     if not x == self._freq_function.get_id()]
         self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
-        self.manager_summary_functions = FunctionList([self._subcorpus_size])
+        self.manager_functions = FunctionList([self._subcorpus_size])
         df = super(FrequencyList, self).summarize(df, session)
 
         # finally, calculate the test matrix:
-        df = self.matrix(df, session)
         df = df.sort_values(by=vis_cols)
+        df = self.matrix(df, session)
         df = df.reset_index(drop=True)
 
         # determine critical value, adjusted for the number of comparisons,
@@ -975,8 +989,8 @@ class ContrastMatrix(FrequencyList):
         threshold = ((pd.Series(pd.np.arange(len(self.p_values))) + 1) /
                      len(self.p_values)) * 0.05
         check = (self.p_values <= threshold)
-        self.critical_value = min(0.05, self.p_values.loc[check[::-1].idxmax()])
-        self.threshold = stats.chi2.ppf(1 - self.critical_value, 1)
+        self.alpha = min(0.05, self.p_values.loc[check[::-1].idxmax()])
+        self.threshold = scipy.stats.chi2.ppf(1 - self.alpha, 1)
 
         return df
 
@@ -999,7 +1013,7 @@ class ContrastMatrix(FrequencyList):
 
         def fnc(x, cols=[]):
             l = [x[col] for col in cols]
-            return ":".join(l)
+            return ":".join([str(x).strip() for x in l])
 
         vis_cols = get_visible_columns(df, manager=self, session=session)
         vis_cols = [x for x in vis_cols
@@ -1008,27 +1022,6 @@ class ContrastMatrix(FrequencyList):
         return df.apply(fnc, cols=vis_cols, axis=1).unique()
 
     def retrieve_loglikelihood(self, row, df, label):
-        def g_test(freq_1, freq_2, total_1, total_2):
-            """
-            This method calculates the G test statistic as described here:
-            http://ucrel.lancs.ac.uk/llwizard.html
-
-            For a formal description of the G² test, see Agresti (2013: 76).
-            """
-            if (freq_1, freq_2, total_1, total_2) not in ContrastMatrix._ll_cache:
-                exp1 = total_1 * (freq_1 + freq_2) / (total_1 + total_2)
-                exp2 = total_2 * (freq_1 + freq_2) / (total_1 + total_2)
-
-                G = 2 * (
-                    (freq_1 * math.log(freq_1 / exp1)) +
-                    (freq_2 * math.log(freq_2 / exp2)))
-
-                ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)] = G
-            return ContrastQuery._ll_cache[(freq_1, freq_2, total_1, total_2)]
-
-        if options.use_scipy:
-            from scipy import stats
-
         freq = self._freq_function.get_id()
         size = self._subcorpus_size.get_id()
 
@@ -1040,15 +1033,12 @@ class ContrastMatrix(FrequencyList):
 
         obs = [[freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
         try:
-            if options.use_scipy:
-                g2, p_g2, _, _ = stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
-                if (freq_1 / total_1) < (freq_2 / total_2):
-                    df = pd.Series([-g2, p_g2])
-                else:
-                    df = pd.Series([g2, p_g2])
-                return df
+            g2, p_g2, _, _ = scipy.stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
+            if (freq_1 / total_1) < (freq_2 / total_2):
+                df = pd.Series([-g2, p_g2])
             else:
-                return (g_test(freq_1, freq_2, total_1, total_2), 0)
+                df = pd.Series([g2, p_g2])
+            return df
         except ValueError as e:
             raise e
 
