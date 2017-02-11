@@ -172,7 +172,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
     
     arguments = None
     name = None
-    additional_arguments = None
     parser = None
     DB = None
     additional_stages = []
@@ -195,12 +194,15 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
     _read_file_formatter = "Reading {file} (%v of %m)..."
 
-    def __init__(self, gui=False):
+    def __init__(self, gui=None):
         self.module_code = module_code
         self.table_description = {}
         self._time_features = []
         self._lexical_features = []
         self._speaker_features = []
+        self._audio_features = []
+        self._image_features = []
+        self._video_features = []
         self._annotations = {}
         self._id_count = {}
         self._primary_keys = {}
@@ -590,6 +592,36 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         self._annotations[inner] = outer
 
+    def add_audio_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of audio features.
+
+        Audio features do not appear in the list of queryable corpus features.
+        The context viewer can use them to visualize the audio in a separate
+        tab.
+        """
+        self._audio_features.append(rc_feature)
+
+    def add_video_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of video features.
+
+        Audio features do not appear in the list of queryable corpus features.
+        The context viewer can use them to visualize the video in a separate
+        tab.
+        """
+        self._video_features.append(rc_feature)
+
+    def add_image_feature(self, rc_feature):
+        """
+        Add the resource feature to the list of image features.
+
+        Audio features do not appear in the list of queryable corpus features.
+        The context viewer can use them to visualize the image in a separate
+        tab.
+        """
+        self._image_features.append(rc_feature)
+
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
         the class attribute self._lexicon_code. This function is needed
@@ -619,6 +651,21 @@ class BaseCorpusBuilder(corpus.BaseResource):
             lines.insert(0, "    speaker_features = {}\n".format(
                 "[{}]".format(", ".join(
                     ['"{}"'.format(x) for x in self._speaker_features]))))
+
+        if self._audio_features:
+            lines.insert(0, "    audio_features = {}\n".format(
+                "[{}]".format(", ".join(
+                    ['"{}"'.format(x) for x in self._audio_features]))))
+        if self._video_features:
+            lines.insert(0, "    video_features = {}\n".format(
+                "[{}]".format(", ".join(
+                    ['"{}"'.format(x) for x in self._video_features]))))
+        if self._image_features:
+            lines.insert(0, "    image_features = {}\n".format(
+                "[{}]".format(", ".join(
+                    ['"{}"'.format(x) for x in self._image_features]))))
+
+
         if self._annotations:
             lines.insert(0, "    annotations = {}\n".format(self._annotations))
 
@@ -716,7 +763,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         self.corpus_file_id: self._file_id,
                         self.corpus_time: time})
 
-    def process_text_file():
+    def process_text_file(self, file_name):
         raise RuntimeError
     
     def _add_next_token_to_corpus(self, values):
@@ -724,6 +771,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         values[self.corpus_id] = self._corpus_id
         self._corpus_buffer.append(values)
         
+    # pylint: disable=method-hidden
     def add_token_to_corpus(self, values):
         if len(values) < len(self._new_tables[self.corpus_table].columns) - 2:
             raise IndexError
@@ -732,6 +780,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self._corpus_keys = values.keys()
         self._corpus_buffer = []
         self._corpus_buffer.append(values)
+
         self.add_token_to_corpus = self._add_next_token_to_corpus
     
     ### METHODS FOR XML FILES
@@ -1275,9 +1324,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
             try:
                 this_column = self._new_tables[table].get_column(column)
+
+                # do not create an index for BLOBs (they are used only to
+                # store binary information that should never be used for
+                # queries or joins):
+                if this_column.base_type.endswith("BLOB"):
+                    continue
                 
-                # indices for TEXT/BLOB columns require a key length:
-                if this_column.base_type.endswith("TEXT") or this_column.base_type.endswith("BLOB"):
+                # indices for TEXT columns require a key length:
+                if this_column.base_type.endswith("TEXT"):
+                    self.logger.warning("TEXT data type is deprecated")
                     if this_column.index_length:
                         length = this_column.index_length
                     else:
