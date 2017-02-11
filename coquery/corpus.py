@@ -63,10 +63,12 @@ from .links import get_by_hash
         #in "_id", or False otherwise."""
         #return _s.endswith("_id")
 
-class LexiconClass(object):
+class LexiconClass(CoqObject):
     """
     Define a base lexicon class.
     """
+    def __init__(self):
+        super(LexiconClass, self).__init__()
 
     def check_pos_list(self, L):
         """ Returns the number of elements for which
@@ -140,7 +142,7 @@ class LexiconClass(object):
         df = pd.read_sql(S.replace("%", "%%"), engine)
         engine.dispose()
 
-        return set(list(df.ix[:,0]))
+        return set(list(df.iloc[:,0]))
 
     def sql_string_get_wordid_list_where(self, token):
         """
@@ -351,7 +353,7 @@ class LexiconClass(object):
             else:
                 raise WordNotInLexiconError
         else:
-            return list(df.ix[:,0])
+            return list(df.iloc[:,0])
 
     def get_matching_wordids(self, token, stopwords=True):
         """
@@ -374,10 +376,10 @@ class LexiconClass(object):
             else:
                 raise WordNotInLexiconError
         else:
-            x = list(df.ix[:,0])
+            x = list(df.iloc[:,0])
             return x
 
-class BaseResource(object):
+class BaseResource(CoqObject):
     """
     """
     # add internal table that can be used to access frequency information:
@@ -387,6 +389,12 @@ class BaseResource(object):
 
     special_table_list = ["coquery", "tag"]
     render_token_style = "background: lightyellow"
+    audio_features = []
+    image_features = []
+    video_features = []
+
+    def __init__(self):
+        super(BaseResource, self).__init__()
 
     @classmethod
     def extract_resource_feature(cls, column):
@@ -548,6 +556,25 @@ class BaseResource(object):
         # return the features that can be constructed from the feature name
         # and the table:
         return ["{}_{}".format(table, feature) for _, table, feature in split_features if table in tables]
+
+    @classmethod
+    def get_queryable_features(cls):
+        """
+        Return a list of the resource features that can be selected as
+        features in a query.
+
+        Features that represent binary data (audio, video, images) cannot be
+        selected because the result table stores only numeric or string data.
+        """
+        l = cls.get_resource_features()
+        # FIXME: this function might be usable to make some table IDs
+        # exposable (see issue #174)
+        return [x for x in l
+                if x not in cls.audio_features
+                and x not in cls.video_features
+                and x not in cls.image_features]
+
+
 
     @classmethod
     def get_table_dict(cls):
@@ -1227,15 +1254,17 @@ class SQLResource(BaseResource):
         assert sorted(list(set(select_list))) == sorted(select_list), "Duplicates in select_list: {}".format(select_list)
         return select_list
 
-class CorpusClass(object):
+class CorpusClass(CoqObject):
     """
     """
     _frequency_cache = {}
     _corpus_size_cache = {}
+    _subcorpus_size_cache = {}
     _corpus_range_cache = {}
     _context_cache = {}
 
     def __init__(self):
+        super(CorpusClass, self).__init__()
         self.lexicon = None
         self.resource = None
 
@@ -1320,6 +1349,7 @@ class CorpusClass(object):
             token_id)
 
         df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.resource.db_name)))
+        queryable_features = self.resource.get_queryable_features()
 
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
@@ -1395,7 +1425,6 @@ class CorpusClass(object):
         size : int
             The number of tokens in the corpus, or in the filtered corpus.
         """
-
         if not filters and getattr(self.resource, "number_of_tokens", None):
             return self.resource.number_of_tokens
 
@@ -1408,16 +1437,24 @@ class CorpusClass(object):
 
             # FIXME: remove code replication with get_subcorpus_range()
             if len(values) == 1:
-                s = "{}.{} = '{}'".format(
+                if type(values[0]) is str:
+                    val = "'{}'".format(values[0].replace("'", "''"))
+                else:
+                    val = values[0]
+                s = "{}.{} = {}".format(
                     getattr(self.resource, "{}_table".format(tab)),
                     getattr(self.resource, rc_feature),
-                    values[0].replace("'", "''"))
+                    val)
             else:
+                if any([type(x) is str for x in values]):
+                    l = ["'{}'".format(x.replace("'", "''")) for
+                                            x in values]
+                else:
+                    l = values
                 s = "{}.{} IN ({})".format(
                     getattr(self.resource, "{}_table".format(tab)),
                     getattr(self.resource, rc_feature),
-                    ",".join(["'{}'".format(x.replace("'", "''")) for
-                                            x in values]))
+                    ",".join(l))
             filter_strings.append(s)
 
         if filter_strings:
@@ -1433,9 +1470,11 @@ class CorpusClass(object):
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
             self._corpus_size_cache[S] = df.values.ravel()[0]
+        if not filters:
+            self.resource.number_of_tokens = self._corpus_size_cache[S]
         return self._corpus_size_cache[S]
 
-    def get_subcorpus_size(self, row, columns=None):
+    def get_subcorpus_size(self, row, columns=None, subst=None):
         """
         Return the size of the subcorpus specified by the corpus features in
         the row.
@@ -1458,7 +1497,7 @@ class CorpusClass(object):
                     col = None
                 if col in corpus_features:
                     value = row[column]
-                    raw_values = self.reverse_substitution(column, value)
+                    raw_values = self.reverse_substitution(column, value, subst)
                     filter_list.append((col, raw_values))
         else:
             for column in columns:
@@ -1466,11 +1505,15 @@ class CorpusClass(object):
 
                 value = row[col]
                 raw_values = self.reverse_substitution(col, value)
-                filter_list.append((column, raw_values))
-        return self.get_corpus_size(filter_list)
+                filter_list.append((column, tuple(raw_values)))
+        tup = tuple(filter_list)
+        if tup not in self._subcorpus_size_cache:
+            size = self.get_corpus_size(filter_list)
+            self._subcorpus_size_cache[tup] = size
+        return self._subcorpus_size_cache[tup]
 
     @staticmethod
-    def reverse_substitution(column, value):
+    def reverse_substitution(column, value, subst={}):
         """
         Return a list of values that could have been the raw value before
         substitution.
@@ -1479,7 +1522,6 @@ class CorpusClass(object):
         column. It returns a list of all values that could have been mapped
         onto the given value.
         """
-        subst = options.get_column_properties().get("substitutions", {})
         l = [key for key, val in subst.get(column, {}).items()
              if value == val]
         l.append(value)
@@ -2917,15 +2959,6 @@ class CorpusClass(object):
                         getattr(self.resource, "corpus_file_id",
                             getattr(self.resource, "corpus_sentence_id",
                                 self.resource.corpus_id)))
-
-        if hasattr(self.resource, "tag_table"):
-            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word_table}.{word} AS COQ_WORD, {tag} AS COQ_TAG_TAG, {tag_table}.{tag_type} AS COQ_TAG_TYPE, {attribute} AS COQ_ATTRIBUTE, {tag_id} AS COQ_TAG_ID FROM {corpus} {joined_tables} LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
-        else:
-            format_string = "SELECT {corpus}.{corpus_id} AS COQ_TOKEN_ID, {word_table}.{word} AS COQ_WORD FROM {corpus} {joined_tables} WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}"
-
-        if origin_id:
-            format_string += " AND {corpus}.{source_id} = '{current_source_id}'"
-
         if hasattr(self.resource, "surface_feature"):
             word_feature = self.resource.surface_feature
         else:
@@ -2940,51 +2973,90 @@ class CorpusClass(object):
         word_table = getattr(self.resource, "{}_table".format(tab))
         word_id = getattr(self.resource, "{}_id".format(tab))
 
+        word_start = getattr(self.resource, "{}_starttime".format(tab), None)
+        word_end = getattr(self.resource, "{}_endtime".format(tab), None)
+
         self.lexicon.table_list = []
         self.lexicon.joined_tables = []
         self.lexicon.add_table_path("corpus_id", word_feature)
 
         if hasattr(self.resource, "tag_table"):
-            S = format_string.format(
-                corpus=self.resource.corpus_table,
-                corpus_id=self.resource.corpus_id,
-                corpus_word_id=corpus_word_id,
-                source_id=origin_id,
+            headers = ["coquery_invisible_corpus_id", "COQ_TAG_ID"]
+            kwargs = {
+                "corpus": self.resource.corpus_table,
+                "corpus_id": self.resource.corpus_id,
+                "corpus_word_id": corpus_word_id,
+                "source_id": origin_id,
 
-                word=getattr(self.resource, word_feature),
-                word_table=word_table,
-                word_id=word_id,
+                "word": getattr(self.resource, word_feature),
+                "word_table": word_table,
+                "word_id": word_id,
 
-                joined_tables=" ".join(self.lexicon.table_list),
+                "joined_tables": " ".join(self.lexicon.table_list),
 
-                tag_table=self.resource.tag_table,
-                tag=self.resource.tag_label,
-                tag_id=self.resource.tag_id,
-                tag_corpus_id=self.resource.tag_corpus_id,
-                tag_type=self.resource.tag_type,
-                attribute=self.resource.tag_attribute,
+                "tag_table": self.resource.tag_table,
+                "tag": self.resource.tag_label,
+                "tag_id": self.resource.tag_id,
+                "tag_corpus_id": self.resource.tag_corpus_id,
+                "tag_type": self.resource.tag_type,
+                "attribute": self.resource.tag_attribute,
 
-                current_source_id=source_id,
-                start=max(0, token_id - 1000),
-                end=token_id + token_width + 999)
-            headers = ["COQ_TOKEN_ID", "COQ_TAG_ID"]
+                "current_source_id": source_id,
+                "start": max(0, token_id - 1000),
+                "end": token_id + token_width + 999}
+            column_string = """
+                    {corpus}.{corpus_id} AS coquery_invisible_corpus_id,
+                    {word_table}.{word} AS coq_word_label_1,
+                    {tag} AS COQ_TAG_TAG,
+                    {tag_table}.{tag_type} AS COQ_TAG_TYPE,
+                    {attribute} AS COQ_ATTRIBUTE,
+                    {tag_id} AS COQ_TAG_ID"""
+            format_string = """
+                SELECT {columns}
+                FROM {corpus} {joined_tables}
+                LEFT JOIN {tag_table}
+                ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id}
+                WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}
+                """
         else:
-            S = format_string.format(
-                corpus=self.resource.corpus_table,
-                corpus_id=self.resource.corpus_id,
-                corpus_word_id=self.resource.corpus_word_id,
-                source_id=origin_id,
+            headers = ["coquery_invisible_corpus_id"]
+            column_string = """
+                    {corpus}.{corpus_id} AS coquery_invisible_corpus_id,
+                    {word_table}.{word} AS coq_word_label_1"""
+            format_string = """
+            SELECT {columns}
+            FROM {corpus} {joined_tables}
+            WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}
+            """
+            kwargs = {
+                "corpus": self.resource.corpus_table,
+                "corpus_id": self.resource.corpus_id,
+                "corpus_word_id": self.resource.corpus_word_id,
+                "source_id": origin_id,
 
-                word=getattr(self.resource, word_feature),
-                word_table=word_table,
-                word_id=word_id,
+                "word": getattr(self.resource, word_feature),
+                "word_table": word_table,
+                "word_id": word_id,
 
-                joined_tables=" ".join(self.lexicon.table_list),
+                "joined_tables": " ".join(self.lexicon.table_list),
 
-                current_source_id=source_id,
-                start=max(0, token_id - 1000),
-                end=token_id + token_width + 999)
-            headers = ["COQ_TOKEN_ID"]
+                "current_source_id": source_id,
+                "start": max(0, token_id - 1000),
+                "end": token_id + token_width + 999}
+        if word_start and word_end:
+            column_string = """{},
+                    {{word_table}}.{{start_time}} AS coq_word_starttime_1,
+                    {{word_table}}.{{end_time}} AS coq_word_endtime_1""".format(
+                        column_string)
+            kwargs.update({"start_time": word_start, "end_time": word_end})
+
+        columns = column_string.format(**kwargs)
+        kwargs["columns"] = column_string.format(**kwargs)
+
+        if origin_id:
+            format_string += " AND {corpus}.{source_id} = '{current_source_id}'"
+        S = format_string.format(**kwargs)
+
         if options.cfg.verbose:
             logger.info(S)
             print(S)
@@ -3000,8 +3072,18 @@ class CorpusClass(object):
 
     def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
         """
-        Return a string containing the markup for the context around the
-        specified token.
+        Return a dictionary with the context data.
+
+        The dictionary has the following keys:
+
+        text: str
+            A string containing the markup for the context around the
+            specified token.
+        audio: bool
+            A boolean indicating whether audio context is available
+        start_time, end_time: float
+            The starting and end time of the audio context. If `audio` is
+            False, the content of these variables in unspecified.
 
         The most simple visual representation of the context is a plain text
         display, but in principle, a corpus might implement a more elaborate
@@ -3036,6 +3118,7 @@ class CorpusClass(object):
         if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
+        print(token_id, source_id, token_width)
         if not (token_id, source_id, token_width) in self._context_cache:
             self._read_context_for_renderer(token_id, source_id, token_width)
         df = self._context_cache[(token_id, source_id, token_width)]
@@ -3062,12 +3145,13 @@ class CorpusClass(object):
         opened_elements = []
         closed_elements = []
 
-        for context_token_id in [x for x in range(context_start, context_end) if x in df.COQ_TOKEN_ID.unique()]:
+        for context_token_id in [x for x in range(context_start, context_end)
+                                 if x in df.coquery_invisible_corpus_id.unique()]:
             opening_elements = []
             closing_elements = []
             word = ""
 
-            df_sub = df[df.COQ_TOKEN_ID == context_token_id]
+            df_sub = df[df.coquery_invisible_corpus_id == context_token_id]
             if "COQ_TAG_ID" in df_sub.columns:
                 for x in df_sub.index:
                     if df_sub.COQ_TAG_TYPE[x] is not None:
@@ -3079,7 +3163,7 @@ class CorpusClass(object):
                         if df_sub.COQ_TAG_TYPE[x] == "close":
                             closing_elements.append(x)
 
-            word = escape_html(df_sub.COQ_WORD.iloc[0])
+            word = escape_html(df_sub.coq_word_label_1.iloc[0])
 
             # process all opening elements:
             for ix in opening_elements:
@@ -3145,4 +3229,19 @@ class CorpusClass(object):
         s = collapse_words(context)
         s = s.replace("</p>", "</p>\n")
         s = s.replace("<br/>", "<br/>\n")
-        return s
+        audio = self.resource.audio_features != []
+        start_time = None
+        end_time = None
+        df = df[(df.coquery_invisible_corpus_id >= context_start) &
+                (df.coquery_invisible_corpus_id <= context_end)]
+        if audio:
+            try:
+                start_time = df.coq_word_starttime_1.min()
+                end_time = df.coq_word_endtime_1.max()
+            except Exception as e:
+                print(e)
+                raise e
+
+        return {"text": s, "df": df,
+                "audio": audio,
+                "start_time": start_time, "end_time": end_time}
