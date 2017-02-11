@@ -63,9 +63,6 @@ class TokenQuery(object):
         self._keys = []
         self.empty_query = False
 
-    def __len__(self):
-        return len(self.tokens)
-
     @staticmethod
     def get_visible_columns(df, session, ignore_hidden=False):
         """
