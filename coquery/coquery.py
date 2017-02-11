@@ -105,6 +105,7 @@ def main():
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
         from .gui.pyqt_compat import QtWidgets, QtGui, QtCore
+        options.cfg.app = QtWidgets.QApplication(sys.argv)
         from .gui.app import CoqueryApp
         from .gui.app import GuiHandler
 
@@ -112,19 +113,18 @@ def main():
         options.cfg.gui_logger.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
         logger.addHandler(options.cfg.gui_logger)
 
-        options.cfg.app = QtWidgets.QApplication(sys.argv)
         if sys.platform == "darwin":
             QtGui.QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
             QtGui.QFont.insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue")
             QtGui.QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
 
-        Coq = CoqueryApp()
+        from . import session
+        session = session.SessionCommandLine()
+
+        Coq = CoqueryApp(session)
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
         Coq.setGUIDefaults()
-
-        from . import session
-        Coq.Session = session.SessionCommandLine()
 
         options.cfg.icon = Coq.get_icon("coquerel_icon.png", small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
