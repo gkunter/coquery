@@ -18,6 +18,8 @@ import logging
 
 import pandas as pd
 import matplotlib as mpl
+mpl.use("Qt5Agg")
+mpl.rcParams["backend"] = "Qt5Agg"
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -551,6 +553,7 @@ class Visualizer(CoqObject):
     plotting_context = "notebook"
 
     def __init__(self, df, session):
+        super(Visualizer, self).__init__()
         self.df = df
         self.session = session
 
@@ -578,8 +581,8 @@ class Visualizer(CoqObject):
     def dtype(feature, df):
         if feature:
             if feature.startswith("func_"):
-                # FIXME: not all functions will return numerical data. At the
-                # time being, only a few functions are included by the
+                # FIXME: not all functions will return numerical data. For
+                # the time being, only a few functions are included by the
                 # designer, and all of them are in fact numerical, but this
                 # might change at some point.
                 return pd.np.float64
@@ -629,12 +632,11 @@ class Visualizer(CoqObject):
 
     @staticmethod
     def count_parameters(data_x, data_y, data_z, df, session):
-        categorical = [x for x in (data_x, data_y, data_z)
-                       if Visualizer.dtype(x, df) == object]
-        numeric = [x for x in (data_x, data_y, data_z)
-                   if Visualizer.dtype(x, df) in (float, int)]
-        empty = [x for x in (data_x, data_y, data_z)
-                 if x is None]
+        num_cols = df.select_dtypes(include=[pd.np.number]).columns
+        cat_cols = df.select_dtypes(exclude=[pd.np.number]).columns
+        categorical = [x for x in (data_x, data_y, data_z) if x in cat_cols]
+        numeric = [x for x in (data_x, data_y, data_z) if x in num_cols]
+        empty = [x for x in (data_x, data_y, data_z) if x is None]
         return categorical, numeric, empty
 
 
