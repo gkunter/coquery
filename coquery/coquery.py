@@ -104,7 +104,9 @@ def main():
 
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
-        from .gui.pyqt_compat import QtWidgets, QtGui, QtCore
+        from .gui.pyqt_compat import (
+            QtWidgets, QtGui, QtCore, close_toplevel_widgets)
+        
         options.cfg.app = QtWidgets.QApplication(sys.argv)
         from .gui.app import CoqueryApp
         from .gui.app import GuiHandler
@@ -133,6 +135,7 @@ def main():
             cProfile.runctx("options.cfg.app.exec_()", globals(), locals())
         else:
             options.cfg.app.exec_()
+        close_toplevel_widgets()
         logger.info("--- Finished program (after %.3f seconds) ---" % (time.time() - start_time))
 
     # Otherwise, run program as a command-line tool:
