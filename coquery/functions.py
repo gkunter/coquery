@@ -25,7 +25,7 @@ from . import options
 from . import sqlhelper
 from .defines import *
 from .general import CoqObject, collapse_words, get_visible_columns
-
+from .gui.pyqt_compat import get_toplevel_window
 
 try:
     max_int = sys.maxint
@@ -1017,10 +1017,12 @@ class ContextColumns(Function):
                             val = SentenceId(session=session).evaluate(df, session=session)
                             df["coquery_invisible_sentence_id"] = val
                             self._sentence_column = "coquery_invisible_sentence_id"
+                get_toplevel_window().useContextConnection.emit(db_connection)
                 val = df.apply(lambda x: self._func(row=x,
                                                     session=session,
                                                     connection=db_connection),
                             axis="columns")
+                get_toplevel_window().closeContextConnection.emit(db_connection)
                 val.index = df.index
                 return val
 
