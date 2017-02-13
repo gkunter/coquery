@@ -22,7 +22,7 @@
       </property>
       <widget class="QFrame" name="options_area">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
          <verstretch>1</verstretch>
         </sizepolicy>
@@ -59,7 +59,7 @@
            <item row="0" column="1">
             <widget class="CoqTextEdit" name="edit_query_string">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -621,7 +621,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QWidget" name="button_box_reaggregate" native="true">
+            <widget class="QFrame" name="button_box_reaggregate">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
