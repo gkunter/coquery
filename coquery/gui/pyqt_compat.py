@@ -62,3 +62,13 @@ def get_toplevel_window(name="MainWindow"):
         if widget.objectName() == "MainWindow":
             return widget
     return None
+
+def close_toplevel_widgets():
+    """
+    Closes all top-level widgets.
+    """
+    for widget in QtWidgets.qApp.topLevelWidgets():
+        if widget.objectName() != "MainWindow":
+            widget.hide()
+            widget.close()
+            del widget

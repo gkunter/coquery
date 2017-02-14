@@ -116,6 +116,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
     updateMultiProgress = QtCore.Signal(int)
     updateStatusMessage = QtCore.Signal(str)
     abortRequested = QtCore.Signal()
+    useContextConnection = QtCore.Signal(object)
+    closeContextConnection = QtCore.Signal(object)
 
     def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -137,6 +139,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self._hidden = None
         self._old_sizes = None
         self.reaggregating = False
+        self._context_connections = []
+        self.terminating = False
 
         self.widget_list = []
         self.Session = session
@@ -281,9 +285,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.list_group_columns.setDropIndicatorShown(False)
 
         self.ui.button_apply_management.setDisabled(True)
-        self.ui.button_apply_management.setFlat(True)
-        self.ui.button_cancel_management.setDisabled(True)
-        self.ui.button_cancel_management.setFlat(True)
+        self.ui.button_cancel_management.hide()
 
         self.ui.widget_find.setTableView(self.ui.data_preview)
         self.ui.widget_find.hide()
@@ -572,6 +574,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
         self.column_tree.itemChanged.connect(self.toggle_selected_feature)
 
+        self.useContextConnection.connect(self.add_context_connection)
+        self.closeContextConnection.connect(self.close_context_connection)
+
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
 
@@ -697,15 +702,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         active = (hasattr(self, "table_model"))
         if active:
             self.ui.button_apply_management.setDisabled(False)
-            self.ui.button_apply_management.setFlat(False)
-            self.ui.button_cancel_management.setDisabled(True)
-            self.ui.button_cancel_management.setFlat(True)
         else:
             # disable buttons if there is no results table:
             self.ui.button_apply_management.setDisabled(True)
-            self.ui.button_apply_management.setFlat(True)
-            self.ui.button_cancel_management.setDisabled(True)
-            self.ui.button_cancel_management.setFlat(True)
         self.set_button_labels()
 
     def enable_corpus_widgets(self):
@@ -1182,6 +1181,15 @@ class CoqueryApp(QtWidgets.QMainWindow):
     ### slots
     ###
 
+    def add_context_connection(self, connection):
+        self._context_connections.append(connection)
+
+    def close_context_connection(self, connection):
+        try:
+            self._context_connections.remove(connection)
+        except IndexError:
+            pass
+
     def column_moved(self, *args, **kwargs):
         section, last, new = args
 
@@ -1282,10 +1290,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
         if not self.Session:
             return
 
-        self.ui.button_apply_management.setDisabled(True)
-        self.ui.button_apply_management.setFlat(True)
-        self.ui.button_cancel_management.setDisabled(False)
-        self.ui.button_cancel_management.setFlat(False)
+        self.ui.button_apply_management.hide()
+        self.ui.button_cancel_management.show()
+        self.ui.button_run_query.show()
+        self.ui.button_run_query.setDisabled(True)
 
         if start:
             self.Session.start_timer()
@@ -1301,6 +1309,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.reaggregating = True
 
         print("reaggregate")
+        self.terminating = False
         self.aggr_thread.start()
 
     def finalize_reaggregation(self):
@@ -1314,10 +1323,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.check_group_items()
         self.check_filters(self.Session.output_object)
         self.set_button_labels()
+        self.ui.button_apply_management.show()
         self.ui.button_apply_management.setDisabled(True)
-        self.ui.button_apply_management.setFlat(True)
-        self.ui.button_cancel_management.setDisabled(True)
-        self.ui.button_cancel_management.setFlat(True)
+        self.ui.button_cancel_management.hide()
 
         self.set_query_button(True)
 
@@ -1345,7 +1353,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.button_run_query.blockSignals(False)
 
     def kill_reaggregation(self):
-        self.aggr_thread.terminate()
+        self.terminating = True
+        for x in self._context_connections:
+            x.close()
+        self.aggr_thread.exit(1)
         self.finalize_reaggregation()
         self.enable_apply_button()
         for i in range(self.ui.list_toolbox.rowCount()):
@@ -1766,11 +1777,14 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.status_server.setText(S)
 
     def exception_during_query(self):
-        if isinstance(self.exception, UnsupportedQueryItemError):
-            QtWidgets.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+        if not self.terminating:
+            if isinstance(self.exception, UnsupportedQueryItemError):
+                QtWidgets.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            else:
+                errorbox.ErrorBox.show(self.exc_info, self.exception)
+            self.showMessage("Query failed.")
         else:
-            errorbox.ErrorBox.show(self.exc_info, self.exception)
-        self.showMessage("Query failed.")
+            self.showMessage("Aborted.")
         self.set_query_button(True)
         self.set_stop_button(False)
         self.stop_progress_indicator()
@@ -2160,14 +2174,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.show_query_status()
 
     def set_query_button(self, state):
-        self.ui.button_run_query.blockSignals(not state)
-        self.ui.button_run_query.setFlat(not state)
-        self.ui.button_run_query.setDisabled(not state)
+        self.ui.button_run_query.setVisible(state)
+        self.ui.button_run_query.setEnabled(state)
 
     def set_stop_button(self, state):
-        self.ui.button_stop_query.blockSignals(not state)
-        self.ui.button_stop_query.setFlat(not state)
-        self.ui.button_stop_query.setDisabled(not state)
+        self.ui.button_stop_query.setVisible(state)
+        self.ui.button_stop_query.setEnabled(state)
 
     def stop_query(self):
         response = QtWidgets.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)

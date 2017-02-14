@@ -36,7 +36,6 @@ class AvailableModulesDialog(QtWidgets.QDialog):
         modules = [
                 ("cachetools", options.use_cachetools),
                 ("PyMySQL", options.use_mysql),
-                ("SciPy", options.use_scipy), 
                 ("Seaborn", options.use_seaborn),
                 ("statsmodels", options.use_statsmodels),
                 ("NLTK", options.use_nltk),
