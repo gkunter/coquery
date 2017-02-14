@@ -1060,9 +1060,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self._target_label = label
 
     def jump_to_column(self, col):
-        if not col:
+        if not col or col.startswith("coquery_invisible"):
             return
-        x = list(self.Session.output_object.columns).index(col)
+        x = [x for x in self.Session.output_object.columns
+             if not x.startswith("coquery_invisible")].index(col)
         h = self.ui.data_preview.horizontalHeader()
         columnIndexes = [h.logicalIndex(i) for i in range(h.count())]
         self.ui.data_preview.setCurrentIndex(
@@ -2192,7 +2193,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
     def run_query(self):
         from coquery.session import SessionCommandLine, SessionInputFile
-
         shift_pressed = options.cfg.app.keyboardModifiers() & QtCore.Qt.ShiftModifier
         options.cfg.to_file = shift_pressed
         if options.cfg.to_file:
@@ -2217,6 +2217,14 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.getGuiValues()
         self.showMessage("Preparing query...")
 
+        # FIXME: reading the query strings from a CSV file may take a while
+        # depending on the size of the file. During this, the GUI isn't
+        # responsive, which should be changed.
+        # One way to do that is to split this method up -- initialize the
+        # correct session in a separate thread, and have the session emit a
+        # signal sessionInitialized once it's ready to query. Then connect
+        # that signal to that part of this method that prepares and starts the
+        # query thread.
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = [x.strip() for x
