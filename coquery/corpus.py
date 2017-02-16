@@ -2936,7 +2936,8 @@ class CorpusClass(CoqObject):
             if attributes:
                 return ["<{} {}>".format(
                     label,
-                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes]))]
+                    ", ".join(["{}='{}'".format(x, attributes[x])
+                               for x in attributes]))]
             else:
                 return ["<{}>".format(label)]
         else:
@@ -2948,7 +2949,8 @@ class CorpusClass(CoqObject):
             if attributes:
                 return ["</{} {}>".format(
                     label,
-                    ", ".join(["{}='{}'".format(x, attributes[x]) for x in attributes]))]
+                    ", ".join(["{}='{}'".format(x, attributes[x])
+                               for x in attributes]))]
             else:
                 return ["</{}>".format(label)]
         else:
@@ -2980,7 +2982,7 @@ class CorpusClass(CoqObject):
         self.lexicon.joined_tables = []
         self.lexicon.add_table_path("corpus_id", word_feature)
 
-        if hasattr(self.resource, "tag_table"):
+        if hasattr(self.resource, "tag_table") and False:
             headers = ["coquery_invisible_corpus_id", "COQ_TAG_ID"]
             kwargs = {
                 "corpus": self.resource.corpus_table,
@@ -3013,9 +3015,9 @@ class CorpusClass(CoqObject):
                     {tag_id} AS COQ_TAG_ID"""
             format_string = """
                 SELECT {columns}
-                FROM {corpus} {joined_tables}
-                LEFT JOIN {tag_table}
-                ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id}
+                FROM {corpus}
+                {joined_tables}
+                LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id}
                 WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}
                 """
         else:
@@ -3025,7 +3027,8 @@ class CorpusClass(CoqObject):
                     {word_table}.{word} AS coq_word_label_1"""
             format_string = """
             SELECT {columns}
-            FROM {corpus} {joined_tables}
+            FROM {corpus}
+            {joined_tables}
             WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}
             """
             kwargs = {
@@ -3043,6 +3046,7 @@ class CorpusClass(CoqObject):
                 "current_source_id": source_id,
                 "start": max(0, token_id - 1000),
                 "end": token_id + token_width + 999}
+
         if word_start and word_end:
             column_string = """{},
                     {{word_table}}.{{start_time}} AS coq_word_starttime_1,
@@ -3054,7 +3058,7 @@ class CorpusClass(CoqObject):
         kwargs["columns"] = column_string.format(**kwargs)
 
         if origin_id:
-            format_string += " AND {corpus}.{source_id} = '{current_source_id}'"
+            format_string += "    AND {corpus}.{source_id} = '{current_source_id}'"
         S = format_string.format(**kwargs)
 
         if options.cfg.verbose:
@@ -3062,13 +3066,33 @@ class CorpusClass(CoqObject):
             print(S)
         engine = self.resource.get_engine()
         df = pd.read_sql(S, engine)
+        print(1)
+        S = """
+            SELECT {tag} AS COQ_TAG_TAG,
+                   {tag_table}.{tag_type} AS COQ_TAG_TYPE,
+                   {attribute} AS COQ_ATTRIBUTE,
+                   {corpus_id} AS COQ_ID
+            FROM {tag_table}
+            WHERE {corpus_id} BETWEEN {start} AND {end}
+            ORDER BY {tag_id}
+        """.format(tag_table=self.resource.tag_table,
+                   tag=self.resource.tag_label,
+                   tag_id=self.resource.tag_id,
+                   corpus_id=self.resource.tag_corpus_id,
+                   tag_corpus_id=self.resource.tag_corpus_id,
+                   tag_type=self.resource.tag_type,
+                   attribute=self.resource.tag_attribute,
+                   current_source_id=source_id,
+                   start=max(0, token_id - 1000),
+                   end=token_id + token_width + 999)
+        tags = pd.read_sql(S, engine)
         engine.dispose()
 
         try:
             df = df.sort_values(by=headers)
         except AttributeError:
             df = df.sort(columns=headers)
-        self._context_cache[(token_id, source_id, token_width)] = df
+        self._context_cache[(token_id, source_id, token_width)] = (df, tags)
 
     def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
         """
@@ -3096,7 +3120,8 @@ class CorpusClass(CoqObject):
         named widget.ui.context_area. """
 
         def expand_row(x):
-            self.id_list += list(range(int(x.coquery_invisible_corpus_id), int(x.end)))
+            return list(range(int(x.coquery_invisible_corpus_id),
+                              int(x.end)))
 
         html_escape_table = {
             "&": "&amp;",
@@ -3118,122 +3143,85 @@ class CorpusClass(CoqObject):
         if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
-        print(token_id, source_id, token_width)
+        def parse_row(row, tags):
+            word = row.coq_word_label_1
+            word_id = row.coquery_invisible_corpus_id
+            opening = tags[(tags.COQ_ID == word_id) &
+                           ((tags.COQ_TAG_TYPE == "open") |
+                            (tags.COQ_TAG_TYPE == "empty"))]
+            closing = tags[(tags.COQ_ID == word_id) &
+                           ((tags.COQ_TAG_TYPE == "close") |
+                            (tags.COQ_TAG_TYPE == "empty"))]
+            l = []
+            if len(opening):
+                l.extend(list(opening.apply(lambda x: parse_tags(x, True),
+                                            axis="columns")))
+            if word:
+                # highlight words that are in the results table:
+                if word_id in self.id_list:
+                    l.append("<span style='{};'>".format(self.resource.render_token_style))
+                # additional highlight if the word is the target word:
+                if token_id <= word_id < token_id + token_width:
+                    l.append("<b>")
+                    l.append(escape_html(word))
+                    l.append("</b>")
+                else:
+                    l.append(escape_html(word))
+                if word_id in self.id_list:
+                    l.append("</span>")
+            if len(closing):
+                l.extend(list(closing.apply(lambda x: parse_tags(x, False),
+                                            axis="columns")))
+            return l
+
+        def parse_tags(row, open=True):
+            if open:
+                s1 = "<{} {}>"
+                s2 = "<{}>"
+            else:
+                s1 = "</{} {}>"
+                s2 = "</{}>"
+            attr = row.COQ_ATTRIBUTE
+            tag = self.tag_to_html(row.COQ_TAG_TAG)
+            if attr:
+                attr = re.sub("=([^,]*)", r"='\g<1>'", attr)
+                return s1.format(tag, attr)
+            else:
+                return s2.format(tag)
+
         if not (token_id, source_id, token_width) in self._context_cache:
             self._read_context_for_renderer(token_id, source_id, token_width)
-        df = self._context_cache[(token_id, source_id, token_width)]
+        df, tags = self._context_cache[(token_id, source_id, token_width)]
+        df = df.reset_index(drop=True)
 
-        context_start = max(0, token_id - context_width)
-        context_end = token_id + token_width + context_width
+        ix = df.index[df.coquery_invisible_corpus_id == token_id][0]
+        context_start = max(0, ix - context_width)
+        context_end = ix + token_width + context_width
+
+        df = df[(df.index >= context_start) & (df.index < context_end)]
 
         # create a list of all token ids that are also listed in the results
         # table:
-        self.id_list = []
         tab = options.cfg.main_window.Session.data_table
-        tab = tab[(tab.coquery_invisible_corpus_id> token_id - 1000) & (
-            tab.coquery_invisible_corpus_id < token_id + 1000 + token_width)]
-        tab["end"] = tab[["coquery_invisible_corpus_id",
-                          "coquery_invisible_number_of_tokens"]].sum(axis=1)
-
+        tab = tab[(tab.coquery_invisible_corpus_id > token_id - 1000) &
+                  (tab.coquery_invisible_corpus_id < token_id + 1000 + token_width)]
+        tab["end"] = (tab[["coquery_invisible_corpus_id",
+                          "coquery_invisible_number_of_tokens"]]
+                         .sum(axis=1))
         # the method expand_row has the side effect that it adds the
         # token id range for each row to the list self.id_list
-        tab.apply(expand_row, axis=1)
+        self.id_list = list(pd.np.hstack(tab.apply(expand_row, axis=1)))
 
-        context = deque()
-        # we need to keep track of any opening and closing tag that does not
-        # have its matching tag in the selected context:
-        opened_elements = []
-        closed_elements = []
-
-        for context_token_id in [x for x in range(context_start, context_end)
-                                 if x in df.coquery_invisible_corpus_id.unique()]:
-            opening_elements = []
-            closing_elements = []
-            word = ""
-
-            df_sub = df[df.coquery_invisible_corpus_id == context_token_id]
-            if "COQ_TAG_ID" in df_sub.columns:
-                for x in df_sub.index:
-                    if df_sub.COQ_TAG_TYPE[x] is not None:
-                        if df_sub.COQ_TAG_TYPE[x] == "open":
-                            opening_elements.append(x)
-                        if df_sub.COQ_TAG_TYPE[x] == "empty":
-                            opening_elements.append(x)
-                            closing_elements.append(x)
-                        if df_sub.COQ_TAG_TYPE[x] == "close":
-                            closing_elements.append(x)
-
-            word = escape_html(df_sub.coq_word_label_1.iloc[0])
-
-            # process all opening elements:
-            for ix in opening_elements:
-                tag = df_sub.loc[ix].COQ_TAG_TAG
-                attr = df_sub.loc[ix].COQ_ATTRIBUTE
-                if attr:
-                    attr_list = [x.partition("=") for x in attr.split(",")]
-                    attributes = dict([(l, r) for l, _, r in attr_list])
-                else:
-                    attributes = {}
-                open_element = self.renderer_open_element(tag, attributes)
-                if open_element:
-                    context += open_element
-                    opened_elements.append(tag)
-
-            if word:
-                # process the context word:
-
-                # highlight words that are in the results table:
-                if context_token_id in self.id_list:
-                    context.append("<span style='{};'>".format(self.resource.render_token_style))
-                # additional highlight if the word is the target word:
-                if token_id <= context_token_id < token_id + token_width:
-                    context.append("<b>")
-                    context.append(word)
-                    context.append("</b>")
-                else:
-                    context.append(word)
-                if context_token_id in self.id_list:
-                    context.append("</span>")
-
-            # process all opening elements:
-            for ix in closing_elements:
-                tag = df_sub.loc[ix].COQ_TAG_TAG
-                attr = df_sub.loc[ix].COQ_ATTRIBUTE
-                if attr:
-                    try:
-                        attributes = dict([x.split("=") for x in attr.split(",")])
-                    except ValueError:
-                        attributes = dict([attr.split("=")])
-                else:
-                    attributes = {}
-
-                close_element = self.renderer_close_element(tag, attributes)
-                if close_element:
-                    context += close_element
-                    # remove the opening element if the current element closes it:
-                    if opened_elements and tag == opened_elements[-1]:
-                        opened_elements.pop()
-                    else:
-                        # otherwise, keep track of unmatched closing elements:
-                        closed_elements.append(tag)
-
-        # for all unmatchend opened elements, add a matching closing one:
-        for tag in opened_elements[::-1]:
-            if tag:
-                context.append("</{}>".format(self.tag_to_html(tag)))
-
-        # for all unmatchend closing elements, add a matching opening one:
-        for tag in closed_elements:
-            if tag:
-                context.appendleft("<{}>".format(self.tag_to_html(tag)))
+        context = pd.np.hstack(df.apply(lambda x: parse_row(x, tags),
+                                        axis="columns"))
         s = collapse_words(context)
         s = s.replace("</p>", "</p>\n")
         s = s.replace("<br/>", "<br/>\n")
         audio = self.resource.audio_features != []
         start_time = None
         end_time = None
-        df = df[(df.coquery_invisible_corpus_id >= context_start) &
-                (df.coquery_invisible_corpus_id <= context_end)]
+        #df = df[(df.coquery_invisible_corpus_id >= context_start) &
+                #(df.coquery_invisible_corpus_id <= context_end)]
         if audio:
             try:
                 start_time = df.coq_word_starttime_1.min()
