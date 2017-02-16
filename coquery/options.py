@@ -1206,9 +1206,16 @@ def process_options():
     options = Options()
     cfg = options.cfg
     options.get_options()
-    if use_cachetools:
+    if use_cachetools and cfg.use_cache:
         from . import cache
-        cfg.query_cache = cache.CoqQueryCache(cfg.use_cache)
+        import cachetools
+        if cfg.use_cache:
+            cfg.query_cache = cache.CoqQueryCache(cfg.use_cache)
+        else:
+            cfg.query_cache = cachetools.LFUCache(
+                                maxsize=cfg.query_cache_size,
+                                getsizeof=sys.getsizeof)
+
     add_source_path(cfg.custom_installer_path)
 
 
