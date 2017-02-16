@@ -576,8 +576,6 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_speaker_feature("source_gender")
         self.add_speaker_feature("source_ethnicity")
 
-        
-
     def xml_preprocess_tag(self, element):
         #self.tag_token(self._corpus_id, element.tag, element.attrib, op=True)
         self.tag_next_token(element.tag, element.attrib)
@@ -738,47 +736,47 @@ class BuilderClass(BaseCorpusBuilder):
         return desc, code
     
     def process_xml_file(self, current_file):
-        """ Reads an XML file."""
+        """ Reads an XML file.
 
-        # There are a few errors in the XML files that are fixed in this 
-        # method.
-        #
-        # First, if the lemma of the word is unknown, the non-conforming XML
-        # tag '<unknown>' is used in the files. The fix is that in such a
-        # case, the value of the first column (i.e. the orhtographic word) 
-        # is copied to the last column (i.e. the lemma).
-        #
-        # Second, HTML entities (e.g. &quot;) are malformed. They are placed
-        # in two lines, the first starting with the ampersand plus the name,
-        # teh second line containing the closing semicolon.
-        #
-        # Third, sometimes the opening XML tag is fed into the POS tagger,
-        # with disastrous results, e.g. from Pr_54.xml.pos, line 235:
-        #
-        #    <error  NN  <unknown>
-        #    corrected=  NN  <unknown>
-        #    "   ''  "
-        #    &quot   NN  <unknown>
-        #    ;   :   ;
-        #    ."> JJ  <unknown>
-        #    &quot   NN  <unknown>
-        #    ;   :   ;
-        #    </error>
-        #
-        # This is fixed by a hack: a line that contains more '<' than '>'
-        # is considered malformed. The first column of every following line
-        # is concatenated to the content of the first column of the 
-        # malformed line, up to the point where a line is encountered that
-        # contains more '>' than '<'. After that line, the file is processed
-        # normally. This hack transforms the malformed lines above into
-        # a well-formed XML segment that corresponds to the content of 
-        # Pr_54.xml:
-        #
-        #     <error corrected="&quot;.">
-        #     &quot;   PUNCT   &quot;
-        #     </error>
+        There are a few errors in the XML files that are fixed in this
+        method.
 
-        
+        First, if the lemma of the word is unknown, the non-conforming XML
+        tag '<unknown>' is used in the files. The fix is that in such a
+        case, the value of the first column (i.e. the orhtographic word)
+        is copied to the last column (i.e. the lemma).
+
+        Second, HTML entities (e.g. &quot;) are malformed. They are placed
+        in two lines, the first starting with the ampersand plus the name,
+        teh second line containing the closing semicolon.
+
+        Third, sometimes the opening XML tag is fed into the POS tagger,
+        with disastrous results, e.g. from Pr_54.xml.pos, line 235:
+
+           <error  NN  <unknown>
+           corrected=  NN  <unknown>
+           "   ''  "
+           &quot   NN  <unknown>
+           ;   :   ;
+           ."> JJ  <unknown>
+           &quot   NN  <unknown>
+           ;   :   ;
+           </error>
+
+        This is fixed by a hack: a line that contains more '<' than '>'
+        is considered malformed. The first column of every following line
+        is concatenated to the content of the first column of the
+        malformed line, up to the point where a line is encountered that
+        contains more '>' than '<'. After that line, the file is processed
+        normally. This hack transforms the malformed lines above into
+        a well-formed XML segment that corresponds to the content of
+        Pr_54.xml:
+
+            <error corrected="&quot;.">
+            &quot;   PUNCT   &quot;
+            </error>
+        """
+
         self._current_file = current_file
 
         file_buffer = StringIO()
