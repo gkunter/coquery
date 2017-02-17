@@ -26,6 +26,20 @@ from .defines import LANGUAGES
 CONTRACTION = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
 PUNCT = '!\'),-./:;?^_`}’”]'
 
+HTML_ESCAPE_TABLE = [
+     ("&", "&amp;"),
+     ('"', "&quot;"),
+     ("'", "&apos;"),
+     (">", "&gt;"),
+     ("<", "&lt;")
+     ]
+
+
+def html_escape(text):
+    for old, new in HTML_ESCAPE_TABLE:
+        if old in text:
+            text = text.replace(old, new)
+    return text
 
 def collapse_words(word_list):
     """ Concatenate the words in the word list, taking clitics, punctuation
