@@ -3123,23 +3123,6 @@ class CorpusClass(CoqObject):
             return list(range(int(x.coquery_invisible_corpus_id),
                               int(x.end)))
 
-        html_escape_table = {
-            "&": "&amp;",
-            '"': "&quot;",
-            "'": "&apos;",
-            ">": "&gt;",
-            "<": "&lt;",
-            }
-
-        def escape_html(s):
-            """
-            Based on http://stackoverflow.com/questions/2077283/
-            """
-            try:
-                return "".join(html_escape_table.get(c, c) for c in s)
-            except:
-                return s
-
         if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
@@ -3163,10 +3146,10 @@ class CorpusClass(CoqObject):
                 # additional highlight if the word is the target word:
                 if token_id <= word_id < token_id + token_width:
                     l.append("<b>")
-                    l.append(escape_html(word))
+                    l.append(html_escape(word))
                     l.append("</b>")
                 else:
-                    l.append(escape_html(word))
+                    l.append(html_escape(word))
                 if word_id in self.id_list:
                     l.append("</span>")
             if len(closing):
