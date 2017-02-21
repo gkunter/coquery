@@ -18,8 +18,10 @@ try:
 except ImportError:
     from io import StringIO
     
-from coquery.corpusbuilder import *
+from coquery.corpusbuilder import BaseCorpusBuilder, XMLCorpusBuilder
+from coquery.corpusbuilder import Identifier, Column, Link
 from coquery.bibliography import *
+from coquery.general import html_escape
 
 class corpus_code():
     #def get_tag_translate(self, tag):
@@ -242,7 +244,7 @@ class corpus_code():
 
         #widget.ui.context_area.setText(collapse_words(context))
 
-class BuilderClass(BaseCorpusBuilder):
+class BuilderClass(XMLCorpusBuilder):
     encoding = "latin-1"
     file_filter = "*.xml.pos"
 
@@ -274,6 +276,46 @@ class BuilderClass(BaseCorpusBuilder):
     source_icetext = "ICE_text_category"
     source_icetextcode = "ICE_text_code"
     source_place = "Place"
+
+    header_tag = "meta"
+    body_tag = "text"
+    encoding = "latin-1"
+
+    _REPLACE_LIST = [
+        ("\xcf", "χ"),
+        ("â", "‘"),
+        ("â", "’"),
+
+        ("â", "“"),
+        ("â", "”"),
+
+        ("â", "–"),
+
+        ("Â°", "°"),
+        ("Â·", "·"),
+
+        ("Ã ", "à"),
+        ("Ãš", "è"),
+        ("Ã¬", "ì"),
+        ("Ã²", "ò"),
+
+        ("Ä", "ĕ"),
+
+        ("Ã©", "é"),
+        ("Ã­", "í"),
+        ("Ãº", "ú"),
+
+        ("Ã€", "ä"),
+
+        ("Ã", "Ì"),
+
+        ("Ã±", "ñ"),
+
+        ("Ê€", "ʤ"),
+
+        ("Î¼", "μ"),
+        ("â", "∆"),
+        ]
 
     expected_files = [
         'Pr_58.xml.pos', 'Pr_20.xml.pos', 'Pr_25.xml.pos', 
@@ -462,10 +504,10 @@ class BuilderClass(BaseCorpusBuilder):
             True if the graphical installer is used, and False if the 
             installer runs on the console.
         """
-        super(BuilderClass, self).__init__(gui, *args)
+        super(BuilderClass, self).__init__(gui=gui, *args)
 
         self.check_arguments()
-        
+
         # add table descriptions for the tables used in this database.
         #
         # Every table has a primary key that uniquely identifies each entry
@@ -528,8 +570,7 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(27) NOT NULL"),
              Column(self.word_lemma, "VARCHAR(27) NOT NULL"),
-             Column(self.word_pos, "ENUM('CC','CD','DT','EX','FW','IN','JJ','JJR','JJS','LS','MD','NN','NNS','NP','NPS','PDT','POS','PP','PP$','PUNCT','RB','RBR','RBS','RP','SYM','TO','UH','VB','VBD','VBG','VBN','VBP','VBZ','WDT','WP','WP$','WRB') NOT NULL")])
-             
+             Column(self.word_pos, "VARCHAR(5) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -575,77 +616,125 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_speaker_feature("source_age")
         self.add_speaker_feature("source_gender")
         self.add_speaker_feature("source_ethnicity")
+        self.add_tag_table()
 
-    def xml_preprocess_tag(self, element):
-        #self.tag_token(self._corpus_id, element.tag, element.attrib, op=True)
+    def process_file(self, current_file):
+        # Process every file except for bl_18a.xml.pos. This file only
+        # contains unimportant meta information:
+        if current_file.lower().find("bl_18a.xml.pos") == -1:
+            self._current_file = current_file
+            super(BuilderClass, self).process_file(current_file)
+
+    def preprocess_element(self, element):
         self.tag_next_token(element.tag, element.attrib)
-        #if element.text or list(element):
-            #self.tag_next_token(element.tag, element.attrib)
-        #else:
-            #self.add_empty_tag(element.tag, element.attrib)
-            #if element.tag == "x-anonym-x":
-                ## ICE-NG contains anonymized labels for names, placenames,
-                ## and other nouns. Insert a special label in that case:
-                #self._word_id = self.table_get(self.word_table, 
-                        #{self.word_label: "ANONYMIZED", 
-                        #self.word_lemma: "ANONYMIZED", 
-                        #self.word_pos: "np"}, case=True)
 
-    def xml_postprocess_tag(self, element):
-        self.tag_token(self._corpus_id, element.tag, element.attrib, cl=True)
-        # mon-empty tag
-        #if element.text or list(element):
-            #self.tag_last_token(element.tag, element.attrib)
+    def postprocess_element(self, element):
+        self.tag_last_token(element.tag, element.attrib)
 
-    def process_text(self, text):
+    def process_content(self, s):
+        def yield_next(x):
+            for line in [x.strip() for x in s.split("\n") if x.strip()]:
+                yield line
+
+        def process_row(word, pos, lemma):
+            if pos == "''" or pos in string.punctuation:
+                pos = "PUNCT"
+            d = dict(zip((self.word_label, self.word_lemma, self.word_pos),
+                         (word, lemma, pos)))
+            if word and lemma:
+                self._word_id = self.table(self.word_table).get_or_insert(
+                    d, case=True)
+                self.add_token_to_corpus(
+                    {self.corpus_word_id: self._word_id,
+                    self.corpus_sentence: self._sentence_id,
+                    self.corpus_file_id: self._file_id,
+                    self.corpus_source_id: self._source_id})
+
         new_sentence = False
-        for row in text.splitlines():
+        content = yield_next(s)
+        for row in content:
             try:
-                self._value_word_label, self._value_word_pos, self._value_word_lemma = [x.strip() for x in row.split("\t")]
+                word, pos, lemma = row.split("\t")
             except ValueError:
-                pass
-            else:
-                d = {self.word_label: self._replace_encoding_errors(self._value_word_label),
-                     self.word_lemma: self._replace_encoding_errors(self._value_word_lemma),
-                     self.word_pos: self._value_word_pos}
-                
-                if self._value_word_pos == "CD":
-                    d[self.word_lemma] = d[self.word_label]
-                elif self._value_word_pos in string.punctuation or self._value_word_pos == "''":
-                    d[self.word_pos] = "PUNCT"
-                elif self._value_word_pos == "SENT":
-                    d[self.word_pos] = "PUNCT"
-                    new_sentence = True
-                    
-                if d[self.word_label] and d[self.word_lemma]:
-                    self._word_id = self.table(self.word_table).get_or_insert(
-                        d, case=True)
-                        
-                    self.add_token_to_corpus(
-                        {self.corpus_word_id: self._word_id,
-                        self.corpus_sentence: self._sentence_id,
-                        self.corpus_file_id: self._file_id,
-                        self.corpus_source_id: self._source_id})
-                if new_sentence:
-                    self._sentence_id += 1
-                    new_sentence = False
-                    
-    def xml_process_content(self, element_text):
-        """ In ICE-NG, the XML elements contain rows of words. This method 
-        processes these rows, and creates token entries in the corpus table. 
-        It also creates new entries in the word table if necessary."""
-        if element_text:
-            self.process_text(element_text)
+                word = row.strip()
+                pos = "UNK"
+                lemma = word
+            if word.startswith("&") and lemma == "&lt;unknown&gt;":
+                # Fix broken XML entities by assuming that the next line
+                # contains a semicolon ";". If so, fix the XML entity, and
+                # store it in the file.
 
-    def xml_process_tail(self, element_tail_text):
-        if element_tail_text:
-            self.process_text(element_tail_text)
-        
-    def xml_get_meta_information(self, root):
-        meta = root.find("meta")
+                # FIXME: occassionally, &apos; is used to indicate e.g. the
+                # possessive clitic, as for instance in line 1131 of
+                # ASsc_03.xml.pos. The corpus builder should be aware of
+                # this, and create a new token "'s".
+                try:
+                    next_row = next(content)
+                except StopIteration:
+                    process_row(word, pos, pos)
+                    continue
+                if next_row.startswith(";\t"):
+                    word = "{};".format(word)
+                    process_row(word, "SYM", word)
+                else:
+                    process_row(word, pos, word)
+                    process_row(*next_row.split("\t"))
+            else:
+                if pos == "SENT":
+                    # FIXME: check if actually a full stop or a decimal point
+                    # by keeping track of the <punctiation> tag in
+                    # preprocess/postprocess element.
+                    new_sentence = True
+                process_row(word, pos, lemma)
+
+            if new_sentence:
+                self._sentence_id += 1
+                new_sentence = False
+
+    def preprocess_data(self, data):
+        def yield_data(data):
+            for x in data:
+                yield x
+
+        def fix_encoding(line):
+            for old, new in self._REPLACE_LIST:
+                if old in line:
+                    line = line.replace(old, new)
+            return line
+
+        l = []
+        content = yield_data(data)
+        for line in content:
+            line = fix_encoding(line)
+            if line.count("\t") < 2:
+                l.append(line)
+                continue
+            if line.count("<") > line.count(">"):
+                left_over = None
+                fragments = ["{} ".format(line.partition("\t")[0])]
+                while True:
+                    line = next(content)
+                    fragments.append(line.partition("\t")[0])
+                    if fragments[-1][-1] in set(['"', "'"]):
+                        fragments.append(" ")
+                    if line.count("<") < line.count(">"):
+                        if fragments[-1][-1] != ">":
+                            fragments[-1], _, left_over = line.partition(">")
+                            fragments.append(">")
+                        break
+                line = "".join(fragments)
+                l.append(line)
+                if left_over:
+                    l.append(html_escape(left_over))
+                continue
+            l.append(html_escape(line))
+        return l
+
+    def process_header(self, root):
+        super(BuilderClass, self).process_header(root)
 
         try:
-            self._value_source_date = meta.find("date").text.strip().split("\t")[0]
+            self._value_source_date = self.header.find("date").text.strip().split("\t")[0]
         except AttributeError:
             self._value_source_date = ""
         self._value_source_date = self._value_source_date.strip().strip("-")
@@ -654,11 +743,11 @@ class BuilderClass(BaseCorpusBuilder):
             self._value_source_date = ""
 
         try:
-            self._value_source_place = meta.find("place").text.strip().split("\t")[0]
+            self._value_source_place = self.header.find("place").text.strip().split("\t")[0]
         except AttributeError:
             self._value_source_place = ""
             
-        author = meta.find("author")
+        author = self.header.find("author")
 
         try:
             self._value_source_gender = author.find("gender").text.strip().split("\t")[0]
@@ -780,7 +869,9 @@ class BuilderClass(BaseCorpusBuilder):
         self._current_file = current_file
 
         file_buffer = StringIO()
-        with codecs.open(current_file, "r", encoding = self.arguments.encoding) as input_file:
+        with codecs.open(current_file,
+                         "r",
+                         encoding=self.arguments.encoding) as input_file:
             skip = False
             fix_split_token = ""
             for i, line in enumerate(input_file):
@@ -875,12 +966,6 @@ class BuilderClass(BaseCorpusBuilder):
     def xml_get_body(self, root):
         return root.find("text")
         
-    def process_file(self, current_file):
-        # Process every file except for bl_18a.xml.pos. This file only 
-        # contains unimportant meta information:
-        if current_file.lower().find("bl_18a.xml.pos") == -1:
-            self.process_xml_file(current_file)
-
     def get_file_identifier(self, path):
         _, base = os.path.split(path)
         while "." in base:
@@ -891,39 +976,39 @@ class BuilderClass(BaseCorpusBuilder):
     def _replace_encoding_errors(s):
         """
         Replace erroneous character sequences by the correct character
-        
-        Unfortunately, some data files in ICE-NG have corrput character 
+
+        Unfortunately, some data files in ICE-NG have corrput character
         encodings, which can limit the usefulness of the corpus data. This
         function attempts to reverse the faulty encoding by replacing any
-        character sequence that appears to be the result of an encdoing 
+        character sequence that appears to be the result of an encdoing
         error by the character that was probably intended.
-        
+
         Parameters
         ----------
         s : string
             The character string
-            
+
         Returns
         -------
         s : string
             The input string with known encoding errors fixed.
         """
-        
+
         # apparently, the character sequence â marks any faulty encoding,
         # and the next character is the actual encoding error. The problem
         # is that in ICE_NG, this three-character sequence can be split up
-        # into two 'words', e.g. for the dash in Pr_13.txt, line 36 
+        # into two 'words', e.g. for the dash in Pr_13.txt, line 36
         # ('hereas others – notably top officials'). In Pr_13.xml.pos, this
         # dash is represented in two separate rows in lines 381-382.
-        
+
         # My solution is to find the two-character marker and replace it by
         # an empty string. Then, the next character is replaced, using the
         # lookup table.
         # The installer has to check, then, if the string is empty after
         # replacement. If so, it should discard the current line.
-        
+
         # CHECK CHARACTERS after 'i' in ATec_01.xml.pos, ATec_06.xml.pos
-        
+
         replace_list = [
             ("â", "‘"),
             ("â", "’"),
@@ -932,7 +1017,7 @@ class BuilderClass(BaseCorpusBuilder):
             ("â", "”"),
 
             ("â", "–"),
-            
+
             ("Â°", "°"),
             ("Â·", "·"),
 
@@ -940,7 +1025,7 @@ class BuilderClass(BaseCorpusBuilder):
             ("Ãš", "è"),
             ("Ã¬", "ì"),
             ("Ã²", "ò"),
-            
+
             ("Ä", "ĕ"),
 
             ("Ã©", "é"),
@@ -948,13 +1033,13 @@ class BuilderClass(BaseCorpusBuilder):
             ("Ãº", "ú"),
 
             ("Ã€", "ä"),
-            
+
             ("Ã", "Ì"),
-            
+
             ("Ã±", "ñ"),
 
             ("Ê€", "ʤ"),
-            
+
             ("Î¼", "μ"),
             ("â", "∆"),
             ]
@@ -967,7 +1052,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         for old, new in corrupt_replace_list:
             s = s.replace(old.replace("â", ""), new)
-            
+
         return s
 
     @staticmethod
@@ -976,7 +1061,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_db_name():
-        return "ice_ng"
+        return "coq_ice_ng"
 
     @staticmethod
     def get_language():
