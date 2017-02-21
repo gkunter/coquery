@@ -2247,7 +2247,28 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 if not self.verify_file_name():
                     QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
+
+                msg_box = QtWidgets.QDialog(self)
+                msg_box.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+                msg_box.setWindowTitle("Reading input file – Coquery", )
+                layout = QtWidgets.QHBoxLayout(msg_box)
+                layout.addWidget(QtWidgets.QLabel("Reading query strings from <br><code>{}</code><br>Please wait...".format(
+                    options.cfg.input_path)))
+                msg_box.setModal(True)
+                msg_box.open()
+                msg_box.show()
+                options.cfg.app.sendPostedEvents()
+                options.cfg.app.processEvents()
+                msg_box.update()
+                msg_box.repaint()
+                options.cfg.app.sendPostedEvents()
+                options.cfg.app.processEvents()
+                msg_box.update()
+                msg_box.repaint()
                 self.new_session = SessionInputFile()
+                msg_box.close()
+                msg_box.hide()
+                del msg_box
         except TokenParseError as e:
             QtWidgets.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLNoConfigurationError:
