@@ -20,8 +20,21 @@ import logging
 
 from coquery import options
 from coquery import corpusbuilder
-from coquery.errors import *
-from coquery.defines import *
+from coquery.errors import (IllegalCodeInModuleError,
+                            IllegalFunctionInModuleError,
+                            IllegalImportInModuleError,
+                            ModuleIncompleteError)
+from coquery.defines import (INSTALLER_ADHOC, INSTALLER_CUSTOM,
+                             INSTALLER_DEFAULT,
+                             NAME,
+                             msg_adhoc_builder_table,
+                             msg_adhoc_builder_texts,
+                             msg_corpus_broken,
+                             msg_invalid_installer,
+                             msg_validated_install,
+                             msg_unvalidated_install,
+                             msg_rejected_install,
+                             msg_failed_install)
 from coquery.unicode import utf8
 
 from . import classes
@@ -200,8 +213,9 @@ class CoqAccordionEntry(QtWidgets.QWidget):
         #response = box(None,
             #"Unvalidated corpus installer – Coquery",
             #msg, QtWidgets.QMessageBox.Yes| QtWidgets.QMessageBox.No, default)
-        if True or response == QtWidgets.QMessageBox.Yes:
-            self._stack.installCorpus.emit(self._builder_class)
+        #if response == QtWidgets.QMessageBox.Yes:
+            #self._stack.installCorpus.emit(self._builder_class)
+        self._stack.installCorpus.emit(self._builder_class)
 
     def setReferences(self, ref):
         self._reference_list = ref
@@ -431,11 +445,13 @@ class CorpusManager(QtWidgets.QDialog):
 
                         if builder_class.get_description():
                             entry.setDescription(
-                                "".join(["<p>{}</p>".format(utf8(x)) for x in builder_class.get_description()]))
+                                "".join(["<p>{}</p>".format(utf8(x))
+                                         for x in builder_class.get_description()]))
 
                         if builder_class.get_language():
                             entry.setLanguage(
-                                utf8(builder_class.get_language()), utf8(builder_class.get_language_code()))
+                                utf8(builder_class.get_language()),
+                                utf8(builder_class.get_language_code()))
 
                         if builder_class.get_references():
                             entry.setReferences(builder_class.get_references())
@@ -467,11 +483,12 @@ class CorpusManager(QtWidgets.QDialog):
                     l.append("HTML")
                 entry = CoqAccordionEntry(stack=self)
                 entry._is_builder = True
-                entry.setTitle("Build new user corpus from text files")
+                entry.setTitle("Build a new corpus from a collection of text files")
                 entry.setDescription(msg_adhoc_builder_texts.format(
                     list="".join(["<li>{}</li>".format(x) for x in l])))
 
-                self.detail_box = classes.CoqDetailBox("Build new user corpus from text files...", entry)
+                self.detail_box = classes.CoqDetailBox(
+                    "Build new corpus from text files...", entry)
                 entry.setup_buttons(False, self.detail_box)
                 self.ui.list_layout.insertWidget(0, self.detail_box)
                 count += 1
@@ -479,9 +496,10 @@ class CorpusManager(QtWidgets.QDialog):
                 entry = CoqAccordionEntry(stack=self)
                 entry._is_builder = True
                 entry._build_from_table = True
-                entry.setTitle("Build a new corpus from table file")
+                entry.setTitle("Build a new user corpus from a CSV table file")
                 entry.setDescription(msg_adhoc_builder_table)
-                self.detail_box = classes.CoqDetailBox("Build a new user corpus from table file...", entry)
+                self.detail_box = classes.CoqDetailBox(
+                    "Build new corpus from table file...", entry)
                 entry.setup_buttons(False, self.detail_box)
                 self.ui.list_layout.insertWidget(1, self.detail_box)
                 count += 1
@@ -496,28 +514,27 @@ class CorpusManager(QtWidgets.QDialog):
                     header.setContentsMargins(0, 0, 0, int(height * 0.25))
                 else:
                     # add spacing otherwise:
-                    header.setContentsMargins(0, int(height * 0.75), 0, int(height * 0.25))
+                    header.setContentsMargins(0, int(height * 0.75),
+                                              0, int(height * 0.25))
                 self.ui.list_layout.insertWidget(header_row, header)
-        self.ui.list_layout.addItem(QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding))
+        self.ui.list_layout.addItem(
+            QtWidgets.QSpacerItem(
+                0, 0,
+                QtWidgets.QSizePolicy.Minimum,
+                QtWidgets.QSizePolicy.Expanding))
 
     def update_accordion(self, detail_box):
         """
         Closes the last installer entry, and remembers the current one.
         """
-        if self.last_detail_box and self.last_detail_box.isExpanded() and self.last_detail_box != detail_box:
+        if (self.last_detail_box
+                and self.last_detail_box.isExpanded()
+                and self.last_detail_box != detail_box):
             self.last_detail_box.toggle()
         self.last_detail_box = detail_box
 
     def closeEvent(self, event):
         options.settings.setValue("corpusmanager_size", self.size())
         options.set_current_server(options.cfg.current_server)
-
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    installer_list = CorpusManager.display("../installer", lambda x: x, lambda x: x)
-    #app.exec_()
-
-if __name__ == "__main__":
-    main()
 
 logger = logging.getLogger(NAME)
