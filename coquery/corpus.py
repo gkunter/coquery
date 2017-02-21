@@ -2982,7 +2982,7 @@ class CorpusClass(CoqObject):
         self.lexicon.joined_tables = []
         self.lexicon.add_table_path("corpus_id", word_feature)
 
-        if hasattr(self.resource, "tag_table") and False:
+        if hasattr(self.resource, "tag_table"):
             headers = ["coquery_invisible_corpus_id", "COQ_TAG_ID"]
             kwargs = {
                 "corpus": self.resource.corpus_table,
@@ -3067,25 +3067,29 @@ class CorpusClass(CoqObject):
         engine = self.resource.get_engine()
         df = pd.read_sql(S, engine)
         print(1)
-        S = """
-            SELECT {tag} AS COQ_TAG_TAG,
-                   {tag_table}.{tag_type} AS COQ_TAG_TYPE,
-                   {attribute} AS COQ_ATTRIBUTE,
-                   {corpus_id} AS COQ_ID
-            FROM {tag_table}
-            WHERE {corpus_id} BETWEEN {start} AND {end}
-            ORDER BY {tag_id}
-        """.format(tag_table=self.resource.tag_table,
-                   tag=self.resource.tag_label,
-                   tag_id=self.resource.tag_id,
-                   corpus_id=self.resource.tag_corpus_id,
-                   tag_corpus_id=self.resource.tag_corpus_id,
-                   tag_type=self.resource.tag_type,
-                   attribute=self.resource.tag_attribute,
-                   current_source_id=source_id,
-                   start=max(0, token_id - 1000),
-                   end=token_id + token_width + 999)
-        tags = pd.read_sql(S, engine)
+        if hasattr(self.resource, "tag_table"):
+            S = """
+                SELECT {tag} AS COQ_TAG_TAG,
+                       {tag_table}.{tag_type} AS COQ_TAG_TYPE,
+                       {attribute} AS COQ_ATTRIBUTE,
+                       {corpus_id} AS COQ_ID
+                FROM {tag_table}
+                WHERE {corpus_id} BETWEEN {start} AND {end}
+                ORDER BY {tag_id}
+            """.format(tag_table=self.resource.tag_table,
+                       tag=self.resource.tag_label,
+                       tag_id=self.resource.tag_id,
+                       corpus_id=self.resource.tag_corpus_id,
+                       tag_corpus_id=self.resource.tag_corpus_id,
+                       tag_type=self.resource.tag_type,
+                       attribute=self.resource.tag_attribute,
+                       current_source_id=source_id,
+                       start=max(0, token_id - 1000),
+                       end=token_id + token_width + 999)
+            tags = pd.read_sql(S, engine)
+        else:
+            tags = pd.DataFrame(columns=["COQ_TAG_TAG", "COQ_TAG_TYPE",
+                                         "COQ_ATTRIBUTE", "COQ_ID"])
         engine.dispose()
 
         try:
