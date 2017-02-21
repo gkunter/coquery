@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,24 +13,18 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 import string
 import re
-import warnings
+import pandas as pd
 
-# ensure Python 2.7 compatibility
-try:
-    import StringIO as io
-except ImportError:
-    import io as io
+from coquery.corpusbuilder import BaseCorpusBuilder, logger
+from coquery.corpusbuilder import (Column, Link, Identifier)
+from coquery.capturer import Capturer
 
-import numpy as np
-
-from coquery.corpusbuilder import *
-from coquery import options
-from coquery.documents import *
 
 class BuilderClass(BaseCorpusBuilder):
     file_name = None
 
-    def __init__(self, gui=False, pos=True, mapping={}, dtypes=[], table_options=None):
+    def __init__(self,
+                 gui=False, mapping=None, dtypes=None, table_options=None):
         # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui)
         self._table_options = table_options
@@ -52,9 +46,9 @@ class BuilderClass(BaseCorpusBuilder):
                 # we have to use a fixed maximum string length:
                 max_length = 128
                 dtype = "VARCHAR({})".format(max_length)
-            elif dtypes[i] == np.float64:
+            elif dtypes[i] == pd.np.float64:
                 dtype = "REAL"
-            elif dtypes[i] == np.int64:
+            elif dtypes[i] == pd.np.int64:
                 dtype = "INTEGER"
             _columns.append((i, rc_feature, label, dtype))
             setattr(self, rc_feature, label)
@@ -103,10 +97,11 @@ class BuilderClass(BaseCorpusBuilder):
         # Path
         # A text value containing the path that points to this data file.
 
-        self.create_table_description(self.file_table,
+        self.create_table_description(
+            self.file_table,
             [Identifier(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-            Column(self.file_name, "VARCHAR(2048) NOT NULL"),
-            Column(self.file_path, "VARCHAR(2048) NOT NULL")])
+             Column(self.file_name, "VARCHAR(2048) NOT NULL"),
+             Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
         # Add the main corpus table. Each row in this table represents a
         # token in the corpus. It has the following columns:
@@ -130,10 +125,6 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(self.corpus_table, l)
 
-    @classmethod
-    def get_file_list(cls, path, file_filter, sort=True):
-        return [cls.arguments.path]
-
     def validate_path(self, path):
         return path == self.arguments.path
 
@@ -141,34 +132,8 @@ class BuilderClass(BaseCorpusBuilder):
     def validate_files(l):
         return True
 
-    def add_token(self, token_string, token_pos=None):
-        # get lemma string:
-        if token_string in string.punctuation:
-            token_pos = "PUNCT"
-            lemma = token_string
-        else:
-            try:
-                # use the current lemmatizer to assign the token to a lemma:
-                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
-            except Exception as e:
-                lemma = token_string.lower()
-
-        # get word id, and create new word if necessary:
-        word_dict = {self.word_lemma: lemma, self.word_label: token_string}
-        if token_pos and self.arguments.use_nltk:
-            word_dict[self.word_pos] = token_pos
-        word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
-
-        # store new token in corpus table:
-        return self.add_token_to_corpus(
-            {self.corpus_word_id: word_id,
-             self.corpus_file_id: self._file_id})
-
     def build_load_files(self):
-        old_stderr = sys.stderr
-        err = io.StringIO()
-        sys.stderr = err
-        if self._table_options != None:
+        if self._table_options is not None:
             kwargs = {
                 "encoding": self._table_options.encoding,
                 "header": 0 if self._table_options.header else None,
@@ -180,25 +145,23 @@ class BuilderClass(BaseCorpusBuilder):
 
         kwargs.update({"low_memory": False, "error_bad_lines": False})
 
-        try:
-            df = pd.read_csv(self.arguments.path, **kwargs)
-        except Exception as e:
-            logger.error(e)
-            print(e)
-        finally:
-            sys.stderr = old_stderr
-
-        try:
-            warn_string = eval(err.getvalue()).decode("utf-8")
-        except:
-            warn_string = err.getvalue()
-        for x in warn_string.split("\n"):
-            print(x)
-            if x:
-                logger.warn("File {} – {}".format(self.arguments.path, x))
+        capt = Capturer(stderr=True)
+        with capt:
+            try:
+                df = pd.read_csv(self.arguments.path, **kwargs)
+            except Exception as e:
+                logger.error(e)
+                print(e)
+        for x in capt:
+            s = "File {} – {}".format(self.arguments.path, x)
+            logger.warn(s)
+            print(s)
 
         if not self._table_options.header:
             df.columns = ["X{}".format(x) for x in df.columns]
+        else:
+            df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x) for x in df.columns]
+
         df[self.corpus_file_id] = 1
         self.DB.load_dataframe(df, self.corpus_table, self.corpus_id)
 
