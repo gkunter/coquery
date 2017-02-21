@@ -10,15 +10,14 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from coquery import options
-from coquery.errors import *
+from coquery.unicode import utf8
 from .pyqt_compat import QtWidgets
 
 from .csvoptions import quote_chars, CSVOptionDialog, CSVOptions
 from .ui.namedTableOptionsUi import Ui_NamedTableOptions
 
-
 class NamedTableOptionsDialog(CSVOptionDialog):
-    def __init__(self, filename, fields=[], default=None, parent=None,
+    def __init__(self, filename, fields=None, default=None, parent=None,
                  icon=None):
         """
         Parameters
@@ -28,10 +27,11 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         fields : dictionary
         """
         self._last_header = None
-        super(NamedTableOptionsDialog, self).__init__(default=default,
-                                                      parent=parent,
-                                                      icon=icon,
-                                                      ui=Ui_NamedTableOptions)
+        super(NamedTableOptionsDialog, self).__init__(
+            default=default,
+            parent=parent,
+            icon=icon,
+            ui=Ui_NamedTableOptions)
 
         self.ui.button_word.clicked.connect(
             lambda: self.map_query_item_type("word"))
@@ -47,15 +47,15 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         self._selected = 0
         self.map = default.mapping
 
-        # make all widget rows the same height (for cosmetic reasons):
-        for key, value in fields:
-            button_name = "button_{}".format(value.lower())
-            edit_name = "edit_{}".format(value.lower())
-            setattr(self.ui, button_name, QtWidgets.QPushButton(key))
-            setattr(self.ui, edit_name, QtWidgets.QLineEdit())
+        if fields:
+            for key, value in fields:
+                button_name = "button_{}".format(value.lower())
+                edit_name = "edit_{}".format(value.lower())
+                setattr(self.ui, button_name, QtWidgets.QPushButton(key))
+                setattr(self.ui, edit_name, QtWidgets.QLineEdit())
 
-            getattr(self.ui, name).clicked.connect(
-                lambda: self.map_query_item_type(value))
+                getattr(self.ui, button_name).clicked.connect(
+                    lambda: self.map_query_item_type(value))
 
         # make all buttons the same size:
         max_height = 0
@@ -85,7 +85,8 @@ class NamedTableOptionsDialog(CSVOptionDialog):
             has_word = "word" in self.map
         except:
             has_word = False
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(has_word)
+        ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+        ok_button.setEnabled(has_word)
 
     def select_file(self):
         name = super(NamedTableOptionsDialog, self).select_file()
