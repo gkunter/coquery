@@ -2,10 +2,10 @@
 """
 sqlwrap.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -17,16 +17,11 @@ import warnings
 import sqlalchemy
 import pandas as pd
 
-# ensure Python 2.7 compatibility
-try:
-    import StringIO as io
-except ImportError:
-    import io as io
-
-from .errors import *
-from .defines import *
+from .errors import DependencyError, SQLProgrammingError
+from .defines import SQL_MYSQL, SQL_SQLITE, NAME
 from . import options
 from . import sqlhelper
+from . import capturer
 
 if options.use_mysql:
     import pymysql
@@ -35,10 +30,10 @@ if options.use_mysql:
 class SqlDB(object):
     """ A wrapper for MySQL. """
     def __init__(self, Host, Port, Type, User, Password, db_name="", db_path="", encoding="utf8", connect_timeout=60, local_infile=0):
-        
+
         if Type == SQL_MYSQL and not options.use_mysql:
             raise DependencyError("pymysql", "https://github.com/PyMySQL/PyMySQL")
-        
+
         self.db_type = Type
         self.db_name = db_name
         self.db_host = Host
@@ -58,7 +53,7 @@ class SqlDB(object):
         else:
             self.version = ""
         self.connection = None
-            
+
     def create_database(self, db_name):
         self.sql_url = sqlhelper.sql_url(options.cfg.current_server)
         self.engine = sqlalchemy.create_engine(self.sql_url)
@@ -76,15 +71,15 @@ class SqlDB(object):
     def has_database(self, db_name):
         """
         Check if the database 'db_name' exists on the current connection.
-        
+
         Parameters
         ----------
-        db_name : str 
-            The name of the database 
-            
+        db_name : str
+            The name of the database
+
         Returns
         -------
-        b : bool 
+        b : bool
             True if the database exists, or False otherwise.
         """
         if self.db_type == SQL_MYSQL:
@@ -95,7 +90,7 @@ class SqlDB(object):
                     if x[0] == db_name.split()[0]:
                         return db_name
             except pymysql.ProgrammingError as ex:
-                warning.warn(ex)
+                warnings.warn(ex)
                 raise ex
             return False
         elif self.db_type == SQL_SQLITE:
@@ -104,15 +99,15 @@ class SqlDB(object):
     def has_table(self, table_name):
         """
         Check if the table 'table_name' exists in the current database.
-        
+
         Parameters
         ----------
-        table_name : str 
+        table_name : str
             The name of the table
-            
+
         Returns
         -------
-        b : bool 
+        b : bool
             True if the table exists, or False otherwise.
         """
         with self.engine.connect() as connection:
@@ -126,44 +121,44 @@ class SqlDB(object):
         """
         Create a new table 'table_name' using the specification from
         'description'.
-        
+
         Parameters
         ----------
-        table_name : str 
-            The name of the new table 
-        description : str 
+        table_name : str
+            The name of the new table
+        description : str
             The SQL string used to create the new table
         """
         S = 'CREATE TABLE {} ({})'.format(table_name, description)
         with self.engine.connect() as connection:
             return connection.execute(S)
-            
-    def find(self, table, values, case=False):        
-        """ 
+
+    def find(self, table, values, case=False):
+        """
         Obtain all records from table_name that match the column-value
         pairs given in the dict values.
-        
+
         Parameters
         ----------
-        table : str 
-            The name of the table 
-        values : dict 
+        table : str
+            The name of the table
+        values : dict
             A dictionary with column names as keys and cell contents as values
         case : bool
-            Set to True if the find should be case-sensitive, or False 
+            Set to True if the find should be case-sensitive, or False
             otherwise.
-            
+
         Returns
         -------
         l : list
             A list of tuples representing the results from the find.
         """
-        
+
         variables = list(values.keys())
         where = []
         for column, value in values.items():
             where.append("{} = '{}'".format(column, str(value).replace("'", "''")))
-            
+
         S = "SELECT {} FROM {}".format(", ".join(variables), table)
 
         # case sensitivity works differently for SQLite and MySQL:
@@ -181,7 +176,7 @@ class SqlDB(object):
         S = S.replace("\\", "\\\\")
         l = self.connection.execute(S).fetchall()
         return l
-        
+
     def kill_connection(self):
         try:
             self.Con.kill(self.Con.thread_id())
@@ -200,14 +195,14 @@ class SqlDB(object):
 
     def close(self):
         return
-        
+
     def explain(self, S):
         """
         Explain a MySQL query.
-        
+
         The output of the EXPLAIN command is formatted as a table, and then
         logged to the logger as an INFO.
-        
+
         Parameters
         ----------
         S : string
@@ -221,21 +216,25 @@ class SqlDB(object):
         except pymysql.ProgrammingError as e:
             raise SQLProgrammingError(S + "\n"+ "%s" % e)
         else:
-            explain_table_rows = [[x[0] for x in explain_table.description]]
+            explain_table_rows = [[x[0] for x
+                                   in explain_table.description]]
             for x in explain_table:
                 explain_table_rows.append([str(y) for y in x])
-                
-            explain_column_width = [len(x[0]) for x in explain_table.description]
+
+            explain_column_width = [len(x[0]) for x
+                                    in explain_table.description]
             for current_row in explain_table_rows:
-                for i in range(len(current_row)):
-                    explain_column_width[i] = max(explain_column_width[i], len(current_row[i]))
-                    
-            format_string = " | ".join (["%%-%is" % x for x in explain_column_width])
-            line_string = "-" * (sum (explain_column_width) - 3 + 3 * len(explain_column_width))
-            
+                for i, x in enumerate(current_row):
+                    explain_column_width[i] = max(explain_column_width[i],
+                                                  len(x))
+
+            format_string = " | ".join(["%%-%is" % x for x
+                                        in explain_column_width])
+            line_string = "-" * (sum(explain_column_width) - 3
+                                 + 3 * len(explain_column_width))
             log_rows = ["EXPLAIN %s" % S]
             log_rows.append(line_string)
-            log_rows.append(format_string % tuple(explain_table_rows [0]))
+            log_rows.append(format_string % tuple(explain_table_rows[0]))
             log_rows.append(line_string)
             for x in explain_table_rows[1:]:
                 log_rows.append(format_string % tuple(x))
@@ -267,31 +266,31 @@ class SqlDB(object):
             cursor = con.cursor()
         cursor.execute(S)
         return cursor
-    
+
     def load_dataframe(self, df, table_name, index_label, if_exists="append"):
         """
         Load the table with content from the dataframe.
-        
+
         Parameters
         ----------
-        df : Pandas DataFrame 
+        df : Pandas DataFrame
             The dataframe that is to be loaded into the database table
-        table_name : string 
+        table_name : string
             The name of the table
-        index_label : string 
-            The name of the index column. If empty, no additional index column 
+        index_label : string
+            The name of the index column. If empty, no additional index column
             is created.
         if_exists : string, either "fail", "replace", or "append"
-            If "append" (the default), the rows from the dataframe are 
-            appended to the table; the table is created if it does not 
-            exist. If "replace", any existing table is replaced by the 
-            rows from the dataframe. If "fail", the dataframe is NOT 
+            If "append" (the default), the rows from the dataframe are
+            appended to the table; the table is created if it does not
+            exist. If "replace", any existing table is replaced by the
+            rows from the dataframe. If "fail", the dataframe is NOT
             loaded into the table.
         """
-        df.to_sql(table_name, 
-                  self.engine, 
-                  if_exists=if_exists, 
-                  index=bool(index_label), 
+        df.to_sql(table_name,
+                  self.engine,
+                  if_exists=if_exists,
+                  index=bool(index_label),
                   index_label=index_label)
 
     def load_infile(self, file_name, table_name, fillna=None, drop_duplicate=None, engine="c", **kwargs):
@@ -304,62 +303,32 @@ class SqlDB(object):
             kwargs : dictionary of pandas.read_csv arguments
 
         """
-        old_stderr = sys.stderr
-        err = io.StringIO()
-        sys.stderr = err
-        
-        df = pd.read_csv(file_name, engine="c", **kwargs)
+        capt = capturer.Capturer(stderr=True)
+        with capt:
+            df = pd.read_csv(file_name, engine="c", **kwargs)
+        for x in capt:
+            logger.warn("File {} – {}".format(file_name, x))
+            print("File {} – {}".format(file_name, x))
 
         if fillna is not None:
             df = df.fillna(fillna)
-
         if drop_duplicate:
             df = df[~df.duplicated(drop_duplicate)]
-
-        sys.stderr = old_stderr
-        try:
-            warn_string = eval(err.getvalue()).decode("utf-8")
-        except:
-            warn_string = err.getvalue()
-        for x in warn_string.split("\n"):
-            if x:
-                logger.warn("File {} – {}".format(file_name, x))
-                print("File {} – {}".format(file_name, x))
-
         self.load_dataframe(df, table_name, None)
-        return
-        
-        arguments = ""
-        if self.db_type == SQL_MYSQL:
-            arg_list = []
-            if sep != None:
-                arg_list.append("COLUMNS TERMINATED BY '{}'".format(sep))
-            if term != None:
-                arg_list.append("LINES TERMINATED BY '{}'".format(sep))
-            if skip != None:
-                arg_list.append("IGNORE {} LINES".format(sep))
-            arguments = " ".join(arg_list)
-            sql_template = "LOAD DATA LOCAL INFILE '{file}' INTO TABLE {table} {args} ({tup})"
-        elif self.db_type == SQL_SQLITE:
-            if sep != None:
-                self.connection.execution_options(autocommit=True).execute('.separator "{}"'.format(sep))
-            sql_template = '.import {file} {table}'
-        S = sql_template.format(file=file_name, table=table_name, args=arguments, tup=",".join(target))
-        self.connection.execution_options(autocommit=True).execute(S)
 
     def get_field_type(self, table_name, column_name):
         """
         Obtain the current SQL field type for the specified column.
-        
+
         Parameters
         ----------
-        table_name, column_name : str 
+        table_name, column_name : str
             The name of the table and the column, respectively
-            
+
         Returns
         -------
-        s : str 
-            A string containing the current SQL field type for the specified 
+        s : str
+            A string containing the current SQL field type for the specified
             column.
         """
         if self.db_type == SQL_MYSQL:
@@ -377,7 +346,7 @@ class SqlDB(object):
                 return str(field_type)
             else:
                 return None
-            
+
         elif self.db_type == SQL_SQLITE:
             S = "PRAGMA table_info({})".format(table_name)
             results = self.connection.execute(S)
@@ -395,19 +364,19 @@ class SqlDB(object):
     def get_optimal_field_type(self, table_name, column_name):
         """
         Obtain the optimal field type for the specified column.
-        
-        This method is not supported for SQLite databases. Here, the return 
+
+        This method is not supported for SQLite databases. Here, the return
         value is always the current field type of the column.
-        
+
         Parameters
         ----------
-        table_name, column_name : str 
+        table_name, column_name : str
             The name of the table and the column, respectively
-            
+
         Returns
         -------
-        s : str 
-            A string containing the optimal SQL field type for the specified 
+        s : str
+            A string containing the optimal SQL field type for the specified
             column.
         """
         if self.db_type == SQL_SQLITE:
@@ -421,36 +390,37 @@ class SqlDB(object):
         except NameError:
             x = str(x)
         return x
-        
+
     def modify_field_type(self, table_name, column_name, new_type):
         """
         Change the field type of the specified column to the new type.
-        
+
         Parameters
         ----------
-        table_name, column_name : str 
+        table_name, column_name : str
             The name of the table and the column, respectively
-        new_type : str 
-            A string containing the new SQL field type for the specified 
+        new_type : str
+            A string containing the new SQL field type for the specified
             column.
         """
-        old_field = self.get_field_type(table_name, column_name)
-        self.connection.execute("ALTER TABLE %s MODIFY %s %s" % (table_name, column_name, new_type))
+        S = "ALTER TABLE {} MODIFY {} {}".format(
+            table_name, column_name, new_type)
+        self.connection.execute(S)
         if options.cfg.verbose:
-            logger.info("ALTER TABLE %s MODIFY %s %s" % (table_name, column_name, new_type))
+            logger.info(S)
 
     def has_index(self, table, index):
         """
         Check if the specified column has an index.
-        
+
         Parameters
         ----------
-        table, column: str 
+        table, column: str
             The name of the table and the column, respectively
-            
+
         Returns
         -------
-        b : bool 
+        b : bool
             True if the column has an index, or False otherwise.
         """
         if self.db_type == SQL_MYSQL:
@@ -458,40 +428,40 @@ class SqlDB(object):
             return bool(self.connection.execute(S))
         elif self.db_type == SQL_SQLITE:
             return bool(len(self.connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl_name = '{}'".format(index, table)).fetchall()))
-    
+
     def get_index_length(self, table_name, column_name, coverage=0.95):
         """
         Return the index length that is required for the given coverage.
-        
+
         If the current SQL engine is SQL_SQLITE, this method always returns
         None.
-        
+
         Parameters
         ----------
-        table_name, column_name : str 
+        table_name, column_name : str
             The name of the table and the column, respectively
-            
+
         coverage : float
             The coverage percentage that the index should cover. Default: 0.95
-        
+
         Returns
         -------
-        number : int 
-            The first character length that reaches the given coverage, or 
+        number : int
+            The first character length that reaches the given coverage, or
             None if the coverage cannot be reached.
         """
-        
+
         if self.db_type == SQL_SQLITE:
             return None
-        
+
         S = """
         SELECT len,
             COUNT(DISTINCT SUBSTR({column}, 1, len)) AS number,
             total,
-            ROUND(COUNT(DISTINCT SUBSTR({column}, 1, len)) / total, 2) AS coverage 
+            ROUND(COUNT(DISTINCT SUBSTR({column}, 1, len)) / total, 2) AS coverage
         FROM   {table}
         INNER JOIN (
-            SELECT COUNT(DISTINCT {column}) total 
+            SELECT COUNT(DISTINCT {column}) total
             FROM   {table}
             WHERE  {column} != "") count_total
         INNER JOIN (
@@ -515,30 +485,30 @@ class SqlDB(object):
             logger.info("{}.{}: index length {}".format(table_name, column_name, max_c[0]))
             return int(max_c[0])
         return None
-    
+
     def create_index(self, table_name, index_name, variables, index_length=None):
         """
         Create an index for the specified column table.
-        
+
         Parameters
         ----------
-        table_name : str 
+        table_name : str
             The name of the table
-            
-        index_name : str 
+
+        index_name : str
             The name of the new index
-            
-        variables : list 
-            A list of strings representing the column names that are to be 
+
+        variables : list
+            A list of strings representing the column names that are to be
             indexed.
-            
+
         index_length : int or None
             The length of the index (applies to TEXT or BLOB fields)
         """
         ## Do not create an index if the table is empty:
         #if not self.connection.execute("SELECT * FROM {} LIMIT 1".format(table_name)).fetchone():
             #return
-        
+
         if index_length:
             variables = ["%s(%s)" % (variables[0], index_length)]
         S = 'CREATE INDEX {} ON {}({})'.format(
