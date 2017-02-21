@@ -71,7 +71,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
     def nodeItems(self, node):
         return [node.child(i) for i in range(node.childCount())]
 
-    def setup_resource(self, resource, skip=(), checkable=True, links=True):
+    def setup_resource(self, resource, skip=(), checkable=True, links=True,
+                       view_tables=False):
         """
         Construct a new output option tree.
 
@@ -247,11 +248,14 @@ class CoqResourceTree(classes.CoqTreeWidget):
         self.blockSignals(True)
         self.clear()
 
-        view_mode = getattr(resource, "default_view_mode", VIEW_MODE_GROUPED)
-        if view_mode == VIEW_MODE_GROUPED:
-            fill_grouped()
-        elif view_mode == VIEW_MODE_TABLES:
+        if view_tables:
             fill_tables()
+        else:
+            view_mode = getattr(resource, "default_view_mode", VIEW_MODE_GROUPED)
+            if view_mode == VIEW_MODE_GROUPED:
+                fill_grouped()
+            elif view_mode == VIEW_MODE_TABLES:
+                fill_tables()
 
         if links:
             # restore external links:
