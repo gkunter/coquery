@@ -649,9 +649,6 @@
                 <property name="shortcut">
                  <string>F5</string>
                 </property>
-                <property name="flat">
-                 <bool>true</bool>
-                </property>
                </widget>
               </item>
               <item>
@@ -664,9 +661,6 @@
                 </property>
                 <property name="text">
                  <string>Cancel</string>
-                </property>
-                <property name="flat">
-                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -730,9 +724,6 @@
              </property>
              <property name="default">
               <bool>false</bool>
-             </property>
-             <property name="flat">
-              <bool>true</bool>
              </property>
             </widget>
            </item>

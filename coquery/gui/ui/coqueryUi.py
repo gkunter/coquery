@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -297,7 +297,6 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.button_apply_management.sizePolicy().hasHeightForWidth())
         self.button_apply_management.setSizePolicy(sizePolicy)
-        self.button_apply_management.setFlat(True)
         self.button_apply_management.setObjectName("button_apply_management")
         self.horizontalLayout_5.addWidget(self.button_apply_management)
         self.button_cancel_management = QtWidgets.QPushButton(self.button_box_reaggregate)
@@ -306,7 +305,6 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.button_cancel_management.sizePolicy().hasHeightForWidth())
         self.button_cancel_management.setSizePolicy(sizePolicy)
-        self.button_cancel_management.setFlat(True)
         self.button_cancel_management.setObjectName("button_cancel_management")
         self.horizontalLayout_5.addWidget(self.button_cancel_management)
         self.verticalLayout.addWidget(self.button_box_reaggregate)
@@ -336,7 +334,6 @@ class Ui_MainWindow(object):
         self.button_stop_query.setSizePolicy(sizePolicy)
         self.button_stop_query.setAutoDefault(False)
         self.button_stop_query.setDefault(False)
-        self.button_stop_query.setFlat(True)
         self.button_stop_query.setObjectName("button_stop_query")
         self.horizontalLayout_3.addWidget(self.button_stop_query)
         spacerItem6 = QtWidgets.QSpacerItem(40, 10, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
