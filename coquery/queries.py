@@ -140,7 +140,10 @@ class TokenQuery(object):
                         for db_name in self.Resource.attach_list:
                             path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
                             S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
-                            connection.execute(S)
+                            try:
+                                connection.execute(S)
+                            except Exception:
+                                pass
 
                     try:
                         results = (connection
