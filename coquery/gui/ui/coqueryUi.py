@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -28,6 +28,7 @@ class Ui_MainWindow(object):
         self.options_area.setObjectName("options_area")
         self.gridLayout = QtWidgets.QGridLayout(self.options_area)
         self.gridLayout.setContentsMargins(0, 0, 0, -1)
+        self.gridLayout.setSpacing(6)
         self.gridLayout.setObjectName("gridLayout")
         self.box_input_settings = QtWidgets.QGroupBox(self.options_area)
         self.box_input_settings.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
