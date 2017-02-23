@@ -1806,6 +1806,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.status_progress.hide()
         self.ui.multi_query_progress.setRange(0, 1)
         self.ui.multi_query_progress.hide()
+        self.statusBar().layout().setStretchFactor(self.ui.status_message, 1)
 
     def finalize_query(self, to_file=False):
         self.query_thread = None
