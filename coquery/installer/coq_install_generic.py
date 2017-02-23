@@ -18,12 +18,13 @@ import os
 import logging
 
 from coquery import options
-from coquery.defines import NAME, FT_PDF, FT_DOCX, FT_ODT, FT_HTML, FT_PLAIN
+from coquery.defines import NAME
 from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.corpusbuilder import (Column, Identifier, Link)
 from coquery.documents import (pdf_to_str, docx_to_str, odt_to_str,
                                html_to_str, plain_to_str,
-                               detect_file_type)
+                               detect_file_type,
+                               FT_PDF, FT_DOCX, FT_ODT, FT_HTML, FT_PLAIN)
 
 
 class BuilderClass(BaseCorpusBuilder):
