@@ -34,7 +34,7 @@ from coquery.defines import (INSTALLER_ADHOC, INSTALLER_CUSTOM,
                              msg_validated_install,
                              msg_unvalidated_install,
                              msg_rejected_install,
-                             msg_failed_install)
+                             msg_failed_validation_install)
 from coquery.unicode import utf8
 
 from . import classes
@@ -201,7 +201,7 @@ class CoqAccordionEntry(QtWidgets.QWidget):
             default = QtWidgets.QMessageBox.No
             box = QtWidgets.QMessageBox.warning
         elif self._validation == "failed":
-            msg = msg_failed_install
+            msg = msg_failed_validation_install
             default = QtWidgets.QMessageBox.No
             box = QtWidgets.QMessageBox.warning
         elif self._validation == "rejected":
