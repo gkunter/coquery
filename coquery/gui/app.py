@@ -311,6 +311,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.set_columns_widget()
 
         self.ui.status_message = QtWidgets.QLabel("{} {}".format(NAME, VERSION))
+        self.ui.status_message.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
+                                       QtWidgets.QSizePolicy.Ignored)
         self.ui.status_progress = QtWidgets.QProgressBar()
         self.ui.status_progress.hide()
 
@@ -333,7 +335,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.statusBar().layout().addItem(QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
         self.statusBar().layout().addWidget(QtWidgets.QLabel(_translate("MainWindow", "Connection: ", None)))
         self.statusBar().layout().addWidget(self.ui.combo_config)
-        self.statusBar().layout().setStretchFactor(self.ui.status_message, 1)
+        self.statusBar().layout().setStretchFactor(self.ui.status_message, 0)
         self.statusBar().layout().setStretchFactor(self.ui.status_progress, 1)
         self.statusBar().layout().setStretchFactor(self.ui.multi_query_progress, 1)
 
@@ -800,16 +802,19 @@ class CoqueryApp(QtWidgets.QMainWindow):
             rows = self.unfiltered_tokens - manager.dropped_na_count
         else:
             rows = self.unfiltered_tokens
-        s = "Total rows: {num:<8} Displayed rows: {uniq:<8} Duration of last operation: {dur}"
 
+        str_list = ["Total rows: {:<8}".format(rows),
+                    "Displayed rows: {:<8}".format(
+                        len(self.table_model.content))]
+        if manager.removed_duplicates:
+            str_list.append("Removed duplicates: {:<8}".format(
+                manager.removed_duplicates))
         if options.cfg.limit_matches and rows != 0:
-            s = "<font color='{{col}}'>Note: </font> Match limit ({{lim:<8}}) enabled. {s}".format(s=s)
+            s = "<font color='{}'>Match limit: {}</font>"
+            str_list.insert(0, s.format(col, options.cfg.number_of_tokens))
 
-        self.showMessage(s.format(
-            num=rows,
-            uniq=len(self.table_model.content),
-            dur=duration_str, col=col,
-            lim=options.cfg.number_of_tokens))
+        str_list.append("Duration of last operation: {}".format(duration_str))
+        self.showMessage(" ".join(str_list))
 
     def set_toolbox_appearance(self, row):
         def _set_icon(col, label):
@@ -906,35 +911,26 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self._hidden = False
         self.ui.splitter_columns.setStretchFactor(0,1)
         self.ui.splitter_columns.setStretchFactor(1,1)
+        self.ui.splitter_columns.setSizes(self._old_sizes)
+
+        # reset width if the slider was minimized:
         w = self._old_sizes[1]
-        button_width = self.ui.button_toggle_hidden.sizeHint().width()
-        print(button_width)
+        button_width = self.ui.button_toggle_hidden.size().width()
         if w <= button_width:
             w = int(splitter_sizeHint.width() * 0.1) + button_width
-            print("NEW w", w)
-        else:
-            print(splitter_sizeHint)
-            print("RESTORING:", splitter_sizeHint.width() - w, w)
-        self.ui.splitter_columns.setSizes([splitter_sizeHint.width() - w, w])
+            self.ui.splitter_columns.setSizes([splitter_sizeHint.width() - w, w])
+
         self._old_sizes = self.ui.splitter_columns.sizes()
 
     def toggle_hidden(self):
-        print(self.ui.splitter_columns.sizeHint())
         sizes = self.ui.splitter_columns.sizes()
-        w = self.ui.button_toggle_hidden.sizeHint().width()
-        print("hidden:       ", self._hidden)
-        print("current sizes:" , sizes)
-        print("old_sizes:    ", self._old_sizes)
-        print("button_width: ", w)
-        if self._hidden:
-            print("SHOWING")
+        w = self.ui.splitter_columns.sizes()[1]
+        button_width = self.ui.button_toggle_hidden.size().width()
+        if self._hidden or w <= button_width:
             self.expand_hidden_columns()
         else:
-            print("HIDING")
             self.collapse_hidden_columns()
         sizes = self.ui.splitter_columns.sizes()
-        print("NEW current sizes:" , sizes)
-        print("NEW old_sizes:    ", self._old_sizes, "\n")
 
     def get_aggregate(self):
         for radio in self.ui.aggregate_radio_list:
@@ -2252,7 +2248,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 msg_box.setAttribute(QtCore.Qt.WA_DeleteOnClose)
                 msg_box.setWindowTitle("Reading input file – Coquery", )
                 layout = QtWidgets.QHBoxLayout(msg_box)
-                layout.addWidget(QtWidgets.QLabel("Reading query strings from <br><code>{}</code><br>Please wait...".format(
+                layout.addWidget(QtWidgets.QLabel("Reading query strings from <br><br><code>{}</code><br><br>Please wait...".format(
                     options.cfg.input_path)))
                 msg_box.setModal(True)
                 msg_box.open()
