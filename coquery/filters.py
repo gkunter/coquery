@@ -49,13 +49,20 @@ class Filter(CoqObject):
         self.stage = stage
 
     def __repr__(self):
-        return "Filter(feature='{}', operator={}, value={}, dtype={}, stage={})".format(
-            self.feature,
-            [x for x in globals() if eval(x) == self.operator][0],
-            "'{}'".format(self.value) if isinstance(self.value, string_types) else self.value,
-            self.dtype,
-            ("FILTER_STAGE_FINAL" if self.stage == FILTER_STAGE_FINAL else
-             "FILTER_STAGE_BEFORE_TRANSFORM"))
+        # This is a bit of a hack. In order to get the __repr__, we look up
+        # the name of the constant from defines (which is imported into the
+        # global namespace) that matches the value of the instance attribute
+        # self.operator:
+        op = [key for key, val in globals().items()
+              if val == self.operator][0]
+        value = ("'{}'".format(self.value)
+                 if isinstance(self.value, string_types)
+                 else self.value)
+        stage = ("FILTER_STAGE_FINAL"
+                 if self.stage == FILTER_STAGE_FINAL
+                 else "FILTER_STAGE_BEFORE_TRANSFORM")
+        S = "Filter(feature='{}', operator={}, value={}, dtype={}, stage={})"
+        return S.format(self.feature, op, value, self.dtype, stage)
 
     def fix(self, x):
         """

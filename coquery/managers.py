@@ -13,11 +13,9 @@ from __future__ import unicode_literals
 
 import logging
 import collections
-import math
 import pandas as pd
 import re
 import scipy
-
 
 from .defines import (QUERY_MODE_TYPES, QUERY_MODE_FREQUENCIES,
                       QUERY_MODE_CONTINGENCY, QUERY_MODE_COLLOCATIONS,
@@ -35,7 +33,6 @@ from .functionlist import FunctionList
 from .general import CoqObject, get_visible_columns
 from . import options
 from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
-
 
 
 class Sorter(CoqObject):
@@ -605,29 +602,28 @@ class Manager(CoqObject):
         print("process()")
         df = df.reset_index(drop=True)
 
-        # get index of duplicates, sorted so that those rows with the highest
-        # number of query tokens are used.
-
         # Get index of rows that are retained if duplicates are removed from
         # the data frame after sorting it by the number of query tokens that
         # returned the rows. This ensures that if the same token is returned
-        # several times by a quantified query string, e.g. # by a string like
-        # 'get *{1,2}', the index of the most specific match is retained, for
+        # several times by a quantified query string, e.g. by a string like
+        # 'get *{0,1}', the index of the most specific match is retained, for
         # example a match such as 'get happy', whereas the index of the less
         # specific matches, for example 'get <NA>', are discarded.
-        id_cols = [x for x in df.columns
-                   if x.startswith("coquery_invisible")
-                   and x.endswith("_id")]
-
-        if (id_cols and "coquery_invisible_number_of_tokens" in df.columns):
-            ix = (df.sort_values(by=id_cols+["coquery_invisible_number_of_tokens"],
+        self.removed_duplicates = 0
+        id_cols = ["coquery_invisible_corpus_id",
+                   "coquery_invisible_query_id"]
+        id_cols = [x for x in id_cols if x in df.columns]
+        if id_cols and options.cfg.drop_duplicates:
+            # get index of duplicates, sorted so that those rows with the
+            # highest number of query tokens are used:
+            tmp = (df.sort_values(by=id_cols + ["coquery_invisible_number_of_tokens"],
                                 ascending=[True] * len(id_cols) + [False])
-                    .drop_duplicates(id_cols)
-                    .index)
-
+                     .drop_duplicates(id_cols))
+            ix = tmp.index
+            self.removed_duplicates = len(df) - len(ix)
             # use the index to discard all rows that contain duplicate corpus
             # ids.
-            df = df.loc[ix]
+            df = df.loc[ix.sort_values()]
 
         self.drop_on_na = None
 
@@ -653,8 +649,8 @@ class Manager(CoqObject):
                            session.summary_functions.get_list() +
                            self.manager_functions.get_list())
 
-        print("done")
         return df
+
 
 class Types(Manager):
     def summarize(self, df, session):
@@ -1017,7 +1013,7 @@ class ContrastMatrix(FrequencyList):
 
         vis_cols = get_visible_columns(df, manager=self, session=session)
         vis_cols = [x for x in vis_cols
-                    if not x in (self._freq_function.get_id(),
+                    if x not in (self._freq_function.get_id(),
                                  self._subcorpus_size.get_id())]
         return df.apply(fnc, cols=vis_cols, axis=1).unique()
 
@@ -1033,7 +1029,9 @@ class ContrastMatrix(FrequencyList):
 
         obs = [[freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
         try:
-            g2, p_g2, _, _ = scipy.stats.chi2_contingency(obs, correction=False, lambda_="log-likelihood")
+            g2, p_g2, _, _ = scipy.stats.chi2_contingency(obs,
+                                                          correction=False,
+                                                          lambda_="log-likelihood")
             if (freq_1 / total_1) < (freq_2 / total_2):
                 df = pd.Series([-g2, p_g2])
             else:

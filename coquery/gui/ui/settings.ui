@@ -65,7 +65,7 @@
           <item>
            <widget class="QRadioButton" name="radio_output_case_upper">
             <property name="text">
-             <string>&amp;Upper case</string>
+             <string>Upper &amp;case</string>
             </property>
            </widget>
           </item>
@@ -145,7 +145,7 @@
             <item>
              <widget class="QLabel" name="label_13">
               <property name="text">
-               <string>&amp;Placeholder for empty cells:</string>
+               <string>Placeholder for e&amp;mpty cells:</string>
               </property>
               <property name="buddy">
                <cstring>edit_na_string</cstring>
@@ -235,7 +235,14 @@
           <item>
            <widget class="QCheckBox" name="check_drop_empty_queries">
             <property name="text">
-             <string>Discard rows with only em&amp;pty cells</string>
+             <string>&amp;Discard rows for which the query returned no matches</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="check_remove_duplicates">
+            <property name="text">
+             <string>&amp;Remove duplicates of matched tokens</string>
             </property>
            </widget>
           </item>
@@ -256,18 +263,6 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <property name="spacing">
-           <number>0</number>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
            <number>0</number>
           </property>
           <item>
@@ -296,6 +291,12 @@
           <item>
            <widget class="QWidget" name="widget_used" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_5">
+             <property name="leftMargin">
+              <number>9</number>
+             </property>
+             <property name="rightMargin">
+              <number>9</number>
+             </property>
              <item>
               <widget class="QLabel" name="label_10">
                <property name="text">
@@ -626,8 +627,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -666,8 +666,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -706,8 +705,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>

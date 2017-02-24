@@ -26,6 +26,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import seaborn as sns
 import scipy
+from scipy import signal
 
 from .pyqt_compat import QtWidgets, QtCore, QtGui
 
@@ -245,7 +246,7 @@ class CoqTextgridView(QtWidgets.QWidget):
             NFFT=NFFT,
             Fs=self.sound().framerate,
             noverlap=noverlap,
-            window=scipy.signal.gaussian(M=NFFT, std=noverlap))
+            window=signal.gaussian(M=NFFT, std=noverlap))
         self._extent = [xbins.min(), xbins.max(), ybins.min(), ybins.max()]
         self._spectrogram = self.transform(data)
 

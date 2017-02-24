@@ -2,7 +2,7 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -808,12 +808,13 @@ class Options(object):
                 except ValueError:
                     pass
                 else:
-                    # FIXME: this is a bit insecure!
-                    # FIXME: not only is it insecure, it's also horribly
-                    # obscure...
-                    from .links import Link
-                    link = eval(link_text)
-                    self.args.table_links[connection].append(link)
+                    from .links import Link, parse_link_text
+                    try:
+                        link = parse_link_text(link_text)
+                    except ValueError:
+                        pass
+                    else:
+                        self.args.table_links[connection].append(link)
 
 
             # read GUI section:
@@ -1208,7 +1209,11 @@ def process_options():
     options.get_options()
     if use_cachetools:
         from . import cache
+        import cachetools
         cfg.query_cache = cache.CoqQueryCache(cfg.use_cache)
+    else:
+        cfg.query_cache = None
+
     add_source_path(cfg.custom_installer_path)
 
 

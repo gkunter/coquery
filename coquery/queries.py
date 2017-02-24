@@ -41,6 +41,7 @@ from . import managers
 
 
 class TokenQuery(object):
+    _id = 0
     """
     This class manages the query string, and is responsible for the output
     of the query results.
@@ -100,7 +101,10 @@ class TokenQuery(object):
             directly to a file contains less information, e.g. it doesn't
             contain an origin ID or a corpus ID (unless requested).
         """
-        manager_hash = managers.get_manager(options.cfg.MODE, self.Resource.name).get_hash()
+        manager = managers.get_manager(options.cfg.MODE,
+                                       self.Resource.name)
+        manager_hash = manager.get_hash()
+
         self.results_frame = pd.DataFrame()
 
         self._max_number_of_tokens = 0
@@ -112,20 +116,27 @@ class TokenQuery(object):
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
 
             if len(self.query_list) > 1:
-                logger.info("Subquery #{} of {}: {}".format(i+1, len(self.query_list), self._current_subquery_string))
+                s = "Subquery #{} of {}: {}".format(
+                            i+1,
+                            len(self.query_list),
+                            self._current_subquery_string)
+                logger.info(s)
 
             if self.Resource.db_type == SQL_SQLITE:
                 # SQLite: keep track of databases that need to be attached.
                 self.Resource.attach_list = set([])
                 # This list is filled by get_query_string().
 
-            query_string = self.Resource.get_query_string(self, self._sub_query, to_file)
+            query_string = self.Resource.get_query_string(self,
+                                                          self._sub_query,
+                                                          to_file)
 
             df = None
             if options.cfg.use_cache and query_string:
                 try:
                     md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
-                    df = options.cfg.query_cache.get((self.Resource.name, manager_hash, md5))
+                    df = options.cfg.query_cache.get((self.Resource.name,
+                                                      manager_hash, md5))
                 except KeyError:
                     pass
             if df is None:
@@ -140,7 +151,10 @@ class TokenQuery(object):
                         for db_name in self.Resource.attach_list:
                             path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
                             S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
-                            connection.execute(S)
+                            try:
+                                connection.execute(S)
+                            except Exception:
+                                pass
 
                     try:
                         results = (connection
@@ -216,7 +230,9 @@ class TokenQuery(object):
 
                     self.results_frame = self.results_frame.append(df)
 
-        self.results_frame.reset_index(drop=True)
+        self.results_frame = self.results_frame.reset_index(drop=True)
+        TokenQuery._id += 1
+        self._query_id = TokenQuery._id
         return self.results_frame
 
     def get_max_tokens(self):
@@ -349,6 +365,7 @@ class TokenQuery(object):
                     input_columns = [("coq_{}".format(x), x) for x in self.input_frame.columns]
                 for df_col, input_col in input_columns:
                     df[df_col] = self.input_frame[input_col][0]
+        df["coquery_invisible_query_id"] = self._query_id
         return df
 
 

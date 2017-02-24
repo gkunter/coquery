@@ -28,9 +28,9 @@ from .defines import NAME
 
 
 class CoqQueryCache(object):
-    def __init__(self, do_not_read=False):
+    def __init__(self, read_cache=False):
         self._cache = None
-        if not do_not_read:
+        if read_cache:
             path = os.path.join(options.cfg.cache_path, "coq_cache.db")
             if os.path.exists(path):
                 try:

@@ -34,6 +34,8 @@ class ContextView(QtWidgets.QWidget):
         self.token_id = token_id
         self.source_id = source_id
         self.token_width = token_width
+        self.context_thread = QtCore.QThread(self)
+        self.rescheduled = False
 
         self.ui = Ui_ContextView()
         self.ui.setupUi(self)
@@ -160,36 +162,48 @@ class ContextView(QtWidgets.QWidget):
             self.ui.source_content.setText(content)
 
     def spin_changed(self):
-        self.ui.slider_context_width.valueChanged.disconnect(self.slider_changed)
+        self.ui.slider_context_width.blockSignals(True)
         self.ui.slider_context_width.setValue(self.ui.spin_context_width.value())
         self.get_context()
-        self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
-        options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
+        self.ui.slider_context_width.blockSignals(False)
+        options.settings.setValue("contextviewer_words",
+                                  self.ui.slider_context_width.value())
 
     def slider_changed(self):
-        self.ui.spin_context_width.valueChanged.disconnect(self.spin_changed)
+        self.ui.spin_context_width.blockSignals(True)
         self.ui.spin_context_width.setValue(self.ui.slider_context_width.value())
         self.get_context()
-        self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
-        options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
+        self.ui.spin_context_width.blockSignals(False)
+        options.settings.setValue("contextviewer_words",
+                                  self.ui.slider_context_width.value())
 
     def get_context(self):
         if hasattr(self, "context_thread"):
             self.context_thread.quit()
-        self.context_thread = classes.CoqThread(self.retrieve_context, self)
-        self.context_thread.taskFinished.connect(self.finalize_context)
-        self.context_thread.taskException.connect(self.onException)
-        self.context_thread.start()
+        self.next_value = self.ui.slider_context_width.value()
+        if not self.context_thread.isRunning():
+            self.context_thread = classes.CoqThread(self.retrieve_context,
+                                                    next_value=self.next_value,
+                                                    parent=self)
+            self.context_thread.taskFinished.connect(self.finalize_context)
+            self.context_thread.taskException.connect(self.onException)
+            self.context_thread.start()
+        else:
+            print("rescheduled: ", self.rescheduled)
+            if not self.rescheduled:
+                self.rescheduled = True
+                self.context_thread.taskFinished.disconnect(self.finalize_context)
+                self.context_thread.taskFinished.connect(self.get_context)
 
-    def retrieve_context(self):
+    def retrieve_context(self, next_value):
         try:
             context = self.corpus.get_rendered_context(
                 self.token_id,
                 self.source_id,
                 self.token_width,
-                self.ui.slider_context_width.value(), self)
+                next_value, self)
         except Exception as e:
-            print(e)
+            print("Exception in retrieve_context(): ", e)
             raise e
         if not self.context_thread.quitted:
             self.context = context
@@ -200,6 +214,7 @@ class ContextView(QtWidgets.QWidget):
                                        "Error retrieving context")
 
     def finalize_context(self):
+        self.rescheduled = False
         font = options.cfg.context_font
 
         if int(font.style()) == int(QtGui.QFont.StyleItalic):

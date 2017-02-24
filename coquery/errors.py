@@ -5,7 +5,7 @@ errors.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -28,7 +28,7 @@ _source_paths = [sys.path[0]]
 def add_source_path(s):
     global _source_paths
     _source_paths.append(s)
-    
+
 def remove_source_path(s):
     global _source_paths
     _source_paths.remove(s)
@@ -66,10 +66,10 @@ class NoArgumentsError(NoTraceException):
 class VisualizationNoDataError(NoTraceException):
     error_message = """
     <p><b>The 'Query results' view is empty.</b></p>
-    <p>You have either not run a query in this session yet, there are no 
+    <p>You have either not run a query in this session yet, there are no
     tokens in the corpus that match your last query, or you have hidden all
     output columns.</p>
-    <p>Try to run a visualization again once the Query results view is not 
+    <p>Try to run a visualization again once the Query results view is not
     empty anymore.</p>
     """
 
@@ -85,35 +85,35 @@ class VisualizationModuleError(NoTraceException):
         <p>Please include this error message:</p>
         <p>{msg}</p>
         """.format(module=module, msg=msg)
-    
+
 class VisualizationInvalidLayout(NoTraceException):
     error_message = """<p><b>The visualization grid layout is too large.</b></p>
-    <p>The visualization could not be plotted because either the row grouping 
+    <p>The visualization could not be plotted because either the row grouping
     factor or the column grouping factor contains more than 16 distinct values.
     The resulting plot would thus contain more than 16 rows or columns, which
     is too small to plot.</p>
-    <p>You may try to rearrange your results table by either hiding or moving 
+    <p>You may try to rearrange your results table by either hiding or moving
     the column that causes this problem, or by selecting other output columns
     with less distinct values.</p>"""
 
 class VisualizationInvalidDataError(NoTraceException):
     error_message = """<p><b>Your results table cannot be plotted by this visualizer.</b></p>
     <p>The visualizer that you selected expects a particular type of data that
-    could not be found in the results table. For example, the 'Time Data' 
+    could not be found in the results table. For example, the 'Time Data'
     visualizers expect a data column that contains temporal data (e.g. Date
     or Age).</p>
     <p>You can either choose a different visualization for your results table,
-    or you can select those output columns which provide the required data. 
+    or you can select those output columns which provide the required data.
     After you have re-run the query with these additional output columns, you
     can try to visualize the results table again.</p>"""
-    
+
 class CollocationNoContextError(NoTraceException):
     error_message = """<p><b>Cannot calculate the collocations</b></p>
     <p>In order to calculate the collocations of a word, a context span
-    has to be defined. Use the "Left context" and "Right context" field to 
+    has to be defined. Use the "Left context" and "Right context" field to
     set the span of words within which Coquery will search for collocates.
     </p>"""
-    
+
 class ContextUnvailableError(NoTraceException):
     error_message = """
     <p>The selected corpus does not provide enough information to show the
@@ -161,7 +161,7 @@ class NoCorpusError(NoTraceException):
 
 class NoCorpusSpecifiedError(NoTraceException):
     error_message = "No corpus name given to script."
-    
+
 class CorpusUnavailableError(NoTraceException):
     error_message = "No corpus available with given name"
 
@@ -264,17 +264,17 @@ class SQLNoConfigurationError(NoTraceException):
     error_message = "No MySQL configuration could be detected."
 
 class SQLNoConnectorError(GenericException):
-    error_message = """The MySQL connector module 'pymysql' was not found for 
+    error_message = """The MySQL connector module 'pymysql' was not found for
     your current Python configuration.
-    
+
     Please install this module, and try again. On many systems, you can use
     the Python package installer 'pip' to do this. The command to install
     pymysql using pip is:
-    
+
     pip install pymysql
-    
-    If your receive an error message which states that the command 'pip' 
-    could not be found, you need to install it first. Please refer to 
+
+    If your receive an error message which states that the command 'pip'
+    could not be found, you need to install it first. Please refer to
     https://pip.pypa.io/ for instructions.
     """
 
@@ -313,7 +313,7 @@ def print_exception(exc):
         par = par.replace("\n", " ").strip(" ")
         par = par.replace("  ", " ")
         print("\n".join(
-            textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)), 
+            textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)),
             file=sys.stderr)
         print(file=sys.stderr)
 

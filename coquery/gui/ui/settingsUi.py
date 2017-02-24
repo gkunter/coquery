@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'settings.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -110,6 +110,9 @@ class Ui_SettingsDialog(object):
         self.check_drop_empty_queries = QtWidgets.QCheckBox(self.groupBox_2)
         self.check_drop_empty_queries.setObjectName("check_drop_empty_queries")
         self.verticalLayout_8.addWidget(self.check_drop_empty_queries)
+        self.check_remove_duplicates = QtWidgets.QCheckBox(self.groupBox_2)
+        self.check_remove_duplicates.setObjectName("check_remove_duplicates")
+        self.verticalLayout_8.addWidget(self.check_remove_duplicates)
         self.check_align_quantified = QtWidgets.QCheckBox(self.groupBox_2)
         self.check_align_quantified.setObjectName("check_align_quantified")
         self.verticalLayout_8.addWidget(self.check_align_quantified)
@@ -117,7 +120,6 @@ class Ui_SettingsDialog(object):
         self.widget_cache = QtWidgets.QGroupBox(self.Queries)
         self.widget_cache.setObjectName("widget_cache")
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout(self.widget_cache)
-        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_4.setSpacing(0)
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
         self.check_use_cache = QtWidgets.QCheckBox(self.widget_cache)
@@ -132,7 +134,7 @@ class Ui_SettingsDialog(object):
         self.widget_used = QtWidgets.QWidget(self.widget_cache)
         self.widget_used.setObjectName("widget_used")
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout(self.widget_used)
-        self.horizontalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_5.setContentsMargins(9, 0, 9, 0)
         self.horizontalLayout_5.setObjectName("horizontalLayout_5")
         self.label_10 = QtWidgets.QLabel(self.widget_used)
         self.label_10.setObjectName("label_10")
@@ -345,18 +347,19 @@ class Ui_SettingsDialog(object):
         self.group_case.setTitle(_translate("SettingsDialog", "&Case"))
         self.radio_output_case_leave.setText(_translate("SettingsDialog", "Do &not change case"))
         self.radio_output_case_lower.setText(_translate("SettingsDialog", "&Lower case"))
-        self.radio_output_case_upper.setText(_translate("SettingsDialog", "&Upper case"))
+        self.radio_output_case_upper.setText(_translate("SettingsDialog", "Upper &case"))
         self.groupBox.setTitle(_translate("SettingsDialog", "&Display"))
         self.label_3.setText(_translate("SettingsDialog", "Displa&y "))
         self.spin_digits.setSuffix(_translate("SettingsDialog", " digit(s)"))
         self.label_7.setText(_translate("SettingsDialog", "after decimal point"))
-        self.label_13.setText(_translate("SettingsDialog", "&Placeholder for empty cells:"))
+        self.label_13.setText(_translate("SettingsDialog", "Placeholder for e&mpty cells:"))
         self.check_word_wrap.setText(_translate("SettingsDialog", " &Word-wrap long lines"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("SettingsDialog", "Results table"))
         self.groupBox_2.setTitle(_translate("SettingsDialog", "&Options"))
         self.check_regular_expressions.setText(_translate("SettingsDialog", "Interpret query strings as &regular expressions"))
         self.check_ignore_case_query.setText(_translate("SettingsDialog", "Ignore &case in query strings"))
-        self.check_drop_empty_queries.setText(_translate("SettingsDialog", "Discard rows with only em&pty cells"))
+        self.check_drop_empty_queries.setText(_translate("SettingsDialog", "&Discard rows for which the query returned no matches"))
+        self.check_remove_duplicates.setText(_translate("SettingsDialog", "&Remove duplicates of matched tokens"))
         self.check_align_quantified.setText(_translate("SettingsDialog", "Align &quantified token columns"))
         self.widget_cache.setTitle(_translate("SettingsDialog", "&Cache"))
         self.check_use_cache.setText(_translate("SettingsDialog", "&Use cache, size: "))

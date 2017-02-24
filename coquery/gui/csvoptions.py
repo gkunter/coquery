@@ -9,30 +9,32 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
 import codecs
+import os
+import re
 import pandas as pd
-import numpy as np
 
 from coquery import options
-from coquery.errors import *
+from coquery.unicode import utf8
+from coquery.defines import (msg_csv_encoding_error,
+                             msg_csv_file_error,
+                             CHARACTER_ENCODINGS)
+#from coquery.errors import *
 from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
 from .ui.csvOptionsUi import Ui_FileOptions
 
 
 class CSVOptions(object):
-    def __init__(self, file_name="", sep=",", header=True, quote_char='"', skip_lines=0,
-                 encoding="utf-8", selected_column=None, mapping={}, dtypes=None):
+    def __init__(self, file_name="", sep=",", header=True, quote_char='"',
+                 skip_lines=0, encoding="utf-8", selected_column=None,
+                 mapping=None, dtypes=None):
         self.sep = sep
         self.header = header
         self.quote_char = quote_char
         self.skip_lines = skip_lines
         self.encoding = encoding
         self.selected_column = selected_column
-        self.mapping = mapping
+        self.mapping = mapping if mapping else {}
         self.dtypes = dtypes
         self.file_name = file_name
 
@@ -72,8 +74,10 @@ class MyTableModel(QtCore.QAbstractTableModel):
             c_role = QtGui.QPalette.Text
         elif role == QtCore.Qt.DisplayRole:
             value = self.df.iloc[index.row()][index.column()]
-            if isinstance(value, np.int64):
+            if isinstance(value, pd.np.int64):
                 value = int(value)
+            elif isinstance(value, (pd.np.float64, pd.np.float, pd.np.float32)):
+                value = float(value)
 
         if c_role:
             return options.cfg.app.palette().brush(group, c_role)
@@ -213,10 +217,6 @@ class CSVOptionDialog(QtWidgets.QDialog):
     def getOptions(default=None, parent=None, icon=None):
         dialog = CSVOptionDialog(default=default, parent=parent, icon=icon)
         return dialog.exec_()
-        if result == QtWidgets.QDialog.Accepted:
-            return result
-        else:
-            return None
 
     def accept(self):
         super(CSVOptionDialog, self).accept()
@@ -282,16 +282,15 @@ class CSVOptionDialog(QtWidgets.QDialog):
                     content = open(self.file_name, "rb").read()
                     detection = chardet.detect(content[:32000])
                     encoding = detection["encoding"]
-                    file_buffer = StringIO(codecs.decode(content, encoding))
                 else:
                     # dumb detection. First try utf-8, then latin-1.
                     try:
-                        content = codecs.open(self.file_name, "rb", encoding="utf-8").read()
-                        encoding = "utf-8"
+                        codecs.open(self.file_name, "rb",
+                                    encoding="utf-8").read()
                     except UnicodeDecodeError:
-                        content = codecs.open(self.file_name, "rb", encoding="latin-1").read()
                         encoding = "latin-1"
-                    file_buffer = StringIO(content)
+                    else:
+                        encoding = "utf-8"
                 try:
                     self.file_table = pd.read_table(
                         self.file_name,
@@ -328,13 +327,16 @@ class CSVOptionDialog(QtWidgets.QDialog):
                     self.parent(), "Query file error",
                     msg_csv_file_error.format(self.file_name))
                 raise e
-
         # ascii encoding is always replaced by utf-8
         if encoding == "ascii":
             encoding = "utf-8"
         self._last_encoding = encoding
         if header is None:
             self.file_table.columns = ["X{}".format(x) for x in range(len(self.file_table.columns))]
+
+        # make column headers SQL-conforming
+        self.file_table.columns = [re.sub("[^a-zA-Z0-9_]", "_", x)
+                                   for x in self.file_table.columns]
 
     def select_file(self):
         """ Call a file selector, and add file name to query file input. """

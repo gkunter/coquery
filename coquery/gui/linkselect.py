@@ -11,20 +11,15 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-import sys
-
 from coquery import options
-from coquery.corpus import BaseResource
-from coquery.defines import *
 from coquery.unicode import utf8
 from coquery.links import Link
 
-from .classes import CoqTreeItem
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.linkselectUi import Ui_LinkSelect
 
 class LinkSelect(QtWidgets.QDialog):
-    def __init__(self, res_from=None, rc_from=None, only_resources=False, parent=None):
+    def __init__(self, res_from=None, rc_from=None, parent=None):
         super(LinkSelect, self).__init__(parent)
         self.res_from = res_from
         try:
@@ -40,7 +35,7 @@ class LinkSelect(QtWidgets.QDialog):
         self.to_text = utf8(self.ui.label_to.text())
         self.explain_text = utf8(self.ui.label_explain.text())
 
-        self.insert_data(only_resources)
+        self.insert_data()
         self.ui.combo_corpus.currentIndexChanged.connect(self.external_changed)
         self.ui.tree_resource.currentItemChanged.connect(self.resource_changed)
         self.ui.tree_external.currentItemChanged.connect(self.external_resource_changed)
@@ -135,7 +130,8 @@ class LinkSelect(QtWidgets.QDialog):
         self.ui.tree_external.setup_resource(resource,
                                              skip=("coquery"),
                                              checkable=False,
-                                             links=False)
+                                             links=False,
+                                             view_tables=True)
         self.ui.tree_external.allSetExpanded(True)
 
     def external_resource_changed(self, current, prev):
@@ -152,10 +148,10 @@ class LinkSelect(QtWidgets.QDialog):
         self.ui.combo_corpus.clear()
         self.ui.tree_external.clear()
 
-    def insert_data(self, only_resources=False):
-        corpora = sorted([resource.name for _, (resource, _0, _1, _2)
-                   in options.cfg.current_resources.items()
-                   if resource.name != self.corpus_name])
+    def insert_data(self):
+        corpora = sorted([resource.name for _, (resource, _, _, _)
+                          in options.cfg.current_resources.items()
+                          if resource.name != self.corpus_name])
         self.ui.combo_corpus.addItems(corpora)
         min_width = self.ui.combo_corpus.sizeHint().width()
         self.ui.label_from_corpus.setMinimumWidth(min_width)
