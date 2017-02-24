@@ -141,11 +141,14 @@ class CoqHelpBrowser(QtWidgets.QTextBrowser):
 
 
 class CoqFeatureList(QtWidgets.QListWidget):
+    featureAdded = QtCore.Signal(object)
+
     def __init__(self, parent=None):
         super(CoqFeatureList, self).__init__(parent)
         self.setAcceptDrops(True)
         self.setDragDropMode(self.DragDrop)
         self.setSelectionMode(self.SingleSelection)
+        # add (and remove) dummy item to determine usual size of entries:
         super(CoqFeatureList, self).addItem(QtWidgets.QListWidgetItem(""))
         self._item_height = (self.visualItemRect(self.item(0)).height() +
                             self.padding())
@@ -156,6 +159,7 @@ class CoqFeatureList(QtWidgets.QListWidget):
     def addItem(self, item):
         item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
         super(CoqFeatureList, self).addItem(item)
+        self.featureAdded.emit(item)
 
     def itemWidth(self):
         return self._item_width
@@ -1073,8 +1077,10 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
         """ Set the checkstate of the item that matches the object_name. If
         the state is Checked, also expand the parent of the item. """
 
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            for child in [root.child(i) for i in range(root.childCount())]:
+        for root in [self.topLevelItem(i)
+                     for i in range(self.topLevelItemCount())]:
+            for child in [root.child(i)
+                          for i in range(root.childCount())]:
                 if child.objectName() == object_name:
                     return child
 
@@ -1090,7 +1096,8 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
                 # Group columns are always required features, so if a
                 # group column is supposed to be unchecked, it is still
                 # checked partially.
-                if state == QtCore.Qt.Unchecked and object_name in options.cfg.group_columns:
+                if (state == QtCore.Qt.Unchecked and
+                        object_name in options.cfg.group_columns):
                     item.setCheckState(column, QtCore.Qt.PartiallyChecked)
                 else:
                     item.setCheckState(column, state)
@@ -1098,7 +1105,8 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
                 if state == QtCore.Qt.Checked:
                     item.parent().setExpanded(True)
                 self.update(item, column)
-            for child in [item.child(i) for i in range(item.childCount())]:
+            for child in [item.child(i)
+                          for i in range(item.childCount())]:
                 _check_state(child, object_name, state, column)
 
         if type(state) != QtCore.Qt.CheckState:
@@ -1107,7 +1115,8 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
             else:
                 state = QtCore.Qt.Unchecked
 
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+        for root in [self.topLevelItem(i)
+                     for i in range(self.topLevelItemCount())]:
             if root.objectName() == object_name:
                 try:
                     root.setChecked(column, state)
@@ -1120,13 +1129,15 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
                     pass
                 self.update(root, column)
 
-            for child in [root.child(i) for i in
-                            range(root.childCount())]:
+            for child in [root.child(i)
+                          for i in range(root.childCount())]:
                 _check_state(child, object_name, state, column)
 
     def getCheckState(self, object_name):
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            for child in [root.child(i) for i in range(root.childCount())]:
+        for root in [self.topLevelItem(i)
+                     for i in range(self.topLevelItemCount())]:
+            for child in [root.child(i)
+                          for i in range(root.childCount())]:
                 if child.objectName() == object_name:
                     return child.checkState(0)
         return None
@@ -1140,8 +1151,10 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
 
     def get_checked(self, column=0):
         check_list = []
-        for root in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
-            for child in [root.child(i) for i in range(root.childCount())]:
+        for root in [self.topLevelItem(i)
+                     for i in range(self.topLevelItemCount())]:
+            for child in [root.child(i)
+                          for i in range(root.childCount())]:
                 if child.checkState(column) == QtCore.Qt.Checked:
                     check_list.append(utf8(child._objectName))
         return check_list
@@ -1152,6 +1165,7 @@ class CoqTableWidget(QtWidgets.QTableWidget):
         val = super(CoqTableWidget, self).mimeData(*args)
         val.setText(",".join([x.data(QtCore.Qt.UserRole) for x in args[0]]))
         return val
+
 
 class LogTableModel(QtCore.QAbstractTableModel):
     """
@@ -1405,47 +1419,31 @@ class CoqTextTag(QtWidgets.QFrame):
 
 class CoqListWidget(QtWidgets.QListWidget):
     itemDropped = QtCore.Signal(QtWidgets.QListWidgetItem)
+    featureAdded = QtCore.Signal(str)
     featureRemoved = QtCore.Signal(str)
 
     def __init__(self, *args, **kwargs):
         super(CoqListWidget, self).__init__(*args, **kwargs)
-        self.columns = []
 
     def dropEvent(self, e):
-        new_item = self.add_resource(e.mimeData().text())
+        new_item = self.addFeature(e.mimeData().text())
         if new_item is not None:
             self.itemDropped.emit(new_item)
             e.acceptProposedAction()
 
-    def clear(self):
-        for _ in range(self.count()):
-            self.takeItem(0)
-        self.columns = []
-
-    def find_resource(self, rc_feature):
-        rc_feature = utf8(rc_feature)
-        for i, (_, x) in enumerate(self.columns):
-            if x == rc_feature:
-                return i
-        return None
-
     def get_item(self, rc_feature):
         rc_feature = utf8(rc_feature)
-        for item, x in self.columns:
-            if x == rc_feature:
+        for i in range(self.count()):
+            item = self.item(i)
+            if utf8(item.data(QtCore.Qt.UserRole)) == rc_feature:
                 return item
         return None
 
-    def get_feature(self, item):
-        for x, rc_feature in self.columns:
-            if x == item:
-                return rc_feature
-        return None
-
-    def add_resource(self, rc_feature):
+    def addFeature(self, rc_feature):
         rc_feature = utf8(rc_feature)
         if self.get_item(rc_feature) is not None:
             return
+
         try:
             label = getattr(get_toplevel_window().resource, rc_feature)
         except AttributeError:
@@ -1456,41 +1454,12 @@ class CoqListWidget(QtWidgets.QListWidget):
                 return None
 
         new_item = QtWidgets.QListWidgetItem(label)
-
-        self.columns.append((new_item, rc_feature))
+        new_item.setData(QtCore.Qt.UserRole, rc_feature)
         self.addItem(new_item)
         self.setCurrentItem(new_item)
         self.itemActivated.emit(new_item)
+        self.featureAdded.emit(rc_feature)
         return new_item
-
-    def insert_resource(self, i, rc_feature):
-        rc_feature = utf8(rc_feature)
-        if self.get_item(rc_feature) is not None:
-            return
-        label = getattr(get_toplevel_window().resource, rc_feature)
-        new_item = QtWidgets.QListWidgetItem(label)
-        self.columns.insert(i, (new_item, rc_feature))
-        self.insertItem(i, new_item)
-        self.setCurrentItem(new_item)
-        self.itemActivated.emit(new_item)
-        try:
-            new_item.setObjectName(rc_feature)
-        except AttributeError as e:
-            print(e)
-
-    def remove_item(self, item):
-        i = self.row(item)
-        _, rc_feature = self.columns[i]
-        self.takeItem(i)
-        self.remove_resource(rc_feature)
-
-    def remove_resource(self, rc_feature):
-        rc_feature = utf8(rc_feature)
-        i = self.find_resource(rc_feature)
-        if i is not None:
-            item, _ = self.columns.pop(i)
-            self.takeItem(self.row(item))
-            self.featureRemoved.emit(rc_feature)
 
 
 class CoqTagEdit(QtWidgets.QLineEdit):
