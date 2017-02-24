@@ -263,12 +263,6 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 if link.res_from == resource.name:
                     self.add_external_link(link)
 
-        # remove from the group list those features that are not available in
-        # the current resource:
-        for _, group_column in get_toplevel_window().ui.list_group_columns.columns:
-            if not hasattr(resource, group_column):
-                get_toplevel_window().ui.list_group_columns.remove_resource(group_column)
-
         self.blockSignals(False)
 
     def add_external_link(self, link):
