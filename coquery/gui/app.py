@@ -209,6 +209,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.column_tree = CoqResourceTree(parent=self)
         self.column_tree.customContextMenuRequested.connect(
             self.get_output_column_menu)
+        self.column_tree.itemChanged.connect(
+            lambda: self.ui.list_group_columns.checkGroupColumns())
 
         self.ui.options_tree = self.column_tree
         self.ui.output_columns.insertWidget(1, self.column_tree)
@@ -262,27 +264,11 @@ class CoqueryApp(QtWidgets.QMainWindow):
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
         header.setSectionResizeMode(2, QtWidgets.QHeaderView.Interactive)
 
-        height = QtWidgets.QLabel().sizeHint().height() + 1
-        self.ui.list_group_columns.setMaximumHeight(
-            height * 5 + 2 * self.ui.list_group_columns.frameWidth())
-        self.ui.list_group_columns.setMinimumHeight(
-            height * 3 + 2 * self.ui.list_group_columns.frameWidth())
-
-
         # use a file system model for the file name auto-completer::
         self.dirModel = QtWidgets.QFileSystemModel(parent=self)
         # make sure that the model is updated on changes to the file system:
         self.dirModel.setRootPath(QtCore.QDir.currentPath())
         self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
-
-        # set up group columns
-        self.ui.button_remove_group.setDisabled(True)
-        self.ui.button_group_up.setDisabled(True)
-        self.ui.button_group_down.setDisabled(True)
-        #self.ui.list_group_columns.setDragEnabled(True)
-        #self.ui.list_group_columns.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
-        self.ui.list_group_columns.viewport().setAcceptDrops(True)
-        self.ui.list_group_columns.setDropIndicatorShown(False)
 
         self.ui.button_apply_management.setDisabled(True)
         self.ui.button_cancel_management.hide()
@@ -342,6 +328,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.change_mysql_configuration(options.cfg.current_server)
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
 
+        self.ui.list_group_columns.setCheckAvailableFunction(
+            self.check_feature_available_for_group)
+
         state = self.test_mysql_connection()
         if not state:
             self.disable_corpus_widgets()
@@ -376,10 +365,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.action_save_results.setIcon(self.get_icon("Save"))
         self.ui.action_save_selection.setIcon(self.get_icon("Save"))
         self.ui.button_change_file.setIcon(self.get_icon("Open Folder"))
-        self.ui.button_remove_group.setIcon(self.get_icon("Delete"))
-        #self.ui.button_add_group.setIcon(self.get_icon("sign-add"))
-        self.ui.button_group_up.setIcon(self.get_icon("Circled Chevron Up"))
-        self.ui.button_group_down.setIcon(self.get_icon("Circled Chevron Down"))
         self.ui.button_run_query.setIcon(self.get_icon("Circled Play"))
         self.ui.button_stop_query.setIcon(self.get_icon("Cancel"))
         self.ui.button_apply_management.setIcon(self.get_icon("Process"))
@@ -539,16 +524,13 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.button_cancel_management.clicked.connect(lambda: self.abortRequested.emit())
 
         # set up hooks for the group column list:
-        self.ui.button_remove_group.clicked.connect(self.remove_group_column)
-        self.ui.button_group_up.clicked.connect(lambda: self.move_group_column(direction="up"))
-        self.ui.button_group_down.clicked.connect(lambda: self.move_group_column(direction="down"))
-        self.ui.list_group_columns.itemActivated.connect(self.activate_group_column_buttons)
-        self.ui.list_group_columns.itemDropped.connect(lambda x: self.add_group_column(item=x))
-        self.ui.list_group_columns.featureRemoved.connect(self.uncheck_grouped_feature)
+        #self.ui.list_group_columns.featureDropped.connect(lambda x: self.add_group_column(item=x))
+        #self.ui.list_group_columns.featureRemoved.connect(self.uncheck_grouped_feature)
         self.ui.button_add_summary_function.clicked.connect(lambda: self.add_function(summary=True))
         self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
 
         # connect widgets that enable the Apply button:
+        self.ui.list_group_columns.groupsChanged.connect(self.enable_apply_button)
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
         self.ui.radio_context_mode_none.toggled.connect(self.enable_apply_button)
         self.ui.radio_context_mode_kwic.toggled.connect(self.enable_apply_button)
@@ -707,6 +689,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         else:
             # disable buttons if there is no results table:
             self.ui.button_apply_management.setDisabled(True)
+            # Nevertheless, update the toolbox appearances
+            for i in range(self.ui.list_toolbox.rowCount()):
+                self.set_toolbox_appearance(i)
         self.set_button_labels()
 
     def enable_corpus_widgets(self):
@@ -828,6 +813,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         error_icon = "Error"
         problem_icon = "Attention"
 
+        if not self.ui.data_preview.isEnabled():
+            active_icon = "Inactive State"
+
         if row == TOOLBOX_CONTEXT:
             radio = self.active_context_radio()
             if radio == self.ui.radio_context_mode_none:
@@ -858,6 +846,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         elif row == TOOLBOX_GROUPING:
             _set_icon(1, None)
             _set_icon(2, None)
+            # FIXME: take currently selected features into account
             if self.ui.list_group_columns.columns:
                 if self.Session.group_functions:
                     _set_icon(2, active_icon)
@@ -888,6 +877,21 @@ class CoqueryApp(QtWidgets.QMainWindow):
     ###
     ### interface status and interface interaction methods
     ###
+
+    def check_feature_available_for_group(self, feature):
+        if not self.ui.data_preview.isEnabled():
+            return feature in self.column_tree.selected()
+        else:
+            for col in self.table_model.content.columns:
+                if feature in col:
+                    return True
+            return False
+
+    def add_group_column(self, feature):
+        self.ui.list_group_columns.addFeature(feature)
+
+    def remove_group_column(self, feature):
+        self.ui.list_group_columns.removeFeature(feature)
 
     def check_filters(self, df):
         """
@@ -1090,90 +1094,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
             options.cfg.reference_corpus[options.cfg.current_server] = corpus
 
     ###
-    ### group columns methods
-    ###
-    ### FIXME: group column methods should be part of a special widget
-    ### subclass
-
-    def check_group_items(self):
-        for item, group_column in self.ui.list_group_columns.columns:
-            if group_column not in options.cfg.selected_features:
-                item.setIcon(self.get_icon("Error"))
-                item.setToolTip(msg_column_not_in_data)
-            else:
-                item.setIcon(QtGui.QIcon())
-                item.setToolTip("")
-
-    def activate_group_column_buttons(self):
-        selected = self.ui.list_group_columns.selectedItems()
-        self.ui.button_remove_group.setEnabled(selected != [])
-        try:
-            pos_first = self.ui.list_group_columns.row(selected[0])
-            pos_last = self.ui.list_group_columns.row(selected[-1])
-        except IndexError:
-            pos_first = 0
-            pos_last = len(self.ui.list_group_columns.columns)
-        self.ui.button_group_up.setEnabled(pos_first > 0)
-        self.ui.button_group_down.setEnabled(pos_last < len(self.ui.list_group_columns.columns)-1)
-
-    def move_group_column(self, direction, rc_feature=None):
-        if rc_feature:
-            selected = [self.ui.list_group_columns.get_item(rc_feature)]
-        else:
-            selected = self.ui.list_group_columns.selectedItems()
-
-        pos_first = self.ui.list_group_columns.row(selected[0])
-        if direction == "up":
-            start = pos_first - 1
-        else:
-            start = pos_first + 1
-
-        features = [self.ui.list_group_columns.get_feature(x) for x in selected]
-
-        for i, rc_feature in enumerate(features):
-            self.ui.list_group_columns.remove_resource(rc_feature)
-            self.ui.list_group_columns.insert_resource(start + i, rc_feature)
-
-        self.activate_group_column_buttons()
-        self.enable_apply_button()
-
-    def add_group_column(self, rc_feature=None, item=None):
-        old_list = set(options.cfg.group_columns)
-        if not item:
-            if rc_feature:
-                selected = [rc_feature]
-            else:
-                selected = [x.objectName() for x in self.column_tree.selectedItems()]
-            for col in selected:
-                self.ui.list_group_columns.add_resource(col)
-
-        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.Unchecked:
-            self.column_tree.setCheckState(rc_feature, QtCore.Qt.PartiallyChecked)
-
-        options.cfg.group_columns = self.get_group_columns()
-        self.activate_group_column_buttons()
-        if old_list != set(options.cfg.group_columns):
-            self.enable_apply_button()
-
-    def uncheck_grouped_feature(self, rc_feature):
-        if self.column_tree.getCheckState(rc_feature) == QtCore.Qt.PartiallyChecked:
-            self.column_tree.setCheckState(rc_feature, QtCore.Qt.Unchecked)
-
-    def remove_group_column(self, rc_feature=None):
-        old_list = set(options.cfg.group_columns)
-        if rc_feature:
-            selected = [self.ui.list_group_columns.get_item(rc_feature)]
-        else:
-            selected = self.ui.list_group_columns.selectedItems()
-        for item in selected:
-            self.ui.list_group_columns.remove_item(item)
-        options.cfg.group_columns = self.get_group_columns()
-
-        self.activate_group_column_buttons()
-        if old_list != set(options.cfg.group_columns):
-            self.enable_apply_button()
-
-    ###
     ### slots
     ###
 
@@ -1316,13 +1236,13 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.resize_rows()
 
         self.show_query_status()
-        self.check_group_items()
+        #self.check_group_items()
         self.check_filters(self.Session.output_object)
+        self.ui.list_group_columns.checkGroupColumns()
         self.set_button_labels()
         self.ui.button_apply_management.show()
         self.ui.button_apply_management.setDisabled(True)
         self.ui.button_cancel_management.hide()
-
         self.set_query_button(True)
 
         for i in range(self.ui.list_toolbox.rowCount()):
@@ -1423,6 +1343,13 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 self.ui.check_restrict.setEnabled(True)
         except AttributeError:
             pass
+
+        # remove group columns that don't exist in the current resource:
+        columns = self.ui.list_group_columns.columns
+        self
+        for col in columns:
+            if not hasattr(self.resource, col):
+                self.ui.list_group_columns.removeFeature(col)
 
     def toggle_selected_feature(self, item):
         is_checked = (item.checkState(0) == QtCore.Qt.Checked)
@@ -2772,8 +2699,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
             options.cfg.external_links = self.get_external_links()
             # FIXME: eventually, selected_features should be a session variable
-            options.cfg.selected_features = self.selected_features
-            options.cfg.group_columns = self.get_group_columns()
+            options.cfg.selected_features = self.column_tree.selected()
+            options.cfg.group_columns = [x for x
+                                         in self.ui.list_group_columns.columns
+                                         if x in options.cfg.selected_features]
             self.get_context_values()
 
     def get_external_links(self):
@@ -2809,12 +2738,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
             l += traverse(root)
         return l
 
-    def get_group_columns(self):
-        """
-        Return a list of currently selected group columns
-        """
-        return [x for _, x in self.ui.list_group_columns.columns]
-
     def show_log(self):
         from . import logfile
         log_view = logfile.LogfileViewer(parent=self)
@@ -2837,8 +2760,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.tool_widget.blockSignals(True)
 
         for col in [x for x in options.cfg.group_columns if x]:
-            self.ui.list_group_columns.add_resource(col)
-            options.cfg.group_columns = self.get_group_columns()
+            self.ui.list_group_columns.addFeature(col)
+        options.cfg.group_columns = self.ui.list_group_columns.columns
 
         # set corpus combo box to current corpus:
         index = self.ui.combo_corpus.findText(options.cfg.corpus)
@@ -2877,7 +2800,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.tool_widget.blockSignals(False)
 
         self.set_main_screen_appearance()
-        self.activate_group_column_buttons()
 
     def add_link(self, item):
         """
@@ -3026,8 +2948,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
             return
 
         if group:
+            selected = self.column_tree.selected()
+            group_columns = [x for x in self.ui.list_group_columns.columns
+                             if x in selected]
             # FIXME: allow different columns as group columns
-            l = [x(sweep=True, hidden=True, group=options.cfg.group_columns) for x in response]
+            l = [x(sweep=True, hidden=True, group=group_columns)
+                 for x in response]
             self.Session.group_functions.set_list(l)
         elif summary:
             l = [x(sweep=True, hidden=True, group=False) for x in response]
