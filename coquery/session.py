@@ -280,6 +280,10 @@ class Session(object):
         finally:
             self.disconnect_from_db()
 
+        self.data_table = self.data_table[set_preferred_order(
+            list(self.data_table.columns),
+            self)]
+
         for col in self.data_table.columns:
             if self.data_table.dtypes[col] == object:
                 if sys.version_info < (3, 0):
