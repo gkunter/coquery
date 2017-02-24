@@ -56,6 +56,8 @@ class CoqGroupColumns(QtWidgets.QWidget):
         self.ui.button_group_down.clicked.connect(
             lambda: self._move_group_column(direction="down"))
 
+        self._check_buttons()
+
     def setCheckAvailableFunction(self, func):
         self._check_available = func
 
@@ -78,8 +80,18 @@ class CoqGroupColumns(QtWidgets.QWidget):
     def addFeature(self, rc_feature):
         self.ui.list_widget.addFeature(rc_feature)
 
+    def removeFeature(self, rc_feature):
+        for i, col in enumerate(self.columns):
+            item = self.ui.list_widget.item(i)
+            if utf8(item.data(QtCore.Qt.UserRole)) == utf8(rc_feature):
+                self.ui.list_widget.takeItem(i)
+                self.columns.remove(col)
+                self.groupsChanged.emit()
+                return
+
     def _check_buttons(self):
         current_row = self.ui.list_widget.currentRow()
+        print(current_row)
         self.ui.button_remove_group.setEnabled(current_row > -1)
         self.ui.button_group_up.setEnabled(current_row > 0)
         self.ui.button_group_down.setEnabled(current_row <
