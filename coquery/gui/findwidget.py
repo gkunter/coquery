@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-search.py is part of Coquery.
+findwidget.py is part of Coquery.
 
 Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
 
