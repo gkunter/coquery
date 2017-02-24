@@ -28,13 +28,13 @@ class CoqResourceMenu(QtWidgets.QMenu):
     removeItemRequested = QtCore.Signal(classes.CoqTreeItem)
     addGroupRequested = QtCore.Signal(str)
     removeGroupRequested = QtCore.Signal(str)
-    
+
     def __init__(self, item, context=True, title="Output column options", parent=None, *args, **kwargs):
         super(CoqResourceMenu, self).__init__(title, parent)
 
         rc_feature = utf8(item.objectName())
         label = utf8(item.text(0))
-        
+
         # if shown as context menu, use column name as header:
         if context:
             head = QtWidgets.QLabel("<b>{}</b>".format(label))
@@ -61,7 +61,7 @@ class CoqResourceMenu(QtWidgets.QMenu):
                 view_entries.triggered.connect(lambda: self.viewEntriesRequested.emit(item))
                 view_uniques.triggered.connect(lambda: self.viewUniquesRequested.emit(item))
 
-                # Only enable the 'View' entries if the SQL connection is 
+                # Only enable the 'View' entries if the SQL connection is
                 # working:
                 view_uniques.setEnabled(options.cfg.gui.test_mysql_connection())
                 view_entries.setEnabled(options.cfg.gui.test_mysql_connection())
@@ -72,16 +72,17 @@ class CoqResourceMenu(QtWidgets.QMenu):
                     self.addAction(add_link)
                     add_link.triggered.connect(lambda: self.addLinkRequested.emit(item))
 
-                if self.parent().ui.list_group_columns.find_resource(rc_feature) is not None:
+                if rc_feature in self.parent().ui.list_group_columns.columns:
                     self.addAction(remove_grouping)
-                    remove_grouping.triggered.connect(lambda: self.removeGroupRequested.emit(rc_feature))
+                    remove_grouping.triggered.connect(
+                        lambda: self.removeGroupRequested.emit(rc_feature))
                 else:
                     self.addAction(add_grouping)
                     add_grouping.triggered.connect(lambda: self.addGroupRequested.emit(rc_feature))
         else:
             unavailable = QtWidgets.QAction(_translate("MainWindow", "No option available for tables.", None), self)
             unavailable.setDisabled(True)
-            self.addAction(unavailable)      
+            self.addAction(unavailable)
 
 class CoqColumnMenu(QtWidgets.QMenu):
     hideColumnRequested = QtCore.Signal(list)
@@ -124,13 +125,15 @@ class CoqColumnMenu(QtWidgets.QMenu):
             rc_feature = columns[0]
             add_grouping = QtWidgets.QAction("Add to &group columns", parent)
             remove_grouping = QtWidgets.QAction("Remove from &group columns", parent)
-
-            if self.parent().ui.list_group_columns.find_resource(rc_feature) is not None:
+            print(rc_feature)
+            if rc_feature in self.parent().ui.list_group_columns.columns:
                 self.addAction(remove_grouping)
-                remove_grouping.triggered.connect(lambda: self.removeGroupRequested.emit(rc_feature))
+                remove_grouping.triggered.connect(
+                    lambda: self.removeGroupRequested.emit(rc_feature))
             else:
                 self.addAction(add_grouping)
-                add_grouping.triggered.connect(lambda: self.addGroupRequested.emit(rc_feature))
+                add_grouping.triggered.connect(
+                    lambda: self.addGroupRequested.emit(rc_feature))
         self.addSeparator()
 
         # add additional function actions, but only if all columns really
@@ -228,3 +231,7 @@ class CoqHiddenColumnMenu(CoqColumnMenu):
         show_column.setIcon(parent.get_icon("Back"))
         show_column.triggered.connect(lambda: self.showColumnRequested.emit(columns))
         self.addAction(show_column)
+
+
+def _translate(x, text, y):
+    return utf8(options.cfg.app.translate(x, text, y))
