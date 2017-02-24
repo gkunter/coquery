@@ -256,7 +256,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>4</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="tool_widget_page_context">
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -457,7 +457,7 @@
               </layout>
              </widget>
              <widget class="QWidget" name="tool_widget_page_groups">
-              <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0,0,0,0,0">
+              <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0,0,0">
                <property name="leftMargin">
                 <number>0</number>
                </property>
@@ -471,45 +471,7 @@
                 <number>0</number>
                </property>
                <item>
-                <widget class="CoqListWidget" name="list_group_columns">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>24</height>
-                  </size>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,0,0">
-                 <item>
-                  <widget class="QPushButton" name="button_remove_group">
-                   <property name="text">
-                    <string>Remove</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QToolButton" name="button_group_up">
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QToolButton" name="button_group_down">
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
+                <widget class="CoqGroupColumns" name="list_group_columns" native="true"/>
                </item>
                <item>
                 <widget class="QPushButton" name="button_add_group_function">
@@ -530,19 +492,6 @@
                   <string>Group filters{}...</string>
                  </property>
                 </widget>
-               </item>
-               <item>
-                <spacer name="verticalSpacer_4">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                </spacer>
                </item>
               </layout>
              </widget>
@@ -1033,7 +982,7 @@ p, li { white-space: pre-wrap; }
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
-     <string>&amp;Options</string>
+     <string>Op&amp;tions</string>
     </property>
     <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>
@@ -1661,11 +1610,6 @@ p, li { white-space: pre-wrap; }
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CoqListWidget</class>
-   <extends>QListWidget</extends>
-   <header location="global">..classes</header>
-  </customwidget>
-  <customwidget>
    <class>CoqTextEdit</class>
    <extends>QTextEdit</extends>
    <header location="global">..classes</header>
@@ -1695,6 +1639,12 @@ p, li { white-space: pre-wrap; }
    <class>CoqRotatedButton</class>
    <extends>QPushButton</extends>
    <header>..classes</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqGroupColumns</class>
+   <extends>QWidget</extends>
+   <header>..groupcolumns</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
