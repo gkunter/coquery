@@ -3066,7 +3066,6 @@ class CorpusClass(CoqObject):
             print(S)
         engine = self.resource.get_engine()
         df = pd.read_sql(S, engine)
-        print(1)
         if hasattr(self.resource, "tag_table"):
             S = """
                 SELECT {tag} AS COQ_TAG_TAG,
