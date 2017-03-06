@@ -756,7 +756,7 @@ class Proportion(BaseProportion):
             if options.cfg.verbose:
                 print(self._name, "calculating df.Proportion()")
         val = super(Proportion, self).evaluate(df, *args, **kwargs)
-        val = val.apply(lambda x: x / len(df))
+        val = val / len(val)
         val.index = df.index
         return val
 
@@ -783,10 +783,11 @@ class Entropy(Proportion):
         _df = df[self.columns(df, **kwargs)]
         _df["COQ_PROP"] = super(Entropy, self).evaluate(df, *args, **kwargs)
         _df = _df.drop_duplicates()
+        props = _df["COQ_PROP"].values
         if len(_df) == 1:
             entropy = 0.0
         else:
-            entropy = -sum(_df["COQ_PROP"].apply(lambda p: p * np.log2(p)))
+            entropy = -sum(props * np.log2(p))
         val = self.constant(df, entropy)
         return val
 
