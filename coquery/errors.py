@@ -2,7 +2,7 @@
 """
 errors.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from __future__ import absolute_import
 
 import sys
 import traceback
@@ -20,6 +19,7 @@ import logging
 import re
 import textwrap
 
+from . import NAME
 from .defines import *
 from .unicode import utf8
 
@@ -154,7 +154,9 @@ class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 
 class ConfigurationError(GenericException):
-    error_message = "Configuration file incomplete or with errors."
+    def __init__(self, msg):
+        self.error_message = msg
+        self.par = ""
 
 class NoCorpusError(NoTraceException):
     error_message = "No corpus is available."
