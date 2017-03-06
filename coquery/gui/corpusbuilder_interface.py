@@ -21,8 +21,8 @@ import sys
 
 from coquery import options
 from coquery import sqlhelper
-from coquery.defines import (NAME,
-                             msg_invalid_metadata,
+from coquery import NAME
+from coquery.defines import (msg_invalid_metadata,
                              msg_install_abort,
                              msg_corpus_path_not_valid)
 from coquery.errors import SQLNoConfigurationError, DependencyError

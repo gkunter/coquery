@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 visualizationDesigner.py is part of Coquery.
 
 Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
@@ -15,8 +15,8 @@ import importlib
 import logging
 import sys
 
-from coquery import options
-from coquery.defines import NAME, ROW_NAMES
+from coquery import options, NAME
+from coquery.defines import ROW_NAMES
 from coquery.errors import VisualizationModuleError
 from coquery.functions import Freq
 from coquery.unicode import utf8

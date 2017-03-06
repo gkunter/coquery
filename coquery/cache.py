@@ -2,7 +2,7 @@
 """
 cache.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -23,8 +23,7 @@ try:
 except ImportError:
     import pickle
 
-from . import options
-from .defines import NAME
+from . import options, NAME
 
 
 class CoqQueryCache(object):

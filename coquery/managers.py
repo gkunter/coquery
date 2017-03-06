@@ -23,15 +23,14 @@ from .defines import (QUERY_MODE_TYPES, QUERY_MODE_FREQUENCIES,
                       COLUMN_NAMES, ROW_NAMES,
                       CONTEXT_NONE, CONTEXT_COLUMNS, CONTEXT_KWIC,
                       CONTEXT_STRING,
-                      QUERY_ITEM_WORD,
-                      NAME)
+                      QUERY_ITEM_WORD)
 from .functions import (Freq,
                         ContextColumns, ContextKWIC, ContextString,
                         MutualInformation, ConditionalProbability,
                         SubcorpusSize)
 from .functionlist import FunctionList
 from .general import CoqObject, get_visible_columns
-from . import options
+from . import options, NAME
 from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
 
 
@@ -1080,6 +1079,8 @@ def get_manager(manager, resource):
     """
     Returns a data manager
     """
+    if resource is None:
+        return None
     try:
         return options.cfg.managers[resource][manager]
     except KeyError:

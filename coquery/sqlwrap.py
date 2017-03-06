@@ -18,8 +18,9 @@ import sqlalchemy
 import pandas as pd
 
 from .errors import DependencyError, SQLProgrammingError
-from .defines import SQL_MYSQL, SQL_SQLITE, NAME
+from .defines import SQL_MYSQL, SQL_SQLITE
 from . import options
+from . import NAME
 from . import sqlhelper
 from . import capturer
 

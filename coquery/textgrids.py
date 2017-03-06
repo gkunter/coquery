@@ -2,7 +2,7 @@
 """
 textgrids.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -17,8 +17,8 @@ import logging
 
 import tgt
 
-from .defines import NAME
 from . import options
+from . import NAME
 from .links import get_by_hash
 from .unicode import utf8
 
