@@ -9,6 +9,9 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import unicode_literals
+from __future__ import print_function
+
 """
 The module :mod:`corpusbuilder.py` provides the framework for corpus module
 installers.
@@ -52,9 +55,6 @@ XML version of the British National Corpus.
 """
 
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import getpass
 import codecs
 import logging
@@ -87,10 +87,11 @@ from . import sqlhelper
 from . import sqlwrap
 from . import options
 from . import corpus
+from . import NAME
 from .tables import Column, Identifier, Link, Table
 
 from .errors import DependencyError, get_error_repr
-from .defines import (SQL_MYSQL, NAME,
+from .defines import (SQL_MYSQL,
                       DEFAULT_MISSING_VALUE,
                       QUERY_ITEM_GLOSS, QUERY_ITEM_LEMMA,
                       QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_POS,
@@ -116,7 +117,7 @@ new_code_str = """
 
     @staticmethod
     def get_description():
-        return ["{description}"]
+        return ['''{description}''']
     """
 
 new_doc_string = """
@@ -1847,8 +1848,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             is_tagged_label = "text corpus"
             tagging_state = "Part-of-speech tags are not available for this corpus."
 
-        desc_template = """
-            "<p>The {label} '{name}' was created on {date}.
+        desc_template = """<p>The {label} '{name}' was created on {date}.
             It contains {tokens} text tokens. {tagging_state}</p>
             <p>Directory:<br/> <code>{path}</code></p>
             <p>File{s}:<br/><code>{files}</code></p><p>"""
