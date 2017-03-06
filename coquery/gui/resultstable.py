@@ -24,7 +24,8 @@ _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)
 class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
     fill = False
 
-    def __init__(self, *args, threshold=0.95, **kwargs):
+    def __init__(self, *args, **kwargs):
+        threshold = kwargs.get("threshold", 0.95)
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
         CoqResultCellDelegate._app = options.cfg.app
         CoqResultCellDelegate._table = get_toplevel_window().table_model
