@@ -152,6 +152,7 @@ class BuilderClass(BaseCorpusBuilder):
             except Exception as e:
                 logger.error(e)
                 print(e)
+                raise e
         for x in capt:
             s = "File {} – {}".format(self.arguments.path, x)
             logger.warn(s)
