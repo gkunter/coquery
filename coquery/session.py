@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from __future__ import absolute_import
 
 import sys
 import time, datetime
@@ -24,6 +23,7 @@ import sqlalchemy
 import pandas as pd
 
 from . import options
+from . import NAME
 from .errors import *
 from .defines import *
 from .general import *
@@ -81,7 +81,6 @@ class Session(object):
             logger.warn("No corpus available on connection '{}'".format(
                 options.cfg.current_server))
 
-        self.show_header = options.cfg.show_header
         self.query_type = queries.get_query_type(options.cfg.MODE)
 
         self.data_table = pd.DataFrame()
@@ -217,6 +216,8 @@ class Session(object):
         try:
             for i, current_query in enumerate(self.query_list):
                 if current_query.query_string in _queried:
+                    logger.warn("Duplicate query string detected: {}".format(
+                        current_query.query_string))
                     continue
                 _queried.append(current_query.query_string)
                 self.queries[i] = current_query
@@ -319,7 +320,10 @@ class Session(object):
             output_file.flush()
 
     def get_manager(self):
-        return managers.get_manager(options.cfg.MODE, self.Resource.name)
+        if not self.Resource:
+            return None
+        else:
+            return managers.get_manager(options.cfg.MODE, self.Resource.name)
 
     def has_cached_data(self):
         return (self, self.get_manager()) in self._manager_cache
