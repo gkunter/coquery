@@ -23,6 +23,7 @@ from coquery import managers
 from coquery import functions
 from coquery import functionlist
 from coquery import sqlhelper
+from coquery import NAME, __version__
 from coquery.general import memory_dump
 from coquery import options
 from coquery.defines import *
@@ -296,7 +297,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
         self.set_columns_widget()
 
-        self.ui.status_message = QtWidgets.QLabel("{} {}".format(NAME, VERSION))
+        self.ui.status_message = QtWidgets.QLabel("{} {}".format(NAME, __version__))
         self.ui.status_message.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
                                        QtWidgets.QSizePolicy.Ignored)
         self.ui.status_progress = QtWidgets.QProgressBar()
@@ -569,6 +570,23 @@ class CoqueryApp(QtWidgets.QMainWindow):
             self.reaggregating):
             self.abortRequested.emit()
 
+        mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
+        self.toggle_to_file((int(e.modifiers() & mask) == mask))
+        e.accept()
+
+    def keyReleaseEvent(self, e):
+        mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
+        self.toggle_to_file((int(e.modifiers() & mask) == mask))
+        e.accept()
+
+    def toggle_to_file(self, to_file):
+        if to_file:
+            self.ui.button_run_query.setText("&New query to file")
+            self.ui.button_run_query.setIcon(self.get_icon("Save"))
+        else:
+            self.ui.button_run_query.setText("&New query")
+            self.ui.button_run_query.setIcon(self.get_icon("Circled Play"))
+
     def help(self):
         from . import helpviewer
 
@@ -813,6 +831,15 @@ class CoqueryApp(QtWidgets.QMainWindow):
         error_icon = "Error"
         problem_icon = "Attention"
 
+        try:
+            manager = self.Session.get_manager()
+        except:
+            manager = None
+        if not manager:
+            manager = managers.get_manager(
+                options.cfg.MODE,
+                utf8(self.ui.combo_corpus.currentText()))
+
         if not self.ui.data_preview.isEnabled():
             active_icon = "Inactive State"
 
@@ -838,7 +865,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 _set_icon(1, None)
                 _set_icon(2, None)
             if self.Session:
-                manager = self.Session.get_manager()
                 if manager.stopwords_failed:
                     _set_icon(2, error_icon)
                     _set_icon(1, None)
@@ -863,14 +889,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 _set_icon(2, active_icon)
 
         elif row == TOOLBOX_SUMMARY:
-            try:
-                manager = managers.get_manager(options.cfg.MODE,
-                                               self.Session.Resource.name)
-            except:
-                manager = managers.get_manager(options.cfg.MODE,
-                                               utf8(self.ui.combo_corpus.currentText()))
             l = self.Session.summary_functions.get_list()
-
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
             _set_icon(2, active_icon if l else None)
 
@@ -1249,7 +1268,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
             self.set_toolbox_appearance(i)
 
         print("reaggregation: done")
-
         if options.cfg.stopword_list and manager.stopwords_failed:
             rc_feature = getattr(self.Session.Resource,
                                  getattr(self.Session.Resource,
@@ -1431,6 +1449,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         if self.Session is None:
             hide()
         else:
+            if not self.Session.Resource:
+                hide()
+                return
             manager = managers.get_manager(options.cfg.MODE,
                                         self.Session.Resource.name)
             if len(manager.hidden_columns) == 0:
@@ -2129,8 +2150,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
     def run_query(self):
         from coquery.session import SessionCommandLine, SessionInputFile
-        shift_pressed = options.cfg.app.keyboardModifiers() & QtCore.Qt.ShiftModifier
-        options.cfg.to_file = shift_pressed
+        mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
+        options.cfg.to_file = (
+            (int(options.cfg.app.keyboardModifiers()) & mask) == mask)
+
         if options.cfg.to_file:
             caption = "Choose output file... – Coquery"
             name = QtWidgets.QFileDialog.getSaveFileName(
@@ -2798,7 +2821,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
             pass
 
         self.ui.tool_widget.blockSignals(False)
-
         self.set_main_screen_appearance()
 
     def add_link(self, item):
