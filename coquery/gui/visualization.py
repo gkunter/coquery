@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 visualization.py is part of Coquery.
 
 Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
@@ -19,29 +19,28 @@ This module provides the base classes required for data visualization:
 * :class:`Visualizer`
 * :class:`VisualizerDialog`
 
-The class :class:`Visualizer` provides the framework for new visualizations. 
+The class :class:`Visualizer` provides the framework for new visualizations.
 Implementation a new visualization usually involves the following steps:
 
 * Write a subclass of :class:`Visualizer`. The subclass will reimplement at least :func:`draw` to contain the plotting routines for the new visualization.
 * Store the Python file containing the subclass in the directory `visualizations`.
 * Make the new visualizer available to Coquery. At the moment, this can only be done by manually adding a menu entry to the `Visualizations` menu, and setting up the required signal connections in :mod:`gui/app.py`. Future versions of Coquery may provide a more simple interface for supplying visualizations.
 
-The class :class:`VisualizerDialog` provides a dialog window for 
-visualizations. This dialog makes use of the Matplotlib navigation toolbar 
-for zooming, panning, and saving. It also provides the capability to freeze 
-and unfreeze the current visualization. A visualization dialog with a 
+The class :class:`VisualizerDialog` provides a dialog window for
+visualizations. This dialog makes use of the Matplotlib navigation toolbar
+for zooming, panning, and saving. It also provides the capability to freeze
+and unfreeze the current visualization. A visualization dialog with a
 specific visualization type can be opened by calling :func:`VisualizerDialog.Plot`.
 
 Examples
 --------
-Examples of different visualizations can be found in the `visualizations` 
+Examples of different visualizations can be found in the `visualizations`
 folder of the Coquery installation. For instance,
-:mod:`visualizations/barplot.py` contains the subclass :class:`BarchartVisualizer` which visualizes the frequency distribution of 
-the current results table in the form of one or more barcharts, and  :mod:`visualizations/barcodeplot.py` contains the subclass :class:`BarcodeVisualizer` which draws a barcode plot where vertical lines 
+:mod:`visualizations/barplot.py` contains the subclass :class:`BarchartVisualizer` which visualizes the frequency distribution of
+the current results table in the form of one or more barcharts, and  :mod:`visualizations/barcodeplot.py` contains the subclass :class:`BarcodeVisualizer` which draws a barcode plot where vertical lines
 indicate the position within the corpus for each token in the result table.
 """
 
-import logging
 import matplotlib as mpl
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
@@ -64,7 +63,7 @@ class CoqNavigationToolbar(NavigationToolbar):
     """
     See matplotlib/backends/backend_qt5.py for the implementation.
     """
-    
+
     def __init__(self, canvas, parent, coordinates=True):
         super(CoqNavigationToolbar, self).__init__(canvas, parent, coordinates)
         if options.cfg.experimental:
@@ -87,7 +86,7 @@ class CoqNavigationToolbar(NavigationToolbar):
         self._buttons["Customize"].setIcon(get_toplevel_window().get_icon("Edit"))
         self._buttons["Pan"].setIcon(get_toplevel_window().get_icon("Resize Four Directions"))
         self._buttons["Subplots"].setIcon(get_toplevel_window().get_icon("Crop"))
-        
+
         self._buttons["Subplots"].setToolTip("Adjust figure margins")
         self._buttons["Customize"].setToolTip("Edit labels, colors, and fonts")
 
@@ -105,13 +104,13 @@ class CoqNavigationToolbar(NavigationToolbar):
 
     def isPanning(self):
         return self._pan
-    
+
     def isZooming(self):
         return self._zoom
 
     def edit_parameters(self, *args):
         from . import figureoptions
-        
+
         new_values = figureoptions.FigureOptions.manage(self.parent.visualizer.options)
         if new_values:
             self.parent.visualizer.options.update(new_values)
@@ -135,29 +134,29 @@ class CoqNavigationToolbar(NavigationToolbar):
         self.margin_dialog.tightlayout.setText("&Reset")
         self.margin_dialog.show()
         get_toplevel_window().widget_list.append(self.margin_dialog)
-        
+
 class VisualizerDialog(QtWidgets.QWidget):
-    """ Defines a QDialog that is used to visualize the data in the main 
-    data preview area. It connects the dataChanged signal of the abstract 
-    data table and the sectionMoved signal of the header of the table view to 
+    """ Defines a QDialog that is used to visualize the data in the main
+    data preview area. It connects the dataChanged signal of the abstract
+    data table and the sectionMoved signal of the header of the table view to
     the update_plot() method so that the method is called whenever either the
     content of the results table changes, or the columns are moved.
-    
-    The visualizer dialog has a 'Freeze visualization' checkbox. If the box 
+
+    The visualizer dialog has a 'Freeze visualization' checkbox. If the box
     is checked, the visualization is not updated on changes.
-    
+
     FIXME: Live updates are currently disabled.
     """
     def __init__(self, parent=None):
         super(VisualizerDialog, self).__init__(parent)
-        
+
         self.ui = Ui_Visualizer()
         self.ui.setupUi(self)
         self.ui.progress_bar.setRange(0, 0)
         self.ui.box_visualize.hide()
         self.ui.progress_bar.hide()
         self.ui.label.hide()
-        
+
         self.setWindowIcon(options.cfg.icon)
         self.margin_dialoglog_stack = []
 
@@ -170,17 +169,17 @@ class VisualizerDialog(QtWidgets.QWidget):
         self.spinner.setSuffix(" year(s)")
         self.spinner_label = QtWidgets.QLabel("Bandwidth: ")
         self.spinner.valueChanged.connect(self.update_plot)
-        
+
         self.combo_x_function = QtWidgets.QComboBox()
         self.label_x_function = QtWidgets.QLabel("Variable on &X axis:")
         self.label_x_function.setBuddy(self.combo_x_function)
         self.combo_y_function = QtWidgets.QComboBox()
         self.label_y_function = QtWidgets.QLabel("Variable on &Y axis:")
         self.label_y_function.setBuddy(self.combo_y_function)
-        
+
         self.toolbar = None
         self.canvas = None
-        
+
         try:
             self.resize(options.settings.value("visualizer_size"))
         except TypeError:
@@ -191,20 +190,20 @@ class VisualizerDialog(QtWidgets.QWidget):
         self.close()
 
     def update_plot(self):
-        """ 
-        Update the plot. 
-        
-        During the update, the canvas and the navigation toolbar are 
+        """
+        Update the plot.
+
+        During the update, the canvas and the navigation toolbar are
         replaced by new instances, as is the figure used by the visualizer.
         Finally, the draw() method of the visualizer is called to plot the
-        visualization again. 
+        visualization again.
         """
         if hasattr(self.toolbar, "margin_dialog"):
             self.toolbar.margin_dialog.hide()
             self.toolbar.margin_dialog.close()
             get_toplevel_window().widget_list.remove(self.toolbar.margin_dialog)
             del self.toolbar.margin_dialog
-            
+
         if self.smooth:
             self.spinner.setEnabled(False)
             self.visualizer.update_data(bandwidth=self.spinner.value())
@@ -229,10 +228,10 @@ class VisualizerDialog(QtWidgets.QWidget):
                 kwargs["column_x"] = utf8(self.combo_x_function.currentText())
 
         self.visualizer.setup_figure()
-        
+
         self.remove_matplot()
         self.add_matplot()
-            
+
         self.visualizer.draw(**kwargs)
 
         self.visualizer.g.fig.tight_layout()
@@ -241,7 +240,7 @@ class VisualizerDialog(QtWidgets.QWidget):
         if self.smooth:
             self.spinner.setEnabled(True)
         self.visualizer.g.fig.tight_layout()
-        
+
         if hasattr(self.toolbar, "margin_dialog"):
             self.toolbar.configure_subplots()
 
@@ -255,12 +254,12 @@ class VisualizerDialog(QtWidgets.QWidget):
             self.canvas.setFocus()
 
         if not self.toolbar:
-            self.toolbar = CoqNavigationToolbar(self.canvas, self, True)       
+            self.toolbar = CoqNavigationToolbar(self.canvas, self, True)
             if (self.visualizer.numerical_axes == 2 and
                 self.visualizer.function_list):
                 self.toolbar.addWidget(self.label_y_function)
                 self.toolbar.addWidget(self.combo_y_function)
-            if (self.visualizer.numerical_axes == 1 and 
+            if (self.visualizer.numerical_axes == 1 and
                 self.visualizer.function_list):
                 self.toolbar.addWidget(self.label_x_function)
                 self.toolbar.addWidget(self.combo_x_function)
@@ -277,24 +276,24 @@ class VisualizerDialog(QtWidgets.QWidget):
 
     def onclick(self, event):
         """
-        Pass any click event onward to the visualizer, unless the dialog is 
+        Pass any click event onward to the visualizer, unless the dialog is
         in panning or zooming mode.
         """
         if not self.toolbar.isPanning() and not self.toolbar.isZooming():
             self.visualizer.onclick(event)
 
     def remove_matplot(self):
-        """ 
-        Remove the matplotlib canvas and the navigation bar from the 
-        dialog. 
+        """
+        Remove the matplotlib canvas and the navigation bar from the
+        dialog.
         """
         if self.canvas:
             self.canvas.close()
         self.ui.verticalLayout.removeWidget(self.canvas)
         self.canvas = None
-        
+
     def close(self, *args):
-        """ Close the visualizer widget, disconnect the signals, and remove 
+        """ Close the visualizer widget, disconnect the signals, and remove
         the visualizer from the list of visualizers when closing."""
         try:
             self.disconnect_signals()
@@ -312,14 +311,14 @@ class VisualizerDialog(QtWidgets.QWidget):
             del self.visualizer
         except AttributeError:
             pass
-        
+
     def keyPressEvent(self, event):
         """ Catch key events so that they can be passed on to the matplotlib
         toolbar. """
         try:
             key_press_handler(event, self.canvas, self.toolbar)
         except AttributeError:
-            # Attribute errors seem to occur when a key is pressed while the 
+            # Attribute errors seem to occur when a key is pressed while the
             # mouse is outside of the figure area:
             #
             # AttributeError: 'QKeyEvent' object has no attribute 'inaxes'
@@ -329,10 +328,10 @@ class VisualizerDialog(QtWidgets.QWidget):
         except Exception as e:
             print(e)
             raise e
-            
+
     def connect_signals(self):
-        """ Connect the dataChanged signal of the abstract data table and the 
-        sectionMoved signal of the header of the table view to the 
+        """ Connect the dataChanged signal of the abstract data table and the
+        sectionMoved signal of the header of the table view to the
         update_plot() method so that the method is called whenever either the
         content of the results table changes, or the columns are moved."""
         if not options.cfg.experimental:
@@ -342,26 +341,26 @@ class VisualizerDialog(QtWidgets.QWidget):
         self.visualizer._view.horizontalHeader().sectionMoved.connect(self.update_plot)
 
     def disconnect_signals(self):
-        """ Disconnect the dataChanged signal of the abstract data table and 
-        the sectionMoved signal of the header of the table view so that the 
-        update_plot() method is not called anymore when the content of the 
+        """ Disconnect the dataChanged signal of the abstract data table and
+        the sectionMoved signal of the header of the table view so that the
+        update_plot() method is not called anymore when the content of the
         results table changes or the columns are moved."""
         if not options.cfg.experimental:
             return
         get_toplevel_window().table_model.dataChanged.disconnect(self.update_plot)
         get_toplevel_window().table_model.layoutChanged.disconnect(self.update_plot)
         self.visualizer._view.horizontalHeader().sectionMoved.disconnect(self.update_plot)
-        
+
     def toggle_freeze(self):
-        """ Toggle the 'frozen' state of the visualization. This method is 
+        """ Toggle the 'frozen' state of the visualization. This method is
         called whenever the 'Freeze visualization' box is checked or
-        unchecked. 
-        
-        If the box is checked, the visualization is frozen, and the plot is 
-        not updated if the content of the results table changes or if the 
-        columns of the table view are moved. 
-        
-        If the box is unchecked (the default), the visualization is not 
+        unchecked.
+
+        If the box is checked, the visualization is frozen, and the plot is
+        not updated if the content of the results table changes or if the
+        columns of the table view are moved.
+
+        If the box is unchecked (the default), the visualization is not
         frozen, and the plot is updated on changes to the results table. """
         if not options.cfg.experimental:
             return
@@ -373,7 +372,7 @@ class VisualizerDialog(QtWidgets.QWidget):
 
     def Plot(self, model, view, visualizer_class, parent=None, **kwargs):
         """ Use the visualization type given as 'visualizer_class' to display
-        the data given in the abstract data table 'model', using the table 
+        the data given in the abstract data table 'model', using the table
         view given in 'view'. """
         self.smooth = kwargs.get("smooth", False)
         self.visualizer = visualizer_class(model, view, parent=None, **kwargs)
@@ -391,13 +390,13 @@ class VisualizerDialog(QtWidgets.QWidget):
             self.combo_y_function.currentIndexChanged.connect(self.update_plot)
         except AttributeError:
             pass
-        
+
         if not self.visualizer._table.empty:
             self.setVisible(True)
             self.connect_signals()
             get_toplevel_window().widget_list.append(self)
             self.add_matplot()
-            self.thread = classes.CoqThread(self.visualizer.draw, 
+            self.thread = classes.CoqThread(self.visualizer.draw,
                                             parent=self)
             self.thread.taskStarted.connect(self.startplot)
             self.thread.taskFinished.connect(self.finishplot)
@@ -414,7 +413,7 @@ class VisualizerDialog(QtWidgets.QWidget):
 
     def startplot(self):
         self.ui.box_visualize.hide()
-        self.ui.frame.setDisabled(True)        
+        self.ui.frame.setDisabled(True)
         self.ui.frame_placeholder.show()
         self.ui.progress_bar.show()
         self.ui.label.show()
@@ -423,11 +422,11 @@ class VisualizerDialog(QtWidgets.QWidget):
     def finishplot(self):
         self.ui.frame_placeholder.hide()
         self.ui.progress_bar.hide()
-        self.ui.label.hide()        
+        self.ui.label.hide()
         self.ui.box_visualize.show()
-        self.ui.frame.setDisabled(False)        
+        self.ui.frame.setDisabled(False)
         self.repaint()
-        
+
         self.visualizer.g.fig.canvas.draw()
 
         self.visualizer.g.fig.tight_layout()
@@ -441,10 +440,10 @@ class VisualizerDialog(QtWidgets.QWidget):
         # Create an alert in the system taskbar to indicate that the
         # visualization has completed:
         options.cfg.app.alert(self, 0)
-  
+
 if __name__ == "__main__":
     unittest.main()
-            
+
     #app = QtWidgets.QApplication(sys.argv)
 
     #TreeMap.MosaicPlot(table)
@@ -452,5 +451,3 @@ if __name__ == "__main__":
     #tm.tree_map(tree, [0, 0], [500, 500], 0, None, None)
     #sys.exit(app.exec_())
 
-
-logger = logging.getLogger(NAME)
