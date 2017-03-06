@@ -10,7 +10,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-from __future__ import absolute_import
+from __future__ import print_function
 
 import collections
 
@@ -44,11 +44,22 @@ if not hasattr(ast, "TryFinally"):
 import hashlib
 from collections import defaultdict
 
-from coquery import general
-from coquery import filters
+from . import general
+from . import NAME
+from . import filters
 from .unicode import utf8
 from .defines import *
 from .errors import *
+
+CONSOLE_DEPRECATION = """The command-line version of Coquery is deprecated.
+
+It doesn't support all features of the graphical interface, may contain
+untested code, and generally produce unexpected "results.
+
+Command-line support may be altogether removed in a future release.
+
+"""
+
 
 class CoqConfigParser(_configparser, object):
     """
@@ -57,14 +68,14 @@ class CoqConfigParser(_configparser, object):
     def items(self, section):
         try:
             return super(CoqConfigParser, self).items(section)
-        except NoSectionError:
+        except (NoSectionError, AttributeError):
             return []
 
     def str(self, section, option, fallback=None, d={}):
         fallback = d.get(option, fallback)
         try:
             val = self.get(section, option)
-        except (NoOptionError, ValueError) as e:
+        except (NoOptionError, ValueError, AttributeError) as e:
             if fallback != None:
                 val = fallback
             else:
@@ -75,7 +86,7 @@ class CoqConfigParser(_configparser, object):
         fallback = d.get(option, fallback)
         try:
             val = self.getboolean(section, option)
-        except (NoOptionError, ValueError) as e:
+        except (NoOptionError, ValueError, AttributeError) as e:
             if fallback != None:
                 val = fallback
             else:
@@ -86,7 +97,7 @@ class CoqConfigParser(_configparser, object):
         fallback = d.get(option, fallback)
         try:
             val = self.getint(section, option)
-        except (NoOptionError, ValueError) as e:
+        except (NoOptionError, ValueError, AttributeError) as e:
             if fallback != None:
                 val = fallback
             else:
@@ -97,7 +108,7 @@ class CoqConfigParser(_configparser, object):
         fallback = d.get(option, fallback)
         try:
             val = self.getfloat(section, option)
-        except (NoOptionError, ValueError) as e:
+        except (NoOptionError, ValueError, AttributeError) as e:
             if fallback != None:
                 val = fallback
             else:
@@ -253,17 +264,18 @@ class Options(object):
             self.args.base_path = os.path.dirname(sys.executable)
         elif __file__:
             self.args.base_path = os.path.dirname(__file__)
-
         self.prog_name = NAME
         self.config_name = "%s.cfg" % NAME.lower()
-        self.version = VERSION
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False, formatter_class=CoqHelpFormatter)
 
         self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
-        self.args.version = self.version
-        self.args.server_configuration = dict()
-        self.args.current_server = None
-        self.args.current_resources = None
+        self.args.current_server = "Default"
+        self.args.server_configuration = {
+            self.args.current_server: {
+                "name": self.args.current_server,
+                "type": SQL_SQLITE,
+                "path": ""}}
+
         self.args.reference_corpus = {}
         self.args.main_window = None
         self.args.first_run = False
@@ -271,6 +283,7 @@ class Options(object):
         self.args.limit_matches = False
         self.args.last_number_of_tokens = 50
         self.args.output_separator = ","
+        self.args.corpus = None
 
         self.args.table_links = defaultdict(list)
 
@@ -278,6 +291,8 @@ class Options(object):
         self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
         self.args.cache_path = os.path.join(self.args.coquery_home, "cache")
         self.args.stopword_path = os.path.join(self.args.base_path, "stopwords")
+        self.args.verbose = False
+        self.args.comment = None
 
         self.args.use_mysql = True
 
@@ -298,7 +313,7 @@ class Options(object):
         self.args.row_color = {}
 
         self.args.managers = {}
-
+        self.args.current_resources = get_available_resources(self.args.current_server)
 
     @property
     def cfg(self):
@@ -350,7 +365,6 @@ class Options(object):
 
         # Output options:
         group = self.parser.add_argument_group("Output options")
-        group.add_argument("--suppress_header", help="exclude column header from the output (default: include)", action="store_false", dest="show_header")
 
         group.add_argument("--context_mode", help="specify the way the context is included in the output", choices=[CONTEXT_KWIC, CONTEXT_STRING, CONTEXT_COLUMNS], type=str)
         group.add_argument("-c", "--context_span", help="include context with N words to the left and the right of the keyword, or with N words to the left and M words to the right if the notation '-c N, M' is used", default=0, type=int, dest="context_span")
@@ -364,7 +378,7 @@ class Options(object):
         group.add_argument("--freq-label", help="use this label in the heading line of the output (default: Freq)", default="Freq", type=str, dest="freq_label")
         group.add_argument("--no_align", help="Control if quantified token columns are aligned. If not set (the default), the columns in the result table are aligned so that row cells belonging to the same query token are placed in the same column. If set, this alignment is disabled. In that case, row cells are padded to the right.", action="store_false", dest="align_quantified")
 
-    def get_options(self):
+    def get_options(self, read_file):
         """
         Read the values from the configuration file, and merge them with
         the command-line options. Values set in the configuration file are
@@ -406,6 +420,9 @@ class Options(object):
         # whether a GUI is requested. This parse doesn't raise an argument
         # error.
         args, unknown = self.parser.parse_known_args()
+        if not args.gui:
+            print(CONSOLE_DEPRECATION, file=sys.stderr)
+
         if use_qt:
             self.args.gui = args.gui
             self.args.to_file = False
@@ -413,13 +430,12 @@ class Options(object):
             self.args.gui = False
             self.args.to_file = True
 
+
         match = re.search("--connection\s+(.+)", self.args.parameter_string)
         if match:
             self.args.current_server = match.group(1)
-        else:
-            self.args.current_server = None
 
-        self.read_configuration()
+        self.read_configuration(read_file)
         self.setup_default_connection()
 
         # create a dictionary that contains the corpora available for the
@@ -662,7 +678,7 @@ class Options(object):
             self.args.current_server = d["name"]
             self.args.current_resources = get_available_resources(self.args.current_server)
 
-    def read_configuration(self):
+    def read_configuration(self, read_file):
         defaults = {
             "default_corpus": "",
             "query_mode": QUERY_MODE_TOKENS,
@@ -694,13 +710,14 @@ class Options(object):
         self.args.first_run = True
         config_file = CoqConfigParser()
 
-        if os.path.exists(self.cfg.config_path):
+        if os.path.exists(self.cfg.config_path) and read_file:
             logger.info("Using configuration file %s" % self.cfg.config_path)
             try:
                 config_file.read(self.cfg.config_path)
             except (IOError, TypeError, ParsingError) as e:
-                print(e)
                 warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
+                raise ConfigurationError((str(e).replace("\\n", "\n")
+                                                .replace("\n", "<br>")))
             else:
                 self.args.first_run = False
 
@@ -748,15 +765,16 @@ class Options(object):
                 self.args.reference_corpus[configuration] = corpus
         # select active SQL configuration, or use Default as fallback
         try:
-            if self.args.current_server == None:
-                self.args.current_server = config_file.str("sql", "active_configuration")
-                if self.args.current_server in self.args.server_configuration:
-                    self.args.current_resources = get_available_resources(self.args.current_server)
-                else:
-                    raise ValueError
+            try:
+                self.args.current_server = config_file.str("sql",
+                                                           "active_configuration")
+            except Exception:
+                raise ValueError
+            if self.args.current_server not in self.args.server_configuration:
+                raise ValueError
         except (NoOptionError, ValueError):
             self.args.current_server = "Default"
-            self.args.current_resources = get_available_resources(self.args.current_server)
+        self.args.current_resources = get_available_resources(self.args.current_server)
 
         # only use the other settings from the configuration file if a
         # GUI is used:
@@ -798,7 +816,7 @@ class Options(object):
 
             # read OUTPUT section:
             for variable, value in config_file.items("output"):
-                if value:
+                if value and variable.strip():
                     self.args.selected_features.append(variable)
 
             # read LINKS section
@@ -941,7 +959,6 @@ class Options(object):
             if type(self.args.group_functions) is not list:
                 self.args.group_functions = []
 
-
 cfg = None
 settings = None
 
@@ -1005,7 +1022,8 @@ def save_configuration():
         if not "output" in config.sections():
             config.add_section("output")
         for feature in cfg.selected_features:
-            config.set("output", feature, True)
+            if feature.strip():
+                config.set("output", feature, True)
 
     # store reference corpora:
     if not "reference_corpora" in config.sections():
@@ -1189,10 +1207,9 @@ def get_configuration_type():
     else:
         return None
 
-def process_options():
+def process_options(use_file=True):
     global cfg
     global settings
-
     if use_qt:
         try:
             from .gui.pyqt_compat import QtCore, CoqSettings
@@ -1206,14 +1223,13 @@ def process_options():
 
     options = Options()
     cfg = options.cfg
-    options.get_options()
+    options.get_options(use_file)
     if use_cachetools:
         from . import cache
         import cachetools
         cfg.query_cache = cache.CoqQueryCache(cfg.use_cache)
     else:
         cfg.query_cache = None
-
     add_source_path(cfg.custom_installer_path)
 
 
