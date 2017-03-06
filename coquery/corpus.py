@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
-from __future__ import absolute_import
 
 import warnings
 from collections import *
@@ -490,7 +489,7 @@ class BaseResource(CoqObject):
             hashed = None
         table, _, feature = s.partition("_")
         if not table or not feature:
-            raise ValueError("either no table or no feature: {}".format(rc_feature))
+            raise ValueError("either no table or no feature: '{}'".format(rc_feature))
 
         return (hashed, table, feature)
 
