@@ -2,7 +2,7 @@
 """
 transpose.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -32,14 +32,9 @@ def arpa_to_ipa(s):
          "EY": "eɪ",
          "AY": "aɪ",
          "OW": "oʊ",
-         "AW": "aʊ",
          "OY": "ɔɪ",
          "ER": "ɝ",
          "AXR": "ɚ",
-         "EH": "ɛ",
-         "UH": "ʊ",
-         "IH": "ɪ",
-         "AW": "aʊ",
          "IA": "iə",
          "EA": "eə",
          "UA": "uə",
