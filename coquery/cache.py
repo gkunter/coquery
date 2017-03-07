@@ -29,6 +29,7 @@ from . import options, NAME
 class CoqQueryCache(object):
     def __init__(self, read_cache=False):
         self._cache = None
+        self._backup = None
         if read_cache:
             path = os.path.join(options.cfg.cache_path, "coq_cache.db")
             if os.path.exists(path):
@@ -97,12 +98,8 @@ class CoqQueryCache(object):
             getsizeof=sys.getsizeof)
 
     def restore(self):
-        if self.has_backup():
-            self._cache = self._backup
-            del self._backup
-
-    def has_backup(self):
-        return hasattr(self, "_backup")
+        self._cache = self._backup
+        self._backup = None
 
     def save(self):
         if not os.path.exists(options.cfg.cache_path):
