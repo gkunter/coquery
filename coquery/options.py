@@ -9,10 +9,8 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
 from __future__ import print_function
-
-import collections
+from __future__ import unicode_literals
 
 try:
     # Python 2.x: import ConfigParser as _configparser
@@ -23,16 +21,11 @@ except ImportError:
     from configparser import ConfigParser as _configparser, RawConfigParser
     from configparser import NoOptionError, ParsingError, NoSectionError
 
-import sys
-import os
 import argparse
-import logging
 import warnings
 import codecs
 import ast
-import inspect
 import glob
-import importlib
 import imp
 
 # make ast work in all Python versions:
@@ -45,10 +38,7 @@ import hashlib
 from collections import defaultdict
 
 from . import general
-from . import NAME
 from . import filters
-from .unicode import utf8
-from .defines import *
 from .errors import *
 
 CONSOLE_DEPRECATION = """The command-line version of Coquery is deprecated.
@@ -71,8 +61,9 @@ class CoqConfigParser(_configparser, object):
         except (NoSectionError, AttributeError):
             return []
 
-    def str(self, section, option, fallback=None, d={}):
-        fallback = d.get(option, fallback)
+    def str(self, section, option, fallback=None, d=None):
+        if d:
+            fallback = d.get(option, fallback)
         try:
             val = self.get(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
@@ -82,8 +73,9 @@ class CoqConfigParser(_configparser, object):
                 raise e
         return val
 
-    def bool(self, section, option, fallback=None, d={}):
-        fallback = d.get(option, fallback)
+    def bool(self, section, option, fallback=None, d=None):
+        if d:
+            fallback = d.get(option, fallback)
         try:
             val = self.getboolean(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
@@ -93,8 +85,9 @@ class CoqConfigParser(_configparser, object):
                 raise e
         return val
 
-    def int(self, section, option, fallback=None, d={}):
-        fallback = d.get(option, fallback)
+    def int(self, section, option, fallback=None, d=None):
+        if d:
+            fallback = d.get(option, fallback)
         try:
             val = self.getint(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
@@ -104,8 +97,9 @@ class CoqConfigParser(_configparser, object):
                 raise e
         return val
 
-    def float(self, section, option, fallback=None, d={}):
-        fallback = d.get(option, fallback)
+    def float(self, section, option, fallback=None, d=None):
+        if d:
+            fallback = d.get(option, fallback)
         try:
             val = self.getfloat(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
@@ -119,7 +113,7 @@ class UnicodeConfigParser(RawConfigParser):
     """
     Define a subclass of RawConfigParser that works with Unicode (hopefully).
     """
-    def write(self, fp):
+    def write(self, fp, DEFAULTSECT="main"):
         """Fixed for Unicode output"""
         if self._defaults:
             fp.write("[%s]\n" % DEFAULTSECT)
@@ -303,7 +297,7 @@ class Options(object):
 
         self.args.filter_list = []
         self.args.group_filter_list = []
-        self.args.selected_features= []
+        self.args.selected_features= set()
         self.args.external_links = {}
 
         # these attributes are used only in the GUI:
@@ -373,7 +367,6 @@ class Options(object):
         group.add_argument("--digits", help="set the number of digits after the period", dest="digits", default=3, type=int)
 
         group.add_argument("--number_of_tokens", help="output up to NUMBER different tokens (default: all tokens)", default=0, type=int, dest="number_of_tokens", metavar="NUMBER")
-        group.add_argument("-Q", "--show_query", help="include query string in the output", action="store_true", dest="show_query")
         group.add_argument("--show_filter", help="include the filter strings in the output", action="store_true", dest="show_filter")
         group.add_argument("--freq-label", help="use this label in the heading line of the output (default: Freq)", default="Freq", type=str, dest="freq_label")
         group.add_argument("--no_align", help="Control if quantified token columns are aligned. If not set (the default), the columns in the result table are aligned so that row cells belonging to the same query token are placed in the same column. If set, this alignment is disabled. In that case, row cells are padded to the right.", action="store_false", dest="align_quantified")
@@ -580,13 +573,7 @@ class Options(object):
         # resource feature to the list of selected features
         for key in shorthands:
             if vars(self.args)[key.strip("-")]:
-                self.args.selected_features.append(shorthands[key])
-
-        try:
-            if self.args.show_query:
-                self.args.selected_features.append("coquery_query_string")
-        except AttributeError:
-            pass
+                self.args.selected_features.add(shorthands[key])
 
         #if self.args.source_filter:
             #Genres, Years, Negated = tokens.COCATextToken(self.args.source_filter, None).get_parse()
@@ -637,7 +624,7 @@ class Options(object):
                     for arg in argument_list:
                         for column, rc_feature in D[rc_table]:
                             if column == arg:
-                                self.args.selected_features.append(rc_feature)
+                                self.args.selected_features.add(rc_feature)
 
         self.args.selected_features = set(self.args.selected_features)
 
@@ -817,7 +804,7 @@ class Options(object):
             # read OUTPUT section:
             for variable, value in config_file.items("output"):
                 if value and variable.strip():
-                    self.args.selected_features.append(variable)
+                    self.args.selected_features.add(variable)
 
             # read LINKS section
             for _, val in config_file.items("links"):
@@ -1226,7 +1213,6 @@ def process_options(use_file=True):
     options.get_options(use_file)
     if use_cachetools:
         from . import cache
-        import cachetools
         cfg.query_cache = cache.CoqQueryCache(cfg.use_cache)
     else:
         cfg.query_cache = None
