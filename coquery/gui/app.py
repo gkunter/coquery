@@ -24,7 +24,7 @@ from coquery import functions
 from coquery import functionlist
 from coquery import sqlhelper
 from coquery import NAME, __version__
-from coquery.general import memory_dump
+from coquery.general import memory_dump, get_visible_columns
 from coquery import options
 from coquery.defines import *
 from coquery.errors import *
@@ -1033,6 +1033,16 @@ class CoqueryApp(QtWidgets.QMainWindow):
                                                self)
         if result:
             manager = self.Session.get_manager()
+
+            d = result.get("substitutions", {})
+            keys = list(d.keys())
+            values = list(d.values())
+            for val in values:
+                if val in keys:
+                    d.remove(val)
+            if d:
+                result["substitutions"] = d
+
             properties[options.cfg.corpus] = result
             options.settings.setValue("column_properties", properties)
 
@@ -2904,9 +2914,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
             columns.append(self.table_model.header[0])
         self.add_function(columns)
 
-    def add_function(self, columns=[], summary=False, group=False, **kwargs):
+    def add_function(self, columns=None, summary=False, group=False, **kwargs):
         from . import addfunction
-
         session = self.Session
         if session is not None:
             manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
@@ -2950,10 +2959,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 "max_parameters": 0,
                 "checkable": True,
                 "checked": checked,
-                "edit_label": False,
-                "available_columns": []})
+                "edit_label": False})
         else:
-            dtypes = pd.Series([self.table_model.get_dtype(x) for x in columns])
+            dtypes = pd.Series([self.table_model.get_dtype(x) for x
+                                in columns])
             try:
                 if all(dtypes != object):
                     kwargs.update({"function_class": (functions.MathFunction, functions.LogicFunction)})
@@ -2962,9 +2971,16 @@ class CoqueryApp(QtWidgets.QMainWindow):
             except Exception as e:
                 print(e)
                 kwargs.update({"function_class": tuple()})
-            if "available_columns" not in kwargs:
-                kwargs.update({"available_columns": [x for x in self.table_model.content.columns if x not in columns]})
-        response = addfunction.FunctionDialog.set_function(parent=self, columns=columns, **kwargs)
+        if not columns:
+            columns = [x for x in self.table_model.content.columns]
+            available = []
+        else:
+            available = [x for x in self.table_model.content.columns
+                         if x not in columns]
+        kwargs["available_columns"] = available
+        response = addfunction.FunctionDialog.set_function(parent=self,
+                                                           columns=columns,
+                                                           **kwargs)
 
         if response is None:
             return
@@ -2978,13 +2994,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
                  for x in response]
             self.Session.group_functions.set_list(l)
         elif summary:
-            l = [x(sweep=True, hidden=True, group=False) for x in response]
+            l = [x(columns=columns, group=False) for x in response]
             self.Session.summary_functions.set_list(l)
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self.Session.column_functions.add_function(fun)
-            self.reaggregate(start=True)
 
         self.enable_apply_button()
 
