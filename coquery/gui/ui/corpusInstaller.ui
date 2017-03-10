@@ -91,7 +91,7 @@
           <item>
            <widget class="QLabel" name="label_input_path">
             <property name="text">
-             <string>&amp;Directory containg text files:</string>
+             <string>Di&amp;rectory containg text files:</string>
             </property>
             <property name="buddy">
              <cstring>input_path</cstring>
@@ -211,7 +211,7 @@
             </layout>
            </item>
            <item>
-            <widget class="QWidget" name="widget_ngram" native="true">
+            <widget class="QWidget" name="widget_n_gram" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <property name="leftMargin">
                <number>0</number>
@@ -226,7 +226,7 @@
                <number>0</number>
               </property>
               <item>
-               <widget class="QCheckBox" name="check_ngram">
+               <widget class="QCheckBox" name="check_n_gram">
                 <property name="text">
                  <string>&amp;Generate lookup table for multi-item query strings,</string>
                 </property>
