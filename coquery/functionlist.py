@@ -12,15 +12,19 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import pandas as pd
+import datetime
 
 from . import options
 from .general import CoqObject
 
 
 class FunctionList(CoqObject):
-    def __init__(self, l=[], *args, **kwargs):
+    def __init__(self, l=None, *args, **kwargs):
         super(FunctionList, self).__init__()
-        self._list = l
+        if l:
+            self._list = l
+        else:
+            self._list = []
 
     def lapply(self, df=None, session=None, manager=None):
         """
@@ -46,7 +50,14 @@ class FunctionList(CoqObject):
             else:
                 drop_on_na = drop_on_na and fun.drop_on_na
             try:
-                val = fun.evaluate(df, session=session, manager=manager)
+                if options.cfg.benchmark:
+                    print(fun.get_name())
+                    then = datetime.datetime.now()
+                    for x in range(5000):
+                        val = fun.evaluate(df, session=session, manager=manager)
+                    print(datetime.datetime.now() - then)
+                else:
+                    val = fun.evaluate(df, session=session, manager=manager)
             except KeyError as e:
                 print(e)
                 self._list.remove(fun)
