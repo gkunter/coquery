@@ -213,11 +213,4 @@ def main():
 
 
 if __name__ == "__main__":
-    for x in sys.argv[1:]:
-        if x == "--benchmark":
-            import timeit
-
-            benchmark_time = timeit.timeit("main()", setup="from __main__ import main", number=10)
-            print("Execution time (25 times): {}".format(benchmark_time))
-            sys.exit(0)
     main()
