@@ -321,9 +321,10 @@ msg_invalid_metadata = """
 <p><b>The file that you selected does not appear to contain valid meta data.</b></p>
 <p>A valid meta data file is a CSV file, i.e. a text file in which the
 column values are separated by commas.</p>
-<p>The first row of the meta data file contains the column names. The first
-column has to be named <code>File</code> or <code>Filename</code>. It links
-the columns following the first to the other meta data values.</p>
+<p>The first row of the meta data file contains the column names. One of
+the column names has to be either <code>File</code> or <code>Filename</code>.
+The values in this column have to contain the file name that the meta data
+in the other columns of that row refers to.</p>
 """
 
 msg_no_word_information = """
