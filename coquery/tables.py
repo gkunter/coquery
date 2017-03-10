@@ -2,7 +2,7 @@
 """
 tables.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -451,18 +451,18 @@ class Table(object):
                     if not column.unique:
                         # add surrogate key
                         # do not add AUTO_INCREMENT to strings or ENUMs:
-                        str_list.insert(0, "{}_primary INT AUTO_INCREMENT".format(column.name))
-                        str_list.insert(1, "{} {}".format(column.name, column.data_type))
+                        str_list.insert(0, "`{}_primary` INT AUTO_INCREMENT".format(column.name))
+                        str_list.insert(1, "`{}` {}".format(column.name, column.data_type))
                         str_list.append("PRIMARY KEY ({}_primary)".format(column.name))
                     else:
                         # do not add AUTO_INCREMENT to strings or ENUMs:
                         if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
-                            pattern = "{} {}"
+                            pattern = "`{}` {}"
                         else:
-                            pattern = "{} {} AUTO_INCREMENT"
-                        pattern = "{} {}"
+                            pattern = "`{}` {} AUTO_INCREMENT"
+                        pattern = "`{}` {}"
                         str_list.append(pattern.format(column.name, column.data_type))
-                        str_list.append("PRIMARY KEY ({})".format(column.name))
+                        str_list.append("PRIMARY KEY (`{}`)".format(column.name))
                     # add generated index column for next token?
                     if index_gen:
                         if "mariadb" in self._DB.version.lower():
@@ -474,7 +474,7 @@ class Table(object):
                         str_list.append("INDEX {id}Next{id} ({id}, Next{id})".format(
                             id=column.name))
                 else:
-                    str_list.append("{} {}".format(
+                    str_list.append("`{}` {}".format(
                         column.name,
                         column.data_type))
                 columns_added.add(column.name)
@@ -512,6 +512,5 @@ class Table(object):
         command_list.insert(0, S)
         table_str = "; ".join(command_list)
         if db_type == SQL_SQLITE:
-            return re.sub(r"\s*UNSIGNED", "", table_str)
-        else:
-            return table_str
+            table_str = re.sub(r"\s*UNSIGNED", "", table_str)
+        return table_str
