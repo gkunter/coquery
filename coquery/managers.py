@@ -61,6 +61,7 @@ class Manager(CoqObject):
         self.dropped_na_count = 0
         self.reset_hidden_columns()
         self.unique_values = {}
+        self.removed_duplicates = 0
 
         self.manager_functions = FunctionList()
 
@@ -165,16 +166,18 @@ class Manager(CoqObject):
         print("\tmutate_groups({})".format(options.cfg.group_columns))
 
         group_cols = self.get_group_columns(df, session)
-        if self._subst:
-            df = (df.replace(self._subst).groupby(group_cols)
-                    .apply(lambda x: session.group_functions.lapply(
-                                        x, session=session, manager=self)))
-        else:
-            df = (df.groupby(group_cols)
-                    .apply(lambda x: session.group_functions.lapply(
-                                        x, session=session, manager=self)))
+        #if self._subst:
+            #df = (df.replace(self._subst).groupby(group_cols)
+                    #.apply(lambda x: session.group_functions.lapply(
+                                        #x, session=session, manager=self)))
+        #else:
+            #df = (df.groupby(group_cols)
+                    #.apply(lambda x: session.group_functions.lapply(
+                                        #x, session=session, manager=self)))
 
-        df = df.reset_index(drop=True)
+        df = (df.groupby(group_cols, as_index=False)
+                .apply(session.group_functions.lapply,
+                       session=session, manager=self))
 
         print("\tDone mutate_groups")
         return df
@@ -190,8 +193,9 @@ class Manager(CoqObject):
         # apply mutate functions, including context functions:
         mutate_functions = FunctionList(self._get_main_functions(df, session))
         kwargs = {"session": session, "manager": self}
-        kwargs.update({"df": df if not self._subst
-                                else df.replace(self._subst)})
+        kwargs.update({"df": df})
+        #kwargs.update({"df": df if not self._subst
+                                #else df.replace(self._subst)})
         df = mutate_functions.lapply(**kwargs)
 
         if options.cfg.context_mode != CONTEXT_NONE:
@@ -213,8 +217,9 @@ class Manager(CoqObject):
         # apply user functions, i.e. functions that were added to
         # individual columns:
         kwargs = {"session": session, "manager": self}
-        kwargs.update({"df": df if not self._subst
-                                else df.replace(self._subst)})
+        kwargs.update({"df": df})
+        #kwargs.update({"df": df if not self._subst
+                                #else df.replace(self._subst)})
         df = FunctionList(session.column_functions).lapply(**kwargs)
 
         df = df.reset_index(drop=True)
@@ -222,6 +227,14 @@ class Manager(CoqObject):
         return df
 
     def substitute(self, df, session, stage="first"):
+        def _get_unique(column):
+            values = column.dropna().unique()
+            to_bool = values.astype(bool)
+            if (to_bool == values).all():
+                return to_bool
+            else:
+                return values
+
         if stage == "first":
             self.unique_values = {}
             self._unresolved_subst = {}
@@ -230,15 +243,18 @@ class Manager(CoqObject):
                     if col not in df.columns:
                         self._unresolved_subst[col] = self._subst[col]
                     else:
-                        self.unique_values[col] = df[col].dropna().unique()
+                        self.unique_values[col] = _get_unique(df[col])
                 try:
                     return df.replace(self._subst)
+                except ValueError as e:
+                    print(str(e), self._subst)
                 except TypeError as e:
-                    print(e)
+                    print(str(e))
         elif stage == "second":
             if self._unresolved_subst:
                 for col in self._unresolved_subst:
-                    self.unique_values[col] = df[col].dropna().unique()
+                    if col in df:
+                        self.unique_values[col] = _get_unique(df[col])
                 try:
                     return df.replace(self._unresolved_subst)
                 except TypeError as e:
@@ -397,13 +413,15 @@ class Manager(CoqObject):
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
         kwargs = {"session": session, "manager": self}
-        kwargs.update({"df": df if not self._subst
-                                else df.replace(self._subst)})
+        kwargs.update({"df": df})
+        #kwargs.update({"df": df if not self._subst
+                                #else df.replace(self._subst)})
         df = self.manager_functions.lapply(**kwargs)
 
         if not self.ignore_user_functions:
-            kwargs.update({"df": df if not self._subst
-                                    else df.replace(self._subst)})
+            kwargs.update({"df": df})
+            #kwargs.update({"df": df if not self._subst
+                                    #else df.replace(self._subst)})
             df = session.summary_functions.lapply(**kwargs)
         cols = [x for x in vis_cols
                 if x.startswith("coq_") and not x.startswith("coq_context_")]
@@ -554,8 +572,9 @@ class Manager(CoqObject):
             return df
 
         stopwords = [x.lower() for x in options.cfg.stopword_list]
-        valid = ~(df[columns].apply(lambda x: x.str.lower())
-                             .isin(stopwords)).apply(any, axis="columns")
+        valid = ~(df[columns].apply(lambda x: x.str.lower()
+                                                   .isin(stopwords))
+                             .any(axis=1))
         print("\tdone")
         return df[valid]
 
@@ -1006,7 +1025,9 @@ class ContrastMatrix(FrequencyList):
         # FIXME: columns should be processed in the order that they appear in
         # the None results table view.
 
-        def fnc(x, cols=[]):
+        def fnc(x, cols=None):
+            if cols is None:
+                cols = []
             l = [x[col] for col in cols]
             return ":".join([str(x).strip() for x in l])
 
