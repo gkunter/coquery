@@ -101,6 +101,9 @@ class CoqQueryCache(object):
         self._cache = self._backup
         self._backup = None
 
+    def has_backup(self):
+        return self._backup is not None
+
     def save(self):
         if not os.path.exists(options.cfg.cache_path):
             os.makedirs(options.cfg.cache_path)
