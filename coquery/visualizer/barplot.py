@@ -430,7 +430,7 @@ class StackedBars(BarPlot):
     Stacked bar chart
     """
     def transform(self, series):
-        return series.cumsum()
+        return series.values.cumsum()
 
     def group_transform(self, grp, numeric):
         return grp[numeric].cumsum()
