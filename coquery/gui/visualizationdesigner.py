@@ -42,8 +42,10 @@ from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 app = get_toplevel_window()
 
 visualizer_mapping = (
+    # Entry order: (Display name, icon name, module, class name)
     ("Beeswarm plot", "Beeswarm_plot", "beeswarmplot", "BeeswarmPlot"),
     ("Barcode plot", "Barcode_plot", "barcodeplot", "BarcodePlot"),
+    ("Heatbar plot", "Barcode_plot", "barcodeplot", "HeatbarPlot"),
     ("Barplot", "Barchart", "barplot", "BarPlot"),
     ("Stacked bars", "Barchart_stacked", "barplot", "StackedBars"),
     ("Percentage bars", "Barchart_percent", "barplot", "PercentBars"),
