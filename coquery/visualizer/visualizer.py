@@ -473,9 +473,9 @@ class BaseVisualizer(QtCore.QObject):
             if not labels:
                 return False
 
-            # Use method from http://stackoverflow.com/questions/22667224/ to
             # get a renderer even on backends where they are normally
-            # unavailable:
+            # unavailable, using method by "Stretch" (CC-BY-AS)
+            # http://stackoverflow.com/a/22689498/5215507
             if hasattr(fig.canvas, "get_renderer"):
                 renderer = fig.canvas.get_renderer()
             else:
