@@ -469,10 +469,12 @@ class Table(object):
                             kwd = "PERSISTENT"
                         else:
                             kwd = "STORED"
-                        str_list.append("Next{id} INT GENERATED ALWAYS AS ({id} + 1) {kwd}".format(
-                            id=column.name, kwd=kwd))
-                        str_list.append("INDEX {id}Next{id} ({id}, Next{id})".format(
-                            id=column.name))
+                        # FIXME: GENERATED is available only in MySQL 5.7.5
+                        # onward. There has to be a check for version.
+                        #str_list.append("Next{id} INT NOT NULL GENERATED ALWAYS AS ({id} + 1) {kwd}".format(
+                            #id=column.name, kwd=kwd))
+                        #str_list.append("INDEX {id}Next{id} ({id}, Next{id})".format(
+                            #id=column.name))
                 else:
                     str_list.append("`{}` {}".format(
                         column.name,
