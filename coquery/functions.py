@@ -83,14 +83,14 @@ combine_map = {
     "join": lambda x, y: y.join(x),
     }
 
-bool_combine = ["all", "any", "none"]
-seq_combine = ["first", "last", "random", "mode", "max", "min"]
-num_combine = ["sum", "mean", "sd", "median", "IQR"]
-no_combine = []
+BOOL_COMBINE = ["all", "any", "none"]
+SEQ_COMBINE = ["first", "last", "random", "mode", "max", "min"]
+NUM_COMBINE = ["sum", "mean", "sd", "median", "IQR"]
+NO_COMBINE = []
 
-str_combine = seq_combine + bool_combine
-num_combine = num_combine + seq_combine
-all_combine = num_combine + seq_combine + bool_combine
+STR_COMBINE = SEQ_COMBINE + BOOL_COMBINE
+NUM_COMBINE = NUM_COMBINE + SEQ_COMBINE
+ALL_COMBINE = NUM_COMBINE + SEQ_COMBINE + BOOL_COMBINE
 
 
 #############################################################################
@@ -102,7 +102,7 @@ class Function(CoqObject):
     parameters = 0
     default_aggr = "first"
     allow_null = False
-    combine_modes = all_combine
+    combine_modes = ALL_COMBINE
     no_column_labels = False # True if the columns appear in the function name
     single_column = True
     drop_on_na = True
@@ -237,7 +237,7 @@ class Function(CoqObject):
 #############################################################################
 
 class StringFunction(Function):
-    combine_modes = str_combine
+    combine_modes = STR_COMBINE
 
     @staticmethod
     def get_description():
@@ -266,7 +266,7 @@ class StringRegEx(StringFunction):
 
 class StringLength(StringFunction):
     _name = "LENGTH"
-    combine_modes = num_combine
+    combine_modes = NUM_COMBINE
 
     # FIXME: there should be a decorator for functions!
     def evaluate(self, df, *args, **kwargs):
@@ -297,10 +297,16 @@ class StringChain(StringFunction):
 class StringCount(StringRegEx):
     _name = "COUNT"
     parameters = 1
-    combine_modes = num_combine
+    combine_modes = NUM_COMBINE
 
     def _func(self, cell):
-        return len(self.re.findall(x) if x is not None else None)
+        if cell is None:
+            return None
+        match = self.re.findall(cell)
+        try:
+            return len(match)
+        except TypeError:
+            return 0
 
     def evaluate(self, df, *args, **kwargs):
         try:
@@ -318,7 +324,7 @@ class StringCount(StringRegEx):
 class StringMatch(StringRegEx):
     _name = "MATCH"
     parameters = 1
-    combine_modes = str_combine
+    combine_modes = STR_COMBINE
 
     def _func(self, col):
         def _match_str(x):
@@ -341,7 +347,7 @@ class StringMatch(StringRegEx):
 class StringExtract(StringRegEx):
     _name = "EXTRACT"
     parameters = 1
-    combine_modes = str_combine
+    combine_modes = STR_COMBINE
 
     def _func(self, col):
         def _match(s):
@@ -377,7 +383,7 @@ class MathFunction(Function):
 
 class Calc(MathFunction):
     _name = "CALC"
-    combine_modes = num_combine
+    combine_modes = NUM_COMBINE
     parameters = 2
 
     def __init__(self, sign="+", value=None, columns=None, *args, **kwargs):
@@ -422,7 +428,7 @@ class BaseFreq(Function):
 
 class Freq(BaseFreq):
     _name = "statistics_frequency"
-    combine_modes = no_combine
+    combine_modes = NO_COMBINE
     no_column_labels = True
     default_aggr = "sum"
     drop_on_na = False
@@ -899,7 +905,7 @@ class MutualInformation(Proportion):
 
 class CorpusSize(Function):
     _name = "statistics_corpus_size"
-    combine_modes = no_combine
+    combine_modes = NO_COMBINE
     no_column_labels = True
 
     @staticmethod
@@ -1086,7 +1092,7 @@ class ContextString(ContextColumns):
 
 class LogicFunction(Function):
     _name = "virtual"
-    combine_modes = bool_combine
+    combine_modes = BOOL_COMBINE
 
     @staticmethod
     def get_description():
@@ -1237,7 +1243,7 @@ class IsEmpty(IsNotEmpty):
 
 #class QueryFunction(Function):
     #_name = "virtual"
-    #combine_modes = bool_combine
+    #combine_modes = BOOL_COMBINE
 
     #@staticmethod
     #def get_description():
