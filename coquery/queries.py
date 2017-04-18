@@ -48,12 +48,14 @@ class TokenQuery(object):
     """
 
     def __init__(self, S, Session):
+        self.query_list = []
         try:
-            self.query_list = tokens.preprocess_query(S)
+            for s in S.split("\n"):
+                if s:
+                    self.query_list += tokens.preprocess_query(s)
         except TokenParseError as e:
             logger.error(str(e))
             S = ""
-            self.query_list = []
         self.query_string = S
         self.Session = Session
         self.Resource = Session.Resource
