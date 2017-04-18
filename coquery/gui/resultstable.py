@@ -25,7 +25,7 @@ class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
     fill = False
 
     def __init__(self, *args, **kwargs):
-        threshold = kwargs.get("threshold", 0.95)
+        threshold = kwargs.pop("threshold", 0.95)
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
         CoqResultCellDelegate._app = options.cfg.app
         CoqResultCellDelegate._table = get_toplevel_window().table_model
@@ -267,16 +267,15 @@ class CoqResultsTableView(classes.CoqTableView):
         self.setSelectionBehavior(self.SelectItems)
         self.setSelectionMode(self.ExtendedSelection)
 
+        v_header = classes.CoqVerticalHeader(QtCore.Qt.Vertical)
+        v_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        v_header.setDefaultSectionSize(QtWidgets.QLabel().sizeHint().height() + 2)
+        self.setVerticalHeader(v_header)
+
         h_header = classes.CoqHorizontalHeader(QtCore.Qt.Horizontal)
         h_header.setSectionsMovable(True)
         h_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        h_header.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectColumns)
-        h_header.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.setHorizontalHeader(h_header)
-
-        v_header = self.verticalHeader()
-        v_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        v_header.setDefaultSectionSize(QtWidgets.QLabel().sizeHint().height() + 2)
 
     def setDelegates(self):
         h_header = self.horizontalHeader()
