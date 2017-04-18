@@ -215,7 +215,7 @@ class TextgridWriter(object):
                             # This can happen if no word boundaries are
                             # selected in a multi-word query.
                             logger.warn("{}: {} ({})".format(
-                                session.translate_header(tier.name),
+                                self.session.translate_header(tier.name),
                                 e, grid_id))
                 else:
                     # segment features
@@ -321,6 +321,8 @@ class TextgridWriter(object):
 
         textgrids = collections.defaultdict(list)
 
+        self.n = 0
+
         for x in grids:
             grid = grids[x]
             for i, tier in enumerate(grid.tiers):
@@ -350,6 +352,7 @@ class TextgridWriter(object):
             target = os.path.join(output_path, "{}{}.TextGrid".format(
                 file_prefix, filename))
             tgt.write_to_file(grid, target)
+            self.n += 1
             textgrids[basename].append((grid, filename, self._offsets[x]))
 
         if sound_path:
@@ -359,7 +362,6 @@ class TextgridWriter(object):
             # FIXME:
             # there should be a resource method that matches sound file names
             # and text grid names.
-
             for root, _, files in os.walk(sound_path):
                 for file_name in files:
                     basename, _ = os.path.splitext(file_name)
@@ -378,7 +380,5 @@ class TextgridWriter(object):
                                 extract_sound(source, target, start, end)
                             except wave.Error:
                                 pass
-
-        self.n = len(grids)
 
 logger = logging.getLogger(NAME)
