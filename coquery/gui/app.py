@@ -43,14 +43,6 @@ if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
     sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
 
 
-AUTO_HIDE = 0
-AUTO_SHOW = 1
-AUTO_FUNCTION = 2
-AUTO_TRANSFORM = 3
-AUTO_STOPWORDS = 4
-AUTO_SUBSTITUTUE = 5
-AUTO_FILTER = 6
-
 class focusFilter(QtCore.QObject):
     """
     Define an event filter that emits a focus signal whenever the widget
@@ -1088,10 +1080,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             if ("substitutions" not in current_properties or
                 current_properties["substitutions"] != result["substitutions"]):
-                if AUTO_SUBSTITUTE in self.apply_required:
-                    self.enable_apply_button()
-                else:
+                if AUTO_SUBSTITUTE in options.settings.value("settings_auto_apply"):
                     self.reaggregate()
+                else:
+                    self.enable_apply_button()
 
     def show_hidden_columns(self):
         manager = self.Session.get_manager()
@@ -1136,7 +1128,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         if set(old_list) != set(options.cfg.stopword_list):
             self.set_button_labels()
-            if AUTO_STOPWORDS in self.apply_required:
+            if AUTO_STOPWORDS in options.settings.value("settings_auto_apply"):
                 self.enable_apply_button()
             else:
                 self.reaggregate()
@@ -1511,10 +1503,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def change_userdata(self):
         self.user_columns = True
-        if AUTO_USERDATA in self.apply_required:
-            self.enable_apply_button()
-        else:
+        if AUTO_USERDATA in options.settings.value("settings_auto_apply"):
             self.reaggregate()
+        else:
+            self.enable_apply_button()
 
     def display_results(self, drop=True):
         if len(self.Session.output_object.dropna(how="all")) == 0:
@@ -1633,10 +1625,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             s2 = {x.get_hash() for x in result}
 
             if (s1 != s2):
-                if AUTO_FILTER in self.apply_required:
-                    self.enable_apply_button()
-                else:
+                if AUTO_FILTER in options.settings.value("settings_auto_apply"):
                     self.reaggregate()
+                else:
+                    self.enable_apply_button()
 
     def manage_group_filters(self):
         from . import addfilters
@@ -1661,10 +1653,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             s2 = {x.get_hash() for x in result}
 
             if (s1 != s2):
-                if AUTO_FILTER in self.apply_required:
-                    self.enable_apply_button()
-                else:
+                if AUTO_FILTER in options.settings.value("settings_auto_apply"):
                     self.reaggregate()
+                else:
+                    self.enable_apply_button()
 
     def save_results(self, selection=False, clipboard=False):
         if not clipboard:
@@ -2071,11 +2063,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                        self.Session.Resource.name)
         for column in selection:
             self.hidden_features.add(column)
-        if AUTO_HIDE in self.apply_required:
-            self.enable_apply_button()
-        else:
+        if AUTO_VISIBILITY in options.settings.value("settings_auto_apply"):
             self.update_table_models()
             self.update_columns()
+        else:
+            self.enable_apply_button()
 
     def show_columns(self, selection):
         """
@@ -2090,11 +2082,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                        self.Session.Resource.name)
         for column in selection:
             self.hidden_features.remove(column)
-        if AUTO_SHOW in self.apply_required:
-            self.enable_apply_button()
-        else:
+        if AUTO_VISIBILITY in options.settings.value("settings_auto_apply"):
             self.update_table_models()
             self.update_columns()
+        else:
+            self.enable_apply_button()
 
     def update_columns(self):
         """
@@ -3058,10 +3050,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self.Session.column_functions.add_function(fun)
 
-        if AUTO_FUNCTION in self.apply_required:
-            self.enable_apply_button()
-        else:
+        if AUTO_FUNCTION in options.settings.value("settings_auto_apply"):
             self.reaggregate()
+        else:
+            self.enable_apply_button()
 
     def edit_function(self, column):
         from . import addfunction
