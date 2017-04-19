@@ -69,11 +69,7 @@ class CoqQueryCache(object):
             # add data frame to cache
             self._cache[key] = x
 
-            # delete backup (if present)
-            try:
-                del self._backup
-            except AttributeError:
-                pass
+            self._backup = None
 
     def get(self, key):
         return self._cache[key]
