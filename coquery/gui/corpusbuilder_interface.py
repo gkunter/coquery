@@ -385,6 +385,7 @@ class InstallerGui(QtWidgets.QDialog):
         namespace = argparse.Namespace()
         namespace.verbose = False
         namespace.use_nltk = False
+        namespace.use_meta = False
         namespace.metadata = utf8(self.ui.label_metafile.text())
 
         if self.ui.radio_only_module.isChecked():
@@ -722,6 +723,7 @@ class BuilderGui(InstallerGui):
 
         namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
+        namespace.use_meta = self.ui.check_use_metafile.checkState()
         namespace.db_name = "coq_{}".format(namespace.name).lower()
         namespace.one_file = self._onefile
         return namespace
