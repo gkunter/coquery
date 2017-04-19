@@ -167,10 +167,6 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
         super(CoqHorizontalHeader, self).mousePressEvent(e)
         self.button_pressed = True
 
-    #def mouseMoveEvent(self, event):
-        #self.setCursor(QtCore.Qt.ArrowCursor)
-        #pass
-
 
 class CoqHelpBrowser(QtWidgets.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
