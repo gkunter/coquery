@@ -16,7 +16,6 @@ from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from .ui.aboutUi import Ui_AboutDialog
 
-
 class AboutDialog(QtWidgets.QDialog):
     """
     Display the About dialog.

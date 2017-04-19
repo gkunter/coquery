@@ -1252,7 +1252,7 @@ def get_configuration_type():
     else:
         return None
 
-def process_options(use_file=True):
+def process_options():
     global cfg
     global settings
     if use_qt:
