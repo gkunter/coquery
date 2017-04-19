@@ -22,7 +22,7 @@ except ImportError:
     from io import BytesIO
 
 from coquery.corpusbuilder import BaseCorpusBuilder, Column, Identifier, Link
-from coquery.defines import NAME
+from coquery import NAME
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.zip"
@@ -50,17 +50,17 @@ class BuilderClass(BaseCorpusBuilder):
     source_genre = "Genre"
     source_url = "URL"
     source_title = "Title"
-    
+
     special_files = ["sources.zip", "lexicon.zip"]
     expected_files = special_files + [
-        "db_au_kso.zip", "db_bd_lws.zip", "db_ca_usi.zip", 
-        "db_gb_blog_akq.zip", "db_gb_genl_lsp.zip", "db_gh_msk.zip", 
-        "db_hk_wjj.zip", "db_ie_ksu.zip", "db_in_ksi.zip", "db_jm_bsh.zip", 
-        "db_ke_aua.zip", "db_lk_ssy.zip", "db_my_wme.zip", "db_ng_kdt.zip", 
-        "db_nz_poj.zip", "db_ph_jop.zip", "db_pk_jww.zip", "db_sg_jsu.zip", 
-        "db_tz_niy.zip", "db_us_blog_lks.zip", "db_us_genl_ksl.zip", 
+        "db_au_kso.zip", "db_bd_lws.zip", "db_ca_usi.zip",
+        "db_gb_blog_akq.zip", "db_gb_genl_lsp.zip", "db_gh_msk.zip",
+        "db_hk_wjj.zip", "db_ie_ksu.zip", "db_in_ksi.zip", "db_jm_bsh.zip",
+        "db_ke_aua.zip", "db_lk_ssy.zip", "db_my_wme.zip", "db_ng_kdt.zip",
+        "db_nz_poj.zip", "db_ph_jop.zip", "db_pk_jww.zip", "db_sg_jsu.zip",
+        "db_tz_niy.zip", "db_us_blog_lks.zip", "db_us_genl_ksl.zip",
         "db_za_asl.zip"]
-    
+
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
@@ -88,7 +88,7 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.corpus_id, "INT UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_source_id, self.source_table)])
-    
+
     @staticmethod
     def get_name():
         return "GloWbE"
@@ -96,15 +96,15 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_db_name():
         return "glowbe"
-    
+
     @staticmethod
     def get_language():
         return "English"
-    
+
     @staticmethod
     def get_language_code():
         return "en-various"
-        
+
     @staticmethod
     def get_title():
         return "Corpus of Global Web-Based English"
@@ -112,7 +112,7 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_modules():
         return [("odo", "Odo", "http://odo.pydata.org/en/latest/project-info.html")]
-        
+
     @staticmethod
     def get_description():
         return [
@@ -158,25 +158,25 @@ class BuilderClass(BaseCorpusBuilder):
 
                 if base_name == "lexicon.zip":
                     table = self.word_table
-                    target = (self.word_id, 
-                                self.word_label, 
-                                self.word_lemma, 
+                    target = (self.word_id,
+                                self.word_label,
+                                self.word_lemma,
                                 self.word_pos)
-                    dtypes = dict(zip(target, 
+                    dtypes = dict(zip(target,
                                       (pd.np.int64, object, object, object)))
                 elif base_name == "sources.zip":
                     table = self.source_table
-                    target = (self.source_id, 
-                                self.source_nwords, 
-                                self.source_country, 
-                                self.source_url, 
+                    target = (self.source_id,
+                                self.source_nwords,
+                                self.source_country,
+                                self.source_url,
                                 self.source_title)
                     dtypes = dict(zip(target,
                                       (pd.np.int64, pd.np.int64, object, object, object)))
                 else:
                     table = self.corpus_table
-                    target = (self.corpus_source_id, 
-                                self.corpus_id, 
+                    target = (self.corpus_source_id,
+                                self.corpus_id,
                                 self.corpus_word_id)
                     dtypes = dict(zip(target,
                                       (pd.np.int64, pd.np.int64, pd.np.int64)))
@@ -194,7 +194,7 @@ class BuilderClass(BaseCorpusBuilder):
                 skiprows = [23302765] if text_name == "db_us_b03.txt" else []
 
                 df = pd.read_csv(BytesIO(zip_file.read(text_name)),
-                                 sep="\t", 
+                                 sep="\t",
                                  names=target,
                                  dtype=dtypes,
                                  quoting=3,
@@ -208,16 +208,16 @@ class BuilderClass(BaseCorpusBuilder):
                 # and POS. They are filled by empty strings:
                 df = df.fillna("")
 
-                # In sources.txt, the country and the genre column are stored 
+                # In sources.txt, the country and the genre column are stored
                 # in a single column, but we want to store them as two:
                 if base_name == "sources.zip":
                     df[self.source_genre] = df[self.source_country].apply(lambda x: x.strip()[-1])
                     df[self.source_country] = df[self.source_country].apply(lambda x: x[:2])
-                    df = df[[self.source_id, 
-                             self.source_nwords, 
-                             self.source_country, 
+                    df = df[[self.source_id,
+                             self.source_nwords,
+                             self.source_country,
                              self.source_genre,
-                             self.source_url, 
+                             self.source_url,
                              self.source_title]]
 
                 if self._widget:
@@ -232,4 +232,3 @@ class BuilderClass(BaseCorpusBuilder):
 if __name__ == "__main__":
     BuilderClass().build()
 
-logger = logging.getLogger(NAME)
