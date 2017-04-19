@@ -86,7 +86,6 @@ class QueryToken(object):
     @classmethod
     def set_pos_check_function(cls, fnc):
         cls._check_pos_list = fnc
->>>>>>> refactor_query_string
 
     @staticmethod
     def has_wildcards(s, replace=False):
@@ -129,7 +128,7 @@ class QueryToken(object):
 
         Parameters
         ----------
-        s : string 
+        s : string
 
         Returns
         -------
@@ -525,7 +524,7 @@ def preprocess_query(S):
     all permutations are included.
 
     This function splits the string, analyzes the quantification of each
-    token, and produces a query string for each quantified token combination.
+    token, and produces a query string for all quantified token combinations.
 
     Parameters
     ----------
