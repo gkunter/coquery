@@ -74,7 +74,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.df = df.loc[[x for x in df.index if x not in ROW_NAMES.values()]]
 
         self.dtypes = dtypes
-
+        self.vis = None
         self._palette_name = "Paired"
 
         self.ui = Ui_VisualizationDesigner()
@@ -293,6 +293,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.tray_data_y.featureCleared.connect(self.check_grid_layout)
         self.ui.tray_data_z.featureCleared.connect(self.check_grid_layout)
 
+        # Hook up annotation changes:
+        self.ui.edit_figure_title.textChanged.connect(self.add_annotations)
+        self.ui.edit_x_label.textChanged.connect(self.add_annotations)
+        self.ui.edit_y_label.textChanged.connect(self.add_annotations)
+
         # Hook up figure plotting.
         # The figure will be plot only upon _explicit_ user actions. User
         # actions are:
@@ -469,8 +474,26 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.check_show_legend.setChecked(self.show_legend)
         self.ui.spin_columns.setValue(self.legend_columns)
 
+    def get_gui_values(self):
+        """
+        """
+        d = dict(
+                data_x=self.ui.tray_data_x.data(),
+                data_y=self.ui.tray_data_y.data(),
+                data_z=self.ui.tray_data_z.data(),
+                columns=self.ui.tray_columns.data(),
+                rows=self.ui.tray_rows.data(),
+                figure_type=self.ui.list_figures.currentItem(),
+                figure_font=None,
+                title=utf8(self.ui.edit_figure_title.text()),
+                xlab=utf8(self.ui.edit_x_label.text()),
+                ylab=utf8(self.ui.edit_y_label.text())
+                )
+        return d
+
     def plot_figure(self):
-        figure_type = self.ui.list_figures.currentItem()
+        values = self.get_gui_values()
+        figure_type = values["figure_type"]
         if not figure_type:
             return
 
@@ -509,20 +532,25 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.session.translate_header(x) for x
             in (data_x, data_y, data_z, columns, rows))
 
-        vis = visualizer_class(df, self.session)
-        self.grid = vis.get_grid(col=columns, row=rows, col_wrap=col_wrap,
+        self.vis = visualizer_class(df, self.session)
+        self.grid = self.vis.get_grid(col=columns, row=rows, col_wrap=col_wrap,
                                  sharex=True, sharey=True)
 
-        self.grid = self.grid.map_dataframe(vis.plot_facet,
+        self.grid = self.grid.map_dataframe(self.vis.plot_facet,
                                             x=data_x, y=data_y, z=data_z,
                                             levels_x=levels_x,
                                             levels_y=levels_y,
                                             levels_z=levels_z,
                                             session=self.session,
                                             palette=self._palette_name)
-        vis.set_annotations(self.grid)
+        self.add_annotations()
         self.setup_canvas(self.grid.fig)
         self.grid.fig.tight_layout()
+
+    def add_annotations(self):
+        if self.vis:
+            values = self.get_gui_values()
+            self.vis.set_annotations(self.grid, values)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
