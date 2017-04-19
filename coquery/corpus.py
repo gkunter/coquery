@@ -26,11 +26,11 @@ from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
     QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
     SQL_MYSQL, SQL_SQLITE,
-    CONTEXT_STRING, NAME,
+    CONTEXT_STRING,
     PREFERRED_ORDER,
     DEFAULT_MISSING_VALUE)
 
-from .general import collapse_words
+from .general import collapse_words, CoqObject
 from . import tokens
 from . import options
 from . import sqlhelper
