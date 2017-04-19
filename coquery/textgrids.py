@@ -221,9 +221,10 @@ class TextgridWriter(object):
                             # with a previous interval.
                             # This can happen if no word boundaries are
                             # selected in a multi-word query.
-                            logger.warn("{}: {} ({})".format(
-                                self.session.translate_header(tier.name),
-                                e, grid_id))
+                            pass
+                            #logger.warn("{}: {} ({})".format(
+                                #self.session.translate_header(tier.name),
+                                #e, grid_id))
                 else:
                     # segment features
                     start_label, end_label = self.feature_timing[tier_name]
@@ -252,7 +253,9 @@ class TextgridWriter(object):
             if interval:
                 # make sure that the tier is always correctly padded to the
                 # right:
-                tier.end_time = max(tier.end_time, interval.end_time + right_padding)
+                tier.end_time = max(tier.end_time,
+                                    interval.end_time + right_padding)
+                tier.end_time = min(tier.end_time, max_stop)
 
         if remember_time:
             tier = grid.get_tier_by_name("Original timing")
