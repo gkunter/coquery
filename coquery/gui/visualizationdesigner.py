@@ -73,7 +73,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
                           if x not in ROW_NAMES.values()]]
 
         for i, x in enumerate(df.columns):
-            if self.dtypes[x] == bool:
+            if self.df[x].dtype == bool:
                 self.df[x] = self.df[x].astype(str)
 
         self._palette_name = "Paired"
