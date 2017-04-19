@@ -123,17 +123,22 @@ class CoqColumnMenu(QtWidgets.QMenu):
 
         if len(columns) == 1:
             rc_feature = columns[0]
+
             add_grouping = QtWidgets.QAction("Add to &group columns", parent)
             remove_grouping = QtWidgets.QAction("Remove from &group columns", parent)
-            print(rc_feature)
-            if rc_feature in self.parent().ui.list_group_columns.columns:
-                self.addAction(remove_grouping)
-                remove_grouping.triggered.connect(
-                    lambda: self.removeGroupRequested.emit(rc_feature))
-            else:
-                self.addAction(add_grouping)
-                add_grouping.triggered.connect(
-                    lambda: self.addGroupRequested.emit(rc_feature))
+
+            # only allow resource features as group variables:
+            if (rc_feature.startswith("coq_") and
+                  rc_feature.endswith(tuple("0123456789"))):
+                feature = rc_feature.split("_", 1)[-1].rsplit("_", 1)[0]
+                if feature in self.parent().ui.list_group_columns.columns:
+                    self.addAction(remove_grouping)
+                    remove_grouping.triggered.connect(
+                        lambda: self.removeGroupRequested.emit(feature))
+                else:
+                    self.addAction(add_grouping)
+                    add_grouping.triggered.connect(
+                        lambda: self.addGroupRequested.emit(feature))
         self.addSeparator()
 
         # add additional function actions, but only if all columns really
