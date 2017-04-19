@@ -179,28 +179,6 @@ class Manager(CoqObject):
                 .apply(session.group_functions.lapply,
                        session=session, manager=self))
 
-        #grouped = df.groupby(group_cols)
-
-        #sub_list = []
-        #for sub in grouped.groups:
-            #sub_list.append(self.group_functions.apply(
-                                #df.iloc[grouped.groups[sub]],
-                                #session=session, manager=self))
-        #df = pd.concat(sub_list, axis=0)
-        print(len(df.groupby(group_cols).groups))
-        subst = options.get_column_properties().get("substitutions", {})
-        if subst:
-            df = (df.replace(subst).groupby(group_cols)
-                    .apply(lambda x: self.group_functions.lapply(
-                                        x, session=session, manager=self)))
-        else:
-            df = (df.groupby(group_cols)
-                    .apply(lambda x: self.group_functions.lapply(
-                                        x, session=session, manager=self)))
-
-        df = df.reset_index(drop=True)
->>>>>>> refactor_query_string
-
         print("\tDone mutate_groups")
         return df
 
