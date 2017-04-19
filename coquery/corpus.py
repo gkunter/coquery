@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
-from __future__ import absolute_import
 
 import warnings
 from collections import *
@@ -490,7 +489,7 @@ class BaseResource(CoqObject):
             hashed = None
         table, _, feature = s.partition("_")
         if not table or not feature:
-            raise ValueError("either no table or no feature: {}".format(rc_feature))
+            raise ValueError("either no table or no feature: '{}'".format(rc_feature))
 
         return (hashed, table, feature)
 
@@ -1299,22 +1298,24 @@ class CorpusClass(CoqObject):
 
         self.lexicon.add_table_path("corpus_id", "file_id")
 
-        f = ", ".join(["{}.{}".format(
-                    self.resource.file_table, getattr(self.resource, x)) for x in features] + ["{}.{}".format(self.resource.corpus_table, self.resource.corpus_id)])
-        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN {token_ids}".format(
-                features=f,
-                corpus=self.resource.corpus_table,
+        feature_list = ["{}.{}".format(
+                                    self.resource.file_table,
+                                    getattr(self.resource, x))
+                        for x in features]
+        feature_list.append("{}.{}".format(
+                                    self.resource.corpus_table,
+                                    self.resource.corpus_id))
+        token_ids = [str(x) for x in tokens]
+        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
+                features=", ".join(feature_list),
                 path = " ".join(self.lexicon.table_list),
-                files=self.resource.file_table,
-                corpus_file=self.resource.corpus_file_id,
-                file_id=self.resource.file_id,
+                corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
-                token_ids="({})".format(", ".join([str(x) for x in tokens])))
+                token_ids=", ".join(token_ids))
 
         engine = self.resource.get_engine()
         df = pd.read_sql(S, engine)
         engine.dispose()
-
         return df
 
     def get_origin_data(self, token_id):

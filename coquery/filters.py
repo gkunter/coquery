@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import logging
 import pandas as pd
 
+from . import NAME
 from .general import CoqObject
 
 # Since Filter.__repr__() uses globals() to look up the strings corresponding

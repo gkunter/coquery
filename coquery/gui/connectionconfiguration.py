@@ -32,17 +32,17 @@ from .ui.connectionConfigurationUi import Ui_ConnectionConfig
 def check_valid_host(s):
     """
     Check if a string is a valid host name or a valid IP address.
-    
+
     The check involves three steps. First, it is checked if the string
-    represents a valid IPv6 address by opening a IP6V socket. Then, the 
-    same check is performed for IPv4 adresses. Finally, the string is 
+    represents a valid IPv6 address by opening a IP6V socket. Then, the
+    same check is performed for IPv4 adresses. Finally, the string is
     checked for formal appropriateness as a hostname.
-    
+
     Parameters
     ----------
     s : string
         A string representing either an IP address or a host name
-    
+
     Returns
     -------
     b : bool
@@ -53,7 +53,7 @@ def check_valid_host(s):
     def is_valid_ipv4_address(address):
         try:
             socket.inet_pton(socket.AF_INET, address)
-        except AttributeError: 
+        except AttributeError:
             try:
                 socket.inet_aton(address)
             except socket.error:
@@ -101,11 +101,11 @@ class ConnectionConfiguration(QtWidgets.QDialog):
     accessDenied = QtCore.Signal(Exception)
     configurationError = QtCore.Signal(Exception)
     connected = QtCore.Signal(str)
-    
+
     def __init__(self, name, config_dict, host="127.0.0.1", port=3306, user="mysql", password="mysql", db_type=SQL_SQLITE, parent=None):
-        
+
         super(ConnectionConfiguration, self).__init__(parent)
-        
+
         self.default_host = host
         self.default_port = port
         self.default_user = user
@@ -116,20 +116,20 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.backup_dict = dict(config_dict)
         self.backup_server = name
         self.config_dict = dict(config_dict)
-        
+
         self.ui = Ui_ConnectionConfig()
         self.ui.setupUi(self)
-        
+
         self.ui.frame_sqlite.hide()
 
-        
+
         #self.ui.checkbox_layout.removeWidget(self.ui.checkBox)
         #self.ui.checkBox.hide()
         #del self.ui.checkBox
         #self.ui.switch_default_path = classes.CoqSwitch(text="Use default directory")
         #self.ui.checkbox_layout.addWidget(self.ui.switch_default_path)
         #self.ui.label_checkbox.buddy = self.ui.switch_default_path
-        
+
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
 
         # set up button signals
@@ -137,25 +137,25 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.ui.button_add.clicked.connect(self.add_configuration)
         self.ui.button_replace.clicked.connect(self.replace_configuration)
         self.ui.button_remove.clicked.connect(self.remove_configuration)
-        
+
         # set up connection signals:
         self.noConnection.connect(lambda x: self.update_connection("noConnection", x))
         self.accessDenied.connect(lambda x: self.update_connection("accessDenied", x))
         self.configurationError.connect(lambda x: self.update_connection("configurationError", x))
         self.connected.connect(lambda x: self.update_connection("connected"))
         self.state = None
-        
+
         # set the validator for the configuration name QLineEdit so that
         # only an alphanumeric string (including '_') can be entered:
         self.ui.configuration_name.setValidator(
             QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
-        
+
         # fill tree widget with existing server configurations:
         for x in sorted(self.config_dict):
             current_item = QtWidgets.QTreeWidgetItem()
             current_item.setText(0, x)
             self.ui.tree_configuration.insertTopLevelItem(0, current_item)
-        
+
         self.set_configuration(self.get_configuration())
         self.update_configuration(False)
 
@@ -175,15 +175,15 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
         self.ui.button_db_path.clicked.connect(self.set_sql_path)
         self.ui.input_db_path.textChanged.connect(lambda: self.update_configuration(True))
-        
+
         self.ui.configuration_name.textEdited.connect(self.set_default_path)
-        
+
         self.ui.radio_mysql.toggled.connect(self.toggle_engine)
         self.ui.radio_sqlite.toggled.connect(self.toggle_engine)
         if not options.use_mysql:
             self.ui.radio_mysql.setDisabled(True)
         self.toggle_engine()
-        
+
         try:
             self.resize(options.settings.value("connectionconfiguration_size"))
         except TypeError:
@@ -227,13 +227,13 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         elif state == "configurationError":
             self.ui.label_connection.setText("The current configuration does not appear to be valid. Please check the settings of the dialog.")
             self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
-        elif state == "connected": 
+        elif state == "connected":
             self.ui.button_status.setStyleSheet('QPushButton {background-color: green; color: green;}')
             self.ui.label_connection.setText("Coquery is successfully connected to the MySQL server.")
         self.state = state
         try:
             self.timer.stop()
-        except AttributeError: 
+        except AttributeError:
             pass
         self.check_buttons()
 
@@ -245,9 +245,9 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.ui.radio_sqlite.setEnabled(False)
         self.ui.radio_mysql.setEnabled(False)
         self.ui.label_7.setEnabled(False)
-        
+
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
-        
+
         name = str(self.ui.configuration_name.text())
 
         if name != "Default":
@@ -255,7 +255,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             self.ui.radio_mysql.setEnabled(True)
             self.ui.label_7.setEnabled(True)
         else:
-            # exit if the configuration name is "Default", because this name 
+            # exit if the configuration name is "Default", because this name
             # is # reserved:
             self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
             return
@@ -263,7 +263,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         if self.state == "noConnection" or self.state == "configurationError":
             self.ui.group_credentials.setEnabled(False)
         else:
-            self.ui.group_credentials.setEnabled(True)            
+            self.ui.group_credentials.setEnabled(True)
 
         # exit if no configuration name has been entered:
         if not name:
@@ -281,7 +281,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 self.ui.button_add.setEnabled(True)
                 #if d["type"] == SQL_SQLITE:
                     ## Only enable the Add button if the SQLite path exists
-                    ## or is empty (in which case the default path will be 
+                    ## or is empty (in which case the default path will be
                     ## used):
                     ##if self.ui.switch_default_path.isOn():
                     #if self.ui.radio_default_path.isChecked():
@@ -309,8 +309,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                         # Enable the Ok button:
                         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
                 elif d["type"] == SQL_SQLITE:
-                    ## The SQLite db path can be empty (then, the default path 
-                    ## will be used). Otherwise, it has to be an existing 
+                    ## The SQLite db path can be empty (then, the default path
+                    ## will be used). Otherwise, it has to be an existing
                     ## directory.
                     #if d["path"] == "" or os.path.isdir(d["path"]):
                         ## Enable the Replace button if the path is new:
@@ -319,13 +319,13 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                         ## Enable the Ok button:
                         #self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
                     self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
-                    
+
                 # Select item in tree:
                 self.current_item = self.ui.tree_configuration.findItems(name, QtCore.Qt.MatchExactly, 0)[0]
                 self.ui.tree_configuration.insertTopLevelItem(0, self.current_item)
                 self.ui.tree_configuration.setCurrentItem(self.current_item)
                 self.current_item.setSelected(True)
-                
+
                 # Also, enable the Remove button:
                 self.ui.button_remove.setEnabled(True)
 
@@ -351,14 +351,14 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         if name:
             if type(name) == tuple:
                 name = name[0]
-            self.ui.input_db_path.setText(name)        
+            self.ui.input_db_path.setText(name)
 
     def apply_configuration(self, item):
         self.current_configuration = self.config_dict[str(item.text(0))]
         self.current_configuration["name"] = str(item.text(0))
         self.set_configuration(self.current_configuration)
         self.update_configuration(True)
-            
+
     def set_configuration(self, d):
         self.ui.configuration_name.setText(d["name"])
         self.old_name = d["name"]
@@ -373,7 +373,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             else:
                 self.ui.radio_remote.setChecked(True)
                 self.ui.hostname.setText(d["host"])
-            
+
             self.ui.user.setText(d["user"])
             self.ui.password.setText(d["password"])
             self.ui.port.setValue(int(d["port"]))
@@ -392,13 +392,13 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 self.ui.radio_custom_path.setChecked(True)
                 self.ui.button_db_path.setDisabled(False)
                 self.ui.input_db_path.setDisabled(False)
-       
+
     def get_configuration(self):
         if self.current_server in self.config_dict:
             # Select the current configuration in the tree:
             self.current_item = self.ui.tree_configuration.findItems(self.current_server, QtCore.Qt.MatchExactly, 0)[0]
             self.ui.tree_configuration.setCurrentItem(self.current_item)
-            self.current_item.setSelected(True)                
+            self.current_item.setSelected(True)
             return self.config_dict[self.current_server]
         else:
             return {
@@ -409,7 +409,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 "type": self.default_type,
                 "path": self.get_sql_path("Default"),
                 "password": self.default_password}
-    
+
     def get_values(self):
         d = dict()
         d["name"] = str(self.ui.configuration_name.text())
@@ -423,7 +423,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         elif self.ui.radio_sqlite.isChecked():
             d["type"] = SQL_SQLITE
         return d
-    
+
     def add_configuration(self):
         name = str(self.ui.configuration_name.text())
         self.config_dict[name] = self.get_values()
@@ -433,7 +433,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.ui.tree_configuration.setCurrentItem(self.current_item)
         self.current_item.setSelected(True)
         self.check_buttons()
-    
+
     def remove_configuration(self, name=None):
         if not name:
             name = str(self.ui.configuration_name.text())
@@ -442,7 +442,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             self.ui.tree_configuration.indexOfTopLevelItem(current_item))
         self.config_dict.pop(name)
         self.check_buttons()
-    
+
     def replace_configuration(self):
         name = str(self.ui.configuration_name.text())
         self.config_dict[name] = self.get_values()
@@ -475,7 +475,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             root_name, root_password, name, password = create_data
             try:
                 engine = sqlalchemy.create_engine(sqlhelper.sql_url((
-                    hostname, 
+                    hostname,
                     self.ui.port.value(),
                     SQL_MYSQL,
                     root_name,
@@ -513,7 +513,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         if connection_changed or self.state == None:
             self.current_connection = self.check_connection()
         self.check_buttons()
-            
+
     def toggle_engine(self):
         """
         Change the current database engine type.
@@ -526,19 +526,19 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             #self.ui.frame_sqlite.show()
             pass
         self.check_buttons()
-            
+
     def check_connection(self):
-        """ 
-        Check if a connection can be established using the current 
+        """
+        Check if a connection can be established using the current
         configuration.
-        
-        For an SQLite configuration, it is always assumed that a connection 
-        can be establised. For MySQL configurations, the settings from the 
+
+        For an SQLite configuration, it is always assumed that a connection
+        can be establised. For MySQL configurations, the settings from the
         GUI are used to probe the database host.
-        
-        This method also sets the connection indicator according to the 
+
+        This method also sets the connection indicator according to the
         connection state.
-        
+
         Returns
         -------
         b : bool
@@ -552,7 +552,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         if self.ui.radio_mysql.isChecked() and not options.use_mysql:
             self.noConnection.emit(Exception("The Python package 'pymysql' is not installed on this system. MySQL connections are not available."))
             return
-        
+
         hostname = self.get_hostname()
         if hostname == "127.0.0.1":
             self.ui.radio_local.setChecked(True)
@@ -572,7 +572,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             self.probe_thread.start()
         else:
             self.noConnection.emit(Exception("Invalid hostname or invalid IP address"))
-        
+
     def update_timeout(self):
         try:
             if self.probe_thread.isRunning() and self.timeout_remain >= 0:
@@ -581,7 +581,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                     "Testing connection (timeout in {} seconds)...".format(self.timeout_remain))
         except AttributeError:
             pass
-        
+
     def probe_host(self, hostname):
         if self.ui.radio_mysql.isChecked():
             db_type = SQL_MYSQL
@@ -589,7 +589,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             db_type = SQL_SQLITE
 
         ok, exc = sqlhelper.test_configuration(
-                    (hostname, 
+                    (hostname,
                     self.ui.port.value(),
                     db_type,
                     str(self.ui.user.text()),
@@ -601,7 +601,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 self.noConnection.emit(exc.orig)
         else:
             self.connected.emit(exc)
-    
+
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
@@ -624,17 +624,10 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             return (self.config_dict, str(self.ui.tree_configuration.currentItem().text(0)))
         else:
             return None
-        
+
     @staticmethod
     def choose(configuration_name, configuration_dict, parent=None):
         dialog = ConnectionConfiguration(configuration_name, configuration_dict, parent=parent)
         return dialog.exec_()
 
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    viewer = ConnectionConfiguration.choose(None, {})
-    viewer.exec_()
-    
-if __name__ == "__main__":
-    main()
-    
+

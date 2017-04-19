@@ -23,7 +23,8 @@ from coquery import managers
 from coquery import functions
 from coquery import functionlist
 from coquery import sqlhelper
-from coquery.general import memory_dump
+from coquery import NAME, __version__
+from coquery.general import memory_dump, get_visible_columns
 from coquery import options
 from coquery.defines import *
 from coquery.errors import *
@@ -40,6 +41,7 @@ from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
 # add path required for visualizers::
 if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
     sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
+
 
 class focusFilter(QtCore.QObject):
     """
@@ -107,7 +109,7 @@ class GuiHandler(logging.StreamHandler):
         self.log_data.append(record)
 
 
-class CoqueryApp(QtWidgets.QMainWindow):
+class CoqMainWindow(QtWidgets.QMainWindow):
     """ Coquery as standalone application. """
 
     corpusListUpdated = QtCore.Signal()
@@ -141,12 +143,15 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.reaggregating = False
         self._context_connections = []
         self.terminating = False
+        self._first_visualization_call = True
+        self.apply_required = set()
 
         self.widget_list = []
         self.Session = session
 
         self.selected_features = set()
         self._forgotten_features = set()
+        self.hidden_features = set()
 
         self._first_corpus = False
         if options.cfg.first_run and not options.cfg.current_resources:
@@ -270,7 +275,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.dirModel.setRootPath(QtCore.QDir.currentPath())
         self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
 
-        self.ui.button_apply_management.setDisabled(True)
+        self.disable_apply_button()
         self.ui.button_cancel_management.hide()
 
         self.ui.widget_find.setTableView(self.ui.data_preview)
@@ -296,7 +301,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
         self.set_columns_widget()
 
-        self.ui.status_message = QtWidgets.QLabel("{} {}".format(NAME, VERSION))
+        self.ui.status_message = QtWidgets.QLabel("{} {}".format(NAME, __version__))
         self.ui.status_message.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
                                        QtWidgets.QSizePolicy.Ignored)
         self.ui.status_progress = QtWidgets.QProgressBar()
@@ -569,6 +574,23 @@ class CoqueryApp(QtWidgets.QMainWindow):
             self.reaggregating):
             self.abortRequested.emit()
 
+        mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
+        self.toggle_to_file((int(e.modifiers() & mask) == mask))
+        e.accept()
+
+    def keyReleaseEvent(self, e):
+        mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
+        self.toggle_to_file((int(e.modifiers() & mask) == mask))
+        e.accept()
+
+    def toggle_to_file(self, to_file):
+        if to_file:
+            self.ui.button_run_query.setText("&New query to file")
+            self.ui.button_run_query.setIcon(self.get_icon("Save"))
+        else:
+            self.ui.button_run_query.setText("&New query")
+            self.ui.button_run_query.setIcon(self.get_icon("Circled Play"))
+
     def help(self):
         from . import helpviewer
 
@@ -682,16 +704,28 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.tool_widget.setCurrentIndex(i)
         options.cfg.last_toolbox = i
 
+    def disable_apply_button(self):
+        self.ui.button_apply_management.setStyleSheet(None)
+        self.ui.button_apply_management.setEnabled(False)
+
     def enable_apply_button(self):
         active = (hasattr(self, "table_model"))
         if active:
             self.ui.button_apply_management.setDisabled(False)
+            palette = QtWidgets.QApplication.instance().palette()
+            fg = palette.color(QtGui.QPalette.HighlightedText).name()
+            bg = palette.color(QtGui.QPalette.Highlight).name()
+            stylesheet = """color: {};
+                            background-color: {};""".format(fg, bg)
         else:
+            stylesheet = None
             # disable buttons if there is no results table:
             self.ui.button_apply_management.setDisabled(True)
             # Nevertheless, update the toolbox appearances
             for i in range(self.ui.list_toolbox.rowCount()):
                 self.set_toolbox_appearance(i)
+
+        self.ui.button_apply_management.setStyleSheet(stylesheet)
         self.set_button_labels()
 
     def enable_corpus_widgets(self):
@@ -813,6 +847,15 @@ class CoqueryApp(QtWidgets.QMainWindow):
         error_icon = "Error"
         problem_icon = "Attention"
 
+        try:
+            manager = self.Session.get_manager()
+        except:
+            manager = None
+        if not manager:
+            manager = managers.get_manager(
+                options.cfg.MODE,
+                utf8(self.ui.combo_corpus.currentText()))
+
         if not self.ui.data_preview.isEnabled():
             active_icon = "Inactive State"
 
@@ -838,7 +881,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 _set_icon(1, None)
                 _set_icon(2, None)
             if self.Session:
-                manager = self.Session.get_manager()
                 if manager.stopwords_failed:
                     _set_icon(2, error_icon)
                     _set_icon(1, None)
@@ -863,14 +905,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 _set_icon(2, active_icon)
 
         elif row == TOOLBOX_SUMMARY:
-            try:
-                manager = managers.get_manager(options.cfg.MODE,
-                                               self.Session.Resource.name)
-            except:
-                manager = managers.get_manager(options.cfg.MODE,
-                                               utf8(self.ui.combo_corpus.currentText()))
             l = self.Session.summary_functions.get_list()
-
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
             _set_icon(2, active_icon if l else None)
 
@@ -1014,6 +1049,16 @@ class CoqueryApp(QtWidgets.QMainWindow):
                                                self)
         if result:
             manager = self.Session.get_manager()
+
+            d = result.get("substitutions", {})
+            keys = list(d.keys())
+            values = list(d.values())
+            for val in values:
+                if val in keys:
+                    d.remove(val)
+            if d:
+                result["substitutions"] = d
+
             properties[options.cfg.corpus] = result
             options.settings.setValue("column_properties", properties)
 
@@ -1035,7 +1080,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
             if ("substitutions" not in current_properties or
                 current_properties["substitutions"] != result["substitutions"]):
-                self.enable_apply_button()
+                if AUTO_SUBSTITUTE in options.settings.value("settings_auto_apply"):
+                    self.reaggregate()
+                else:
+                    self.enable_apply_button()
 
     def show_hidden_columns(self):
         manager = self.Session.get_manager()
@@ -1065,8 +1113,11 @@ class CoqueryApp(QtWidgets.QMainWindow):
              if not x.startswith("coquery_invisible")].index(col)
         h = self.ui.data_preview.horizontalHeader()
         columnIndexes = [h.logicalIndex(i) for i in range(h.count())]
-        self.ui.data_preview.setCurrentIndex(
-            self.table_model.createIndex(0, columnIndexes[x]))
+        try:
+            self.ui.data_preview.setCurrentIndex(
+                self.table_model.createIndex(0, columnIndexes[x]))
+        except IndexError as e:
+            print(str(e))
 
     def manage_stopwords(self):
         from . import stopwords
@@ -1077,7 +1128,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
         if set(old_list) != set(options.cfg.stopword_list):
             self.set_button_labels()
-            self.enable_apply_button()
+            if AUTO_STOPWORDS in options.settings.value("settings_auto_apply"):
+                self.enable_apply_button()
+            else:
+                self.reaggregate()
 
     def set_reference_corpus(self):
         from . import linkselect
@@ -1211,6 +1265,11 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.button_run_query.show()
         self.ui.button_run_query.setDisabled(True)
 
+        manager = self.Session.get_manager()
+        manager.reset_hidden_columns()
+        for hidden in self.hidden_features:
+            manager.hide_column(hidden)
+
         if start:
             self.Session.start_timer()
         self.showMessage("Managing data...")
@@ -1241,7 +1300,7 @@ class CoqueryApp(QtWidgets.QMainWindow):
         self.ui.list_group_columns.checkGroupColumns()
         self.set_button_labels()
         self.ui.button_apply_management.show()
-        self.ui.button_apply_management.setDisabled(True)
+        self.disable_apply_button()
         self.ui.button_cancel_management.hide()
         self.set_query_button(True)
 
@@ -1249,7 +1308,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
             self.set_toolbox_appearance(i)
 
         print("reaggregation: done")
-
         if options.cfg.stopword_list and manager.stopwords_failed:
             rc_feature = getattr(self.Session.Resource,
                                  getattr(self.Session.Resource,
@@ -1431,6 +1489,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
         if self.Session is None:
             hide()
         else:
+            if not self.Session.Resource:
+                hide()
+                return
             manager = managers.get_manager(options.cfg.MODE,
                                         self.Session.Resource.name)
             if len(manager.hidden_columns) == 0:
@@ -1442,8 +1503,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
     def change_userdata(self):
         self.user_columns = True
-        self.enable_apply_button()
-        #self.reaggregate(start=True)
+        if AUTO_USERDATA in options.settings.value("settings_auto_apply"):
+            self.reaggregate()
+        else:
+            self.enable_apply_button()
 
     def display_results(self, drop=True):
         if len(self.Session.output_object.dropna(how="all")) == 0:
@@ -1562,7 +1625,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
             s2 = {x.get_hash() for x in result}
 
             if (s1 != s2):
-                self.enable_apply_button()
+                if AUTO_FILTER in options.settings.value("settings_auto_apply"):
+                    self.reaggregate()
+                else:
+                    self.enable_apply_button()
 
     def manage_group_filters(self):
         from . import addfilters
@@ -1587,7 +1653,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
             s2 = {x.get_hash() for x in result}
 
             if (s1 != s2):
-                self.enable_apply_button()
+                if AUTO_FILTER in options.settings.value("settings_auto_apply"):
+                    self.reaggregate()
+                else:
+                    self.enable_apply_button()
 
     def save_results(self, selection=False, clipboard=False):
         if not clipboard:
@@ -1616,10 +1685,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
             # restrict to selection?
             if selection or clipboard:
-                sel = self.ui.data_preview.selectionModel().selection()
+                select_range = self.ui.data_preview.selectionModel().selection()
                 selected_rows = set([])
                 selected_columns = set([])
-                for x in self.indexes():
+                for x in select_range.indexes():
                     selected_rows.add(x.row())
                     selected_columns.add(x.column())
                 tab = tab.iloc[list(selected_rows)][list(selected_columns)]
@@ -1654,19 +1723,23 @@ class CoqueryApp(QtWidgets.QMainWindow):
         from . import textgridexport
 
         header = self.ui.data_preview.horizontalHeader()
-        ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
+        ordered_headers = [self.table_model.header[header.logicalIndex(i)]
+                           for i in range(header.count())]
 
-        result = textgridexport.TextgridExportDialog.manage(columns=ordered_headers, parent=self)
+        result = textgridexport.TextgridExportDialog.manage(
+            columns=ordered_headers, parent=self)
         if result:
             from coquery.textgrids import TextgridWriter
 
             for x in ordered_headers:
                 if "_starttime_" in x or "_endtime_" in x:
                     result["columns"].append(x)
-
             tab = self.table_model.content[result["columns"]]
+
+            # add required invisible columns:
             for x in self.table_model.invisible_content.columns:
                 if x.startswith(("coquery_invisible_corpus_id",
+                                 "coquery_invisible_origin_id",
                                  "coquery_invisible_corpus_starttime",
                                  "coquery_invisible_corpus_endtime")):
                     tab[x] = self.table_model.invisible_content[x]
@@ -1989,9 +2062,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
         manager = managers.get_manager(options.cfg.MODE,
                                        self.Session.Resource.name)
         for column in selection:
-            manager.hide_column(column)
-        self.update_table_models()
-        self.update_columns()
+            self.hidden_features.add(column)
+        if AUTO_VISIBILITY in options.settings.value("settings_auto_apply"):
+            self.update_table_models()
+            self.update_columns()
+        else:
+            self.enable_apply_button()
 
     def show_columns(self, selection):
         """
@@ -2005,9 +2081,12 @@ class CoqueryApp(QtWidgets.QMainWindow):
         manager = managers.get_manager(options.cfg.MODE,
                                        self.Session.Resource.name)
         for column in selection:
-            manager.show_column(column)
-        self.update_table_models()
-        self.update_columns()
+            self.hidden_features.remove(column)
+        if AUTO_VISIBILITY in options.settings.value("settings_auto_apply"):
+            self.update_table_models()
+            self.update_columns()
+        else:
+            self.enable_apply_button()
 
     def update_columns(self):
         """
@@ -2129,8 +2208,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
 
     def run_query(self):
         from coquery.session import SessionCommandLine, SessionInputFile
-        shift_pressed = options.cfg.app.keyboardModifiers() & QtCore.Qt.ShiftModifier
-        options.cfg.to_file = shift_pressed
+        mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
+        options.cfg.to_file = (
+            (int(options.cfg.app.keyboardModifiers()) & mask) == mask)
+
         if options.cfg.to_file:
             caption = "Choose output file... – Coquery"
             name = QtWidgets.QFileDialog.getSaveFileName(
@@ -2172,23 +2253,9 @@ class CoqueryApp(QtWidgets.QMainWindow):
                     QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
 
-                msg_box = QtWidgets.QDialog(self)
-                msg_box.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-                msg_box.setWindowTitle("Reading input file – Coquery", )
-                layout = QtWidgets.QHBoxLayout(msg_box)
-                layout.addWidget(QtWidgets.QLabel("Reading query strings from <br><br><code>{}</code><br><br>Please wait...".format(
-                    options.cfg.input_path)))
-                msg_box.setModal(True)
-                msg_box.open()
-                msg_box.show()
-                options.cfg.app.sendPostedEvents()
-                options.cfg.app.processEvents()
-                msg_box.update()
-                msg_box.repaint()
-                options.cfg.app.sendPostedEvents()
-                options.cfg.app.processEvents()
-                msg_box.update()
-                msg_box.repaint()
+                s = "Reading query strings from <br><br><code>{}</code><br><br>Please wait...".format(options.cfg.input_path)
+                title = "Reading input file – Coquery"
+                msg_box = classes.CoqStaticBox(title, s)
                 self.new_session = SessionInputFile()
                 msg_box.close()
                 msg_box.hide()
@@ -2254,6 +2321,14 @@ class CoqueryApp(QtWidgets.QMainWindow):
             errorbox.alert_missing_module("Seaborn", self)
             return
 
+        if self._first_visualization_call:
+            self._first_visualization_call = False
+            title = "Loading visualization modules – Coquery"
+            content = "Loading the visualization modules. Please wait..."
+            msg_box = classes.CoqStaticBox(title, content)
+        else:
+            msg_box = None
+
         from . import visualizationdesigner
         try:
             df = pd.concat([self.table_model.content,
@@ -2261,8 +2336,15 @@ class CoqueryApp(QtWidgets.QMainWindow):
                     axis=1)
         except (AttributeError, KeyError):
             df = pd.DataFrame()
+
+        if msg_box:
+            msg_box.hide()
+            msg_box.close()
+            del msg_box
+
         dialog = visualizationdesigner.VisualizationDesigner(
-            df, df.dtypes, self.Session)
+            df, self.Session)
+
         dialog.show()
         self.widget_list.append(dialog)
 
@@ -2798,7 +2880,6 @@ class CoqueryApp(QtWidgets.QMainWindow):
             pass
 
         self.ui.tool_widget.blockSignals(False)
-
         self.set_main_screen_appearance()
 
     def add_link(self, item):
@@ -2882,9 +2963,8 @@ class CoqueryApp(QtWidgets.QMainWindow):
             columns.append(self.table_model.header[0])
         self.add_function(columns)
 
-    def add_function(self, columns=[], summary=False, group=False, **kwargs):
+    def add_function(self, columns=None, summary=False, group=False, **kwargs):
         from . import addfunction
-
         session = self.Session
         if session is not None:
             manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
@@ -2928,10 +3008,10 @@ class CoqueryApp(QtWidgets.QMainWindow):
                 "max_parameters": 0,
                 "checkable": True,
                 "checked": checked,
-                "edit_label": False,
-                "available_columns": []})
+                "edit_label": False})
         else:
-            dtypes = pd.Series([self.table_model.get_dtype(x) for x in columns])
+            dtypes = pd.Series([self.table_model.get_dtype(x) for x
+                                in columns])
             try:
                 if all(dtypes != object):
                     kwargs.update({"function_class": (functions.MathFunction, functions.LogicFunction)})
@@ -2940,9 +3020,16 @@ class CoqueryApp(QtWidgets.QMainWindow):
             except Exception as e:
                 print(e)
                 kwargs.update({"function_class": tuple()})
-            if "available_columns" not in kwargs:
-                kwargs.update({"available_columns": [x for x in self.table_model.content.columns if x not in columns]})
-        response = addfunction.FunctionDialog.set_function(parent=self, columns=columns, **kwargs)
+        if not columns:
+            columns = [x for x in self.table_model.content.columns]
+            available = []
+        else:
+            available = [x for x in self.table_model.content.columns
+                         if x not in columns]
+        kwargs["available_columns"] = available
+        response = addfunction.FunctionDialog.set_function(parent=self,
+                                                           columns=columns,
+                                                           **kwargs)
 
         if response is None:
             return
@@ -2956,15 +3043,17 @@ class CoqueryApp(QtWidgets.QMainWindow):
                  for x in response]
             self.Session.group_functions.set_list(l)
         elif summary:
-            l = [x(sweep=True, hidden=True, group=False) for x in response]
+            l = [x(columns=columns, group=False) for x in response]
             self.Session.summary_functions.set_list(l)
         else:
             fun_type, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self.Session.column_functions.add_function(fun)
-            self.reaggregate(start=True)
 
-        self.enable_apply_button()
+        if AUTO_FUNCTION in options.settings.value("settings_auto_apply"):
+            self.reaggregate()
+        else:
+            self.enable_apply_button()
 
     def edit_function(self, column):
         from . import addfunction

@@ -91,6 +91,34 @@ class CoqThread(QtCore.QThread):
         return result
 
 
+class CoqStaticBox(QtWidgets.QDialog):
+    def __init__(self, title, content, *args, **kwargs):
+        super(CoqStaticBox, self).__init__(*args, **kwargs)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setWindowTitle(title)
+        self.layout = QtWidgets.QHBoxLayout(self)
+        self.label = QtWidgets.QLabel(content)
+        self.layout.addWidget(self.label)
+        self.setModal(True)
+        self.open()
+        self.show()
+        self.update()
+        self.repaint()
+        get_toplevel_window().repaint()
+        QtWidgets.QApplication.sendPostedEvents()
+        QtWidgets.QApplication.processEvents()
+        self.update()
+        self.repaint()
+        get_toplevel_window().repaint()
+
+
+class CoqVerticalHeader(QtWidgets.QHeaderView):
+    def enterEvent(self, event):
+        self.parent().setCursor(QtCore.Qt.ArrowCursor)
+        super(CoqVerticalHeader, self).enterEvent(event)
+        event.accept()
+
+
 class CoqHorizontalHeader(QtWidgets.QHeaderView):
     sectionFinallyResized = QtCore.Signal(int, int, int)
 
@@ -99,6 +127,12 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
         self.button_pressed = False
         self._resizing = False
         self.sectionResized.connect(self.alert_resize)
+        self._selected_columns = []
+
+    def enterEvent(self, event):
+        self.parent().setCursor(QtCore.Qt.ArrowCursor)
+        super(CoqHorizontalHeader, self).enterEvent(event)
+        event.accept()
 
     def alert_resize(self, *args, **kwargs):
         self._args = args
@@ -112,14 +146,20 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
             self._resizing = False
         else:
             ix = self.logicalIndexAt(e.pos())
+            if ix in self._selected_columns:
+                mode = QtCore.QItemSelectionModel.Deselect
+                self._selected_columns.remove(ix)
+            else:
+                mode = QtCore.QItemSelectionModel.Select
+                self._selected_columns.append(ix)
+
             select = self.parent().selectionModel()
             model = self.model()
             top = model.index(0, ix, QtCore.QModelIndex())
             bottom = model.index(0, ix, QtCore.QModelIndex())
             selection = QtCore.QItemSelection(top, bottom)
             select.select(selection,
-                            QtCore.QItemSelectionModel.Toggle |
-                            QtCore.QItemSelectionModel.Columns)
+                          mode | QtCore.QItemSelectionModel.Columns)
 
         self.button_pressed = False
 
@@ -789,6 +829,7 @@ class CoqDetailBox(QtWidgets.QWidget):
         self.frame.setFrameShadow(frameShadow)
 
         self.header_layout = QtWidgets.QHBoxLayout()
+        self.header_layout.setSpacing(4)
 
         self.header = QtWidgets.QPushButton(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
@@ -849,8 +890,8 @@ class CoqDetailBox(QtWidgets.QWidget):
 
     def update(self):
         try:
-            up = get_toplevel_window().get_icon("Up Squared")
-            down = get_toplevel_window().get_icon("Down Squared")
+            up = get_toplevel_window().get_icon("Chevron Up_2")
+            down = get_toplevel_window().get_icon("Chevron Right_2")
         except AttributeError:
             up = None
             down = None
@@ -858,10 +899,54 @@ class CoqDetailBox(QtWidgets.QWidget):
             self.box.show()
             self.header.setFlat(False)
             self.header.setText(self._alternative)
+            s = utf8(options.cfg.app.translate(
+                "MainWindow",
+                "Click to hide corpus information",
+                None))
+            self.header.setToolTip(s)
             icon = up
         else:
             try:
                 self.header.setText(self._text)
+                s = utf8(options.cfg.app.translate(
+                    "MainWindow",
+                    "Click to show corpus information",
+                    None))
+                self.header.setToolTip(s)
+
+                get_pal = lambda x: options.cfg.app.palette().color(x).name()
+                kwargs = {
+                    "border": get_pal(QtGui.QPalette.Button),
+                    "hoverborder": get_pal(QtGui.QPalette.Highlight),
+                    "hoverhighlight": get_pal(QtGui.QPalette.Midlight),
+                    "hoverlowlight": get_pal(QtGui.QPalette.Button),
+                    "presshighlight": get_pal(QtGui.QPalette.Button),
+                    "presslowlight": get_pal(QtGui.QPalette.Midlight)}
+                self.header.setStyleSheet("""
+                    QPushButton {{
+                        text-align: left;
+                        padding: 4px;
+                        padding-left: 2px;
+                        border: 0px solid {border} }}
+                    QPushButton:hover {{
+                        text-align: left;
+                        padding: 4px;
+                        padding-left: 1px;
+                        border: 1px solid {hoverborder};
+                        background-color: qLineargradient(
+                            x1: 0, y1: 0, x2: 0, y2: 1,
+                            stop: 0 {hoverhighlight},
+                            stop: 0.15 {hoverlowlight}); }}
+                    QPushButton:pressed {{
+                        text-align: left;
+                        padding: 4px;
+                        padding-left: 1px;
+                        border: 1px solid {hoverborder};
+                        background-color: qLineargradient(
+                            x1: 0, y1: 0, x2: 0, y2: 1,
+                            stop: 0 {presshighlight},
+                            stop: 0.85 {presslowlight}); }}
+                    """.format(**kwargs))
                 self.box.hide()
             except RuntimeError:
                 # The box may have been deleted already, which raises a
@@ -1696,6 +1781,12 @@ class CoqTableView(QtWidgets.QTableView):
     def __init__(self, *args, **kwargs):
         super(CoqTableView, self).__init__(*args, **kwargs)
         self.resizeRow.connect(self.setRowHeight)
+        self.setMouseTracking(True)
+
+    def selectAll(self):
+        super(CoqTableView, self).selectAll()
+        h_header = self.horizontalHeader()
+        h_header._selected_columns = list(range(len(h_header)))
 
     def setWordWrap(self, wrap, *args, **kwargs):
         super(CoqTableView, self).setWordWrap(wrap, *args, **kwargs)
@@ -1733,6 +1824,17 @@ class CoqTableView(QtWidgets.QTableView):
         self.setVisible(False)
         super(CoqTableView, self).resizeColumnsToContents(*args, **kwargs)
         self.setVisible(True)
+
+    def mouseMoveEvent(self, event):
+        pos = event.pos()
+        index = self.indexAt(pos)
+        self.setCursor(QtCore.Qt.ArrowCursor)
+        if index.isValid():
+            if self.model().header[index.column()].startswith("coq_userdata"):
+                self.setCursor(QtCore.Qt.IBeamCursor)
+            else:
+                self.setCursor(QtCore.Qt.CrossCursor)
+        super(CoqTableView, self).mouseMoveEvent(event)
 
 
 class CoqTableModel(QtCore.QAbstractTableModel):
@@ -1912,17 +2014,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         # ToolTipRole: return the content as a tooltip:
         elif role == QtCore.Qt.ToolTipRole:
-            if ix not in self._hidden_columns:
-                if self._dtypes[ix] == float:
-                    return "<div>{}</div>".format(escape(options.cfg.float_format.format(self.content.values[index.row()][ix])))
-                elif self._dtypes[ix] in (int, bool):
-                    return "<div>{}</div>".format(self.content.values[index.row()][ix])
-                elif self.content.values[index.row()][ix] is None:
-                    return "<div>no value</div>"
-                else:
-                    return "<div>{}</div>".format(escape(self.content.values[index.row()][ix]))
-            else:
-                return "[hidden]"
+            val = self.content.values[index.row()][ix]
+            formatted_val = self.formatted.values[index.row()][ix]
+            return "<div>{}</div>".format(escape(formatted_val))
 
         # TextAlignmentRole: return the alignment of the column:
         elif role == QtCore.Qt.TextAlignmentRole:
@@ -1946,8 +2040,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         return None
 
     def headerData(self, index, orientation, role):
-        """ Return the header at the given index, taking the sorting settings
-        into account. """
+        """
+        Return the header at the given index, taking the sorting settings
+        into account.
+        """
 
         # Return row names?
         if orientation == QtCore.Qt.Vertical:
@@ -1983,7 +2079,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 return None
 
             sorter = self._manager.get_sorter(column)
-            try:
+            if sorter:
                 icon = {(False, False): "Descending Sorting",
                         (True, False): "Ascending Sorting",
                         (False, True): "Descending Reverse Sorting",
@@ -1991,10 +2087,10 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                             sorter.ascending,
                             sorter.reverse]
                 return get_toplevel_window().get_icon(icon)
-            except AttributeError:
+            else:
                 return None
-
-        return None
+        else:
+            return None
 
     def rowCount(self, parent=None):
         """ Return the number of rows. """
@@ -2003,6 +2099,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         """ Return the number of columns. """
         return self.content.columns.size
+
+
 
 class CoqTabBar(QtWidgets.QTabBar):
     def __init__(self, *args, **kwargs):

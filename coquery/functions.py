@@ -83,14 +83,14 @@ combine_map = {
     "join": lambda x, y: y.join(x),
     }
 
-bool_combine = ["all", "any", "none"]
-seq_combine = ["first", "last", "random", "mode", "max", "min"]
-num_combine = ["sum", "mean", "sd", "median", "IQR"]
-no_combine = []
+BOOL_COMBINE = ["all", "any", "none"]
+SEQ_COMBINE = ["first", "last", "random", "mode", "max", "min"]
+NUM_COMBINE = ["sum", "mean", "sd", "median", "IQR"]
+NO_COMBINE = []
 
-str_combine = seq_combine + bool_combine
-num_combine = num_combine + seq_combine
-all_combine = num_combine + seq_combine + bool_combine
+STR_COMBINE = SEQ_COMBINE + BOOL_COMBINE
+NUM_COMBINE = NUM_COMBINE + SEQ_COMBINE
+ALL_COMBINE = NUM_COMBINE + SEQ_COMBINE + BOOL_COMBINE
 
 
 #############################################################################
@@ -102,7 +102,7 @@ class Function(CoqObject):
     parameters = 0
     default_aggr = "first"
     allow_null = False
-    combine_modes = all_combine
+    combine_modes = ALL_COMBINE
     no_column_labels = False # True if the columns appear in the function name
     single_column = True
     drop_on_na = True
@@ -111,7 +111,8 @@ class Function(CoqObject):
     def get_description():
         return "Base functions"
 
-    def __init__(self, columns=[], value=None, label=None, alias=None, group=[], sweep=False, aggr=None, hidden=False, **kwargs):
+    def __init__(self, columns=None, value=None, label=None, alias=None,
+                 group=None, sweep=False, aggr=None, hidden=False, **kwargs):
         """
         Parameters
         ----------
@@ -119,6 +120,10 @@ class Function(CoqObject):
             True if the function sweeps through the coluns, and False if it
             sticks to one row at a time during evaluation
         """
+        if columns is None:
+            columns = []
+        if group is None:
+            group = []
         super(Function, self).__init__()
         self.column_list = columns
         self._hidden = hidden
@@ -232,7 +237,7 @@ class Function(CoqObject):
 #############################################################################
 
 class StringFunction(Function):
-    combine_modes = str_combine
+    combine_modes = STR_COMBINE
 
     @staticmethod
     def get_description():
@@ -241,7 +246,7 @@ class StringFunction(Function):
 
 class StringRegEx(StringFunction):
 
-    def __init__(self, value, columns=[], *args, **kwargs):
+    def __init__(self, value, columns=None, *args, **kwargs):
         super(StringRegEx, self).__init__(columns, *args, **kwargs)
         self.value = value
         try:
@@ -261,10 +266,18 @@ class StringRegEx(StringFunction):
 
 class StringLength(StringFunction):
     _name = "LENGTH"
-    combine_modes = num_combine
+    combine_modes = NUM_COMBINE
 
-    def _func(self, cols):
-        return cols.apply(lambda x: len(x) if isinstance(x, str) else len(str(x)) if x is not None else None)
+    # FIXME: there should be a decorator for functions!
+    def evaluate(self, df, *args, **kwargs):
+        try:
+            columns = self.columns(df, **kwargs)
+            val = df[columns].applymap(len)
+            if len(val.columns) > 1:
+                val = val.apply(self.select, axis="columns")
+        except (KeyError, ValueError):
+            val = self.constant(df, None)
+        return val
 
 
 class StringChain(StringFunction):
@@ -273,7 +286,7 @@ class StringChain(StringFunction):
     allow_null = True
     combine_modes = ["join"]
 
-    def __init__(self, value, columns=[], *args, **kwargs):
+    def __init__(self, value, columns=None, *args, **kwargs):
         super(StringChain, self).__init__(columns, value=value, *args, **kwargs)
         self.select = self._select
 
@@ -284,20 +297,34 @@ class StringChain(StringFunction):
 class StringCount(StringRegEx):
     _name = "COUNT"
     parameters = 1
-    combine_modes = num_combine
+    combine_modes = NUM_COMBINE
 
-    def _func(self, col):
-        if self.re is None:
-            return pd.Series([pd.np.nan] * len(col), index=col.index)
-        else:
-            return col.apply(lambda x: len(self.re.findall(x)) if x is not None else None)
-        #return col.apply(lambda x: str(x).count(self.value) if x != None else x)
+    def _func(self, cell):
+        if cell is None:
+            return None
+        match = self.re.findall(cell)
+        try:
+            return len(match)
+        except TypeError:
+            return 0
+
+    def evaluate(self, df, *args, **kwargs):
+        try:
+            if self.re is None:
+                raise ValueError
+            columns = self.columns(df, **kwargs)
+            val = df[columns].applymap(self._func)
+            if len(val.columns) > 1:
+                val = val.apply(self.select, axis="columns")
+        except (KeyError, ValueError):
+            val = self.constant(df, None)
+        return val
 
 
 class StringMatch(StringRegEx):
     _name = "MATCH"
     parameters = 1
-    combine_modes = str_combine
+    combine_modes = STR_COMBINE
 
     def _func(self, col):
         def _match_str(x):
@@ -320,7 +347,7 @@ class StringMatch(StringRegEx):
 class StringExtract(StringRegEx):
     _name = "EXTRACT"
     parameters = 1
-    combine_modes = str_combine
+    combine_modes = STR_COMBINE
 
     def _func(self, col):
         def _match(s):
@@ -356,10 +383,10 @@ class MathFunction(Function):
 
 class Calc(MathFunction):
     _name = "CALC"
-    combine_modes = num_combine
+    combine_modes = NUM_COMBINE
     parameters = 2
 
-    def __init__(self, sign="+", value=None, columns=[], *args, **kwargs):
+    def __init__(self, sign="+", value=None, columns=None, *args, **kwargs):
         super(Calc, self).__init__(columns, *args, **kwargs)
         self.sign = sign
         self.value = value
@@ -401,7 +428,7 @@ class BaseFreq(Function):
 
 class Freq(BaseFreq):
     _name = "statistics_frequency"
-    combine_modes = no_combine
+    combine_modes = NO_COMBINE
     no_column_labels = True
     default_aggr = "sum"
     drop_on_na = False
@@ -410,7 +437,10 @@ class Freq(BaseFreq):
         """
         Count the number of rows with equal values in the target columns.
         """
-        fun = Freq(columns=self.columns(df, **kwargs), group=self.group)
+        columns = self.columns(df, **kwargs)
+        print("Freq\n", columns)
+
+        fun = Freq(columns=columns, group=self.group)
         # do not calculate the frequencies again if the data frame already
         # contains an identical frequency column:
         if self.find_function(df, fun):
@@ -490,9 +520,6 @@ class FreqPMW(Freq):
     _name = "statistics_frequency_pmw"
     words = 1000000
 
-    def __init__(self, columns=[], *args, **kwargs):
-        super(FreqPMW, self).__init__(columns, *args, **kwargs)
-
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
         val = super(FreqPMW, self).evaluate(df, *args, **kwargs)
@@ -514,9 +541,6 @@ class FreqNorm(Freq):
     occurrences relative to the current subcorpus size.
     """
     _name = "statistics_frequency_normalized"
-
-    def __init__(self, columns=[], *args, **kwargs):
-        super(FreqNorm, self).__init__(columns, *args, **kwargs)
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
@@ -745,9 +769,12 @@ class Proportion(BaseProportion):
 
     def __init__(self, *args, **kwargs):
         super(Proportion, self).__init__(*args, **kwargs)
+        self.sweep = False
 
     def evaluate(self, df, *args, **kwargs):
-        fun = Proportion(columns=self.columns(df, **kwargs), group=self.group)
+        columns = self.columns(df, **kwargs)
+        print("Proportion\n", columns)
+        fun = Proportion(columns=columns, group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
                 print(self._name, "using df.Proportion()")
@@ -756,7 +783,8 @@ class Proportion(BaseProportion):
             if options.cfg.verbose:
                 print(self._name, "calculating df.Proportion()")
         val = super(Proportion, self).evaluate(df, *args, **kwargs)
-        val = val.apply(lambda x: x / len(df))
+        print(val)
+        val = val / len(val)
         val.index = df.index
         return val
 
@@ -783,10 +811,11 @@ class Entropy(Proportion):
         _df = df[self.columns(df, **kwargs)]
         _df["COQ_PROP"] = super(Entropy, self).evaluate(df, *args, **kwargs)
         _df = _df.drop_duplicates()
+        props = _df["COQ_PROP"].values
         if len(_df) == 1:
             entropy = 0.0
         else:
-            entropy = -sum(_df["COQ_PROP"].apply(lambda p: p * np.log2(p)))
+            entropy = -sum(props * np.log2(props))
         val = self.constant(df, entropy)
         return val
 
@@ -876,15 +905,12 @@ class MutualInformation(Proportion):
 
 class CorpusSize(Function):
     _name = "statistics_corpus_size"
-    combine_modes = no_combine
+    combine_modes = NO_COMBINE
     no_column_labels = True
 
     @staticmethod
     def get_description():
         return "Corpus size functions"
-
-    def __init__(self, columns=[], *args, **kwargs):
-        super(CorpusSize, self).__init__(columns, *args, **kwargs)
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
@@ -902,12 +928,10 @@ class SubcorpusSize(CorpusSize):
         manager = kwargs["manager"]
         fun = SubcorpusSize(session=session, columns=self.columns(df, **kwargs), group=self.group)
         if self.find_function(df, fun):
-            if options.cfg.verbose:
-                print(self._name, "using df.SubcorpusSize()")
+            print(self._name, "using df.SubcorpusSize()")
             return df[fun.get_id()]
         else:
-            if options.cfg.verbose:
-                print(self._name, "calculating df.SubcorpusSize()")
+            print(self._name, "calculating df.SubcorpusSize()")
 
         corpus_features = [x for x, _ in session.Resource.get_corpus_features()]
         column_list = [x for x in corpus_features if "coq_{}_1".format(x) in self.columns(df, **kwargs)]
@@ -1068,7 +1092,7 @@ class ContextString(ContextColumns):
 
 class LogicFunction(Function):
     _name = "virtual"
-    combine_modes = bool_combine
+    combine_modes = BOOL_COMBINE
 
     @staticmethod
     def get_description():
@@ -1172,13 +1196,54 @@ class IsFalse(LogicFunction):
     def _func(self, cols):
         return cols.apply(lambda x: not bool(x))
 
+
+class IsNotMissing(LogicFunction):
+    _name = "ISNOTMISSING"
+    parameters = 0
+
+    def evaluate(self, df, *args, **kwargs):
+        columns = self.columns(df, **kwargs)
+        val = df[columns].notnull()
+        if len(val.columns) > 1:
+            val = val.apply(self.select, axis="columns")
+        return val
+
+
+class IsMissing(IsNotMissing):
+    _name = "ISMISSING"
+    parameters = 0
+
+    def evaluate(self, df, *args, **kwargs):
+        return ~super(IsMissing, self).evaluate(df, *args, **kwargs)
+
+
+class IsNotEmpty(LogicFunction):
+    _name = "ISNOTEMPTY"
+    parameters = 0
+
+    def evaluate(self, df, *args, **kwargs):
+        columns = self.columns(df, **kwargs)
+        val = df[columns].apply(lambda x: x.notnull() &
+                                          x.index.isin(x.nonzero()[0]))
+        if len(val.columns) > 1:
+            val = val.apply(self.select, axis="columns")
+        return val
+
+
+class IsEmpty(IsNotEmpty):
+    _name = "IsEmpty"
+
+    def evaluate(self, df, *args, **kwargs):
+        return ~super(IsEmpty, self).evaluate(df, *args, **kwargs)
+
+
 ##############################################################################
 ### Query functions
 ##############################################################################
 
 #class QueryFunction(Function):
     #_name = "virtual"
-    #combine_modes = bool_combine
+    #combine_modes = BOOL_COMBINE
 
     #@staticmethod
     #def get_description():

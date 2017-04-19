@@ -14,7 +14,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import math
-import logging
 
 import pandas as pd
 import matplotlib as mpl
@@ -27,7 +26,6 @@ from coquery.gui.pyqt_compat import QtCore, QtGui
 from coquery import options
 from coquery import managers
 from coquery.general import CoqObject
-from coquery.defines import NAME
 from coquery.errors import (VisualizationInvalidLayout,
                             VisualizationNoDataError)
 from coquery.unicode import utf8
@@ -663,4 +661,3 @@ def get_grid_layout(n):
         return (nrows, ncols)
 
 
-logger = logging.getLogger(NAME)

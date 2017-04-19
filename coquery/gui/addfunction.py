@@ -55,7 +55,7 @@ class FunctionItem(QtWidgets.QWidget):
             font = self.label_1.font()
             font.setPointSize(font.pointSize() * 0.8)
             self.label_2.setFont(font)
-            
+
         if checkable:
             self.outerLayout.addWidget(self.checkbox)
         self.outerLayout.addLayout(self.innerLayout)
@@ -66,13 +66,13 @@ class FunctionItem(QtWidgets.QWidget):
             return self.checkbox.setCheckState(*args, **kwargs)
         else:
             return None
-        
+
     def checkState(self, *args, **kwargs):
         if self.checkable:
             return self.checkbox.checkState(*args, **kwargs)
         else:
             return False
-        
+
     def sizeHint(self):
         size_hint = self.innerLayout.sizeHint()
         if self.checkable:
@@ -89,11 +89,21 @@ class FunctionItem(QtWidgets.QWidget):
         return size_hint
 
 class FunctionDialog(QtWidgets.QDialog):
-    def __init__(self, columns=[], available_columns=[],
-                 function_class=[], 
+    def __init__(self, columns=None, available_columns=None,
+                 function_class=None,
                  function_types=None,
-                 func=None, max_parameters=1, checkable=False, checked=[],
+                 func=None, max_parameters=1, checkable=False, checked=None,
                  edit_label=True, parent=None):
+
+        if columns is None:
+            columns = []
+        if available_columns is None:
+            available_columns = []
+        if function_types is None:
+            function_types = []
+        if checked is None:
+            checked = []
+
         super(FunctionDialog, self).__init__(parent)
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
@@ -110,7 +120,7 @@ class FunctionDialog(QtWidgets.QDialog):
                             QtWidgets.QComboBox().sizeHint().width())
         self.ui.combo_combine.setMaximumWidth(max_width)
         self.ui.combo_combine.setMinimumWidth(max_width)
-        
+
         self.max_parameters = max_parameters
         self.edit_label = edit_label
 
@@ -131,8 +141,8 @@ class FunctionDialog(QtWidgets.QDialog):
 
         if max_parameters == 0:
             self.ui.parameter_box.hide()
-        
-        if available_columns == []:
+
+        if not available_columns and not columns:
             self.ui.widget_selection.hide()
             sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
             sizePolicy.setHorizontalStretch(0)
@@ -140,7 +150,7 @@ class FunctionDialog(QtWidgets.QDialog):
             sizePolicy.setHeightForWidth(self.ui.list_functions.sizePolicy().hasHeightForWidth())
             self.ui.list_functions.setSizePolicy(sizePolicy)
 
-        if function_class == []:
+        if not function_class:
             # remove function class selection widget
             widget = self.ui.list_classes
             self.ui.horizontalLayout.removeWidget(widget)
@@ -160,20 +170,20 @@ class FunctionDialog(QtWidgets.QDialog):
                         if (issubclass(attr, fc) and attr != fc):
                             l.append(attr)
                     except TypeError:
-                        # this is raised if attr is not a class, but e.g. a 
+                        # this is raised if attr is not a class, but e.g. a
                         # string
                         pass
                 l = sorted(l, key=lambda x: x.get_name())
                 self._func.append(l)
-                
+
             self.ui.list_classes.currentRowChanged.connect(self.set_function_group)
             self.set_function_group(0)
-        
+
         if func:
             self.select_function(func)
-        
+
         self.check_gui()
-                
+
         try:
             self.resize(options.settings.value("functionapply_size"))
         except TypeError:
@@ -222,7 +232,7 @@ class FunctionDialog(QtWidgets.QDialog):
         if func._label:
             self.ui.edit_label.setText(func._label)
             self._auto_label = False
-            
+
     def fill_list(self, function_class):
         if self.function_types:
             func_list = self.function_types
@@ -232,14 +242,14 @@ class FunctionDialog(QtWidgets.QDialog):
                 l = []
                 for attr in [getattr(functions, x) for x in functions.__dict__]:
                     try:
-                        if (issubclass(attr, fc) and 
+                        if (issubclass(attr, fc) and
                             attr != fc and
                             attr._name != "virtual"):
                             l.append(attr)
                     except TypeError:
                         pass
                 func_list += sorted(l, key=lambda x: x.get_name())
-            
+
         widget = self.ui.list_functions
         for x in sorted(func_list, key=lambda x: x.get_name(), reverse=True):
             item = CoqListItem()
@@ -265,7 +275,7 @@ class FunctionDialog(QtWidgets.QDialog):
     def check_gui(self, func=None, only_label=False):
         self.ui.parameter_box.setEnabled(self.max_parameters > 0)
         self.ui.box_combine.setEnabled(len(self.columns) > 1)
-            
+
         if not self.edit_label:
             self.ui.widget_label.hide()
         else:
@@ -281,7 +291,7 @@ class FunctionDialog(QtWidgets.QDialog):
                 self.ui.combo_combine.setCurrentIndex(func.combine_modes.index(current_combine))
             else:
                 self.ui.combo_combine.setCurrentIndex(0)
-            
+
             if func.parameters == 0 or self.max_parameters == 0:
                 self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
                 self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
@@ -294,18 +304,18 @@ class FunctionDialog(QtWidgets.QDialog):
                     self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
 
             self.ui.list_functions.item(self.ui.list_functions.currentRow()).setSelected(True)
-    
+
         aggr = str(self.ui.combo_combine.currentText())
         if aggr == "":
             aggr = func.default_aggr
-        
+
         session = get_toplevel_window().Session
         tmp_func = func(
             columns=self.columns,
             value=utf8(self.ui.edit_function_value.text()),
             aggr=aggr,
             session=session)
-        
+
         if self._auto_label:
             try:
                 manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
@@ -335,7 +345,7 @@ class FunctionDialog(QtWidgets.QDialog):
             else:
                 value = utf8(self.ui.edit_function_value.text())
                 escaped = value.replace("'", "\'")
-                
+
                 if self._auto_label:
                     label = None
                 else:
@@ -353,12 +363,12 @@ class FunctionDialog(QtWidgets.QDialog):
     def set_function(columns, **kwargs):
         dialog = FunctionDialog(columns=columns, **kwargs)
         dialog.setVisible(True)
-        
+
         return dialog.exec_()
-        
+
     @staticmethod
     def edit_function(func, parent=None, **kwargs):
         dialog = FunctionDialog(func=func, parent=parent, **kwargs)
         dialog.setVisible(True)
-        
+
         return dialog.exec_()

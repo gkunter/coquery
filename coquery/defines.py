@@ -2,7 +2,7 @@
 """
 defines.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -10,10 +10,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-
-VERSION = "0.10.0dev"
-NAME = "Coquery"
-DATE = "2016"
 
 DEFAULT_MISSING_VALUE = "<NA>"
 
@@ -116,6 +112,13 @@ CONTEXT_SENTENCE = "Sentence"
 
 VIEW_MODE_TABLES = 0
 VIEW_MODE_GROUPED = 1
+
+AUTO_VISIBILITY = 0
+AUTO_FUNCTION = 1
+AUTO_SUBSTITUTE = 2
+AUTO_STOPWORDS = 3
+AUTO_FILTER = 4
+AUTO_TRANSFORM = 5
 
 (TOOLBOX_CONTEXT, TOOLBOX_STOPWORDS, TOOLBOX_GROUPING,
 TOOLBOX_AGGREGATE, TOOLBOX_SUMMARY) = range(5)
@@ -325,9 +328,10 @@ msg_invalid_metadata = """
 <p><b>The file that you selected does not appear to contain valid meta data.</b></p>
 <p>A valid meta data file is a CSV file, i.e. a text file in which the
 column values are separated by commas.</p>
-<p>The first row of the meta data file contains the column names. The first
-column has to be named <code>File</code> or <code>Filename</code>. It links
-the columns following the first to the other meta data values.</p>
+<p>The first row of the meta data file contains the column names. One of
+the column names has to be either <code>File</code> or <code>Filename</code>.
+The values in this column have to contain the file name that the meta data
+in the other columns of that row refers to.</p>
 """
 
 msg_no_word_information = """
@@ -436,6 +440,26 @@ Please call 'Database servers...' from the Preferences menu, and set up a
 configuration for your MySQL database server.</p>
 <p>If you need assistance setting up your database server, call 'MySQL
 server help' from the Help menu.</p>
+"""
+msg_options_error = """
+<p><b>An error occurred while starting Coquery.</b></p>
+<p>Coquery could not start due to an unexpected error while setting up
+the program configuration.</p>
+<p>We apologize for this problem. Please help us fix it by sending a
+message to us: <a href="mailto:support@coquery.org">support@coquery.org</a>.
+We will be in touch with you as quickly as possible.</p>
+<p>To help us, include the following text in your message:<br><br><span style='color: #aa0000'>{}</span></p>
+"""
+msg_error_in_config = """
+<p><b>There is an error in your configuration file.</b><p>
+<p>While trying to read the configuration file, the following error occurred:
+<br><br><code>{}</code></p>
+<p>You can abort Coquery now, and try to fix the problem with the configuration file.</p>
+<p>Alternatively, you can proceed without reading the configuration file.</p>
+<p><b>Warning:</b> If you proceed without reading the configuration file,
+all database connections that you have manually configured will be lost. You
+will have to set them up again.<br></p>
+<p>Do you want to abort Coquery now?</p>
 """
 msg_warning_statistics = """
 <p><b>You have unsaved data in the results table.</b></p>

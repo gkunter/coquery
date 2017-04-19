@@ -2,7 +2,7 @@
 """
 cache.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -23,13 +23,13 @@ try:
 except ImportError:
     import pickle
 
-from . import options
-from .defines import NAME
+from . import options, NAME
 
 
 class CoqQueryCache(object):
     def __init__(self, read_cache=False):
         self._cache = None
+        self._backup = None
         if read_cache:
             path = os.path.join(options.cfg.cache_path, "coq_cache.db")
             if os.path.exists(path):
@@ -69,11 +69,7 @@ class CoqQueryCache(object):
             # add data frame to cache
             self._cache[key] = x
 
-            # delete backup (if present)
-            try:
-                del self._backup
-            except AttributeError:
-                pass
+            self._backup = None
 
     def get(self, key):
         return self._cache[key]
@@ -98,12 +94,11 @@ class CoqQueryCache(object):
             getsizeof=sys.getsizeof)
 
     def restore(self):
-        if self.has_backup():
-            self._cache = self._backup
-            del self._backup
+        self._cache = self._backup
+        self._backup = None
 
     def has_backup(self):
-        return hasattr(self, "_backup")
+        return self._backup is not None
 
     def save(self):
         if not os.path.exists(options.cfg.cache_path):

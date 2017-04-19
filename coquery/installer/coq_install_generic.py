@@ -17,8 +17,7 @@ import pandas as pd
 import os
 import logging
 
-from coquery import options
-from coquery.defines import NAME
+from coquery import options, NAME
 from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.corpusbuilder import (Column, Identifier, Link)
 from coquery.documents import (pdf_to_str, docx_to_str, odt_to_str,
@@ -121,6 +120,7 @@ class BuilderClass(BaseCorpusBuilder):
              Link(self.corpus_file_id, self.file_table)])
 
         self._sentence_id = 0
+        self._meta_table = None
 
     @staticmethod
     def validate_files(l):
@@ -244,31 +244,52 @@ class BuilderClass(BaseCorpusBuilder):
              self.corpus_file_id: self._file_id})
 
     def add_metadata(self, file_name):
-        self._meta_table = pd.read_csv(file_name)
-        self._meta_table.index = range(1, len(self._meta_table)+1)
-        setattr(self, "file_name", self._meta_table.columns[0])
-        self._meta_table[self.file_path] = ""
+        df = pd.read_csv(file_name)
+
+        meta_columns = []
+        for col in df.columns:
+            if col.lower() in set(["file", "filename"]):
+                self.file_name = col
+            else:
+                meta_columns.append(col)
+
+        df[self.file_path] = ""
         for root, dirs, files in os.walk(os.path.split(file_name)[0]):
             for filename in files:
-                self._meta_table[self.file_path].loc[
-                    self._meta_table[self.file_name] == filename] = root
+                df[self.file_path].loc[
+                    df[self.file_name] == filename] = root
+
+        df = df.iloc[df[self.file_name].nonzero()[0]]
+        df = df.iloc[df[self.file_path].nonzero()[0]]
+        df.index = range(1, len(df)+1)
 
         l = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
+             Column(self.file_path, "VARCHAR(4096) NOT NULL"),
              Column(self.file_name, "VARCHAR({}) NOT NULL".format(
-                 max(self._meta_table[self.file_name].str.len())))]
+                 int(max(df[self.file_name].str.len()))))]
 
-        for col in self._meta_table.columns[1:]:
+        for col in meta_columns:
             rc_feature = "file_{}".format(col.lower())
             setattr(self, rc_feature, col)
-            if self._meta_table[col].dtype == int:
+            if df[col].dtype == int:
                 l.append(Column(col, "MEDIUMINT"))
-            elif self._meta_table[col].dtype == float:
+            elif df[col].dtype == float:
                 l.append(Column(col, "REAL"))
             else:
                 l.append(Column(col, "VARCHAR({})".format(
-                    max(self._meta_table[col].str.len()))))
+                    int(max(df[col].str.len())))))
+
         self.create_table_description(self.file_table, l)
         self.special_files.append(os.path.basename(file_name))
+
+        self._meta_table = df
+
+
+    def has_metadata(self, file_name):
+        if self._meta_table is None:
+            return False
+        basename = os.path.basename(file_name)
+        return any(self._meta_table[self.file_name] == basename)
 
     def store_metadata(self):
         self.DB.load_dataframe(self._meta_table,
@@ -278,24 +299,24 @@ class BuilderClass(BaseCorpusBuilder):
     def store_filename(self, file_name):
         if self.arguments.metadata:
             basename = os.path.basename(file_name)
-            if basename not in self.special_files:
-                self._file_id = self._meta_table[self._meta_table[self.file_name] == basename].index[0]
+            if (basename not in self.special_files and
+                self.has_metadata(basename)):
+                self._file_id = self._meta_table[
+                    self._meta_table[
+                        self.file_name] == basename].index[0]
         else:
             return super(BuilderClass, self).store_filename(file_name)
 
     @classmethod
     def probe_metadata(cls, file_name):
-        if super(BuilderClass, cls).probe_metadata(
-            os.path.basename(file_name).lower()):
-            try:
-                df = pd.read_csv(file_name, nrows=2)
-                if not df.columns[0].lower().startswith("file"):
-                    return False
-            except:
-                return False
-            else:
-                return True
-        else:
+        try:
+            df = pd.read_csv(file_name, nrows=2)
+            for col in df.columns:
+                if col.lower() in set(["file", "filename"]):
+                    return True
+            return False
+        except Exception as e:
+            print("can't read", str(e))
             return False
 
     def process_file(self, file_name):
@@ -321,7 +342,14 @@ class BuilderClass(BaseCorpusBuilder):
             The path name of the file that is to be processed
         """
 
-        if os.path.basename(file_name) in self.special_files:
+        basename = os.path.basename(file_name)
+        if basename in self.special_files:
+            return
+
+        if not self.has_metadata(basename) and self.arguments.use_meta:
+            s = "{} not in meta data.".format(basename)
+            print(s)
+            logger.warn(s)
             return
 
         raw_text = self._read_text(file_name)

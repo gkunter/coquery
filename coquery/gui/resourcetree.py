@@ -288,7 +288,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
         table = sorted(table, key=lambda x: getattr(ext_res, x))
         # fill new tree with the features from the linked table (exclude
         # the linking feature):
-        for rc_feature in [x for x in table if x != link.rc_to]:
+        for rc_feature in [x for x in table]:
             _, _, feature = ext_res.split_resource_feature(rc_feature)
             # exclude special resource features
             if feature not in ("id", "table") and not feature.endswith("_id"):
@@ -343,7 +343,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
             for child in [node.child(i) for i in range(node.childCount())]:
                 if child.checkState(0) != QtCore.Qt.Unchecked:
                     resource = utf8(child.objectName())
-                    if not resource.endswith("_table"):
+                    if resource and not resource.endswith("_table"):
                         checked.add(resource)
                     checked.update(traverse(child))
             return checked

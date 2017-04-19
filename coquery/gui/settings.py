@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 from coquery import options
+from coquery.defines import AUTO_VISIBILITY
 from coquery.errors import remove_source_path, add_source_path
 from coquery.unicode import utf8
 from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
@@ -274,6 +275,17 @@ class Settings(QtWidgets.QDialog):
         except AttributeError:
             pass
 
+        l = []
+        for i in range(self.ui.list_auto_apply.count()):
+            item = self.ui.list_auto_apply.item(i)
+            if i in options.settings.value("settings_auto_apply",
+                                           [AUTO_VISIBILITY]):
+                state = QtCore.Qt.Checked
+            else:
+                state = QtCore.Qt.Unchecked
+            item.setCheckState(state)
+
+
     def change_options(self):
         self._options.output_case_sensitive = (
             bool(self.ui.radio_output_case_leave.isChecked()))
@@ -330,6 +342,13 @@ class Settings(QtWidgets.QDialog):
         self._options.figure_font = self._figure_font
         self._options.context_font = self._context_font
         self._options.na_string = utf8(self.ui.edit_na_string.text())
+
+        l = []
+        for i in range(self.ui.list_auto_apply.count()):
+            item = self.ui.list_auto_apply.item(i)
+            if item.checkState() == QtCore.Qt.Checked:
+                l.append(i)
+        options.settings.setValue("settings_auto_apply", l)
 
     @staticmethod
     def manage(options, parent=None):

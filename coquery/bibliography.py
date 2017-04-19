@@ -11,13 +11,13 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 import warnings
+import sys
 
 
 # Create a tuple containing the available string types
-# (Python 3 has no unicode):
-try:
-    STRING_TYPES = (unicode, str)
-except NameError:
+if sys.version_info < (3, 0):
+    STRING_TYPES = (basestring, )
+else:
     STRING_TYPES = (str, )
 
 MSG_WARN_FULL_NAME_MODE = (

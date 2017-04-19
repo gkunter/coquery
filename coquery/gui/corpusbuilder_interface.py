@@ -21,8 +21,8 @@ import sys
 
 from coquery import options
 from coquery import sqlhelper
-from coquery.defines import (NAME,
-                             msg_invalid_metadata,
+from coquery import NAME
+from coquery.defines import (msg_invalid_metadata,
                              msg_install_abort,
                              msg_corpus_path_not_valid)
 from coquery.errors import SQLNoConfigurationError, DependencyError
@@ -62,14 +62,6 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.use_pos_tagging.hide()
         self.ui.progress_box.hide()
 
-        self.ui.button_input_path.clicked.connect(self.select_path)
-        self.ui.button_metafile.clicked.connect(self.select_metafile)
-        self.ui.label_metafile.clicked.connect(self.select_metafile)
-
-        self.ui.radio_read_files.toggled.connect(lambda x: self.activate_read(True))
-        self.ui.radio_only_module.toggled.connect(lambda x: self.activate_read(False))
-        self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
-
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setText(self.button_label)
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).clicked.connect(self.start_install)
 
@@ -78,13 +70,6 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.button_metafile.hide()
         self.ui.label_metafile.hide()
         self.ui.check_use_metafile.hide()
-
-        self.installStarted.connect(self.show_progress)
-        self.progressSet.connect(self.set_progress)
-        self.labelSet.connect(self.set_label)
-        self.progressUpdate.connect(self.update_progress)
-
-        self.generalUpdate.connect(self.general_update)
 
         notes = builder_class.get_installation_note()
         if notes:
@@ -119,6 +104,23 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.issue_label.setText("")
         self.ui.corpus_name.setStyleSheet("")
 
+        self.ui.button_input_path.clicked.connect(self.select_path)
+        self.ui.button_metafile.clicked.connect(self.select_metafile)
+        self.ui.label_metafile.clicked.connect(self.select_metafile)
+
+        self.ui.radio_read_files.toggled.connect(lambda x: self.activate_read(True))
+        self.ui.radio_only_module.toggled.connect(lambda x: self.activate_read(False))
+        self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
+
+        self.installStarted.connect(self.show_progress)
+        self.progressSet.connect(self.set_progress)
+        self.labelSet.connect(self.set_label)
+        self.progressUpdate.connect(self.update_progress)
+
+        self.generalUpdate.connect(self.general_update)
+
+
+
     def restore_settings(self):
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
@@ -140,7 +142,7 @@ class InstallerGui(QtWidgets.QDialog):
         val = options.settings.value("corpusinstaller_use_nltk", "false")
         self.ui.use_pos_tagging.setChecked(val == "true" or val is True)
         val = options.settings.value("corpusinstaller_use_ngram_table", "false")
-        self.ui.check_ngram.setChecked(val == "true" or val is True)
+        self.ui.check_n_gram.setChecked(val == "true" or val is True)
         self.ui.spin_n.setValue(
             int(options.settings.value("corpusinstaller_n_gram_width", 2)))
         self.ui.radio_read_files.blockSignals(False)
@@ -161,7 +163,7 @@ class InstallerGui(QtWidgets.QDialog):
         options.settings.setValue("corpusinstaller_use_nltk",
                                   self.ui.use_pos_tagging.isChecked())
         options.settings.setValue("corpusinstaller_use_ngram_table",
-                                  self.ui.check_ngram.isChecked())
+                                  self.ui.check_n_gram.isChecked())
         options.settings.setValue("corpusinstaller_ngram_width",
                                   self.ui.spin_n.value())
 
@@ -223,7 +225,7 @@ class InstallerGui(QtWidgets.QDialog):
             path = os.path.expanduser("~")
 
         name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
-        if type(name) == tuple:
+        if type(name) is tuple:
             name = name[0]
         if name:
             if not self.builder_class.probe_metadata(name):
@@ -383,6 +385,7 @@ class InstallerGui(QtWidgets.QDialog):
         namespace = argparse.Namespace()
         namespace.verbose = False
         namespace.use_nltk = False
+        namespace.use_meta = False
         namespace.metadata = utf8(self.ui.label_metafile.text())
 
         if self.ui.radio_only_module.isChecked():
@@ -400,7 +403,7 @@ class InstallerGui(QtWidgets.QDialog):
             namespace.l = True
             namespace.c = True
             namespace.only_module = False
-            if self.ui.check_ngram.checkState():
+            if self.ui.check_n_gram.checkState():
                 namespace.lookup_ngram = True
                 namespace.ngram_width = int(self.ui.spin_n.value())
             else:
@@ -451,7 +454,7 @@ class BuilderGui(InstallerGui):
             self.ui.button_input_path.clicked.disconnect(self.select_path)
             self.ui.button_input_path.clicked.connect(self.file_options)
             self.ui.input_path.clicked.connect(self.file_options)
-            self.ui.widget_ngram.hide()
+            self.ui.widget_n_gram.hide()
             self.ui.radio_only_module.hide()
             self.ui.label_only_module.hide()
             self.ui.radio_read_files.setChecked(True)
@@ -720,6 +723,7 @@ class BuilderGui(InstallerGui):
 
         namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
+        namespace.use_meta = self.ui.check_use_metafile.checkState()
         namespace.db_name = "coq_{}".format(namespace.name).lower()
         namespace.one_file = self._onefile
         return namespace

@@ -73,7 +73,8 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         if col in self.pre_subst:
             dtype = self.pre_subst[col].dtype
         else:
-            dtype = self.df.dtypes[col]
+            dtype = self.df[col].dtype
+
         # ensure that the keys have the same dtype as the values:
         if dtype == object:
             return key
@@ -82,7 +83,10 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         elif dtype == int:
             return int(key)
         elif dtype == bool:
-            return bool(key)
+            if key in ["True", "False"]:
+                return key == "True"
+            else:
+                return bool(key)
         raise TypeError
 
     def exec_(self, *args, **kwargs):
@@ -217,6 +221,7 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         col = current_item.data(QtCore.Qt.UserRole)
         key = utf8(self.ui.table_substitutions.item(i, 0).text())
         value = utf8(self.ui.table_substitutions.item(i, 1).text())
+        key = self._key_dtype(key, col)
         self.substitutions[col][key] = value
 
     def change_alias(self):

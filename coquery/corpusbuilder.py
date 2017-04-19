@@ -9,6 +9,9 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import unicode_literals
+from __future__ import print_function
+
 """
 The module :mod:`corpusbuilder.py` provides the framework for corpus module
 installers.
@@ -52,9 +55,6 @@ XML version of the British National Corpus.
 """
 
 
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import getpass
 import codecs
 import logging
@@ -87,10 +87,11 @@ from . import sqlhelper
 from . import sqlwrap
 from . import options
 from . import corpus
+from . import NAME
 from .tables import Column, Identifier, Link, Table
 
 from .errors import DependencyError, get_error_repr
-from .defines import (SQL_MYSQL, NAME,
+from .defines import (SQL_MYSQL,
                       DEFAULT_MISSING_VALUE,
                       QUERY_ITEM_GLOSS, QUERY_ITEM_LEMMA,
                       QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_POS,
@@ -116,7 +117,7 @@ new_code_str = """
 
     @staticmethod
     def get_description():
-        return ["{description}"]
+        return ['''{description}''']
     """
 
 new_doc_string = """
@@ -255,7 +256,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         cls.tag_id = "TagId"
         cls.tag_label = "Tag"
         cls.tag_type = "Type"
-        cls.tag_corpus_id = cls.corpus_id
+        cls.tag_corpus_id = self.corpus_id
         cls.tag_attribute = "Attribute"
 
         if not features_only:
@@ -411,6 +412,8 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self._widget.progressSet.emit(len(self._new_tables), "Creating tables... (%v of %m)")
             self._widget.progressUpdate.emit(0)
 
+        self.add_tag_table()
+
         for i, current_table in enumerate(self._new_tables):
             self._new_tables[current_table].setDB(self.DB)
             S = self._new_tables[current_table].get_create_string(
@@ -494,7 +497,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         return False
 
     @classmethod
-    def validate_files(cls, l):
+    def validate_files(cls, file_list):
         """
         Validates the file list.
 
@@ -505,16 +508,21 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
         Parameters
         ----------
-        l : list
+        file_list : list
             A list of file names as created by get_file_list()
 
         """
-        found_list = [x for x in [os.path.basename(y) for y in l] if x in cls.expected_files]
+        found_list = [x for x
+                      in [os.path.basename(y) for y in file_list]
+                      if x in cls.expected_files]
+
         if len(set(found_list)) < len(set(cls.expected_files)):
-            missing_list = [x for x in cls.expected_files if x not in found_list]
+            missing_list = [x for x in cls.expected_files
+                            if x not in found_list]
             sample = "<br/>".join(missing_list[:5])
             if len(missing_list) > 6:
-                sample = "{}</code>, and {} other files".format(sample, len(missing_list) - 3)
+                S = "{}</code>, and {} other files"
+                sample = S.format(sample, len(missing_list) - 3)
             elif len(missing_list) == 6:
                 sample = "<br/>".join(missing_list[:6])
             raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
@@ -1847,8 +1855,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             is_tagged_label = "text corpus"
             tagging_state = "Part-of-speech tags are not available for this corpus."
 
-        desc_template = """
-            "<p>The {label} '{name}' was created on {date}.
+        desc_template = """<p>The {label} '{name}' was created on {date}.
             It contains {tokens} text tokens. {tagging_state}</p>
             <p>Directory:<br/> <code>{path}</code></p>
             <p>File{s}:<br/><code>{files}</code></p><p>"""

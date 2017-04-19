@@ -2,7 +2,7 @@
 """
 textgrids.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -17,8 +17,8 @@ import logging
 
 import tgt
 
-from .defines import NAME
 from . import options
+from . import NAME
 from .links import get_by_hash
 from .unicode import utf8
 
@@ -30,13 +30,13 @@ class TextgridWriter(object):
         self.session = session
         self._artificial_corpus_id = False
         self._offsets = {}
+        self.file_data = self.get_file_data()
 
     def get_file_data(self):
         file_data = self.resource.corpus.get_file_data(
             self.df.coquery_invisible_corpus_id,
             ["file_name", "file_duration"])
-        file_data.reset_index(drop=True, inplace=True)
-        return file_data
+        return file_data.reset_index(drop=True)
 
     def prepare_textgrids(self, order=None, one_grid_per_match=False,
                           remember_time=False):
@@ -47,14 +47,16 @@ class TextgridWriter(object):
             A list of columns that specifies the order of the text grid tiers.
         """
         self.feature_timing = dict()
-        self.file_data = self.get_file_data()
-
         grids = {}
+
+        if "coquery_invisible_origin_id" not in self.df.columns:
+            one_grid_per_match = True
 
         if one_grid_per_match:
             key_columns = [self.resource.file_name, self.resource.corpus_id]
         else:
             key_columns = [self.resource.file_name]
+
         for i in self.file_data.index:
             grid_id = tuple(self.file_data.iloc[i][key_columns])
             grids[grid_id] = tgt.TextGrid()
@@ -168,6 +170,7 @@ class TextgridWriter(object):
                     tier_name = "corpus_id"
                 else:
                     continue
+                number = 1
             elif col.startswith("coquery_invisible"):
                 continue
             elif col.startswith(("func", "coquery", "db")):
@@ -195,7 +198,11 @@ class TextgridWriter(object):
                     # lexical feature -- add one interval per entry
                     for i in df.index:
                         row = df.loc[i]
-                        val = utf8(row[col])
+                        dtype = df.dtypes[col]
+                        try:
+                            val = utf8(row[col].astype(dtype))
+                        except AttributeError:
+                            val = utf8(row[col])
                         try:
                             label_s, label_e = self.feature_timing[tier_name]
                             start_col = "coq_{}_{}".format(label_s, number)
@@ -214,9 +221,10 @@ class TextgridWriter(object):
                             # with a previous interval.
                             # This can happen if no word boundaries are
                             # selected in a multi-word query.
-                            logger.warn("{}: {} ({})".format(
-                                session.translate_header(tier.name),
-                                e, grid_id))
+                            pass
+                            #logger.warn("{}: {} ({})".format(
+                                #self.session.translate_header(tier.name),
+                                #e, grid_id))
                 else:
                     # segment features
                     start_label, end_label = self.feature_timing[tier_name]
@@ -240,12 +248,14 @@ class TextgridWriter(object):
                             tier.add_interval(interval)
                         except ValueError as e:
                             logger.warn("{}: {} ({})".format(
-                                session.translate_header(tier.name),
+                                self.session.translate_header(tier.name),
                                 e, grid_id))
             if interval:
                 # make sure that the tier is always correctly padded to the
                 # right:
-                tier.end_time = max(tier.end_time, interval.end_time + right_padding)
+                tier.end_time = max(tier.end_time,
+                                    interval.end_time + right_padding)
+                tier.end_time = min(tier.end_time, max_stop)
 
         if remember_time:
             tier = grid.get_tier_by_name("Original timing")
@@ -273,19 +283,22 @@ class TextgridWriter(object):
         """
         grids = self.prepare_textgrids(columns,
                                        one_grid_per_match, remember_time)
-        file_data = self.get_file_data()
+
+        if "coquery_invisible_origin_id" not in self.df.columns:
+            one_grid_per_match = True
 
         if one_grid_per_match:
             grouped = self.df.groupby("coquery_invisible_corpus_id")
         else:
-            grouped = self.df.groupby("coq_file_name_1")
+            grouped = self.df.groupby("coquery_invisible_origin_id")
+
         for key, match_df in grouped:
             if one_grid_per_match:
                 corpus_id = key
             else:
                 corpus_id = match_df["coquery_invisible_corpus_id"].values[0]
-            f_row = file_data[file_data[self.resource.corpus_id] == corpus_id]
-
+            f_row = self.file_data[
+                        self.file_data[self.resource.corpus_id] == corpus_id]
             start_columns = [x for x in match_df.columns if "starttime_" in x]
             end_columns = [x for x in match_df.columns if "endtime_" in x]
 
@@ -315,11 +328,17 @@ class TextgridWriter(object):
     def write_grids(self, output_path, columns, one_grid_per_match,
                     sound_path, left_padding, right_padding, remember_time,
                     file_prefix):
+
+        if "coquery_invisible_origin_id" not in self.df.columns:
+            one_grid_per_match = True
+
         self.output_path = output_path
         grids = self.fill_grids(columns, one_grid_per_match, sound_path,
                                 left_padding, right_padding, remember_time)
 
         textgrids = collections.defaultdict(list)
+
+        self.n = 0
 
         for x in grids:
             grid = grids[x]
@@ -350,6 +369,7 @@ class TextgridWriter(object):
             target = os.path.join(output_path, "{}{}.TextGrid".format(
                 file_prefix, filename))
             tgt.write_to_file(grid, target)
+            self.n += 1
             textgrids[basename].append((grid, filename, self._offsets[x]))
 
         if sound_path:
@@ -359,7 +379,6 @@ class TextgridWriter(object):
             # FIXME:
             # there should be a resource method that matches sound file names
             # and text grid names.
-
             for root, _, files in os.walk(sound_path):
                 for file_name in files:
                     basename, _ = os.path.splitext(file_name)
@@ -378,7 +397,5 @@ class TextgridWriter(object):
                                 extract_sound(source, target, start, end)
                             except wave.Error:
                                 pass
-
-        self.n = len(grids)
 
 logger = logging.getLogger(NAME)

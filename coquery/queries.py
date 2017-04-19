@@ -2,7 +2,7 @@
 """
 queries.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,7 +12,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
-from __future__ import absolute_import
 
 import math
 import hashlib
@@ -38,6 +37,7 @@ from .general import *
 from . import tokens
 from . import options
 from . import managers
+from . import NAME
 
 
 class TokenQuery(object):
@@ -48,12 +48,14 @@ class TokenQuery(object):
     """
 
     def __init__(self, S, Session):
+        self.query_list = []
         try:
-            self.query_list = tokens.preprocess_query(S)
+            for s in S.split("\n"):
+                if s:
+                    self.query_list += tokens.preprocess_query(s)
         except TokenParseError as e:
             logger.error(str(e))
             S = ""
-            self.query_list = []
         self.query_string = S
         self.Session = Session
         self.Resource = Session.Resource

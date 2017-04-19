@@ -19,6 +19,7 @@ import imp
 import logging
 
 from coquery import options
+from coquery import NAME
 from coquery import corpusbuilder
 from coquery.errors import (IllegalCodeInModuleError,
                             IllegalFunctionInModuleError,
@@ -26,7 +27,6 @@ from coquery.errors import (IllegalCodeInModuleError,
                             ModuleIncompleteError)
 from coquery.defines import (INSTALLER_ADHOC, INSTALLER_CUSTOM,
                              INSTALLER_DEFAULT,
-                             NAME,
                              msg_adhoc_builder_table,
                              msg_adhoc_builder_texts,
                              msg_corpus_broken,
