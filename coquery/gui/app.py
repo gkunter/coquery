@@ -1731,9 +1731,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import textgridexport
 
         header = self.ui.data_preview.horizontalHeader()
-        ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
+        ordered_headers = [self.table_model.header[header.logicalIndex(i)]
+                           for i in range(header.count())]
 
-        result = textgridexport.TextgridExportDialog.manage(columns=ordered_headers, parent=self)
+        result = textgridexport.TextgridExportDialog.manage(
+            columns=ordered_headers, parent=self)
         if result:
             from coquery.textgrids import TextgridWriter
 
@@ -1741,8 +1743,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 if "_starttime_" in x or "_endtime_" in x:
                     result["columns"].append(x)
             tab = self.table_model.content[result["columns"]]
+
+            # add required invisible columns:
             for x in self.table_model.invisible_content.columns:
                 if x.startswith(("coquery_invisible_corpus_id",
+                                 "coquery_invisible_origin_id",
                                  "coquery_invisible_corpus_starttime",
                                  "coquery_invisible_corpus_endtime")):
                     tab[x] = self.table_model.invisible_content[x]
