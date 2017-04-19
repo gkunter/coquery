@@ -12,7 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 from coquery import options
-from coquery.defines import AUTO_VISIBILITY
+from coquery.defines import AUTO_VISIBILITY, AUTO_APPLY_DEFAULT
 from coquery.errors import remove_source_path, add_source_path
 from coquery.unicode import utf8
 from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
@@ -279,7 +279,7 @@ class Settings(QtWidgets.QDialog):
         for i in range(self.ui.list_auto_apply.count()):
             item = self.ui.list_auto_apply.item(i)
             if i in options.settings.value("settings_auto_apply",
-                                           [AUTO_VISIBILITY]):
+                                           AUTO_APPLY_DEFAULT):
                 state = QtCore.Qt.Checked
             else:
                 state = QtCore.Qt.Unchecked
