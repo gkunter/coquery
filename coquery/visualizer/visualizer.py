@@ -574,8 +574,11 @@ class Visualizer(CoqObject):
                    palette=None, **kwargs):
         pass
 
-    def set_annotations(self, grid):
-        pass
+    def set_annotations(self, grid, values):
+        ax = grid.fig.gca()
+        ax.set_title(values.get("title", "(none)"))
+        ax.set_xlabel(values.get("xlab", "(none)"))
+        ax.set_ylabel(values.get("ylab", "(none)"))
 
     @staticmethod
     def dtype(feature, df):
