@@ -64,14 +64,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
     allLoaded = QtCore.Signal()
     visualizers = {}
 
-    def __init__(self, df, dtypes, session, parent=None):
+    def __init__(self, df, session, parent=None):
         super(VisualizationDesigner, self).__init__(parent)
         self.session = session
 
         # discard special rows such as contingency total:
-        self.df = df.loc[[x for x in df.index if x not in ROW_NAMES.values()]]
+        self.df = df.loc[[x for x in df.index
+                          if x not in ROW_NAMES.values()]]
 
-        self.dtypes = dtypes
+        for i, x in enumerate(df.columns):
+            if self.dtypes[x] == bool:
+                self.df[x] = self.df[x].astype(str)
 
         self._palette_name = "Paired"
 
@@ -160,10 +163,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def populate_variable_lists(self):
         self.categorical = [col for col in self.df.columns
-                       if self.dtypes[col] == object and not
+                       if self.df.dtypes[col] in (object, bool) and not
                        col.startswith(("coquery_invisible"))]
         self.numerical = [col for col in self.df.columns
-                     if self.dtypes[col] in (int, float) and not
+                     if self.df.dtypes[col] in (int, float) and not
                      col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
