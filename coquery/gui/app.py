@@ -208,6 +208,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.ui.centralwidget.adjustSize()
             self.adjustSize()
 
+        self.Session.summary_functions = options.cfg.summary_functions
+        self.Session.group_functions = options.cfg.group_functions
+
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
@@ -2634,6 +2637,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 x = self.widget_list.pop(0)
                 x.close()
                 del x
+
+            options.cfg.summary_functions = self.Session.summary_functions
+            options.cfg.group_functions = self.Session.group_functions
+
             self.save_configuration()
             event.accept()
 
@@ -3053,12 +3060,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             except Exception as e:
                 print(e)
                 kwargs.update({"function_class": tuple()})
-        if not columns:
-            columns = [x for x in self.table_model.content.columns]
-            available = []
-        else:
-            available = [x for x in self.table_model.content.columns
-                         if x not in columns]
+        available = []
+        if hasattr(self, "table_model"):
+            if not columns:
+                columns = [x for x in self.table_model.content.columns]
+                available = []
+            else:
+                available = [x for x in self.table_model.content.columns
+                            if x not in columns]
         kwargs["available_columns"] = available
         response = addfunction.FunctionDialog.set_function(parent=self,
                                                            columns=columns,
