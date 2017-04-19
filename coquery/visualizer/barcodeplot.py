@@ -157,7 +157,8 @@ class BarcodePlot(vis.Visualizer):
         ax = kwargs.get("ax", plt.gca())
         ax.set(**ax_kwargs)
 
-    def set_annotations(self, grid):
+    def set_annotations(self, grid, values):
+        super(BarcodePlot, self).set_annotations(grid, values)
         lim = (0, self.session.Corpus.get_corpus_size())
         if self.horizontal:
             grid.set(xlim=lim)
