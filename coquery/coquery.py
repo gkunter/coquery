@@ -149,7 +149,7 @@ def main():
                                                           QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                 print(response)
                 sys.exit(1)
-        from .gui.app import CoqueryApp
+        from .gui.app import CoqMainWindow
         from .gui.app import GuiHandler
 
         options.cfg.gui_logger = GuiHandler()
@@ -164,7 +164,7 @@ def main():
         from . import session
         session = session.SessionCommandLine()
 
-        Coq = CoqueryApp(session)
+        Coq = CoqMainWindow(session)
         options.cfg.gui = Coq
         options.cfg.gui_logger.setGui(Coq)
         Coq.setGUIDefaults()
