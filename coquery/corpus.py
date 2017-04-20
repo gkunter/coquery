@@ -897,26 +897,38 @@ class SQLResource(BaseResource):
         Returns a list of corpus joins for the sub query
         """
         l = []
+
+        token_list = [(i, tup) for i, tup in enumerate(query_items)]
+        token_list = sorted(token_list,
+                     key=lambda x: len(x[1][1]) if x[1][1] is not None else -1,
+                     reverse=True)
+
         current_pos = 1
-        for i, (pos, token) in enumerate(query_items):
-            if token is not None:
-                if hasattr(cls, "corpus_next_id"):
-                    comp = "COQ_CORPUS_{prev}.{next_id}".format(prev=current_pos,
-                                                    next_id=cls.corpus_next_id)
-                else:
-                    comp = "COQ_CORPUS_{prev}.{id} + 1".format(prev=current_pos - 1, id=cls.corpus_id)
+        ref_pos = token_list[0][0]
 
-                if current_pos == 1:
-                    s = "{corpus} AS COQ_CORPUS_{N}"
-                else:
-                    s = "INNER JOIN {corpus} AS COQ_CORPUS_{N} ON COQ_CORPUS_{N}.{corpus_id} = {comp}"
+        for i, (pos, token) in token_list:
+            if i < ref_pos:
+                comp = "COQ_CORPUS_{prev}.{id} - {dist}".format(
+                            prev=ref_pos + 1,
+                            id=cls.corpus_id,
+                            dist=ref_pos - i)
+            else:
+                comp = "COQ_CORPUS_{prev}.{id} + {dist}".format(
+                            prev=ref_pos + 1,
+                            id=cls.corpus_id,
+                            dist=i - ref_pos)
+            if current_pos == 1:
+                s = "{corpus} AS COQ_CORPUS_{N}"
+            else:
+                s = "INNER JOIN {corpus} AS COQ_CORPUS_{N} ON COQ_CORPUS_{N}.{corpus_id} = {comp}"
 
-                l.append(s.format(
-                    corpus=cls.corpus_table,
-                    corpus_id=cls.corpus_id,
-                    N=current_pos, comp=comp))
+            l.append(s.format(
+                corpus=cls.corpus_table,
+                corpus_id=cls.corpus_id,
+                N=i+1,
+                comp=comp))
 
-                current_pos += 1
+            current_pos += 1
         return l
 
     @classmethod
@@ -1066,7 +1078,15 @@ class SQLResource(BaseResource):
         table_list = []
         where_list = []
 
-        features = [x for x in sorted(selected) if not x.startswith("segment_")]
+        if n == 0:
+            features = [x for x in sorted(selected)
+                        if not x.startswith("segment_")]
+        else:
+            lexicon_features = [x for x, _ in cls.get_lexicon_features()]
+            features = [x for x in sorted(selected)
+                        if not x.startswith("segment_") and
+                        x in lexicon_features]
+
         root, tables = cls.get_required_tables("corpus", features, conditions)
 
         for tup in tables:

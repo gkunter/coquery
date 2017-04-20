@@ -150,7 +150,29 @@ class TestCorpus(unittest.TestCase):
         l = self.resource.get_corpus_joins(query.query_list[0])
         self.assertListEqual(l, ["Corpus AS COQ_CORPUS_1",
                                  "INNER JOIN Corpus AS COQ_CORPUS_2 ON COQ_CORPUS_2.ID = COQ_CORPUS_1.ID + 1",
-                                 "INNER JOIN Corpus AS COQ_CORPUS_3 ON COQ_CORPUS_3.ID = COQ_CORPUS_2.ID + 1"])
+                                 "INNER JOIN Corpus AS COQ_CORPUS_3 ON COQ_CORPUS_3.ID = COQ_CORPUS_1.ID + 2"])
+
+    def test_corpus_joins_4a(self):
+        """
+        Three query items, join order optimized by query item complexity.
+        """
+        query = TokenQuery("* *ier [n*]", self.Session)
+        l = self.resource.get_corpus_joins(query.query_list[0])
+        self.maxDiff = None
+        self.assertListEqual(l, ["Corpus AS COQ_CORPUS_2",
+                                 "INNER JOIN Corpus AS COQ_CORPUS_3 ON COQ_CORPUS_3.ID = COQ_CORPUS_2.ID + 1",
+                                 "INNER JOIN Corpus AS COQ_CORPUS_1 ON COQ_CORPUS_1.ID = COQ_CORPUS_2.ID - 1"])
+
+    def test_corpus_joins_4b(self):
+        """
+        Three query items, join order optimized by query item complexity.
+        """
+        query = TokenQuery("d* * [n*]", self.Session)
+        l = self.resource.get_corpus_joins(query.query_list[0])
+        self.maxDiff = None
+        self.assertListEqual(l, ["Corpus AS COQ_CORPUS_3",
+                                 "INNER JOIN Corpus AS COQ_CORPUS_1 ON COQ_CORPUS_1.ID = COQ_CORPUS_3.ID - 2",
+                                 "INNER JOIN Corpus AS COQ_CORPUS_2 ON COQ_CORPUS_2.ID = COQ_CORPUS_3.ID - 1"])
 
     def test_feature_joins_1(self):
         l1, l2 = self.resource.get_feature_joins(0, ["word_label"])
@@ -197,7 +219,19 @@ class TestCorpus(unittest.TestCase):
                                   "LEFT JOIN Deep AS COQ_DEEP_1 ON COQ_DEEP_1.DeepId = COQ_LEMMA_1.DeepId"])
         self.assertListEqual(l2, [])
 
-    #def test_feature_joins_7(self):
+    def test_feature_joins_7a(self):
+        # get a source feature (first query item)
+        l1, l2 = self.resource.get_feature_joins(0, ["source_label"])
+        self.assertListEqual(l1, ["LEFT JOIN Files AS COQ_SOURCE_1 ON COQ_SOURCE_1.FileId = COQ_CORPUS_1.FileId"])
+        self.assertListEqual(l2, [])
+
+    def test_feature_joins_7b(self):
+        # get a source feature (second query item)
+        l1, l2 = self.resource.get_feature_joins(1, ["source_label"])
+        self.assertListEqual(l1, [])
+        self.assertListEqual(l2, [])
+
+    #def test_feature_joins_8(self):
         ## words and segments
         #l1, l2 = self.resource.get_feature_joins(0, ["word_label", "segment_label"])
         #print(l1, l2)
