@@ -381,7 +381,7 @@ class Ui_SettingsDialog(object):
         self.label_11.setBuddy(self.edit_cache_path)
 
         self.retranslateUi(SettingsDialog)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         self.buttonBox.accepted.connect(SettingsDialog.accept)
         self.buttonBox.rejected.connect(SettingsDialog.reject)
         QtCore.QMetaObject.connectSlotsByName(SettingsDialog)

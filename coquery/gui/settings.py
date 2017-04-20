@@ -194,10 +194,6 @@ class Settings(QtWidgets.QDialog):
             self.ui.check_regular_expressions.setChecked(self._options.regexp)
         except AttributeError:
             pass
-        try:
-            self.ui.check_regular_expressions.setChecked(self._options.regexp)
-        except AttributeError:
-            pass
         #try:
             #self.ui.check_ignore_punctuation.setChecked(bool(self._options.ignore_punctuation))
         #except AttributeError:
