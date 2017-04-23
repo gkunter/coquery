@@ -1313,19 +1313,26 @@ class SQLResource(BaseResource):
             current_pos = 1
             for i, (pos, token) in enumerate(token_list):
                 hashed, tab, feat = cls.split_resource_feature(rc_feature)
+                # external resources:
                 if hashed:
                     link, res = get_by_hash(hashed)
                     if link.rc_from in lexicon_features:
-                        ext_alias = cls.alias_external_table(i+1,
+                        ext_alias = cls.alias_external_table(i,
                                                          link, res)
                         ext_rc = "{}_{}".format(tab, feat)
                         ext_column = getattr(res, ext_rc)
-                        s = "{ext_alias}.{ext_column} AS db_{db_name}_coq_{ext_rc}_{N}"
+                        if token is not None:
+                            column = "{ext_alias}.{ext_column}".format(
+                                ext_alias=ext_alias, ext_column=ext_column)
+                        else:
+                            column = "NULL"
+                        s = "{column} AS db_{db_name}_coq_{ext_rc}_{N}"
                         alias = s.format(
-                            ext_alias=ext_alias, ext_column=ext_column,
-                            db_name=res.db_name, ext_rc=ext_rc, N=i)
+                            column=column,
+                            db_name=res.db_name, ext_rc=ext_rc, N=i+1)
                         columns.append(alias)
                         current_pos += 1
+
                 if rc_feature in lexicon_features:
                     if token is not None:
                         column = "COQ_{table}_{pos}.{name}".format(

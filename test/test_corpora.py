@@ -13,47 +13,50 @@ from coquery.coquery import options
 from coquery.defines import *
 from coquery.queries import TokenQuery
 from coquery.tokens import COCAToken
-from coquery.gui.linkselect import Link
+import coquery.links
+#from coquery.gui.linkselect import Link
 
 import argparse
 
+class Resource(SQLResource):
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    corpus_source_id = "FileId"
+    corpus_starttime = "Start"
+    corpus_endtime = "End"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_label = "Word"
+    word_pos = "POS"
+    word_lemma_id = "LemmaId"
+    lemma_table = "Lemmas"
+    lemma_id = "LemmaId"
+    lemma_label = "Lemma"
+    lemma_deep_id = "DeepId"
+    deep_table = "Deep"
+    deep_id = "DeepId"
+    source_table = "Files"
+    source_id = "FileId"
+    source_label = "Title"
+    segment_id = "SegmentId"
+    segment_table = "Segments"
+    segment_starttime = "SegStart"
+    segment_endtime = "SegEnd"
+    segment_origin_id = "SegmentOrigin"
+
+    db_name = "MockCorpus"
+    name = "Corp"
+    query_item_word = "word_label"
+
+    query_item_pos = "word_pos"
+    query_item_lemma = "lemma_label"
+
+    annotations = {"segment": "word"}
+
+
 class TestCorpus(unittest.TestCase):
-
-    resource = SQLResource
-    # mock corpus module:
-    resource.corpus_table = "Corpus"
-    resource.corpus_id = "ID"
-    resource.corpus_word_id = "WordId"
-    resource.corpus_source_id = "FileId"
-    resource.corpus_starttime = "Start"
-    resource.corpus_endtime = "End"
-    resource.word_table = "Lexicon"
-    resource.word_id = "WordId"
-    resource.word_label = "Word"
-    resource.word_pos = "POS"
-    resource.word_lemma_id = "LemmaId"
-    resource.lemma_table = "Lemmas"
-    resource.lemma_id = "LemmaId"
-    resource.lemma_label = "Lemma"
-    resource.lemma_deep_id = "DeepId"
-    resource.deep_table = "Deep"
-    resource.deep_id = "DeepId"
-    resource.source_table = "Files"
-    resource.source_id = "FileId"
-    resource.source_label = "Title"
-    resource.segment_id = "SegmentId"
-    resource.segment_table = "Segments"
-    resource.segment_starttime = "SegStart"
-    resource.segment_endtime = "SegEnd"
-    resource.segment_origin_id = "SegmentOrigin"
-
-    resource.db_name = "MockCorpus"
-    resource.query_item_word = "word_label"
-
-    resource.query_item_pos = "word_pos"
-    resource.query_item_lemma = "lemma_label"
-
-    resource.annotations = {"segment": "word"}
+    resource = Resource
 
     @staticmethod
     def pos_check_function(l):
@@ -459,11 +462,105 @@ class TestCorpus(unittest.TestCase):
              "(COQ_WORD_3.Word = 'than')",
              "(COQ_WORD_8.POS LIKE 'nn%')"])
 
+class ExternalCorpus(SQLResource):
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_label = "Word"
+    word_data = "ExtData"
+    db_name = "extcorp"
+    name = "ExternalCorpus"
 
+
+def _monkeypatch_get_resource(name):
+    return TestCorpusWithExternal.external, None, None
+
+
+class TestCorpusWithExternal(unittest.TestCase):
+    external = ExternalCorpus
+    resource = Resource
+
+    def setUp(self):
+        self.maxDiff = None
+        options.cfg = argparse.Namespace()
+        options.cfg.number_of_tokens = 0
+        options.cfg.limit_matches = False
+        options.cfg.regexp = False
+        options.cfg.query_case_sensitive = False
+        options.get_configuration_type = lambda: SQL_MYSQL
+        options.get_resource = _monkeypatch_get_resource
+        self.Session = MockOptions()
+        self.Session.Resource = self.resource
+        self.Session.Lexicon = None
+        self.Session.Corpus = None
+
+        self.link = coquery.links.Link(
+                        self.resource.name, "word_label",
+                        self.external.name, "word_label",
+                        join="LEFT JOIN")
+        options.cfg.current_server = "Default"
+        options.cfg.table_links = {}
+        options.cfg.table_links[options.cfg.current_server] = [self.link]
+
+    def test_linked_feature_join(self):
+        ext_feature = "{}.word_data".format(self.link.get_hash())
+        l1, l2 = self.resource.get_feature_joins(0, [ext_feature])
+        self.assertListEqual(l1, [
+            "INNER JOIN Lexicon AS COQ_WORD_1 ON COQ_WORD_1.WordId = COQ_CORPUS_1.WordId",
+            "LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1 ON EXTCORP_LEXICON_1.Word = COQ_WORD_1.Word"])
+        self.assertListEqual(l2, [])
+
+    def test_linked_required_columns(self):
+        query = TokenQuery("*", self.Session)
+        ext_feature = "{}.word_data".format(self.link.get_hash())
+        l = self.resource.get_required_columns(query.query_list[0],
+                                               [ext_feature])
+        self.assertListEqual(l,
+            ["EXTCORP_LEXICON_1.ExtData AS db_extcorp_coq_word_data_1",
+             "COQ_CORPUS_1.ID AS coquery_invisible_corpus_id",
+             "COQ_CORPUS_1.FileId AS coquery_invisible_origin_id"])
+
+    def test_quantified_required_columns(self):
+        ext_feature = "{}.word_data".format(self.link.get_hash())
+        s = "happy to{0,1} [n*]"
+
+        query = TokenQuery(s, self.Session)
+        self.assertTrue(len(query.query_list) == 2)
+
+        l = self.resource.get_corpus_joins(query.query_list[0])
+        # 1     2    3
+        # happy {to} [n*]
+
+        l = self.resource.get_required_columns(query.query_list[0],
+            ["word_label", ext_feature])
+        self.assertListEqual(l,
+            ["COQ_WORD_1.Word AS coq_word_label_1",
+             "NULL AS coq_word_label_2",
+             "COQ_WORD_3.Word AS coq_word_label_3",
+             "EXTCORP_LEXICON_1.ExtData AS db_extcorp_coq_word_data_1",
+             "NULL AS db_extcorp_coq_word_data_2",
+             "EXTCORP_LEXICON_3.ExtData AS db_extcorp_coq_word_data_3",
+             "COQ_CORPUS_1.ID AS coquery_invisible_corpus_id",
+             "COQ_CORPUS_1.FileId AS coquery_invisible_origin_id"])
+
+        l = self.resource.get_required_columns(query.query_list[1],
+            ["word_label", ext_feature])
+        self.assertListEqual(l,
+            ["COQ_WORD_1.Word AS coq_word_label_1",
+             "COQ_WORD_2.Word AS coq_word_label_2",
+             "COQ_WORD_3.Word AS coq_word_label_3",
+             "EXTCORP_LEXICON_1.ExtData AS db_extcorp_coq_word_data_1",
+             "EXTCORP_LEXICON_2.ExtData AS db_extcorp_coq_word_data_2",
+             "EXTCORP_LEXICON_3.ExtData AS db_extcorp_coq_word_data_3",
+             "COQ_CORPUS_1.ID AS coquery_invisible_corpus_id",
+             "COQ_CORPUS_1.FileId AS coquery_invisible_origin_id"])
 
 def main():
     suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestCorpus)])
+        unittest.TestLoader().loadTestsFromTestCase(TestCorpus),
+        unittest.TestLoader().loadTestsFromTestCase(TestCorpusWithExternal)])
     unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
