@@ -136,7 +136,7 @@ class LexiconClass(object):
         table_path = self.resource.get_table_path(last_table, end_table)
         for table in table_path[1:]:
             if table not in self.joined_tables:
-                self.table_list.append("LEFT JOIN {table} ON {table}.{table_id} = {prev_table}.{prev_table_id}".format(
+                self.table_list.append("INNER JOIN {table} ON {table}.{table_id} = {prev_table}.{prev_table_id}".format(
                     table=getattr(self.resource, "{}_table".format(table)),
                     table_id=getattr(self.resource, "{}_id".format(table)),
                     prev_table=getattr(self.resource, "{}_table".format(last_table)),
@@ -896,40 +896,46 @@ class SQLResource(BaseResource):
         """
         Returns a list of corpus joins for the sub query
         """
-        l = []
 
-        token_list = [(i, tup) for i, tup in enumerate(query_items)]
+        joins = []
+
+        token_list = []
+        offset = 0
+
+        for i, (_, item_string) in enumerate(query_items):
+            if item_string is not None:
+                token_list.append((offset, (i+1, item_string)))
+                offset += 1
+
         token_list = sorted(token_list,
-                     key=lambda x: len(x[1][1]) if x[1][1] is not None else -1,
-                     reverse=True)
+                            key=lambda x: (len(x[1][1]) -
+                                           2 * x[1][1].count("[")),
+                            reverse=True)
 
-        current_pos = 1
-        ref_pos = token_list[0][0]
-
-        for i, (pos, token) in token_list:
-            if i < ref_pos:
-                comp = "COQ_CORPUS_{prev}.{id} - {dist}".format(
-                            prev=ref_pos + 1,
-                            id=cls.corpus_id,
-                            dist=ref_pos - i)
+        for i, (offset, (N, _)) in enumerate(token_list):
+            if i == 0:
+                s = "FROM       {corpus} AS COQ_CORPUS_{N}"
+                comp = ""
+                ref_N = N
+                ref_offs = offset
             else:
-                comp = "COQ_CORPUS_{prev}.{id} + {dist}".format(
-                            prev=ref_pos + 1,
-                            id=cls.corpus_id,
-                            dist=i - ref_pos)
-            if current_pos == 1:
-                s = "{corpus} AS COQ_CORPUS_{N}"
-            else:
-                s = "INNER JOIN {corpus} AS COQ_CORPUS_{N} ON COQ_CORPUS_{N}.{corpus_id} = {comp}"
+                if N > ref_N:
+                    comp = "COQ_CORPUS_{{ref_N}}.{{id}} + {offs}"
+                    offs = offset - ref_offs
+                else:
+                    comp = "COQ_CORPUS_{{ref_N}}.{{id}} - {offs}"
+                    offs = abs(offset - ref_offs)
+                s = ("INNER JOIN {{corpus}} AS COQ_CORPUS_{{N}} "
+                     "ON COQ_CORPUS_{{N}}.{{id}} = {comp}").format(
+                         comp=comp.format(offs=offs))
+            s = s.format(
+                    corpus=cls.corpus_table,
+                    id=cls.corpus_id,
+                    N=N, ref_N=ref_N,
+                    comp=comp)
 
-            l.append(s.format(
-                corpus=cls.corpus_table,
-                corpus_id=cls.corpus_id,
-                N=i+1,
-                comp=comp))
-
-            current_pos += 1
-        return l
+            joins.append(s)
+        return joins
 
     @classmethod
     def get_required_tables(cls, root, selected, conditions):
@@ -1029,7 +1035,7 @@ class SQLResource(BaseResource):
                 table_alias=table_alias, table_id=table_id,
                 parent=parent.upper(), parent_id=parent_id, N=n+1)
 
-            table_str = "LEFT JOIN {} ON {}".format(table_str, where_str)
+            table_str = "INNER JOIN {} ON {}".format(table_str, where_str)
             return [table_str], []
 
         def add_joins(n, parent, tup):
@@ -1310,20 +1316,20 @@ class SQLResource(BaseResource):
                 if hashed:
                     link, res = get_by_hash(hashed)
                     if link.rc_from in lexicon_features:
-                        ext_alias = cls.alias_external_table(current_pos-1,
+                        ext_alias = cls.alias_external_table(i+1,
                                                          link, res)
                         ext_rc = "{}_{}".format(tab, feat)
                         ext_column = getattr(res, ext_rc)
                         s = "{ext_alias}.{ext_column} AS db_{db_name}_coq_{ext_rc}_{N}"
                         alias = s.format(
                             ext_alias=ext_alias, ext_column=ext_column,
-                            db_name=res.db_name, ext_rc=ext_rc, N=current_pos)
+                            db_name=res.db_name, ext_rc=ext_rc, N=i)
                         columns.append(alias)
                         current_pos += 1
                 if rc_feature in lexicon_features:
                     if token is not None:
                         column = "COQ_{table}_{pos}.{name}".format(
-                            table=tab.upper(), pos=current_pos,
+                            table=tab.upper(), pos=i+1,
                             name=getattr(cls, rc_feature))
                         current_pos += 1
                     else:
@@ -1364,6 +1370,30 @@ class SQLResource(BaseResource):
         return columns
 
     @classmethod
+    def get_condition_list(cls, query_items, join_list, selected):
+        condition_list = []
+        current_pos = 0
+        # go through the query items and add all required list as well as
+        # the WHERE conditions based on the query item specification
+        for i, (pos, s) in enumerate(query_items):
+            if s is not None:
+                token = tokens.COCAToken(s)
+                if s != "*":
+                    conditions = cls.get_token_conditions(i, token)
+                else:
+                    conditions = {}
+
+                for _, l in conditions.items():
+                    condition_list += ["({})".format(x) for x in l]
+                table_list, where_list = cls.get_feature_joins(i,
+                                                               selected,
+                                                               conditions)
+                join_list += table_list
+                condition_list += ["({})".format(x) for x in where_list]
+                current_pos += 1
+        return condition_list
+
+    @classmethod
     def get_query_string(cls, query_items, selected, columns=[], to_file=False):
         """
         Return an SQL string for the specified query.
@@ -1373,25 +1403,6 @@ class SQLResource(BaseResource):
 
         # get list of self-joints for the corpus:
         join_list = cls.get_corpus_joins(query_items)
-        condition_list = []
-        current_pos = 0
-
-        # go through the query items and add all required list as well as
-        # the WHERE conditions based on the query item specification
-        for i, (pos, s) in enumerate(query_items):
-            if s is not None:
-                token = tokens.COCAToken(s)
-                if s != "*":
-                    conditions = cls.get_token_conditions(current_pos, token)
-                else:
-                    conditions = {}
-
-                for _, l in conditions.items():
-                    condition_list += ["({})".format(x) for x in l]
-                table_list, where_list = cls.get_feature_joins(current_pos, selected, conditions)
-                join_list += table_list
-                condition_list += ["({})".format(x) for x in where_list]
-                current_pos += 1
 
         # Some tables are not linked by an ID, but by time alignments.
         # One example is the Segments table from the Buckeye corpus.
@@ -1406,8 +1417,12 @@ class SQLResource(BaseResource):
 
         sql_template = """
         SELECT {columns}
-        FROM   {joins}"""
+        {joins}"""
 
+        # get list of conditions that will be placed in the WHERE clause:
+        condition_list = cls.get_condition_list(query_items,
+                                                join_list,
+                                                selected)
         if condition_list:
             sql_template = """{}
             WHERE  {{conditions}}""".format(sql_template)
@@ -1420,7 +1435,6 @@ class SQLResource(BaseResource):
             S = """{}
             LIMIT  {}
             """.format(options.cfg.number_of_tokens)
-
         return S
 
     def get_context(self, token_id, origin_id, number_of_tokens, db_connection,
