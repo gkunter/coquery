@@ -593,7 +593,7 @@ class BaseReferenceCorpus(Function):
 
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
-    _name = "statistics_reference_corpus_frequency"
+    _name = "reference_corpus_frequency"
     single_column = True
 
     def __init__(self, *args, **kwargs):
