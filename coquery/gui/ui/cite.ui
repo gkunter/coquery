@@ -1,18 +1,213 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>CiteDialog</class>
+ <widget class="QDialog" name="CiteDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>480</height>
+    <height>492</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>How to cite – Coquery</string>
   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>&amp;Unified Stylesheet</string>
+       </property>
+       <property name="buddy">
+        <cstring>edit_unified</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QTextEdit" name="edit_unified">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="html">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Kunter, Gero. {date}. &lt;span style=&quot; font-style:italic;&quot;&gt;Coquery: a free corpus query tool&lt;/span&gt;. Version {version}, http://www.coquery.org. ([INSERT ACCESS DATE].)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>&amp;APA</string>
+       </property>
+       <property name="buddy">
+        <cstring>edit_apa</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QTextEdit" name="edit_apa">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="html">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Kunter, G. ({date}). Coquery: a free corpus query tool (version {version}) [Computer program]. Retrieved from &amp;lt;http://www.coquery.org&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>&amp;MLA</string>
+       </property>
+       <property name="buddy">
+        <cstring>edit_mla</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QTextEdit" name="edit_mla">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="html">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Kunter, Gero. &lt;span style=&quot; font-style:italic;&quot;&gt;Coquery: a free corpus query tool&lt;/span&gt;. Computer Software. Version {version}. {date}. Web. [INSERT ACCESS DATE]. &amp;lt;http://www.coquery.org&amp;gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>E&amp;ndnote</string>
+       </property>
+       <property name="buddy">
+        <cstring>edit_endnote</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QPlainTextEdit" name="edit_endnote">
+       <property name="font">
+        <font>
+         <family>Monospace</family>
+        </font>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="plainText">
+        <string>%0 Computer Program
+%A Kunter, Gero
+%D {date}
+%T Coquery: a free corpus query tool
+%U http://www.coquery.org
+%Z Version {version}</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>BibTe&amp;X</string>
+       </property>
+       <property name="buddy">
+        <cstring>edit_bibtex</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QPlainTextEdit" name="edit_bibtex">
+       <property name="font">
+        <font>
+         <family>Monospace</family>
+        </font>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="plainText">
+        <string>@misc{Coquery,
+  Title        = {{Coquery: a free corpus query tool}},
+  Author       = {{Kunter, Gero}},
+  Note         = {{Version {version}}},
+  HowPublished = {{http://www.coquery.org}},
+  Year         = {{{year}}}
+}
+</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>&amp;RIS</string>
+       </property>
+       <property name="buddy">
+        <cstring>edit_ris</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QPlainTextEdit" name="edit_ris">
+       <property name="font">
+        <font>
+         <family>Monospace</family>
+        </font>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="plainText">
+        <string>TY  - COMP
+A1  - Kunter, Gero
+TI  - Coquery: a free corpus query tool
+Y1  - {date}
+UR  - http://www.coquery.org
+N1  - Version {version}</string>
+       </property>
+       <property name="textInteractionFlags">
+        <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QPushButton" name="button_copy">
+       <property name="text">
+        <string>Copy to clipboard</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>
