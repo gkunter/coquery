@@ -396,6 +396,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_corpus_documentation.triggered.connect(self.open_corpus_help)
         self.ui.action_available_modules.triggered.connect(self.show_available_modules)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
+        self.ui.action_how_to_cite.triggered.connect(self.how_to_cite)
         self.ui.action_help.triggered.connect(self.help)
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
@@ -2828,8 +2829,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def show_about(self):
         from . import about
-        about = about.AboutDialog(parent=self)
-        about.exec_()
+        about_dialog = about.AboutDialog(parent=self)
+        about_dialog.exec_()
+
+    def how_to_cite(self):
+        from . import cite
+        cite_dialog = cite.CiteDialog(parent=self)
+        cite_dialog.exec_()
 
     def show_available_modules(self):
         from . import availablemodules
