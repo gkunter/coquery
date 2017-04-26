@@ -311,27 +311,23 @@ class CoqFeatureTray(CoqFeatureList):
 class CoqRotatedButton(QtWidgets.QPushButton):
     """
     A rotated push button.
-
-    Adopted from http://stackoverflow.com/a/36083737/5215507
     """
 
     def paintEvent(self, event):
         painter = QtWidgets.QStylePainter(self)
         painter.rotate(270)
-        painter.translate(-1 * self.height(), 0);
+        painter.translate(-self.height(), 0)
         painter.drawControl(QtWidgets.QStyle.CE_PushButton,
                             self.getSyleOptions())
 
     def minimumSizeHint(self):
-        size = super(CoqRotatedButton, self).minimumSizeHint()
+        size = QtWidgets.QPushButton(self.text()).minimumSizeHint()
         size.transpose()
-        return QtCore.QSize(QtWidgets.QPushButton().minimumSizeHint().height(),
-                            size.width())
+        return size
 
     def sizeHint(self):
-        size = super(CoqRotatedButton, self).sizeHint()
+        size = QtWidgets.QPushButton(self.text()).sizeHint()
         size.transpose()
-        size.setWidth(QtWidgets.QLabel().sizeHint().height())
         return size
 
     def getSyleOptions(self):
@@ -341,20 +337,28 @@ class CoqRotatedButton(QtWidgets.QPushButton):
         size.transpose()
         options.rect.setSize(size)
         options.features = QtWidgets.QStyleOptionButton.None_
+
+        features = []
+
         if self.isFlat():
-            options.features |= QtWidgets.QStyleOptionButton.Flat
+            features.append(QtWidgets.QStyleOptionButton.Flat)
+        elif not self.isDown():
+            features.append(QtWidgets.QStyle.State_Raised)
+
         if self.menu():
-            options.features |= QtWidgets.QStyleOptionButton.HasMenu
-        if self.autoDefault() or self.isDefault():
-            options.features |= QtWidgets.QStyleOptionButton.AutoDefaultButton
+            features.append(QtWidgets.QStyleOptionButton.HasMenu)
         if self.isDefault():
-            options.features |= QtWidgets.QStyleOptionButton.DefaultButton
+            features.append(QtWidgets.QStyleOptionButton.AutoDefaultButton)
+            features.append(QtWidgets.QStyleOptionButton.DefaultButton)
+        if self.autoDefault():
+            features.append(QtWidgets.QStyleOptionButton.AutoDefaultButton)
         if self.isDown() or (self.menu() and self.menu().isVisible()):
-            options.state |= QtWidgets.QStyle.State_Sunken
+            features.append(QtWidgets.QStyle.State_Sunken)
         if self.isChecked():
-            options.state |= QtWidgets.QStyle.State_On
-        if not self.isFlat() and not self.isDown():
-            options.state |= QtWidgets.QStyle.State_Raised
+            features.append(QtWidgets.QStyle.State_On)
+
+        for feat in features:
+            options.features = options.features | feat
 
         options.text = self.text()
         options.icon = self.icon()

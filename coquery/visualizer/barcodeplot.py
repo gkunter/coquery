@@ -93,10 +93,14 @@ class Visualizer(vis.BaseVisualizer):
 
 class BarcodePlot(vis.Visualizer):
     axes_style = "white"
+    TOP = 0.975
+    BOTTOM = 0.025
+    COLOR = None
 
     def plot_facet(self,
                    data, color, x=None, y=None, levels_x=None, levels_y=None,
-                   palette=None, **kwargs):
+                   palette=None, rug=None, rug_color="Black",
+                   **kwargs):
         """
         Plot a barcode plot.
 
@@ -116,7 +120,13 @@ class BarcodePlot(vis.Visualizer):
             xval = data[x].apply(lambda x: levels_x.index(x))
             colors = get_colors(palette, levels_x)
             cols = xval.apply(lambda x: colors[x])
-            plt.hlines(corpus_id, xval + 0.025, xval + 0.975, cols)
+            if rug:
+                if "top" in rug:
+                    plt.hlines(corpus_id, xval + 0.9, xval + 1, cols)
+                if "bottom" in rug:
+                    plt.hlines(corpus_id, xval, xval + 0.1, cols)
+            else:
+                plt.hlines(corpus_id, xval + self.BOTTOM, xval + self.TOP, cols)
         else:
             self.horizontal = True
             levels_y = levels_y[::-1]
@@ -134,12 +144,21 @@ class BarcodePlot(vis.Visualizer):
                 yval = data[y].apply(lambda y: levels_y.index(y))
                 colors = get_colors(palette, levels_x)
                 cols = data[x].apply(lambda x: colors[levels_x.index(x)])
-            plt.vlines(corpus_id, yval + 0.025, yval + 0.975, cols)
+            if rug:
+                if "top" in rug:
+                    plt.vlines(corpus_id, yval + 0.9, yval + 1, cols)
+                if "bottom" in rug:
+                    plt.vlines(corpus_id, yval, yval + 0.1, cols)
+            else:
+                plt.vlines(corpus_id,
+                           yval + self.BOTTOM, yval + self.TOP,
+                           cols)
 
         ax = kwargs.get("ax", plt.gca())
         ax.set(**ax_kwargs)
 
-    def set_annotations(self, grid):
+    def set_annotations(self, grid, values):
+        super(BarcodePlot, self).set_annotations(grid, values)
         lim = (0, self.session.Corpus.get_corpus_size())
         if self.horizontal:
             grid.set(xlim=lim)
@@ -157,3 +176,102 @@ class BarcodePlot(vis.Visualizer):
         if len(num) > 0 or len(cat) > 2:
             return False
         return True
+
+class HeatbarPlot(BarcodePlot):
+    """
+    Produce a heat bar instead of single bars.
+
+    Assuming that 'matches' is an array containing the corpus ids of the
+    tokens in the match, this code produces a heat bar:
+
+    import numpy as np
+    from matplotlib import pyplot as plt
+    import statsmodels
+
+    corpus_size = 50000
+    matches = np.unique(
+                np.concatenate(
+                    (np.random.normal(1000, 250, 10).astype(int),
+                     np.random.normal(32500, 2000, 20).astype(int),
+                     np.random.uniform(0, corpus_size, 20).astype(int))))
+
+    # KDE from statsmodels:
+    from statsmodels.nonparametric.kde import KDEUnivariate
+    kde = KDEUnivariate(matches.astype(float))
+    kde.fit(bw="scott")
+
+    # alternative KDE from scipy.stats:
+    # from scipy.stats import gaussian_kde
+    # kde = scipy.stats.gaussian_kde(matches, "silverman")
+
+    values = kde.evaluate(range(corpus_size))
+    #values =kde.density
+
+    plt.pcolormesh([values], cmap="Blues_r")
+    plt.vlines(matches, 0, 1)
+
+    """
+
+    TOP = 0.05
+    BOTTOM = 0.0
+    COLOR = "Black"
+
+    def __init__(self, *args, **kwargs):
+        from statsmodels.nonparametric.kde import KDEUnivariate
+        HeatbarPlot.kde = KDEUnivariate
+        super(HeatbarPlot, self).__init__(*args, **kwargs)
+
+    def plot_facet(self, data, color, **kwargs):
+        """
+        Plot a HeatBar plot.
+
+        A heatbar plot is like a barcode plot, only that there is also a
+        heat map plotted under the lines.
+        """
+
+        x = kwargs.get("x", None)
+        y = kwargs.get("y", None)
+        levels_x = kwargs.get("levels_x", None)
+        levels_y = kwargs.get("levels_y", None)
+
+        corpus_size = self.session.Corpus.get_corpus_size()
+        M = []
+        if x:
+            for current_x in levels_x:
+                dsub = data[data[x] == current_x]
+                matches = dsub.coquery_invisible_corpus_id
+                density = self.kde(matches.astype(float))
+                density.fit(bw="scott")
+                values = density.evaluate(range(corpus_size))[::-1]
+                #M.append(len(matches) * values / values.max())
+                M.append(len(matches) * values)
+            plt.imshow(pd.np.array(M).T,
+                       aspect="auto", cmap="Greys",
+                       extent=(0, len(levels_x), 0, corpus_size))
+        elif y:
+            for current_y in levels_y:
+                dsub = data[data[y] == current_y]
+                matches = dsub.coquery_invisible_corpus_id
+                density = self.kde(matches.astype(float))
+                try:
+                    density.fit(bw="scott")
+                except:
+                    values = pd.np.array([0] * corpus_size)
+                else:
+                    values = density.evaluate(range(corpus_size))
+                    values = values / values.max()
+                M.append(len(matches) * values)
+            plt.imshow(pd.np.array(M),
+                       aspect="auto", cmap="Greys",
+                       extent=(0, corpus_size, 0, len(levels_y)))
+        else:
+            matches = data["coquery_invisible_corpus_id"]
+            density = self.kde(matches.astype(float))
+            density.fit(bw="scott")
+            M = [density.evaluate(range(corpus_size))]
+            plt.imshow(M,
+                       aspect="auto", cmap="Greys",
+                       extent=(0, corpus_size, 0, 1))
+        super(HeatbarPlot, self).plot_facet(data, color,
+                                            rug=["top", "bottom"],
+                                            **kwargs)

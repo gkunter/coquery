@@ -144,7 +144,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._context_connections = []
         self.terminating = False
         self._first_visualization_call = True
-        self.apply_required = set()
+        self._last_aggregate = None
 
         self.widget_list = []
         self.Session = session
@@ -207,6 +207,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except TypeError:
             self.ui.centralwidget.adjustSize()
             self.adjustSize()
+
+        self.Session.summary_functions = options.cfg.summary_functions
+        self.Session.group_functions = options.cfg.group_functions
 
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -1081,7 +1084,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             if ("substitutions" not in current_properties or
                 current_properties["substitutions"] != result["substitutions"]):
-                if AUTO_SUBSTITUTE in options.settings.value("settings_auto_apply"):
+                if AUTO_SUBSTITUTE in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
                     self.reaggregate()
                 else:
                     self.enable_apply_button()
@@ -1129,7 +1133,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         if set(old_list) != set(options.cfg.stopword_list):
             self.set_button_labels()
-            if AUTO_STOPWORDS in options.settings.value("settings_auto_apply"):
+            if AUTO_STOPWORDS in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
                 self.enable_apply_button()
             else:
                 self.reaggregate()
@@ -1164,6 +1169,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def column_moved(self, *args, **kwargs):
         section, last, new = args
 
+        if options.cfg.MODE == QUERY_MODE_TOKENS:
+            print(self.Session.data_table.columns)
+            columns = list(self.Session.data_table.columns.values)
+            vis_cols = self.table_model.header
+            for x in vis_cols[::-1]:
+                columns.remove(x)
+                columns.insert(0, x)
+            moved = self.table_model.header[section]
+            columns.remove(moved)
+            columns.insert(new, moved)
+            self.Session.data_table = self.Session.data_table[columns]
+            print(self.Session.data_table.columns)
         #self.reaggregate()
         #if self.Session.query_type == queries.ContingencyQuery:
             #self.reaggregate(query_type=queries.ContingencyQuery, recalculate=True)
@@ -1504,7 +1521,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def change_userdata(self):
         self.user_columns = True
-        if AUTO_USERDATA in options.settings.value("settings_auto_apply"):
+        if AUTO_USERDATA in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
             self.reaggregate()
         else:
             self.enable_apply_button()
@@ -1540,10 +1558,26 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         current_properties = properties.get(options.cfg.corpus, {})
         options.cfg.column_color = current_properties.get("colors", {})
 
-
         old_row, old_col = (self.ui.data_preview.currentIndex().row(),
                             self.ui.data_preview.currentIndex().column())
         self.ui.data_preview.setModel(self.table_model)
+        self.ui.data_preview.horizontalHeader().reset()
+        if self._last_aggregate != options.cfg.MODE:
+            print("------- resetting --------")
+            header = self.ui.data_preview.horizontalHeader()
+            for i in range(header.count()):
+                print(i, header.logicalIndex(i), header.visualIndex(i))
+            while any([header.logicalIndex(i) != i for
+                       i in range(header.count())]):
+                print(any([header.logicalIndex(i) != i for
+                       i in range(header.count())]))
+                for i in range(header.count()):
+                    if header.logicalIndex(i) != i:
+                        header.moveSection(i, header.logicalIndex(i))
+            for i in range(header.count()):
+                print(i, header.logicalIndex(i), header.visualIndex(i))
+        self._last_aggregate = options.cfg.MODE
+
         self.ui.data_preview.setDelegates()
         try:
             self.ui.data_preview.setCurrentIndex(
@@ -1626,7 +1660,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             s2 = {x.get_hash() for x in result}
 
             if (s1 != s2):
-                if AUTO_FILTER in options.settings.value("settings_auto_apply"):
+                if AUTO_FILTER in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
                     self.reaggregate()
                 else:
                     self.enable_apply_button()
@@ -1654,7 +1689,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             s2 = {x.get_hash() for x in result}
 
             if (s1 != s2):
-                if AUTO_FILTER in options.settings.value("settings_auto_apply"):
+                if AUTO_FILTER in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
                     self.reaggregate()
                 else:
                     self.enable_apply_button()
@@ -2064,7 +2100,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                        self.Session.Resource.name)
         for column in selection:
             self.hidden_features.add(column)
-        if AUTO_VISIBILITY in options.settings.value("settings_auto_apply"):
+        if AUTO_VISIBILITY in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
             self.update_table_models()
             self.update_columns()
         else:
@@ -2083,7 +2120,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                        self.Session.Resource.name)
         for column in selection:
             self.hidden_features.remove(column)
-        if AUTO_VISIBILITY in options.settings.value("settings_auto_apply"):
+        if AUTO_VISIBILITY in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
             self.update_table_models()
             self.update_columns()
         else:
@@ -2600,6 +2638,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 x = self.widget_list.pop(0)
                 x.close()
                 del x
+
+            options.cfg.summary_functions = self.Session.summary_functions
+            options.cfg.group_functions = self.Session.group_functions
+
             self.save_configuration()
             event.accept()
 
@@ -2766,7 +2808,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if options.cfg:
             options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
             options.cfg.MODE = self.get_aggregate()
-            self._last_aggregate = options.cfg.MODE
             options.cfg.context_restrict = (
                 self.ui.check_restrict.isChecked() and
                 self.ui.check_restrict.isEnabled())
@@ -2784,8 +2825,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # FIXME: eventually, selected_features should be a session variable
             options.cfg.selected_features = self.column_tree.selected()
             options.cfg.group_columns = [x for x
-                                         in self.ui.list_group_columns.columns
-                                         if x in options.cfg.selected_features]
+                                         in self.ui.list_group_columns.columns]
             self.get_context_values()
 
     def get_external_links(self):
@@ -3026,12 +3066,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             except Exception as e:
                 print(e)
                 kwargs.update({"function_class": tuple()})
-        if not columns:
-            columns = [x for x in self.table_model.content.columns]
-            available = []
-        else:
-            available = [x for x in self.table_model.content.columns
-                         if x not in columns]
+        available = []
+        if hasattr(self, "table_model"):
+            if not columns:
+                columns = [x for x in self.table_model.content.columns]
+                available = []
+            else:
+                available = [x for x in self.table_model.content.columns
+                            if x not in columns]
         kwargs["available_columns"] = available
         response = addfunction.FunctionDialog.set_function(parent=self,
                                                            columns=columns,
@@ -3056,7 +3098,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self.Session.column_functions.add_function(fun)
 
-        if AUTO_FUNCTION in options.settings.value("settings_auto_apply"):
+        if AUTO_FUNCTION in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
             self.reaggregate()
         else:
             self.enable_apply_button()

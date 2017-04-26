@@ -40,6 +40,8 @@ from collections import defaultdict
 from . import general
 from . import filters
 from .errors import *
+from . import functionlist
+from . import functions
 
 CONSOLE_DEPRECATION = """The command-line version of Coquery is deprecated.
 
@@ -278,6 +280,9 @@ class Options(object):
         self.args.last_number_of_tokens = 50
         self.args.output_separator = ","
         self.args.corpus = None
+        self.args.gui = True
+        self.args.summary_functions = functionlist.FunctionList()
+        self.args.group_functions = functionlist.FunctionList()
 
         self.args.table_links = defaultdict(list)
 
@@ -709,7 +714,7 @@ class Options(object):
                 self.args.first_run = False
 
         for x in ["main", "sql", "gui", "output", "filter", "context",
-                  "links", "reference_corpora"]:
+                  "links", "reference_corpora", "functions"]:
             if x not in config_file.sections():
                 config_file.add_section(x)
 
@@ -922,6 +927,55 @@ class Options(object):
                     else:
                         self.args.group_filter_list.append(filt)
 
+            # read FUNCTIONS section
+            sum_columns = {}
+            sum_values = {}
+            sum_aggrs = {}
+            sum_names = {}
+            sum_types = {}
+            max_sum_func = 0
+
+            for var, value in config_file.items("functions"):
+                try:
+                    parsed = var.split("_")
+                    if len(parsed) == 3:
+                        f_type, s_num, cat = parsed
+                        print(f_type, s_num, cat)
+                        try:
+                            num = int(s_num)
+                        except ValueError:
+                            continue
+                        if f_type == "func":
+                            max_sum_func = max(num, max_sum_func)
+                            if cat == "name":      sum_names[num] = value
+                            elif cat == "columns": sum_columns[num] = value.split(",")
+                            elif cat == "value":   sum_values[num] = value
+                            elif cat == "aggr":    sum_aggrs[num] = value
+                            elif cat == "type":    sum_types[num] = value
+                except Exception as e:
+                    print(e)
+                    pass
+
+            for i in range(max_sum_func + 1):
+                col = sum_columns.get(i)
+                name = sum_names.get(i)
+                val = sum_values.get(i)
+                aggr = sum_aggrs.get(i)
+                f_type = sum_types.get(i)
+                try:
+                    FUN = func_types[name]
+                except KeyError:
+                    print(i, name)
+                else:
+                    func = FUN(columns=col, value=val, aggr=aggr)
+                    if f_type == "group":
+                        self.args.group_functions.add_function(func)
+                    elif f_type == "summary":
+                        self.args.summary_functions.add_function(func)
+                    else:
+                        print("Function not processed", name)
+                        pass
+
         # Use QSettings?
         if settings:
             column_properties = {}
@@ -939,12 +993,6 @@ class Options(object):
                 if x.startswith("column_width_"):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
-            self.args.summary_functions = settings.value("summary_functions", [])
-            if type(self.args.summary_functions) is not list:
-                self.args.summary_functions = []
-            self.args.group_functions = settings.value("group_functions", [])
-            if type(self.args.group_functions) is not list:
-                self.args.group_functions = []
 
 cfg = None
 settings = None
@@ -1031,6 +1079,26 @@ def save_configuration():
         config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
         config.set("filter", "groupfilter_{}_value".format(i), filt.value)
 
+    if not "functions" in config.sections():
+        config.add_section("functions")
+    i = 0
+    for func in cfg.summary_functions:
+        config.set("functions", "func_{}_name".format(i), func._name)
+        config.set("functions", "func_{}_columns".format(i),
+                    ",".join(func.column_list))
+        config.set("functions", "func_{}_value".format(i), func.value)
+        config.set("functions", "func_{}_aggr".format(i), func.aggr)
+        config.set("functions", "func_{}_type".format(i), "summary")
+        i += 1
+    for func in cfg.group_functions:
+        config.set("functions", "func_{}_name".format(i), func._name)
+        config.set("functions", "func_{}_columns".format(i),
+                    ",".join(func.column_list))
+        config.set("functions", "func_{}_value".format(i), func.value)
+        config.set("functions", "func_{}_aggr".format(i), func.aggr)
+        config.set("functions", "func_{}_type".format(i), "group")
+        i += 1
+
     if cfg.table_links:
         if not "links" in config.sections():
             config.add_section("links")
@@ -1051,16 +1119,6 @@ def save_configuration():
         for x in cfg.column_width:
             if not x.startswith("coquery_invisible") and cfg.column_width[x] and x:
                 settings.setValue("column_width_{}".format(x), cfg.column_width[x])
-        try:
-            f = cfg.summary_functions
-        except AttributeError:
-            f = {}
-        settings.setValue("summary_functions", f)
-        try:
-            f = cfg.group_functions
-        except AttributeError:
-            f = {}
-        settings.setValue("group_functions", f)
 
         if not "gui" in config.sections():
             config.add_section("gui")
@@ -1564,3 +1622,14 @@ for mod in ["sqlalchemy", "pandas"]:
         missing_modules.append(mod)
 
 logger = logging.getLogger(NAME)
+
+import inspect
+
+func_types = {}
+for _, cls in inspect.getmembers(functions):
+    if callable(cls):
+        try:
+            func_types[cls._name] = cls
+        except AttributeError:
+            pass
+

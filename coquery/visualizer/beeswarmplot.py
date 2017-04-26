@@ -26,7 +26,8 @@ class Visualizer(vis.BaseVisualizer):
 
     def format_coord(self, x, y, title):
         return "{}: <b>{}</b>, corpus position: {}".format(
-            self._groupby[-1], sorted(self._levels[-1])[int(round(x))], int(y))
+            self._groupby[-1],
+            sorted(self._levels[-1])[int(round(x))], int(y))
 
     def setup_figure(self):
         with sns.axes_style("ticks"):
@@ -47,7 +48,7 @@ class Visualizer(vis.BaseVisualizer):
 
     def onclick(self, event):
         try:
-            # FIXME: instead of using event.xdata, the closest token id
+            # FIXME: instead of using event.ydata, the closest token id
             # should be used for lookup. The discussion at
             # http://stackoverflow.com/questions/12141150/ may help to
             # do this efficiently

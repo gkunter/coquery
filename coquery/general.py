@@ -221,6 +221,16 @@ def get_visible_columns(df, manager, session, hidden=False):
                                    "coquery_invisible")) and
                  x not in manager.hidden_columns)]
 
+    #l = set_preferred_order(l)
+    return l
+
+def set_preferred_order(l, session):
+    """
+    Arrange the column names in l so that they occur in the preferred order.
+
+    Columns not in the preferred order follow in an unspecified order.
+    """
+
     resource_order = session.Resource.get_preferred_output_order()
     for x in resource_order[::-1]:
         lex_list = [y for y in l if x in y]

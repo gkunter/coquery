@@ -471,9 +471,9 @@ class BaseVisualizer(QtCore.QObject):
             if not labels:
                 return False
 
-            # Use method from http://stackoverflow.com/questions/22667224/ to
             # get a renderer even on backends where they are normally
-            # unavailable:
+            # unavailable, using method by "Stretch" (CC-BY-AS)
+            # http://stackoverflow.com/a/22689498/5215507
             if hasattr(fig.canvas, "get_renderer"):
                 renderer = fig.canvas.get_renderer()
             else:
@@ -572,8 +572,11 @@ class Visualizer(CoqObject):
                    palette=None, **kwargs):
         pass
 
-    def set_annotations(self, grid):
-        pass
+    def set_annotations(self, grid, values):
+        ax = grid.fig.gca()
+        ax.set_title(values.get("title", "(none)"))
+        ax.set_xlabel(values.get("xlab", "(none)"))
+        ax.set_ylabel(values.get("ylab", "(none)"))
 
     @staticmethod
     def dtype(feature, df):

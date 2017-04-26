@@ -40,8 +40,6 @@ class Filter(CoqObject):
             raise ValueError("Invalid filter operator '{}'".format(operator))
         if not feature:
             raise ValueError("No filter column specified")
-        if not value:
-            raise ValueError("No filter value specified")
 
         self.feature = feature
         self.operator = operator
@@ -72,7 +70,7 @@ class Filter(CoqObject):
         A fixed string is enclosed in simple quotation marks. Quotation
         marks inside the string are escaped.
         """
-        if self.dtype == object:
+        if self.dtype == object or isinstance(x, str):
             if "'" in x:
                 val = x.replace("'", "\\'")
             else:
