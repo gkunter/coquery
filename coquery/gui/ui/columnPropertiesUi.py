@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'columnProperties.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -33,7 +33,8 @@ class Ui_ColumnProperties(object):
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.tab)
-        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_3.setContentsMargins(6, 6, 6, 6)
+        self.gridLayout_3.setSpacing(6)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.buttonbox_color = QtWidgets.QDialogButtonBox(self.tab)
         self.buttonbox_color.setOrientation(QtCore.Qt.Vertical)
@@ -90,7 +91,8 @@ class Ui_ColumnProperties(object):
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.tab_2)
-        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_3.setContentsMargins(6, 6, 6, 6)
+        self.verticalLayout_3.setSpacing(6)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.table_substitutions = QtWidgets.QTableWidget(self.tab_2)
         self.table_substitutions.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
