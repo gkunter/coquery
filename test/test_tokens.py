@@ -819,6 +819,17 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
 
+    def test_lemmatize_pos(self):
+        S = "#abc.[N*]"
+        token = self.token_type(S, self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertTrue(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, ["N%"])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["abc"])
+
     def test_escape_negation1(self):
         S = "\\~abc"
         token = self.token_type(S, self.lexicon)
