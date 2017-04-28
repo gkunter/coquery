@@ -967,6 +967,7 @@ p, li { white-space: pre-wrap; }
     <addaction name="separator"/>
     <addaction name="action_available_modules"/>
     <addaction name="action_about_coquery"/>
+    <addaction name="action_how_to_cite"/>
    </widget>
    <widget class="QMenu" name="menuCorpus">
     <property name="title">
@@ -1607,16 +1608,21 @@ p, li { white-space: pre-wrap; }
     <string>Ctrl+D</string>
    </property>
   </action>
+  <action name="action_how_to_cite">
+   <property name="text">
+    <string>How to cite</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CoqTextEdit</class>
-   <extends>QTextEdit</extends>
+   <class>CoqClickableLabel</class>
+   <extends>QLabel</extends>
    <header location="global">..classes</header>
   </customwidget>
   <customwidget>
-   <class>CoqClickableLabel</class>
-   <extends>QLabel</extends>
+   <class>CoqTextEdit</class>
+   <extends>QTextEdit</extends>
    <header location="global">..classes</header>
   </customwidget>
   <customwidget>

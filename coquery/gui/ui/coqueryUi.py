@@ -667,6 +667,8 @@ class Ui_MainWindow(object):
         self.action_find.setObjectName("action_find")
         self.action_visualization_designer = QtWidgets.QAction(MainWindow)
         self.action_visualization_designer.setObjectName("action_visualization_designer")
+        self.action_how_to_cite = QtWidgets.QAction(MainWindow)
+        self.action_how_to_cite.setObjectName("action_how_to_cite")
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -683,6 +685,7 @@ class Ui_MainWindow(object):
         self.menuHilfe.addSeparator()
         self.menuHilfe.addAction(self.action_available_modules)
         self.menuHilfe.addAction(self.action_about_coquery)
+        self.menuHilfe.addAction(self.action_how_to_cite)
         self.menuCorpus.addAction(self.action_manage_corpus)
         self.menuCorpus.addSeparator()
         self.menuCorpus.addAction(self.action_link_external)
@@ -888,6 +891,7 @@ class Ui_MainWindow(object):
         self.action_find.setShortcut(_translate("MainWindow", "Ctrl+F"))
         self.action_visualization_designer.setText(_translate("MainWindow", "&Visualization designer..."))
         self.action_visualization_designer.setShortcut(_translate("MainWindow", "Ctrl+D"))
+        self.action_how_to_cite.setText(_translate("MainWindow", "How to cite"))
 
 from ..classes import CoqClickableLabel, CoqRotatedButton, CoqTextEdit
 from ..findwidget import CoqFindWidget

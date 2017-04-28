@@ -140,6 +140,8 @@ class QueryToken(object):
 
         for x in s:
             if parse_next:
+                if x in ["~", "#"]:
+                    rep.append("\\")
                 rep.append(x)
                 parse_next = False
             else:
@@ -205,20 +207,27 @@ class COCAToken(QueryToken):
         transcript_specification = None
         gloss_specification = None
 
-        self.negated = bool(self.S.count(self.negation_flag) & 1)
-        self.negated = bool(re.search("^\s*({}*)".format(self.negation_flag), self.S).group(0).count(self.negation_flag) & 1)
-        pat = "^\s*({}*)(\\\\#)?(#*)(.*)".format(self.negation_flag, self.lemmatize_flag)
-        self.lemmatize = bool(re.search(pat, self.S).groups()[2])
-        work = self.S.strip(self.negation_flag)
+        pat = r"^\s*(?P<negated>~*)(?P<lemmatize>#*)(?P<item>.*)"
+        match = re.search(pat, self.S)
+
+        if match.groupdict()["negated"]:
+            self.negated = bool(len(match.groupdict()["negated"]) % 2)
+        else:
+            self.negated = False
+
+        self.lemmatize = bool(match.groupdict()["lemmatize"])
+        work = (match.groupdict()["item"]
+                     .replace("\\#", "#")
+                     .replace("\\~", "~"))
 
         if work == "//" or work == "[]":
             word_specification = work
         else:
             # try to match WORD|LEMMA|TRANS.[POS]:
-            match = re.match("{}*(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){{1}}(\.\[(?P<class>.*)\]){{1}}".format(self.lemmatize_flag), work)
+            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", work)
             if not match:
                 # try to match WORD|LEMMA|TRANS:
-                match = re.match("{}*(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){{1}}".format(self.lemmatize_flag), work)
+                match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", work)
 
             word_specification = match.groupdict()["word"]
             # word specification that begin and end with quotation marks '"'
