@@ -634,6 +634,16 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
         self._image_features.append(rc_feature)
 
+    @classmethod
+    def add_exposed_id(cls, rc_feature):
+        """
+        Add the resource feature to the list of exposed IDs.
+
+        Exposed IDs are selectable in the resource tree, i.e. they are added
+        to the list of queryable corpus features.
+        """
+        cls.exposed_ids.append(rc_feature)
+
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
         the class attribute self._lexicon_code. This function is needed
