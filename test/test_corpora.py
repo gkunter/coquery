@@ -30,6 +30,7 @@ class Resource(SQLResource):
     word_label = "Word"
     word_pos = "POS"
     word_lemma_id = "LemmaId"
+    word_transcript = "Transcript"
     lemma_table = "Lemmas"
     lemma_id = "LemmaId"
     lemma_label = "Lemma"
@@ -51,6 +52,7 @@ class Resource(SQLResource):
 
     query_item_pos = "word_pos"
     query_item_lemma = "lemma_label"
+    query_item_transcript = "word_transcript"
 
     annotations = {"segment": "word"}
 
@@ -71,7 +73,8 @@ class FlatResource(SQLResource):
     db_name = "MockFlat"
     name = "Flat"
     query_item_word = "word_label"
-    query_item_lemma = "word_label"
+    query_item_lemma = "word_lemma"
+    query_item_pos = "word_pos"
 
 
 class ExternalCorpus(SQLResource):
@@ -113,12 +116,12 @@ class TestCorpus(unittest.TestCase):
 
     # TEST TABLE PATH
 
-    def test_table_path_1(self):
+    def test_table_path_deep(self):
         l = ["word", "deep"]
         path = self.resource.get_table_path(*l)
         self.assertListEqual(path, ["word", "lemma", "deep"])
 
-    def test_table_path_2(self):
+    def test_table_path_non_existing(self):
         l = ["lemma", "source"]
         path = self.resource.get_table_path(*l)
         self.assertEqual(path, None)
@@ -331,36 +334,69 @@ class TestCorpus(unittest.TestCase):
         d = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(d, {"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR COQ_LEMMA_1.Lemma LIKE 'b%'"]})
 
+    def get_token_conditions_4(self):
+        token = COCAToken("a*.[n*]")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word LIKE 'a%'",
+                       "COQ_WORD_1.POS LIKE 'n%'"]})
+
     def test_token_conditions_lemmatized_flat_1(self):
         self.Session.Resource = self.flat_resource
         S = "#abc"
         token = COCAToken(S, self.Session)
-        d = self.resource.get_token_conditions(0, token)
+        d = self.flat_resource.get_token_conditions(0, token)
         self.assertEqual(
             self.simple(d["word"][0]),
             self.simple("""
-                COQ_LEMMA_1.Lemma IN
+                COQ_WORD_1.Lemma IN
                     (SELECT DISTINCT Lemma
                      FROM       Lexicon AS COQ_WORD_1
                      WHERE (COQ_WORD_1.Word = 'abc'))"""))
+        self.Session.Resource = self.resource
+
+    def test_token_conditions_lemmatized_flat_pos(self):
+        self.Session.Resource = self.flat_resource
+        S = "#a*.[n*]"
+        token = COCAToken(S, self.Session)
+        d = self.flat_resource.get_token_conditions(0, token)
+        self.assertEqual(
+            self.simple(d["word"][0]),
+            self.simple("""
+                COQ_WORD_1.Lemma IN
+                    (SELECT DISTINCT Lemma
+                     FROM       Lexicon AS COQ_WORD_1
+                     WHERE (COQ_WORD_1.Word LIKE 'a%') AND
+                           (COQ_WORD_1.POS LIKE 'n%'))"""))
         self.Session.Resource = self.resource
 
     def test_token_conditions_lemmatized_deep_1(self):
         S = "#abc"
         token = COCAToken(S, self.Session)
         d = self.resource.get_token_conditions(0, token)
-        print()
-        from pprint import pprint
-        pprint(d)
         self.assertEqual(
             self.simple(d["word"][0]),
             self.simple("""
                 COQ_LEMMA_1.Lemma IN
                     (SELECT DISTINCT Lemma
                      FROM       Lexicon AS COQ_WORD_1
-                     INNER JOIN Lemma AS COQ_LEMMA_1
-                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaID
+                     INNER JOIN Lemmas AS COQ_LEMMA_1
+                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
                      WHERE (COQ_WORD_1.Word = 'abc'))"""))
+
+    def test_token_conditions_lemmatized_deep_2(self):
+        S = "#/a*/"
+        token = COCAToken(S, self.Session)
+        d = self.resource.get_token_conditions(0, token)
+        self.assertEqual(
+            self.simple(d["word"][0]),
+            self.simple("""
+                COQ_LEMMA_1.Lemma IN
+                    (SELECT DISTINCT Lemma
+                     FROM       Lexicon AS COQ_WORD_1
+                     INNER JOIN Lemmas AS COQ_LEMMA_1
+                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
+                     WHERE (COQ_WORD_1.Transcript LIKE 'a%'))"""))
 
     ### SELECT COLUMNS
 

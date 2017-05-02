@@ -1153,13 +1153,26 @@ class SQLResource(BaseResource):
         _, last_table, _ = cls.split_resource_feature(word_feature)
 
         path = cls.get_table_path(w_tab, l_tab)
-        print(path)
+        prev_alias = word_alias
+        prev_tab = w_tab
+
         if path:
-            for table in path:
+            for table in path[1:]:
                 table_name = getattr(cls, "{}_table".format(table))
+                table_id = getattr(cls, "{}_id".format(table))
                 table_alias = "COQ_{}_{}".format(table.upper(), i+1)
-                table_list.append("INNER JOIN {} AS {} ON <???>".format(
-                    table_name, table_alias))
+
+                prev_id = getattr(cls, "{}_{}_id".format(prev_tab, table))
+
+                linking_condition = "{}.{} = {}.{}".format(
+                    table_alias, table_id,
+                    prev_alias, prev_id)
+
+                table_list.append("INNER JOIN {} AS {} ON {}".format(
+                    table_name, table_alias,
+                    linking_condition))
+
+                prev_alias = table_alias
 
         if options.cfg.regexp:
             operator = "REGEXP"
@@ -1174,7 +1187,7 @@ class SQLResource(BaseResource):
 
         # using the path, get a list of all lemma labels that belong to
         # the word ids from the list:
-        inner_select = "SELECT DISTINCT {} FROM {} WHERE ({{where}})".format(
+        inner_select = "SELECT DISTINCT {} FROM {} WHERE {{where}}".format(
                 lemma_column, " ".join(table_list))
 
 
@@ -1272,11 +1285,14 @@ class SQLResource(BaseResource):
                           for x in wildcards]
                 s = " OR ".join(s_list + s_exp)
 
-            if token.lemmatize:
-                condition = cls.get_lemmatized_contitions(i, token)
-                s = condition.format(where=s)
-
             d[tab].append(s)
+
+        if token.lemmatize:
+            condition = cls.get_lemmatized_contitions(i, token)
+            d = {"word": [
+                    condition.format(where=" AND ".join(
+                    ["({})".format(x) for x in list(d.values())[0]]))]}
+
         return d
 
     @classmethod
