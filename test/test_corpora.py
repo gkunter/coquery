@@ -55,8 +55,40 @@ class Resource(SQLResource):
     annotations = {"segment": "word"}
 
 
+class FlatResource(SQLResource):
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    corpus_source_id = "FileId"
+    corpus_starttime = "Start"
+    corpus_endtime = "End"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_label = "Word"
+    word_pos = "POS"
+    word_lemma = "Lemma"
+
+    db_name = "MockFlat"
+    name = "Flat"
+    query_item_word = "word_label"
+    query_item_lemma = "word_label"
+
+
+class ExternalCorpus(SQLResource):
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_label = "Word"
+    word_data = "ExtData"
+    db_name = "extcorp"
+    name = "ExternalCorpus"
+
+
 class TestCorpus(unittest.TestCase):
     resource = Resource
+    flat_resource = FlatResource
 
     @staticmethod
     def pos_check_function(l):
@@ -78,12 +110,31 @@ class TestCorpus(unittest.TestCase):
         COCAToken.set_pos_check_function(self.pos_check_function)
 
         #options.cfg.external_links = [(Link(), "word_label")]
-    
+
+    # TEST TABLE PATH
+
+    def test_table_path_1(self):
+        l = ["word", "deep"]
+        path = self.resource.get_table_path(*l)
+        self.assertListEqual(path, ["word", "lemma", "deep"])
+
+    def test_table_path_2(self):
+        l = ["lemma", "source"]
+        path = self.resource.get_table_path(*l)
+        self.assertEqual(path, None)
+
+    @staticmethod
+    def simple(s):
+        s = s.replace("\n", " ")
+        while "  " in s:
+            s = s.replace("  ", " ")
+        return s.strip()
+
     #def test_is_lexical(self):
         #self.assertTrue(self.resource.is_lexical("word_label"))
         #self.assertTrue(self.resource.is_lexical("cmudict.word_transcript"))
         #self.assertFalse(self.resource.is_lexical("source_label"))
-        
+
     #def test_no_link(self):
         #table_structure = ice_ng.Resource.get_table_structure("word_table", ["word_label"])
         #self.assertEqual(table_structure["rc_features"], ['word_label', 'word_lemma_id', 'word_pos', 'word_transcript'])
@@ -140,7 +191,7 @@ class TestCorpus(unittest.TestCase):
         root, l = self.resource.get_required_tables("corpus", ["lemma_label"], {})
         self.assertEqual(l, [("word", [("lemma", [])])])
 
-    ### CORPUS JOINS
+    # TEST CORPUS JOINS
 
     def test_corpus_joins_one_item(self):
         query = TokenQuery("*", self.Session)
@@ -177,7 +228,6 @@ class TestCorpus(unittest.TestCase):
                                  "INNER JOIN Corpus AS COQ_CORPUS_3 ON COQ_CORPUS_3.ID = COQ_CORPUS_2.ID + 1",
                                  "INNER JOIN Corpus AS COQ_CORPUS_1 ON COQ_CORPUS_1.ID = COQ_CORPUS_2.ID - 1"])
 
-
     def test_quantified_query_string_1(self):
         query = TokenQuery("* b*{1,2} *", self.Session)
         self.assertTrue(len(query.query_list) == 2)
@@ -194,6 +244,12 @@ class TestCorpus(unittest.TestCase):
              "INNER JOIN Corpus AS COQ_CORPUS_3 ON COQ_CORPUS_3.ID = COQ_CORPUS_2.ID + 1",
              "INNER JOIN Corpus AS COQ_CORPUS_1 ON COQ_CORPUS_1.ID = COQ_CORPUS_2.ID - 1",
              "INNER JOIN Corpus AS COQ_CORPUS_4 ON COQ_CORPUS_4.ID = COQ_CORPUS_2.ID + 2"])
+
+    def test_lemmatized_corpus_joins_1(self):
+        S = "#abc.[n*]"
+        query = TokenQuery(S, self.Session)
+        l = self.resource.get_corpus_joins(query.query_list[0])
+        self.assertListEqual(l, ["FROM       Corpus AS COQ_CORPUS_1"])
 
     ### FEATURE JOINS
 
@@ -275,6 +331,36 @@ class TestCorpus(unittest.TestCase):
         d = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(d, {"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR COQ_LEMMA_1.Lemma LIKE 'b%'"]})
 
+    def test_token_conditions_lemmatized_flat_1(self):
+        self.Session.Resource = self.flat_resource
+        S = "#abc"
+        token = COCAToken(S, self.Session)
+        d = self.resource.get_token_conditions(0, token)
+        self.assertEqual(
+            self.simple(d["word"][0]),
+            self.simple("""
+                COQ_LEMMA_1.Lemma IN
+                    (SELECT DISTINCT Lemma
+                     FROM       Lexicon AS COQ_WORD_1
+                     WHERE (COQ_WORD_1.Word = 'abc'))"""))
+        self.Session.Resource = self.resource
+
+    def test_token_conditions_lemmatized_deep_1(self):
+        S = "#abc"
+        token = COCAToken(S, self.Session)
+        d = self.resource.get_token_conditions(0, token)
+        print()
+        from pprint import pprint
+        pprint(d)
+        self.assertEqual(
+            self.simple(d["word"][0]),
+            self.simple("""
+                COQ_LEMMA_1.Lemma IN
+                    (SELECT DISTINCT Lemma
+                     FROM       Lexicon AS COQ_WORD_1
+                     INNER JOIN Lemma AS COQ_LEMMA_1
+                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaID
+                     WHERE (COQ_WORD_1.Word = 'abc'))"""))
 
     ### SELECT COLUMNS
 
@@ -338,13 +424,6 @@ class TestCorpus(unittest.TestCase):
              "NULL AS coq_word_label_9",
              "COQ_CORPUS_1.ID AS coquery_invisible_corpus_id",
              "COQ_CORPUS_1.FileId AS coquery_invisible_origin_id"])
-
-    @staticmethod
-    def simple(s):
-        s = s.replace("\n", " ")
-        while "  " in s:
-            s = s.replace("  ", " ")
-        return s.strip()
 
     def test_query_string_blank(self):
         query = TokenQuery("*", self.Session)
@@ -461,17 +540,6 @@ class TestCorpus(unittest.TestCase):
             ["(COQ_WORD_1.Word = 'more')",
              "(COQ_WORD_3.Word = 'than')",
              "(COQ_WORD_8.POS LIKE 'nn%')"])
-
-class ExternalCorpus(SQLResource):
-    corpus_table = "Corpus"
-    corpus_id = "ID"
-    corpus_word_id = "WordId"
-    word_table = "Lexicon"
-    word_id = "WordId"
-    word_label = "Word"
-    word_data = "ExtData"
-    db_name = "extcorp"
-    name = "ExternalCorpus"
 
 
 def _monkeypatch_get_resource(name):

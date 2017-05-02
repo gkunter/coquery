@@ -1137,17 +1137,29 @@ class SQLResource(BaseResource):
 
         # create a table path from the word table to the lemma table
         word_feature = getattr(cls, QUERY_ITEM_WORD)
-        _, table, _ = cls.split_resource_feature(word_feature)
-        word_table = getattr(cls, "{}_table".format(table))
-        word_id = getattr(cls, "{}_id".format(table))
+        _, w_tab, _ = cls.split_resource_feature(word_feature)
+        word_table = getattr(cls, "{}_table".format(w_tab))
+        word_id = getattr(cls, "{}_id".format(w_tab))
+        word_alias = "COQ_{}_{}".format(w_tab.upper(), i+1)
 
         lemma_feature = getattr(cls, QUERY_ITEM_LEMMA)
-        _, table, _ = cls.split_resource_feature(lemma_feature)
-        lemma_table = getattr(cls, "{}_table".format(table))
-        lemma_id = getattr(cls, "{}_id".format(table))
+        _, l_tab, _ = cls.split_resource_feature(lemma_feature)
+        lemma_table = getattr(cls, "{}_table".format(l_tab))
+        lemma_id = getattr(cls, "{}_id".format(l_tab))
+        lemma_column = getattr(cls, lemma_feature)
+        lemma_alias = "COQ_{}_{}".format(l_tab.upper(), i+1)
 
-        path = cls.get_table_path(word_table, lemma_table)
-        table_list = MAGIC_FUNCTION(path)
+        table_list = ["{} AS {}".format(word_table, word_alias)]
+        _, last_table, _ = cls.split_resource_feature(word_feature)
+
+        path = cls.get_table_path(w_tab, l_tab)
+        print(path)
+        if path:
+            for table in path:
+                table_name = getattr(cls, "{}_table".format(table))
+                table_alias = "COQ_{}_{}".format(table.upper(), i+1)
+                table_list.append("INNER JOIN {} AS {} ON <???>".format(
+                    table_name, table_alias))
 
         if options.cfg.regexp:
             operator = "REGEXP"
@@ -1157,21 +1169,21 @@ class SQLResource(BaseResource):
             else:
                 operator = "="
 
-        where_string = "{}.{} {} '{}'".format(word_table, word_id, operator, token.S)
+        where_string = "{}.{} {} '{}'".format(
+            word_table, word_feature, operator, token.S)
 
         # using the path, get a list of all lemma labels that belong to
         # the word ids from the list:
-        inner_select = "SELECT DISTINCT {}.{} FROM {} WHERE {}".format(
-                lemma_table, getattr(cls, lemma_feature),
-                table_list, where_string)
+        inner_select = "SELECT DISTINCT {} FROM {} WHERE ({{where}})".format(
+                lemma_column, " ".join(table_list))
+
 
         kwargs = {
-            "lemma_alias": TODO,
-            "lemma_feature": lemma_feature,
-            "inner_select": inner_select,
-            "N": i+1}
+            "lemma_alias": lemma_alias,
+            "lemma_column": lemma_column,
+            "inner_select": inner_select}
 
-        S = "{lemma_alias}_{N}.{lemma_feature} IN ({inner_select})".format(
+        S = "{lemma_alias}.{lemma_column} IN ({inner_select})".format(
             **kwargs)
         return S
 
@@ -1224,9 +1236,6 @@ class SQLResource(BaseResource):
             if not spec_list:
                 continue
 
-            if token.lemmatize:
-                condition = cls.get_lemmatized_contitions(i, token)
-
             try:
                 col = getattr(cls, getattr(cls, label))
             except AttributeError:
@@ -1234,7 +1243,7 @@ class SQLResource(BaseResource):
             _, tab, _ = cls.split_resource_feature(getattr(cls, label))
 
             alias = "COQ_{}_{}".format(tab.upper(), i+1)
-            if len(spec_list) == 1:
+            if (len(spec_list) == 1):
                 x = spec_list[0]
                 format_str = handle_case("{}.{} {} '{}'")
                 s = format_str.format(alias, col, get_operator(x), x)
@@ -1262,6 +1271,11 @@ class SQLResource(BaseResource):
                 s_list = [format_str.format(alias, col, operator, x)
                           for x in wildcards]
                 s = " OR ".join(s_list + s_exp)
+
+            if token.lemmatize:
+                condition = cls.get_lemmatized_contitions(i, token)
+                s = condition.format(where=s)
+
             d[tab].append(s)
         return d
 
@@ -1951,7 +1965,7 @@ class CorpusClass(object):
 
         if isinstance(s, (int, float)):
             s = "{}".format(s)
-            
+
         if s in ["%", "_"]:
             s = "\\" + s
         s = s.replace("'", "''")
