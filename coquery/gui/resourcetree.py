@@ -139,6 +139,9 @@ class CoqResourceTree(classes.CoqTreeWidget):
                            if (not x.endswith(("_id", "_table")) and
                                not x.startswith(("tag_")) and
                                not x.startswith(skip))]
+
+            rc_features.extend(resource.get_exposed_ids())
+
             segment_features = [x for x in rc_features
                                 if x.startswith("segment_")]
             file_features = [x for x in rc_features if x.startswith("file_")]

@@ -391,6 +391,7 @@ class BaseResource(CoqObject):
     audio_features = []
     image_features = []
     video_features = []
+    exposed_ids = []
 
     def __init__(self):
         super(BaseResource, self).__init__()
@@ -573,7 +574,18 @@ class BaseResource(CoqObject):
                 and x not in cls.video_features
                 and x not in cls.image_features]
 
+    @classmethod
+    def get_exposed_ids(cls):
+        """
+        Return the list of exposed IDs.
 
+        The corpus ID is always an exposed ID. The IDs from other tables can
+        be added by using add_exposed_id().
+        """
+        if "corpus_id" not in cls.exposed_ids:
+            return cls.exposed_ids + ["corpus_id"]
+        else:
+            return cls.exposed_ids
 
     @classmethod
     def get_table_dict(cls):
