@@ -19,7 +19,7 @@ import sys
 import pandas as pd
 import numpy as np
 import sqlalchemy
-
+import operator
 
 from . import options
 from . import sqlhelper
@@ -153,9 +153,9 @@ class Function(CoqObject):
         else:
             if self.group:
                 template = "{func} by {cols}"
-                return template.format(
-                    func=self.get_name(),
-                    cols="/".join(["{}".format(session.translate_header(x)) for x in self.group]))
+                l = [session.translate_header(x) for x in self.group]
+                cols = "/".join(l)
+                return template.format(func=self.get_name(),cols="/".join(l))
 
             if self.no_column_labels:
                 return self.get_name()
@@ -375,43 +375,101 @@ class StringDecategoricalize(StringFunction):
 
 class MathFunction(Function):
     _name = "virtual"
+    combine_modes = NUM_COMBINE
 
     @staticmethod
     def get_description():
         return "Mathematical functions"
 
 
-class Calc(MathFunction):
-    _name = "CALC"
-    combine_modes = NUM_COMBINE
-    parameters = 2
+class CalcFunction(MathFunction):
+    """
+    CalcFunction is a meta class that uses the Numpy representation of the
+    data frame for the calculations, thus speeding up performance.
+    """
+    _name = "virtual"
+    def evaluate(self, df, *args, **kwargs):
+        val = df[self.columns(df, **kwargs)[0]].values
+        for x in self.columns(df, **kwargs)[1:]:
+            val = self._func(val, df[x].values)
+        if self.value:
+            val = self._func(val, pd.np.float64(self.value))
+        return pd.Series(data=val, index=df.index)
 
-    def __init__(self, sign="+", value=None, columns=None, *args, **kwargs):
-        super(Calc, self).__init__(columns, *args, **kwargs)
-        self.sign = sign
-        self.value = value
+
+class Add(CalcFunction):
+    _name = "ADD"
+    _func = operator.add
+
+
+class Sub(CalcFunction):
+    _name = "SUB"
+    _func = operator.sub
+
+
+class Mul(CalcFunction):
+    _name = "MUL"
+    _func = operator.mul
+
+
+class Div(CalcFunction):
+    _name = "DIV"
+    _func = operator.truediv
+
+
+class NumpyFunction(MathFunction):
+    """
+    NumpyFunction is a wrapper for mathematical functions provided by Numpy.
+    The function is specified in the class attribute `_func`.
+    """
+    _name = "virtual"
 
     def evaluate(self, df, *args, **kwargs):
-        def _calc(val1, val2):
-            try:
-                if self.sign == "+":
-                    val1 = val1 + val2
-                elif self.sign == "-":
-                    val1 = val1 - val2
-                elif self.sign == "/":
-                    val1 = val1 / val2
-                elif self.sign == "*":
-                    val1 = val1 * val2
-            except:
-                val1 = pd.Series([pd.np.nan] * len(val1), index=val1.index)
-            return val1
+        _df = df[self.columns(df, **kwargs)]
+        val = self._func(_df.values)
+        return pd.Series(data=val, index=df.index)
 
-        val = df[self.columns(df, **kwargs)[0]]
-        for x in self.columns(df, **kwargs)[1:]:
-            val = _calc(val, df[x])
-        if self.value:
-            val = _calc(val, self.value)
-        return val
+
+class Min(NumpyFunction):
+    _name = "MIN"
+
+    def _func(self, values):
+        return pd.np.nanmin(values, axis=1)
+
+
+class Max(NumpyFunction):
+    _name = "MAX"
+
+    def _func(self, values):
+        return pd.np.nanmax(values, axis=1)
+
+
+class Mean(NumpyFunction):
+    _name = "MEAN"
+
+    def _func(self, values):
+        return pd.np.mean(values, axis=1)
+
+
+class Median(NumpyFunction):
+    _name = "MEDIAN"
+
+    def _func(self, values):
+        return pd.np.median(values, axis=1)
+
+
+class StandardDeviation(NumpyFunction):
+    _name = "SD"
+
+    def _func(self, values):
+        return pd.np.std(values, axis=1)
+
+
+class InterquartileRange(NumpyFunction):
+    _name = "IQR"
+
+    def _func(self, values):
+        return pd.np.subtract(*pd.np.percentile(values, [75, 25], axis=1))
 
 
 #############################################################################
