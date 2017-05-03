@@ -334,12 +334,34 @@ class TestCorpus(unittest.TestCase):
         d = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(d, {"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR COQ_LEMMA_1.Lemma LIKE 'b%'"]})
 
-    def get_token_conditions_4(self):
+    def test_get_token_conditions_4(self):
         token = COCAToken("a*.[n*]")
         d = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(d,
              {"word": ["COQ_WORD_1.Word LIKE 'a%'",
                        "COQ_WORD_1.POS LIKE 'n%'"]})
+
+    def test_token_condition_empty_1(self):
+        token = COCAToken("*")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d, {})
+
+    def test_token_condition_empty_2(self):
+        token = COCAToken("*.[*]")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d, {})
+
+    def test_token_condition_empty_3(self):
+        token = COCAToken("*.[n*]")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
+
+    def test_token_condition_empty_4(self):
+        token = COCAToken("a*.[*]")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
 
     def test_token_conditions_lemmatized_flat_1(self):
         self.Session.Resource = self.flat_resource
