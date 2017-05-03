@@ -3075,6 +3075,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 available = [x for x in self.table_model.content.columns
                             if x not in columns]
         kwargs["available_columns"] = available
+
+        # run the dialog:
         response = addfunction.FunctionDialog.set_function(parent=self,
                                                            columns=columns,
                                                            **kwargs)
@@ -3094,7 +3096,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             l = [x(columns=columns, group=False) for x in response]
             self.Session.summary_functions.set_list(l)
         else:
-            fun_type, value, aggr, label = response
+            fun_type, columns, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self.Session.column_functions.add_function(fun)
 

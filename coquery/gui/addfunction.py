@@ -344,7 +344,9 @@ class FunctionDialog(QtWidgets.QDialog):
                 return l
             else:
                 value = utf8(self.ui.edit_function_value.text())
-                escaped = value.replace("'", "\'")
+                escaped_value = value.replace("'", "\'")
+                columns = [x.data(QtCore.Qt.UserRole) for x
+                           in self.ui.widget_selection.selectedItems()]
 
                 if self._auto_label:
                     label = None
@@ -355,7 +357,7 @@ class FunctionDialog(QtWidgets.QDialog):
                 if aggr == "":
                     aggr = func.default_aggr
 
-                return (func, escaped, aggr, label)
+                return (func, columns, escaped_value, aggr, label)
         else:
             return None
 
