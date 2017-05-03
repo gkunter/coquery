@@ -70,7 +70,7 @@ class Filter(CoqObject):
         A fixed string is enclosed in simple quotation marks. Quotation
         marks inside the string are escaped.
         """
-        if self.dtype == object or isinstance(x, str):
+        if self.dtype == object:
             if "'" in x:
                 val = x.replace("'", "\\'")
             else:
