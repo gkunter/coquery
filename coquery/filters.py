@@ -70,24 +70,44 @@ class Filter(CoqObject):
         A fixed string is enclosed in simple quotation marks. Quotation
         marks inside the string are escaped.
         """
-        if self.dtype == object:
+
+        if x == "":
+            val = "''"
+
+        elif self.dtype in [int, float]:
+            # attempt to coerce the value to a numeric variable
+            if not isinstance(x, (int, float)):
+                val = pd.np.float(x)
+                try:
+                    if x == pd.np.int(x):
+                        val = pd.np.int(x)
+                except ValueError:
+                    pass
+            else:
+                val = x
+
+        elif self.dtype == bool:
+            if isinstance(x, (float, int)):
+                val = bool(x)
+            else:
+                if x.lower() in ["yes", "y", "1", "true", "t"]:
+                    val = True
+                elif x.lower() in ["no", "n", "0", "false", "f"]:
+                    val = False
+                else:
+                    S = "Filter value has to be either 'yes' or 'no'"
+                    raise ValueError(S)
+
+        else:
             if "'" in x:
                 val = x.replace("'", "\\'")
             else:
                 val = x
             val = "'{}'".format(val)
-        elif self.dtype == bool:
-            if x.lower() in ["yes", "y", "1", "true", "t"]:
-                val = True
-            elif x.lower() in ["no", "n", "0", "false", "f"]:
-                val = False
-            else:
-                raise ValueError("Filter value has to be either 'yes' or 'no'")
-        else:
-            val = str(x)
-        return val
 
-    def get_filter_string(self):
+        return str(val)
+
+    def get_filter_string(self, df):
         # if the value is an NA (either None or np.nan), a trick described
         # here is used: http://stackoverflow.com/a/26535881/5215507
         #
@@ -98,6 +118,8 @@ class Filter(CoqObject):
         #
         # Thus, testing whether FEATURE equals NA returns the query string
         # FEATURE != FEATURE.
+
+        self.dtype = df[self.feature].dropna().dtype
 
         if self.operator == OP_MATCH:
             raise ValueError("RegEx filters do not use query strings.")
@@ -138,7 +160,7 @@ class Filter(CoqObject):
         if self.feature not in df.columns:
             return df
 
-        self.dtype = pd.Series(list(df[self.feature].dropna())).dtype
+        self.dtype = df[self.feature].dropna().dtype
         if self.operator in (OP_MATCH, OP_NMATCH):
             if self.dtype == object:
                 col = df[self.feature].dropna()
@@ -152,9 +174,9 @@ class Filter(CoqObject):
             return df.iloc[col[matching].index]
         else:
             try:
-                return df.query(self.get_filter_string(),
+                return df.query(self.get_filter_string(df),
                                 engine=_query_engine)
-            except Exception as e:
+            except SyntaxError as e:
                 S = "Could not apply filter {}: {}".format(self, str(e))
                 print(S)
                 logger.warn(S)
