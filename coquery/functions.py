@@ -107,6 +107,9 @@ class Function(CoqObject):
     single_column = True
     drop_on_na = True
 
+    minimum_columns = None
+    maximum_columns = None
+
     @staticmethod
     def get_description():
         return "Base functions"
@@ -381,6 +384,22 @@ class MathFunction(Function):
     def get_description():
         return "Mathematical functions"
 
+    def coerce_value(self, df, **kwargs):
+        column_dtypes = df[self.columns(df, **kwargs)].dtypes
+
+        if all([dt in (int, float) for dt in column_dtypes]):
+            # if all columns are numeric, the value is coerced to float
+            return float(self.value)
+        elif any([dt == object for dt in column_dtypes]):
+            # if there is any string column, the value is coerced to a string:
+            return str(self.value)
+        elif any([dt == bool for dt in column_dtypes]):
+            # if there is any bool column, the value is coerced to a bool:
+            return bool(self.value)
+        else:
+            # undefined behavior
+            raise TypeError
+
 
 class CalcFunction(MathFunction):
     """
@@ -388,12 +407,15 @@ class CalcFunction(MathFunction):
     data frame for the calculations, thus speeding up performance.
     """
     _name = "virtual"
+
     def evaluate(self, df, *args, **kwargs):
         val = df[self.columns(df, **kwargs)[0]].values
         for x in self.columns(df, **kwargs)[1:]:
             val = self._func(val, df[x].values)
         if self.value:
-            val = self._func(val, pd.np.float64(self.value))
+            const = self.coerce_value(df, **kwargs)
+            print(val, const)
+            val = self._func(val, const)
         return pd.Series(data=val, index=df.index)
 
 
@@ -423,6 +445,7 @@ class NumpyFunction(MathFunction):
     The function is specified in the class attribute `_func`.
     """
     _name = "virtual"
+    parameters = 0
 
     def evaluate(self, df, *args, **kwargs):
         _df = df[self.columns(df, **kwargs)]
@@ -473,6 +496,128 @@ class InterquartileRange(NumpyFunction):
 
 
 #############################################################################
+## Comparisons and Logic functions
+#############################################################################
+
+class Comparison(CalcFunction):
+    _name = "virtual"
+    combine_modes = BOOL_COMBINE
+
+    @staticmethod
+    def get_description():
+        return "Comparisons"
+
+
+class Equal(Comparison):
+    _name = "EQUAL"
+    _func = operator.eq
+
+
+class NotEqual(Comparison):
+    _name = "NOTEQUAL"
+    _func = operator.ne
+
+
+class GreaterThan(Comparison):
+    _name = "GREATERTHAN"
+    _func = operator.gt
+
+
+class GreaterEqual(Comparison):
+    _name = "GREATEREQUAL"
+    _func = operator.ge
+
+
+class LessThan(Comparison):
+    _name = "LESSTHAN"
+    _func = operator.lt
+
+
+class LessEqual(Comparison):
+    _name = "LESSEQUAL"
+    _func = operator.le
+
+
+class LogicFunction(CalcFunction):
+    _name = "virtual"
+    combine_modes = BOOL_COMBINE
+
+    @staticmethod
+    def get_description():
+        return "Logical functions"
+
+
+class And(LogicFunction):
+    _name = "AND"
+    _func = pd.np.logical_and
+
+
+class Or(LogicFunction):
+    _name = "OR"
+    _func = pd.np.logical_or
+
+
+class Xor(LogicFunction):
+    _name = "XOR"
+    _func = pd.np.logical_xor
+
+#class IsTrue(LogicFunction):
+    #_name = "ISTRUE"
+    #parameters = 0
+
+    #def _func(self, cols):
+        #return cols.apply(lambda x: bool(x))
+
+
+#class IsFalse(LogicFunction):
+    #_name = "ISFALSE"
+    #parameters = 0
+
+    #def _func(self, cols):
+        #return cols.apply(lambda x: not bool(x))
+
+
+#class IsNotMissing(LogicFunction):
+    #_name = "ISNOTMISSING"
+    #parameters = 0
+
+    #def evaluate(self, df, *args, **kwargs):
+        #columns = self.columns(df, **kwargs)
+        #val = df[columns].notnull()
+        #if len(val.columns) > 1:
+            #val = val.apply(self.select, axis="columns")
+        #return val
+
+
+#class IsMissing(IsNotMissing):
+    #_name = "ISMISSING"
+    #parameters = 0
+
+    #def evaluate(self, df, *args, **kwargs):
+        #return ~super(IsMissing, self).evaluate(df, *args, **kwargs)
+
+
+#class IsNotEmpty(LogicFunction):
+    #_name = "ISNOTEMPTY"
+    #parameters = 0
+
+    #def evaluate(self, df, *args, **kwargs):
+        #columns = self.columns(df, **kwargs)
+        #val = df[columns].apply(lambda x: x.notnull() &
+                                          #x.index.isin(x.nonzero()[0]))
+        #if len(val.columns) > 1:
+            #val = val.apply(self.select, axis="columns")
+        #return val
+
+
+#class IsEmpty(IsNotEmpty):
+    #_name = "ISEMPTY"
+
+    #def evaluate(self, df, *args, **kwargs):
+        #return ~super(IsEmpty, self).evaluate(df, *args, **kwargs)
+
+
+#############################################################################
 ## Frequency functions
 #############################################################################
 
@@ -496,7 +641,6 @@ class Freq(BaseFreq):
         Count the number of rows with equal values in the target columns.
         """
         columns = self.columns(df, **kwargs)
-        print("Freq\n", columns)
 
         fun = Freq(columns=columns, group=self.group)
         # do not calculate the frequencies again if the data frame already
@@ -831,7 +975,7 @@ class Proportion(BaseProportion):
 
     def evaluate(self, df, *args, **kwargs):
         columns = self.columns(df, **kwargs)
-        print("Proportion\n", columns)
+
         fun = Proportion(columns=columns, group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
@@ -1142,157 +1286,6 @@ class ContextString(ContextColumns):
                                         [x.upper() for x in target if x] +
                                         right)))],
                                         index=[self._name])
-
-
-#############################################################################
-## Logic functions
-#############################################################################
-
-class LogicFunction(Function):
-    _name = "virtual"
-    combine_modes = BOOL_COMBINE
-
-    @staticmethod
-    def get_description():
-        return "Logical functions"
-
-    def _comp(self, x, y):
-        return False
-
-    def _func_value(self, cols):
-        if cols.dtype == object:
-            # make string column comparison:
-            return cols.apply(lambda x: self._comp(x, str(self.value)))
-        else:
-            # make float comparison:
-            return cols.apply(lambda x: self._comp(x, float(self.value)))
-
-    def _func_columns(self, cols):
-        if len(cols) == 1:
-            return self.constant(cols, np.nan)
-        else:
-            val = cols[0]
-            for x in cols[1:]:
-                val = self._comp(val, x)
-            return self.constant(cols, val)
-
-    def evaluate(self, df, *args, **kwargs):
-        try:
-            if self.value:
-                val = df[self.columns(df, **kwargs)].apply(self._func_value)
-            else:
-                val = df[self.columns(df, **kwargs)].apply(self._func_columns, axis="columns")
-            if len(val.columns) > 1:
-                val = val.apply(self.select, axis="columns")
-        except (KeyError, ValueError):
-            val = self.constant(df, np.nan)
-
-        return val
-
-
-class Equal(LogicFunction):
-    _name = "EQUAL"
-
-    def _comp(self, x, y):
-        return x == y
-
-
-class NotEqual(LogicFunction):
-    _name = "NOTEQUAL"
-
-    def _comp(self, x, y):
-        return x != y
-
-
-class GreaterThan(LogicFunction):
-    _name = "GREATERTHAN"
-
-    def _comp(self, x, y):
-        return x > y
-
-
-class LessThan(LogicFunction):
-    _name = "LESSTHAN"
-
-    def _comp(self, x, y):
-        return x < y
-
-
-class And(LogicFunction):
-    _name = "AND"
-
-    def _comp(self, x, y):
-        return bool(x and y)
-
-
-class Or(LogicFunction):
-    _name = "OR"
-
-    def _comp(self, x, y):
-        return bool(x or y)
-
-
-class Xor(LogicFunction):
-    _name = "XOR"
-
-    def _comb(self, x, y):
-        return bool(x) != bool(y)
-
-
-class IsTrue(LogicFunction):
-    _name = "ISTRUE"
-    parameters = 0
-
-    def _func(self, cols):
-        return cols.apply(lambda x: bool(x))
-
-
-class IsFalse(LogicFunction):
-    _name = "ISFALSE"
-    parameters = 0
-
-    def _func(self, cols):
-        return cols.apply(lambda x: not bool(x))
-
-
-class IsNotMissing(LogicFunction):
-    _name = "ISNOTMISSING"
-    parameters = 0
-
-    def evaluate(self, df, *args, **kwargs):
-        columns = self.columns(df, **kwargs)
-        val = df[columns].notnull()
-        if len(val.columns) > 1:
-            val = val.apply(self.select, axis="columns")
-        return val
-
-
-class IsMissing(IsNotMissing):
-    _name = "ISMISSING"
-    parameters = 0
-
-    def evaluate(self, df, *args, **kwargs):
-        return ~super(IsMissing, self).evaluate(df, *args, **kwargs)
-
-
-class IsNotEmpty(LogicFunction):
-    _name = "ISNOTEMPTY"
-    parameters = 0
-
-    def evaluate(self, df, *args, **kwargs):
-        columns = self.columns(df, **kwargs)
-        val = df[columns].apply(lambda x: x.notnull() &
-                                          x.index.isin(x.nonzero()[0]))
-        if len(val.columns) > 1:
-            val = val.apply(self.select, axis="columns")
-        return val
-
-
-class IsEmpty(IsNotEmpty):
-    _name = "IsEmpty"
-
-    def evaluate(self, df, *args, **kwargs):
-        return ~super(IsEmpty, self).evaluate(df, *args, **kwargs)
 
 
 ##############################################################################
