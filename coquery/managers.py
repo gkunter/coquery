@@ -182,14 +182,14 @@ class Manager(CoqObject):
         print("\tDone mutate_groups")
         return df
 
-    def mutate(self, df, session):
+    def mutate(self, df, session, stage="first"):
         """
         Modify the transformed data frame by applying all needed functions.
         """
         if len(df) == 0:
             return df
 
-        print("\tmutate()")
+        print("\tmutate(stage='{}')".format(stage))
         # apply mutate functions, including context functions:
         mutate_functions = FunctionList(self._get_main_functions(df, session))
         kwargs = {"session": session, "manager": self}
@@ -216,11 +216,27 @@ class Manager(CoqObject):
 
         # apply user functions, i.e. functions that were added to
         # individual columns:
-        kwargs = {"session": session, "manager": self}
-        kwargs.update({"df": df})
+        kwargs = {"session": session,
+                  "manager": self,
+                  "df": df}
         #kwargs.update({"df": df if not self._subst
                                 #else df.replace(self._subst)})
-        df = FunctionList(session.column_functions).lapply(**kwargs)
+
+        self.stage_one_functions = []
+        if stage == "first":
+            self.stage_two_functions = []
+            for fnc in session.column_functions:
+                all_available = all([col in df.columns
+                                     for col in fnc.columns(**kwargs)])
+                if all_available:
+                    self.stage_one_functions.append(fnc)
+                else:
+                    self.stage_two_functions.append(fnc)
+
+        if stage == "first" and self.stage_one_functions:
+            df = FunctionList(self.stage_one_functions).lapply(**kwargs)
+        if stage == "second" and self.stage_two_functions:
+            df = FunctionList(self.stage_two_functions).lapply(**kwargs)
 
         df = df.reset_index(drop=True)
         print("\tdone")
@@ -584,7 +600,7 @@ class Manager(CoqObject):
 
         Processing a data frame involves the following stages:
 
-        1.  mutate(df)
+        1.  mutate(df, stage="first")
             Apply all main functions (including context functions) as well as
             user functions.
 
@@ -607,13 +623,18 @@ class Manager(CoqObject):
             Take the data frame, and transform it according to the current
             transformation.
 
-        8.  substitute(df, stage="second")
+        8.  mutate(df, stage="second")
+            Apply all user functions that could not be applied because they
+            referred to function columns that were not available in step (1)
+            yet.
+
+        9.  substitute(df, stage="second")
             Apply the substitution table for the remaining columns
 
-        9.  filter(df, stage=FILTER_STAGE_FINAL)
+        10.  filter(df, stage=FILTER_STAGE_FINAL)
             Apply remaining filters to the transformed data frame.
 
-        10. select(df)
+        11. select(df)
             Discard the columns that are not needed for the current
             transformation.
         """
@@ -659,6 +680,7 @@ class Manager(CoqObject):
             df = self.mutate_groups(df, session)
         df = self.filter(df, session, stage=FILTER_STAGE_BEFORE_TRANSFORM)
         df = self.summarize(df, session)
+        df = self.mutate(df, session, stage="second")
         df = self.substitute(df, session, "second")
         df = self.filter(df, session, stage=FILTER_STAGE_FINAL)
         df = self.select(df, session)
