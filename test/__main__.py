@@ -1,23 +1,35 @@
-import test.test_bibliography
-import test.test_celex
-import test.test_corpora
-import test.test_filters
-import test.test_functions
-import test.test_options
-import test.test_textgrids
-import test.test_tokens
-import test.test_unicode
+import unittest
+
+from test.test_bibliography import (
+    TestPerson, TestPersonList, TestEditorList, TestReference, TestArticle,
+    TestBook, TestInCollection)
+from test.test_celex import TestCELEX
+from test.test_corpora import TestCorpus
+from test.test_filters import TestFilterString, TestApply
+from test.test_functions import (
+    TestFrequencyFunctions, TestStringFunctions, TestMathFunctions,
+    TestLogicalFunctions)
+from test.test_options import TestQueryStringParse
+from test.test_sessions import TestSessionInputFile
+from test.test_textgrids import TestTextGridModuleMethods
+from test.test_tokens import (
+    TestTokens, TestQueryTokenCOCA, TestQuantification)
+from test.test_unicode import TestUnicodeModuleMethods
 
 def main():
-    test.test_bibliography.main()
-    test.test_celex.main()
-    test.test_corpora.main()
-    test.test_filters.main()
-    test.test_functions.main()
-    test.test_options.main()
-    test.test_textgrids.main()
-    test.test_tokens.main()
-    test.test_unicode.main()
+
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(x)
+         for x in [TestPerson, TestPersonList, TestEditorList, TestReference,
+                   TestArticle, TestBook, TestInCollection,
+                   TestCELEX,
+                   TestCorpus,
+                   TestFilterString, TestApply,
+                   TestQueryStringParse,
+                   TestTextGridModuleMethods,
+                   TestTokens, TestQueryTokenCOCA, TestQuantification,
+                   TestUnicodeModuleMethods]])
+    unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
     main()

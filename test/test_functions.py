@@ -25,15 +25,6 @@ from coquery.functions import *
 from coquery.functionlist import FunctionList
 from coquery import options
 
-options.cfg = MockOptions()
-options.settings = MockSettings()
-
-options.cfg.verbose = False
-options.cfg.drop_on_na = False
-options.cfg.column_properties = {}
-options.cfg.corpus = "Test"
-options.cfg.benchmark = False
-
 df1 = pd.DataFrame({'coquery_invisible_number_of_tokens': {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 37: 1, 38: 1, 39: 1, 40: 1, 41: 1, 42: 1, 43: 1, 44: 1, 45: 1, 46: 1, 47: 1, 48: 1, 49: 1, 50: 1, 51: 1, 52: 1, 53: 1, 54: 1},
                    'db_celex_coq_phonoword_phoncvbr_1': {0: None, 1: None, 2: None, 3: None, 4: None, 5: None, 6: None, 7: None, 8: None, 9: None, 10: None, 11: None, 12: None, 13: None, 14: None, 15: None, 16: None, 17: None, 18: None, 19: None, 20: None, 21: None, 22: None, 23: '[CVC][VC][CCVVC]', 24: '[CVC][VC][CCVVC]', 25: '[CVC][VC][CCVVC]', 26: '[CVC][VC][CCVVC]', 27: '[CVC][VC][CCVVC]', 28: '[CVC][VC][CCVVC]', 29: '[CVC][VC][CCVVC]', 30: '[CVC][VC][CCVVC]', 31: '[CVC][VC][CCVVC]', 32: '[CVC][VC][CCVVC]', 33: '[CVC][VC][CCVVC]', 34: '[CVC][VC][CCVVC]', 35: '[CVC][VC][CCVVC]', 36: '[CVC][VC][CCVVC]', 37: '[CVC][VC][CCVVC]', 38: '[CVC][VC][CCVVC]', 39: '[CVC][VC][CCVVC]', 40: '[CVC][VC][CCVVC]', 41: '[CVC][VC][CCVVC]', 42: '[CVC][VC][CCVVC]', 43: '[CVC][VC][CCVVC]', 44: '[CVC][VC][CCVVC]', 45: '[CVC][VC][CCVVC]', 46: '[CVC][VC][CCVVC]', 47: '[CVC][VC][CCVVC]', 48: '[CVC][VC][CCVVC]', 49: '[CVC][VC][CCVVC]', 50: '[CVC][VC][CCVVC]', 51: '[CVC][VC][CCVVC]', 52: '[CVC][VC][CCVVC]', 53: '[CVC][VC][CCVVC]', 54: '[CVC][VC][CCVVC]'}, 'coq_word_lemma_1': {0: 'DISINVEST', 1: 'DISINVEST', 2: 'DISINVEST', 3: 'DISINVEST', 4: 'DISINVEST', 5: 'DISINVEST', 6: 'DISINVEST', 7: 'DISINVEST', 8: 'DISINVEST', 9: 'DISINVEST', 10: 'DISINVEST', 11: 'DISINVEST', 12: 'DISINVEST', 13: 'DISINVEST', 14: 'DISINVEST', 15: 'DISINVEST', 16: 'DISINVEST', 17: 'DISINVEST', 18: 'DISINVEST', 19: 'DISINVEST', 20: 'DISINVEST', 21: 'DISINFORM', 22: 'DISINFORM', 23: 'DISINCLINE', 24: 'DISINCLINE', 25: 'DISINCLINE', 26: 'DISINCLINE', 27: 'DISINCLINE', 28: 'DISINCLINE', 29: 'DISINCLINE', 30: 'DISINCLINE', 31: 'DISINCLINE', 32: 'DISINCLINE', 33: 'DISINCLINE', 34: 'DISINCLINE', 35: 'DISINCLINE', 36: 'DISINCLINE', 37: 'DISINCLINE', 38: 'DISINCLINE', 39: 'DISINCLINE', 40: 'DISINCLINE', 41: 'DISINCLINE', 42: 'DISINCLINE', 43: 'DISINCLINE', 44: 'DISINCLINE', 45: 'DISINCLINE', 46: 'DISINCLINE', 47: 'DISINCLINE', 48: 'DISINCLINE', 49: 'DISINCLINE', 50: 'DISINCLINE', 51: 'DISINCLINE', 52: 'DISINCLINE', 53: 'DISINCLINE', 54: 'DISINCLINE'},
                    'coquery_invisible_corpus_id': {0: 209958039, 1: 222147309, 2: 270672183, 3: 273669329, 4: 338252544, 5: 502550702, 6: 674478400, 7: 679851596, 8: 248429324, 9: 297611776, 10: 473032852, 11: 473034740, 12: 571814551, 13: 597679391, 14: 679683583, 15: 681286004, 16: 429535765, 17: 571814444, 18: 571814457, 19: 571814459, 20: 571814461, 21: 284683786, 22: 433840744, 23: 278745314, 24: 278745314, 25: 278745314, 26: 278745314, 27: 278745314, 28: 278745314, 29: 278745314, 30: 278745314, 31: 278745314, 32: 278745314, 33: 278745314, 34: 278745314, 35: 278745314, 36: 278745314, 37: 278745314, 38: 278745314, 39: 519017348, 40: 519017348, 41: 519017348, 42: 519017348, 43: 519017348, 44: 519017348, 45: 519017348, 46: 519017348, 47: 519017348, 48: 519017348, 49: 519017348, 50: 519017348, 51: 519017348, 52: 519017348, 53: 519017348, 54: 519017348},
@@ -57,7 +48,18 @@ df2 = pd.DataFrame({
         INT_COLUMN: [1, 2, 3, 7],
         FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan]})
 
+
 class TestFrequencyFunctions(unittest.TestCase):
+    def setUp(self):
+        options.cfg = MockOptions()
+        options.settings = MockSettings()
+
+        options.cfg.verbose = False
+        options.cfg.drop_on_na = False
+        options.cfg.column_properties = {}
+        options.cfg.corpus = "Test"
+        options.cfg.benchmark = False
+
     #def test_freq(self):
         #df = pd.DataFrame(df0)
         #func = Freq(columns=[x for x in df.columns if not x.startswith("coquery_invisible")])
@@ -110,71 +112,213 @@ class TestFrequencyFunctions(unittest.TestCase):
 
         self.assertListEqual(val_a.tolist(), val_b.tolist())
 
+
 class TestStringFunctions(unittest.TestCase):
+    def setUp(self):
+        options.cfg = MockOptions()
+        options.settings = MockSettings()
+
+        options.cfg.verbose = False
+        options.cfg.drop_on_na = False
+        options.cfg.column_properties = {}
+        options.cfg.corpus = "Test"
+        options.cfg.benchmark = False
+
     def test_count(self):
         func = StringCount(columns=["coq_word_label_1"], value="x")
         val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [0, 0, 0, 3, 3])
 
+
 class TestMathFunctions(unittest.TestCase):
+    def setUp(self):
+        options.cfg = MockOptions()
+        options.settings = MockSettings()
+
+        options.cfg.verbose = False
+        options.cfg.drop_on_na = False
+        options.cfg.column_properties = {}
+        options.cfg.corpus = "Test"
+        options.cfg.benchmark = False
+
 
     df = pd.DataFrame(
         {"column_1": [2, 5, 7, 9],
          "column_2": [3, 3, 3, 3],
-         "column_3": [2, pd.np.nan, pd.np.nan, 0] })
+         "column_3": [2, pd.np.nan, pd.np.nan, 0],
+         "column_4": [2.1, 2.2, 2.3, 2.4],
+         "column_5": list("abcd"),
+         "column_6": [0, 1, 0, 1] })
 
-    def assert_result(self, func_class, df, columns, expected):
-        func = func_class(columns=columns)
+    def assert_result(self, func_class, df, columns, expected, value=None):
+        func = func_class(columns=columns, value=value)
         result = FunctionList([func]).lapply(df, session=None)
         npt.assert_equal(result[func.get_id()].values, expected)
+
+    def test_coerce_value_int_1(self):
+        columns = ["column_1", "column_2"]
+        value = "2"
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_int_2(self):
+        columns = ["column_1", "column_2"]
+        value = "2.0"
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_int_3(self):
+        columns = ["column_1", "column_2"]
+        value = 2.0
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_int_4(self):
+        columns = ["column_1", "column_2"]
+        value = 2
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_float_1(self):
+        columns = ["column_3", "column_4"]
+        value = "2"
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_float_2(self):
+        columns = ["column_3", "column_4"]
+        value = "2.0"
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_float_3(self):
+        columns = ["column_3", "column_4"]
+        value = 2.0
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_float_4(self):
+        columns = ["column_3", "column_4"]
+        value = 2
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(type(
+            func.coerce_value(df=self.df, session=None)), float)
+
+    def test_coerce_value_string_1(self):
+        columns = ["column_1", "column_5"]
+        value = "2"
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), "2")
+        self.assertEqual(
+            type(func.coerce_value(df=self.df, session=None)), str)
+
+    def test_coerce_value_string_2(self):
+        columns = ["column_1", "column_5"]
+        value = "2.0"
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), "2.0")
+        self.assertEqual(
+            type(func.coerce_value(df=self.df, session=None)), str)
+
+    def test_coerce_value_string_3(self):
+        columns = ["column_1", "column_5"]
+        value = 2.0
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), "2.0")
+        self.assertEqual(
+            type(func.coerce_value(df=self.df, session=None)), str)
+
+    def test_coerce_value_string_4(self):
+        columns = ["column_1", "column_5"]
+        value = 2
+        func = Add(columns=columns, value=value)
+        self.assertEqual(func.coerce_value(df=self.df, session=None), "2")
+        self.assertEqual(
+            type(func.coerce_value(df=self.df, session=None)), str)
 
     def test_add(self):
         columns = ["column_1", "column_2"]
         expected = [5, 8, 10, 12]
         func = Add
-
         self.assert_result(func, self.df, columns, expected)
 
     def test_add_nan(self):
         columns = ["column_1", "column_3"]
         expected = [4, pd.np.nan, pd.np.nan, 9]
         func = Add
-
         self.assert_result(func, self.df, columns, expected)
+
+    def test_add_fixed_1(self):
+        columns = ["column_1"]
+        expected = [3, 6, 8, 10]
+        func = Add
+        value = 1
+        self.assert_result(func, self.df, columns, expected, value=value)
+
+    def test_add_fixed_2(self):
+        columns = ["column_1"]
+        expected = [3, 6, 8, 10]
+        func = Add
+        value = "1"
+        self.assert_result(func, self.df, columns, expected, value=value)
 
     def test_sub(self):
         columns = ["column_1", "column_2"]
         expected = [-1, 2, 4, 6]
         func = Sub
-
         self.assert_result(func, self.df, columns, expected)
+
+    def test_sub_fixed(self):
+        columns = ["column_1"]
+        expected = [1, 4, 6, 8]
+        func = Sub
+        value = 1
+        self.assert_result(func, self.df, columns, expected, value=value)
 
     def test_mul(self):
         columns = ["column_1", "column_2"]
         expected = [6, 15, 21, 27]
         func = Mul
-
         self.assert_result(func, self.df, columns, expected)
+
+    def test_mul_fixed(self):
+        columns = ["column_1"]
+        expected = [4, 10, 14, 18]
+        func = Mul
+        value = 2
+        self.assert_result(func, self.df, columns, expected, value=value)
 
     def test_div_zero(self):
         columns = ["column_1", "column_3"]
         expected = [1, pd.np.nan, pd.np.nan, pd.np.inf]
         func = Div
-
         self.assert_result(func, self.df, columns, expected)
 
     def test_max(self):
         columns = ["column_1", "column_2"]
         expected = [3, 5, 7, 9]
         func = Max
-
         self.assert_result(func, self.df, columns, expected)
 
     def test_min(self):
         columns = ["column_1", "column_2"]
         expected = [2, 3, 3, 3]
         func = Min
-
         self.assert_result(func, self.df, columns, expected)
 
     def test_mean(self):
@@ -184,7 +328,6 @@ class TestMathFunctions(unittest.TestCase):
                     pd.np.mean((7, 3)),
                     pd.np.mean((9, 3))]
         func = Mean
-
         self.assert_result(func, self.df, columns, expected)
 
     def test_median(self):
@@ -194,7 +337,6 @@ class TestMathFunctions(unittest.TestCase):
                     pd.np.median((7, 3)),
                     pd.np.median((9, 3))]
         func = Median
-
         self.assert_result(func, self.df, columns, expected)
 
     def test_sd(self):
@@ -204,22 +346,246 @@ class TestMathFunctions(unittest.TestCase):
                     pd.np.std((7, 3)),
                     pd.np.std((9, 3))]
         func = StandardDeviation
-
         self.assert_result(func, self.df, columns, expected)
 
     def test_iqr(self):
         columns = ["column_1", "column_2"]
         expected = [0.5, 1, 2, 3]
         func = InterquartileRange
-
         self.assert_result(func, self.df, columns, expected)
 
+
+class TestLogicalFunctions(unittest.TestCase):
+    def setUp(self):
+        self.df = df = pd.DataFrame(
+            {"column_1": [1, 1, 2, 2, 5, 5],
+             "column_2": [1, 1, 3, 3, 3, 3],
+             "column_3": [1, None, 2, None, 3, None],
+             "column_4": [0, 1, 0, 1, 0, 1],
+             "column_5": [2, 2, 2, 2, 0, 0],
+             "str_1": ["aaa", "bbb", "ccc", "ddd", "eee", "fff"],
+             "str_2": ["ccc", "ccc", "ccc", "ddd", "ddd", "ddd"],
+             "str_3": ["aaa", None, "ccc", None, "eee", None],
+             })
+
+        options.cfg = MockOptions()
+        options.settings = MockSettings()
+
+        options.cfg.verbose = False
+        options.cfg.drop_on_na = False
+        options.cfg.column_properties = {}
+        options.cfg.corpus = "Test"
+        options.cfg.benchmark = False
+
+    def assert_result(self, func_class, df, columns, expected, value=None):
+        func = func_class(columns=columns, value=value)
+        result = FunctionList([func]).lapply(df, session=None)
+        npt.assert_equal(result[func.get_id()].values, expected)
+
+    def test_equal(self):
+        columns = ["column_1", "column_2"]
+        expected = [True, True, False, False, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_equal_value(self):
+        columns = ["column_1"]
+        expected = [False, False, True, True, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected, value=2)
+
+    def test_equal_none(self):
+        columns = ["column_1", "column_3"]
+        expected = [True, False, True, False, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_equal_str(self):
+        columns = ["str_1", "str_2"]
+        expected = [False, False, True, True, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_equal_str_value(self):
+        columns = ["str_1"]
+        expected = [False, False, True, False, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected, value="ccc")
+
+    def test_equal_str_none(self):
+        columns = ["str_1", "str_3"]
+        expected = [True, False, True, False, True, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_value_conversion_1(self):
+        columns = ["column_1"]
+        expected = [False, False, True, True, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected, value="2")
+
+    def test_value_conversion_2(self):
+        columns = ["column_1"]
+        expected = [False, False, True, True, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected, value="2.0")
+
+    def test_notqual(self):
+        columns = ["column_1", "column_2"]
+        expected = [False, False, True, True, True, True]
+        func = NotEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_notequal_value(self):
+        columns = ["column_1"]
+        expected = [True, True, False, False, True, True]
+        func = NotEqual
+        self.assert_result(func, self.df, columns, expected, value=2)
+
+    def test_notequal_none(self):
+        columns = ["column_1", "column_3"]
+        expected = [False, True, False, True, True, True]
+        func = NotEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_notequal_str(self):
+        columns = ["str_1", "str_2"]
+        expected = [True, True, False, False, True, True]
+        func = NotEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_notequal_str_value(self):
+        columns = ["str_1"]
+        expected = [True, True, False, True, True, True]
+        func = NotEqual
+        self.assert_result(func, self.df, columns, expected, value="ccc")
+
+    def test_notequal_str_none(self):
+        columns = ["str_1", "str_3"]
+        expected = [False, True, False, True, False, True]
+        func = NotEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_greaterthan(self):
+        columns = ["column_1", "column_2"]
+        expected = [False, False, False, False, True, True]
+        func = GreaterThan
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_greaterthan_value(self):
+        columns = ["column_1"]
+        expected = [False, False, False, False, True, True]
+        func = GreaterThan
+        self.assert_result(func, self.df, columns, expected, value=2)
+
+    def test_greaterthan_str(self):
+        columns = ["str_1", "str_2"]
+        expected = [False, False, False, False, True, True]
+        func = GreaterThan
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_greaterthan_str_value(self):
+        columns = ["str_1"]
+        expected = [False, False, True, True, True, True]
+        func = GreaterThan
+        self.assert_result(func, self.df, columns, expected, value="bbb")
+
+    def test_greaterequal(self):
+        columns = ["column_1", "column_2"]
+        expected = [True, True, False, False, True, True]
+        func = GreaterEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_greaterequal_value(self):
+        columns = ["column_1"]
+        expected = [False, False, True, True, True, True]
+        func = GreaterEqual
+        self.assert_result(func, self.df, columns, expected, value=2)
+
+    def test_greaterequal_str(self):
+        columns = ["str_1", "str_2"]
+        expected = [False, False, True, True, True, True]
+        func = GreaterEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_greaterequal_str_value(self):
+        columns = ["str_1"]
+        expected = [False, True, True, True, True, True]
+        func = GreaterEqual
+        self.assert_result(func, self.df, columns, expected, value="bbb")
+
+    def test_lessthan(self):
+        columns = ["column_1", "column_2"]
+        expected = [False, False, True, True, False, False]
+        func = LessThan
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_lessthan_value(self):
+        columns = ["column_1"]
+        expected = [True, True, False, False, False, False]
+        func = LessThan
+        self.assert_result(func, self.df, columns, expected, value=2)
+
+    def test_lessthan_str(self):
+        columns = ["str_1", "str_2"]
+        expected = [True, True, False, False, False, False]
+        func = LessThan
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_lessthan_str_value(self):
+        columns = ["str_1"]
+        expected = [True, False, False, False, False, False]
+        func = LessThan
+        self.assert_result(func, self.df, columns, expected, value="bbb")
+
+    def test_lessequal(self):
+        columns = ["column_1", "column_2"]
+        expected = [True, True, True, True, False, False]
+        func = LessEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_lessequal_value(self):
+        columns = ["column_1"]
+        expected = [True, True, True, True, False, False]
+        func = LessEqual
+        self.assert_result(func, self.df, columns, expected, value=2)
+
+    def test_lessequal_str(self):
+        columns = ["str_1", "str_2"]
+        expected = [True, True, True, True, False, False]
+        func = LessEqual
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_lessequal_str_value(self):
+        columns = ["str_1"]
+        expected = [True, True, False, False, False, False]
+        func = LessEqual
+        self.assert_result(func, self.df, columns, expected, value="bbb")
+
+    def test_and(self):
+        columns = ["column_1", "column_4"]
+        expected = [False, True, False, True, False, True]
+        func = And
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_or(self):
+        columns = ["column_4", "column_5"]
+        expected = [True, True, True, True, False, True]
+        func = Or
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_or(self):
+        columns = ["column_4", "column_5"]
+        expected = [True, False, True, False, False, True]
+        func = Xor
+        self.assert_result(func, self.df, columns, expected)
 
 def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestFrequencyFunctions),
         unittest.TestLoader().loadTestsFromTestCase(TestStringFunctions),
         unittest.TestLoader().loadTestsFromTestCase(TestMathFunctions),
+        unittest.TestLoader().loadTestsFromTestCase(TestLogicalFunctions),
         ])
     unittest.TextTestRunner().run(suite)
 
