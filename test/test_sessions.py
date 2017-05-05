@@ -38,7 +38,6 @@ class TestSessionInputFile(unittest.TestCase):
             if d.get("queries", None):
                 l.append("{}\n".format("\n".join(d["queries"])))
             S = "".join(l)
-            print(S)
             temp_file.write(S)
 
     def test_input_file_session_init_header_only(self):
