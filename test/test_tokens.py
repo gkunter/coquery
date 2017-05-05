@@ -17,7 +17,8 @@ class TestLexicon(LexiconClass):
     def is_part_of_speech(self, pos):
         return pos in ["N", "V"]
 
-class TestModuleMethods(unittest.TestCase):
+
+class TestTokens(unittest.TestCase):
     def test_parse_query_string1(self):
         S1 = "this is a query"
         S2 = "this    is a query    "
@@ -193,6 +194,7 @@ class TestModuleMethods(unittest.TestCase):
         L = [u"#/'bɐlɐl/"]
         result = tokens.parse_query_string(S, tokens.COCAToken)
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
 
 class TestQueryTokenCOCA(unittest.TestCase):
     token_type = tokens.COCAToken
@@ -912,6 +914,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, ["~abc"])
 
+
 class TestQuantification(unittest.TestCase):
     def test_no_quantifiers(self):
         self.assertEqual(tokens.get_quantifiers("xxx"), ("xxx", 1, 1))
@@ -1136,7 +1139,7 @@ class TestQuantification(unittest.TestCase):
 
 def main():
     suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
+        unittest.TestLoader().loadTestsFromTestCase(TestTokensModuleMethods),
         unittest.TestLoader().loadTestsFromTestCase(TestQueryTokenCOCA),
         unittest.TestLoader().loadTestsFromTestCase(TestQuantification),
         ])
