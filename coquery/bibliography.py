@@ -69,7 +69,7 @@ class Person(object):
         elif isinstance(middle, list):
             self.middle = middle
         else:
-            pass
+            self.middle = []
             # raise ValueError(MSG_PERSON_ILLEGAL_MIDDLE_NAME_TYPE)
         self.prefix = prefix
         self.suffix = suffix
