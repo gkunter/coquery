@@ -3060,9 +3060,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                 in columns])
             try:
                 if all(dtypes != object):
-                    kwargs.update({"function_class": (functions.MathFunction, functions.LogicFunction)})
+                    kwargs.update(
+                        {"function_class": (functions.MathFunction,
+                                            functions.Comparison,
+                                            functions.LogicFunction)})
                 else:
-                    kwargs.update({"function_class": (functions.StringFunction, functions.LogicFunction)})
+                    kwargs.update(
+                        {"function_class": (functions.StringFunction,
+                                            functions.Comparison)})
             except Exception as e:
                 print(e)
                 kwargs.update({"function_class": tuple()})
