@@ -16,7 +16,9 @@ import itertools
 import re
 import string
 
-from .defines import msg_token_dangling_open
+from .defines import (
+    msg_token_dangling_open, msg_unexpected_quantifier,
+    msg_unexpected_bracket)
 from .errors import TokenParseError
 from .unicode import utf8
 
