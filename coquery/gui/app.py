@@ -1250,7 +1250,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             if data.index[col].startswith("coq_userdata"):
                 return
 
-        origin_id = self.Session.Corpus.get_source_id(token_id)
+        origin_id = self.Session.Resource.get_origin_id(token_id)
 
         from . import contextviewer
         viewer = contextviewer.ContextView(
