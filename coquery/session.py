@@ -177,6 +177,15 @@ class Session(object):
     def disconnect_from_db(self):
         self.db_connection.close()
 
+    def prepare_queries(self):
+        self.query_list = []
+        for query_string in options.cfg.query_list:
+            if self.query_type:
+                new_query = self.query_type(query_string, self)
+            else:
+                raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
+            self.query_list.append(new_query)
+
     def run_queries(self, to_file=False, **kwargs):
         """
         Run each query in the query list, and append the results to the
@@ -562,20 +571,12 @@ class SessionCommandLine(Session):
         super(SessionCommandLine, self).__init__()
         if len(options.cfg.query_list) > 1:
             logger.info("{} queries".format(len(options.cfg.query_list)))
-        for query_string in options.cfg.query_list:
-            if self.query_type:
-                new_query = self.query_type(query_string, self)
-            else:
-                raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
-            self.query_list.append(new_query)
         self.max_number_of_input_columns = 0
 
 class SessionInputFile(Session):
-    def __init__(self):
-        super(SessionInputFile, self).__init__()
+    def prepare_queries(self):
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-
             try:
                 input_file = pd.read_table(
                     filepath_or_buffer=InputFile,
@@ -618,11 +619,9 @@ class SessionInputFile(Session):
                 read_lines += 1
             self.input_columns = ["coq_{}".format(x) for x in self.header]
 
-
         logger.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
             logger.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
-
 
 class SessionStdIn(Session):
     def __init__(self):

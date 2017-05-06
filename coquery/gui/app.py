@@ -18,6 +18,7 @@ import importlib
 import os
 import logging
 import pandas as pd
+import datetime
 
 from coquery import managers
 from coquery import functions
@@ -2287,7 +2288,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                           in options.cfg.query_list[0].splitlines()
                                           if x.strip()]
                 self.new_session = SessionCommandLine()
+                self.new_session.prepare_queries()
             else:
+                self.new_session = SessionInputFile()
                 if not self.verify_file_name():
                     QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
@@ -2295,12 +2298,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 s = "Reading query strings from <br><br><code>{}</code><br><br>Please wait...".format(options.cfg.input_path)
                 title = "Reading input file – Coquery"
                 msg_box = classes.CoqStaticBox(title, s)
-                self.new_session = SessionInputFile()
+                try:
+                    self.new_session.prepare_queries()
+                except TokenParseError as e:
+                    msg_box.hide()
+                    raise e
+
                 msg_box.close()
                 msg_box.hide()
                 del msg_box
         except TokenParseError as e:
-            QtWidgets.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self,
+                "Query string parsing error – Coquery",
+                e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLNoConfigurationError:
             QtWidgets.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLInitializationError as e:
