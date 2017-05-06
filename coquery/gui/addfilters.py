@@ -15,7 +15,8 @@ from __future__ import unicode_literals
 from coquery import options
 from coquery.defines import (
     FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL,
-    OPERATOR_LABELS, OP_MATCH, OP_NMATCH)
+    OPERATOR_LABELS,
+    OP_MATCH, OP_NMATCH, OP_EQ, OP_NE, OP_GE, OP_GT, OP_LE, OP_LT)
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.addFilterUi import Ui_FiltersDialog
@@ -155,6 +156,7 @@ class FilterDialog(QtWidgets.QDialog):
             if operator not in (OP_MATCH, OP_NMATCH):
                 filt.get_filter_string()
         except Exception as e:
+            print(e)
             self.ui.button_add.setDisabled(True)
             return
         else:
