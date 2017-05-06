@@ -1643,8 +1643,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         try:
             columns = (self.table_model.content.columns |
                        self.hidden_model.content.columns)
-            dtypes = (self.table_model.content.dtypes +
-                      self.hidden_model.content.dtypes)
+            dtypes = self.table_model.content.dtypes.append(
+                        self.hidden_model.content.dtypes)
         except AttributeError:
             columns = []
             dtypes = []
