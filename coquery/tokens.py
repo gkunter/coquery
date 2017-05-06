@@ -327,7 +327,13 @@ def parse_query_string(S, token_type):
     except AttributeError:
         # using Python 3.x
         pass
-    for current_char in S:
+
+    for char_pos, current_char in enumerate(S):
+        # this string is used to mark the position of syntax errors
+        pos_string = ("." * (char_pos) +
+                      "↥" +
+                      "." * (len(S) - char_pos - 1))
+
         if escaping:
             current_word = add(current_word, current_char)
             escaping = False
@@ -359,7 +365,7 @@ def parse_query_string(S, token_type):
                         token_type.pos_separator,
                         token_type.bracket_open,
                         token_type.bracket_close))
-                elif current_char == token_type.pos_separator:
+                if current_char == token_type.pos_separator:
                     state = ST_POS_SEPARATOR
                     token_closed = False
 
@@ -375,16 +381,26 @@ def parse_query_string(S, token_type):
                     # open a POS specification):
                     if current_char == token_type.bracket_open:
                         if len(current_word) < 2 or current_word[-1] != ".":
-                            raise TokenParseError("{}: unexpected opening bracket <code style='color: #aa0000'>{}</code> within a word".format(S, token_type.bracket_open))
+                            raise TokenParseError(
+                                msg_unexpected_bracket.format(
+                                    S, pos_string, current_char))
+
                     # any character other than an opening quantification is
                     # forbidden if the current word is not empty
                     elif current_char != token_type.quantification_open:
-                        raise TokenParseError("{}: Only quantifiers starting with <code style='color: #aa0000'>{}</code> are allowed after a query token (encountered {})".format(S, token_type.quantification_open, current_char))
+                        raise TokenParseError(
+                            msg_unexpected_quantifier.format(
+                                S, pos_string,
+                                token_type.quantification_open,
+                                current_char))
                 else:
                     # quantifications are only allowed if they follow a
                     # query item:
                     if current_char == token_type.quantification_open:
-                        raise TokenParseError("{}: Query items may not start with the quantifier bracket <code style='color: #aa0000'>{}</code>".format(S, token_type.quantification_open))
+                        raise TokenParseError(
+                            msg_unexpected_quantifier_start.format(
+                                S, pos_string,
+                                token_type.quantification_open))
 
                 # set new state:
                 if current_char == token_type.transcript_open:
@@ -464,7 +480,8 @@ def parse_query_string(S, token_type):
 
     if state != ST_NORMAL:
         if state == ST_POS_SEPARATOR:
-            raise TokenParseError("{}: Missing a part-of-speech specification after '.'".format(S))
+            raise TokenParseError(msg_missing_pos_spec.format(
+                S, pos_string, token_type.pos_separator))
         if state == ST_IN_BRACKET:
             op = token_type.bracket_open
             cl = token_type.bracket_close
@@ -477,7 +494,8 @@ def parse_query_string(S, token_type):
         elif state == ST_IN_QUANTIFICATION:
             op = token_type.quantification_open
             cl = token_type.quantification_close
-        raise TokenParseError(msg_token_dangling_open.format(str=S, open=op, close=cl))
+        raise TokenParseError(
+            msg_token_dangling_open.format(S, pos_string, cl, op))
     if current_word:
         tokens.append(current_word)
     return tokens
