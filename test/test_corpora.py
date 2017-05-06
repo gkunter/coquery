@@ -334,12 +334,24 @@ class TestCorpus(unittest.TestCase):
         d = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(d, {"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR COQ_LEMMA_1.Lemma LIKE 'b%'"]})
 
-    def get_token_conditions_4(self):
+    def test_get_token_conditions_4(self):
         token = COCAToken("a*.[n*]")
         d = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(d,
              {"word": ["COQ_WORD_1.Word LIKE 'a%'",
                        "COQ_WORD_1.POS LIKE 'n%'"]})
+
+    def test_get_token_conditions_quote_char_1(self):
+        token = COCAToken("'ll")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word = '''ll'"]})
+
+    def test_get_token_conditions_quote_char_2(self):
+        token = COCAToken("'ll|ll")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
 
     def test_token_conditions_lemmatized_flat_1(self):
         self.Session.Resource = self.flat_resource

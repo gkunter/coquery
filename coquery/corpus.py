@@ -976,7 +976,7 @@ class SQLResource(BaseResource):
 
             alias = "COQ_{}_{}".format(tab.upper(), i+1)
             if (len(spec_list) == 1):
-                x = spec_list[0]
+                x = spec_list[0].replace("'", "''")
                 format_str = handle_case("{}.{} {} '{}'")
                 s = format_str.format(alias, col, get_operator(x), x)
             else:
@@ -990,7 +990,8 @@ class SQLResource(BaseResource):
 
                 if explicit:
                     format_str = handle_case("{}.{} IN ({})")
-                    s_list = ",".join(["'{}'".format(x) for x in explicit])
+                    s_list = ", ".join(["'{}'".format(x.replace("'", "''"))
+                                       for x in explicit])
                     s_exp = [format_str.format(alias, col, s_list)]
                 else:
                     s_exp = []
