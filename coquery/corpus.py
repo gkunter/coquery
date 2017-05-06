@@ -20,8 +20,7 @@ import logging
 import sqlalchemy
 import pandas as pd
 
-from .errors import (
-    WordNotInLexiconError, UnsupportedQueryItemError)
+from .errors import UnsupportedQueryItemError
 from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
     QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
