@@ -15,7 +15,8 @@ from __future__ import unicode_literals
 from coquery import options
 from coquery.defines import (
     FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL,
-    OPERATOR_LABELS, OP_MATCH, OP_NMATCH)
+    OPERATOR_LABELS,
+    OP_EQ, OP_NE, OP_GT, OP_GE, OP_LT, OP_LE, OP_MATCH, OP_NMATCH)
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.addFilterUi import Ui_FiltersDialog
