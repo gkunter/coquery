@@ -9,13 +9,13 @@ import sys
 from coquery.unicode import utf8
 from coquery.gui.pyqt_compat import QtCore
 
-class TestModuleMethods(unittest.TestCase):
+class TestUnicodeModuleMethods(unittest.TestCase):
     def test_namespace_conflict(self):
         """
-        Test whether the module name 'unicode' interferes with the built-in 
+        Test whether the module name 'unicode' interferes with the built-in
         type 'unicode' in Python 2.7.
-        
-        There are two tests. For Python 2.7, the return value of 
+
+        There are two tests. For Python 2.7, the return value of
         unicode("test") is tested against the explicit unicode string u"test".
         For Python 3.x, a call to unicode() is expected to raise a NameError,
         as this type is not defined.
@@ -24,7 +24,7 @@ class TestModuleMethods(unittest.TestCase):
             self.assertEqual(unicode("test"), u"test")
         else:
             self.assertRaises(NameError, lambda: unicode())
-        
+
     def test_utf8_type(self):
         s1 = b'unaccented text for testing'
         s2 = 'unaccented text for testing'
@@ -45,7 +45,7 @@ class TestModuleMethods(unittest.TestCase):
         s7 = QtCore.QString(s4)
         self.assertEqual(type(utf8(s6)), type(u""))
         self.assertEqual(type(utf8(s7)), type(u""))
-        
+
     def test_utf8_content(self):
         s1a = 'unaccented text for testing'
         s1b = QtCore.QString(s1a)
@@ -55,19 +55,19 @@ class TestModuleMethods(unittest.TestCase):
         s2a = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
         s2b = QtCore.QString(s2a)
         s2u  = u'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
-        
+
         # test content:
         self.assertEqual(utf8(s1a), s1u)
         self.assertEqual(utf8(s1b), s1u)
         self.assertEqual(utf8(s1c), s1u)
         self.assertEqual(utf8(s2a), s2u)
         self.assertEqual(utf8(s2b), s2u)
-        
+
 def main():
     suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
+        unittest.TestLoader().loadTestsFromTestCase(TestUnicodeModuleMethods),
         ])
-    
+
     unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':

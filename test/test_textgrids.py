@@ -81,8 +81,7 @@ BaseResource.file_duration = "Duration"
 BaseResource.db_name = "Test"
 
 
-class TestModuleMethods(unittest.TestCase):
-
+class TestTextGridModuleMethods(unittest.TestCase):
     def setUp(self):
         self.resource = BaseResource()
         self.session = MockSession(self.resource)
@@ -161,7 +160,6 @@ class TestModuleMethods(unittest.TestCase):
     def test_fill_grids_file1_no_labels(self):
         options.cfg.selected_features = self.selected_features1
         writer = textgrids.TextgridWriter(self.df1, self.session)
-        print(self.df1)
         grids = writer.fill_grids()
 
         grid = grids[("File1.txt",)]
@@ -265,12 +263,12 @@ class TestModuleMethods(unittest.TestCase):
 
 def main():
     suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
+        unittest.TestLoader().loadTestsFromTestCase(TestTextGridModuleMethods),
         ])
     unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
-    if not hasattr(TestModuleMethods, "assertCountEqual"):
-        setattr(TestModuleMethods, "assertCountEqual",
-                TestModuleMethods.assertItemsEqual)
+    if not hasattr(TestTextGridModuleMethods, "assertCountEqual"):
+        setattr(TestTextGridModuleMethods, "assertCountEqual",
+                TestTextGridModuleMethods.assertItemsEqual)
     main()

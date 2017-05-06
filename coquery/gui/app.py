@@ -1643,8 +1643,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         try:
             columns = (self.table_model.content.columns |
                        self.hidden_model.content.columns)
-            dtypes = (self.table_model.content.dtypes +
-                      self.hidden_model.content.dtypes)
+            dtypes = self.table_model.content.dtypes.append(
+                        self.hidden_model.content.dtypes)
         except AttributeError:
             columns = []
             dtypes = []
@@ -3060,9 +3060,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                 in columns])
             try:
                 if all(dtypes != object):
-                    kwargs.update({"function_class": (functions.MathFunction, functions.LogicFunction)})
+                    kwargs.update(
+                        {"function_class": (functions.MathFunction,
+                                            functions.Comparison,
+                                            functions.LogicFunction)})
                 else:
-                    kwargs.update({"function_class": (functions.StringFunction, functions.LogicFunction)})
+                    kwargs.update(
+                        {"function_class": (functions.StringFunction,
+                                            functions.Comparison)})
             except Exception as e:
                 print(e)
                 kwargs.update({"function_class": tuple()})
@@ -3075,6 +3080,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 available = [x for x in self.table_model.content.columns
                             if x not in columns]
         kwargs["available_columns"] = available
+
+        # run the dialog:
         response = addfunction.FunctionDialog.set_function(parent=self,
                                                            columns=columns,
                                                            **kwargs)
@@ -3094,7 +3101,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             l = [x(columns=columns, group=False) for x in response]
             self.Session.summary_functions.set_list(l)
         else:
-            fun_type, value, aggr, label = response
+            fun_type, columns, value, aggr, label = response
             fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
             self.Session.column_functions.add_function(fun)
 

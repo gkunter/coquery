@@ -586,13 +586,17 @@ class SessionInputFile(Session):
                     na_filter=False)
             except ValueError:
                 raise EmptyInputFileError(InputFile)
-            if self.header == None:
+
+            if self.header is None:
                 if options.cfg.file_has_headers:
                     self.header = input_file.columns.values.tolist()
                 else:
-                    self.header = ["X{}".format(i+1) for i, _ in enumerate(input_file.columns)]
+                    self.header = ["X{}".format(i+1) for i, _
+                                   in enumerate(input_file.columns)]
                     input_file.columns = self.header
-            options.cfg.query_label = self.header.pop(options.cfg.query_column_number - 1)
+
+            options.cfg.query_label = self.header.pop(
+                options.cfg.query_column_number - 1)
             for current_line in input_file.iterrows():
                 current_line = list(current_line[1])
                 if options.cfg.query_column_number > len(current_line):
@@ -600,14 +604,17 @@ class SessionInputFile(Session):
 
                 if read_lines >= options.cfg.skip_lines:
                     try:
-                        query_string = current_line.pop(options.cfg.query_column_number - 1)
+                        query_string = current_line.pop(
+                            options.cfg.query_column_number - 1)
                     except AttributeError:
                         continue
                     new_query = self.query_type(query_string, self)
                     new_query.input_frame = pd.DataFrame(
                         [current_line], columns=self.header)
                     self.query_list.append(new_query)
-                self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
+                self.max_number_of_input_columns = max(
+                    len(current_line),
+                    self.max_number_of_input_columns)
                 read_lines += 1
             self.input_columns = ["coq_{}".format(x) for x in self.header]
 

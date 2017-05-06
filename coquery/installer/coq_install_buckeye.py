@@ -161,7 +161,8 @@ class BuilderClass(BaseCorpusBuilder):
         's2602b.zip', 's1902a.zip', 's2801b.zip',
         's2301a.zip', 's3603a.zip', 's0302b.zip',
         's1401a.zip', 's1604a.zip', 's1103b.zip',
-        's1204a.zip', 's0801a.zip', 's1402a.zip']
+        's1204a.zip', 's0801a.zip', 's1402a.zip',
+        's0701a.zip', 's0401b.zip']
 
     # the table of speaker characteristics is from p. 4 of the Buckeye
     # Corpus Manual, http://buckeyecorpus.osu.edu/php/publications.php:
@@ -207,13 +208,13 @@ class BuilderClass(BaseCorpusBuilder):
     # Corpus Manual, http://buckeyecorpus.osu.edu/php/publications.php. It
     # is used when trying to salvage incomplete rows.
 
-    _valid_pos = ["CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR",
-                  "JJS", "LS", "MD", "NN", "NNS", "NNP", "NNPS", "PDT",
-                  "POS", "PRP", "PP$", "RB", "RBR", "RBS", "RP", "SYM",
-                  "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ",
-                  "WDT", "WP", "WP$", "WRB", "DT_VBZ", "EX_VBZ", "NULL",
-                  "PRP_MD", "PRP_VBP", "PRP_VBZ", "VBG_TO", "VBP_RB",
-                  "VBP_TO", "VBZ_RB", "WP_VBZ", "WP_RB"]
+    _VALID_POS = ["CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR",
+                 "JJS", "LS", "MD", "NN", "NNS", "NNP", "NNPS", "PDT",
+                 "POS", "PRP", "PP$", "RB", "RBR", "RBS", "RP", "SYM",
+                 "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ",
+                 "WDT", "WP", "WP$", "WRB", "DT_VBZ", "EX_VBZ", "NULL",
+                 "PRP_MD", "PRP_VBP", "PRP_VBZ", "VBG_TO", "VBP_RB",
+                 "VBP_TO", "VBZ_RB", "WP_VBZ", "WP_RB"]
 
     def __init__(self, gui=False, *args):
        # all corpus builders have to call the inherited __init__ function:
@@ -475,10 +476,10 @@ class BuilderClass(BaseCorpusBuilder):
         file_name, _ = os.path.splitext(filename)
         words_file = "{}.words".format(file_name)
         input_data = speaker_zip.read(words_file)
-        input_data = [utf8(x.strip()) for x in input_data.splitlines() if x.strip()]
+        input_data = [utf8(x.strip()) for x in input_data.splitlines()
+                      if x.strip()]
         self._duration = 0
         regex = re.compile("[{<].+[}>]")
-
 
         # The list ``segments'' contains all segments in this file. Each
         # entry in the list is a tuple with the end time and the segment
@@ -492,8 +493,9 @@ class BuilderClass(BaseCorpusBuilder):
         # label, POS, transcript, # and canonical transcript as values.
         tokens = []
 
+        iter_data = iter(input_data)
 
-        for row in input_data:
+        for row in iter_data:
             row = re.sub("\s+", " ", row)
 
             # only process the lines after the hash mark:
@@ -504,16 +506,17 @@ class BuilderClass(BaseCorpusBuilder):
                 # There is an error in file s3504a.words: the POS field is
                 # wrapped to a separate line. For this file, the installer
                 # contains special treatment of the input data:
-                if filename == "s3504a.zip" and last_row != None:
+                if filename == "s3504a.zip":
+                    next_row = next(iter_data)
+
                     # Not only is there the line-wrapping error, the file
                     # also has only one filed for non-linguistic tokens
                     # <...>, while all other files appear to have some
                     # kind of dummy lemma and word label. In order to be
                     # consistent, supply these labels if needed:
-                    if row.endswith("null"):
-                        row = "; U; U; null"
-                    row = "{}{}".format(last_row, row)
-                    last_row = None
+                    if next_row.endswith("null"):
+                        next_row = "; U; U; null"
+                    row = "{}{}".format(row, next_row)
 
                 try:
                     self._value_corpus_time, _, remain = row.partition(" ")
@@ -527,7 +530,7 @@ class BuilderClass(BaseCorpusBuilder):
                     logger.warn(".words file {}: error in float conversion ({})".format(filename, row))
                     continue
 
-                split_values = value.split("; ")
+                split_values = [x.strip() for x in value.split("; ")]
 
                 # Rows should have four values: the orthographic word, the
                 # canonical transcription, the transcribed word, and the POS
@@ -541,13 +544,6 @@ class BuilderClass(BaseCorpusBuilder):
                     # if there are less than 4 values, still try to salvage
                     # the row
 
-                    # account for corrupt file s3405a.zip by stopping with
-                    # this row at this point, and processing it together with
-                    # the next row:
-                    if filename == "s3504a.zip":
-                        last_row = row
-                        continue
-
                     # the first value is always the word:
                     self._value_corpus_word = split_values[0]
 
@@ -559,17 +555,19 @@ class BuilderClass(BaseCorpusBuilder):
                     if len(split_values) == 3:
                         # check if last value is a valid POS tag, or "null",
                         # i.e. a non-speech label:
-                        if split_values[2] in [self._valid_pos, "null"]:
+                        if split_values[-1] in [self._VALID_POS, "null"]:
                             self._value_corpus_transcript = split_values[1]
-                            self._value_corpus_pos = split_values[2]
+                            self._value_corpus_lemmatranscript = split_values[1]
+                            self._value_corpus_pos = split_values[-1]
                         else:
                             self._value_corpus_transcript = split_values[1]
-                            self._value_corpus_lemmatranscript = split_values[2]
+                            self._value_corpus_lemmatranscript = split_values[-1]
+                            self._value_corpus_transcript = "null"
 
                     elif len(split_values) == 2:
                         # check if last value is a valid POS tag, or "null",
                         # i.e. a non-speech label:
-                        if split_values[1] in [self._valid_pos, "null"]:
+                        if split_values[1] in [self._VALID_POS, "null"]:
                             self._value_corpus_pos = split_values[1]
                             if split_values[-1] == "null":
                                 # apparently, 'U' is used as transcription of
