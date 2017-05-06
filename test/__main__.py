@@ -13,7 +13,7 @@ from test.test_options import TestQueryStringParse
 from test.test_sessions import TestSessionInputFile
 from test.test_textgrids import TestTextGridModuleMethods
 from test.test_tokens import (
-    TestTokens, TestQueryTokenCOCA, TestQuantification)
+    TestTokensModuleMethods, TestQueryTokenCOCA, TestQuantification)
 from test.test_unicode import TestUnicodeModuleMethods
 
 def main():
@@ -27,7 +27,8 @@ def main():
                    TestFilterString, TestApply,
                    TestQueryStringParse,
                    TestTextGridModuleMethods,
-                   TestTokens, TestQueryTokenCOCA, TestQuantification,
+                   TestTokensModuleMethods,
+                   TestQueryTokenCOCA, TestQuantification,
                    TestUnicodeModuleMethods]])
     unittest.TextTestRunner().run(suite)
 
