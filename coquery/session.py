@@ -94,8 +94,6 @@ class Session(object):
         # Column functions are functions that the user specified from the
         # results table
         self.column_functions = functionlist.FunctionList()
-        # group functions are functions applied to each group (duh)
-        self.group_functions = functionlist.FunctionList()
         # Summary functions are functions that the user specified to be
         # applied after the summary
         self.summary_functions = functionlist.FunctionList()
@@ -215,11 +213,10 @@ class Session(object):
         number_of_queries = len(self.query_list)
         manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
+        manager.set_groups(self.groups)
 
         dtype_list = []
-
         self.queries = {}
-
         _queried = []
 
         try:
@@ -353,7 +350,7 @@ class Session(object):
 
         manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
-        manager.set_group_filters(options.cfg.group_filter_list)
+        manager.set_groups(self.groups)
 
         column_properties = {}
         try:
