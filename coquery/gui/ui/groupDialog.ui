@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Add a group – Coquery</string>
   </property>
-  <layout class="QGridLayout" name="verticalLayout" rowstretch="0,1,1,0">
+  <layout class="QGridLayout" name="verticalLayout" rowstretch="0,1,2,0">
    <item row="3" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
@@ -22,24 +22,6 @@
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QScrollArea" name="scroll_area">
-     <property name="widgetResizable">
-      <bool>true</bool>
-     </property>
-     <widget class="QWidget" name="scroll_content">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>535</width>
-        <height>197</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="scroll_layout"/>
-     </widget>
     </widget>
    </item>
    <item row="2" column="0">
@@ -80,6 +62,31 @@
      <property name="text">
       <string/>
      </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QScrollArea" name="scroll_area">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scroll_content">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>535</width>
+        <height>265</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="scroll_layout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="margin">
+        <number>0</number>
+       </property>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
