@@ -256,11 +256,11 @@ class SelectionDialog(QtWidgets.QDialog):
                  *args, **kwargs):
         super(SelectionDialog, self).__init__(*args, **kwargs)
         self.setWindowTitle(title)
-        self.layout = QtWidgets.QVBoxLayout(self)
+        self.main_layout = QtWidgets.QVBoxLayout(self)
         self.list_select = CoqListSelect()
         self.list_select.setAvailableList(available, translator)
         self.list_select.setSelectedList(selected, translator)
-        self.layout.addWidget(self.list_select)
+        self.main_layout.addWidget(self.list_select)
         self.resize(500, 310)
 
     def exec_(self):
