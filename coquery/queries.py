@@ -334,9 +334,6 @@ class TokenQuery(object):
             self.empty_query = False
 
         columns = self.Session.output_order
-        group_functions = self.Session.group_functions
-        if group_functions or options.cfg.group_filter_list:
-            columns += options.cfg.group_columns
 
         for column in columns:
             if column == "coquery_query_string":
