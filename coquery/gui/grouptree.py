@@ -99,29 +99,32 @@ class CoqGroupTree(QtWidgets.QWidget):
         return item
 
     def check_buttons(self):
+        selected = self.ui.tree_groups.selectedItems()
         try:
             get_toplevel_window().table_model.content
         except:
             self.ui.button_add_group.setDisabled(True)
             self.ui.button_edit_group.setDisabled(True)
-            self.ui.button_remove_group.setDisabled(True)
+            self.ui.button_remove_group.setEnabled(bool(selected))
             return
         else:
             self.ui.button_add_group.setEnabled(True)
-        selected = self.ui.tree_groups.selectedItems()
         self.ui.button_edit_group.setEnabled(bool(selected))
         self.ui.button_remove_group.setEnabled(bool(selected))
 
     def _add_group(self):
         try:
-            df = get_toplevel_window().table_model.content
+            vis_cols = get_toplevel_window().table_model.content.columns
+            hidden_cols = get_toplevel_window().hidden_model.content.columns
+            all_columns = list(vis_cols) + list(hidden_cols)
         except AttributeError:
-            df = pd.DataFrame()
+            all_columns = []
 
         self._item_number += 1
         name = self.group_label.format(self._item_number)
-        group = Group(name, df.columns.tolist())
-        result = GroupDialog.edit(group, df, parent=get_toplevel_window())
+        group = Group(name, list(vis_cols))
+        result = GroupDialog.edit(group, all_columns,
+                                  parent=get_toplevel_window())
         if result:
             item = CoqGroupTreeItem(result)
             self.ui.tree_groups.addTopLevelItem(item)
@@ -138,13 +141,16 @@ class CoqGroupTree(QtWidgets.QWidget):
 
     def _edit_group(self):
         try:
-            df = get_toplevel_window().table_model.content
+            vis_cols = get_toplevel_window().table_model.content.columns
+            hidden_cols = get_toplevel_window().hidden_model.content.columns
+            all_columns = list(vis_cols) + list(hidden_cols)
         except AttributeError:
-            df = pd.DataFrame()
+            all_columns = []
 
         item = self.get_current_item()
         group = item.group
-        result = GroupDialog.edit(group, df, parent=get_toplevel_window())
+        result = GroupDialog.edit(group, all_columns,
+                                  parent=get_toplevel_window())
         if result:
             item.change_group(result)
             self.groupModified.emit(result)
