@@ -14,15 +14,15 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import logging
-import numpy as np
+import os
+import sys
+import random
 import pandas as pd
 
-from coquery import general
+from coquery import general, NAME
 from coquery import options
-from coquery import filters
 from coquery import managers
-from coquery.errors import *
-from coquery.defines import *
+from coquery import session
 from coquery.unicode import utf8
 
 from .pyqt_compat import (QtCore, QtGui, QtWidgets,
@@ -33,6 +33,7 @@ from xml.sax.saxutils import escape
 
 _left_align = int(QtCore.Qt.AlignLeft) | int(QtCore.Qt.AlignVCenter)
 _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)
+
 
 class CoqThread(QtCore.QThread):
     taskStarted = QtCore.Signal()
@@ -191,9 +192,9 @@ class CoqFeatureList(QtWidgets.QListWidget):
         # add (and remove) dummy item to determine usual size of entries:
         super(CoqFeatureList, self).addItem(QtWidgets.QListWidgetItem(""))
         self._item_height = (self.visualItemRect(self.item(0)).height() +
-                            self.padding())
+                             self.padding())
         self._item_width = (self.visualItemRect(self.item(0)).width() +
-                           self.padding())
+                            self.padding())
         self.takeItem(0)
 
     def addItem(self, item):
@@ -213,7 +214,7 @@ class CoqFeatureList(QtWidgets.QListWidget):
 
     def dragEnterEvent(self, e):
         if ("application/x-qabstractitemmodeldatalist" in
-            e.mimeData().formats()):
+                e.mimeData().formats()):
             e.accept()
         else:
             super(CoqFeatureList, self).dragEnterEvent(e)
@@ -245,7 +246,7 @@ class CoqFeatureTray(CoqFeatureList):
         self.setMinimumHeight(self.itemHeight() + 2 * self.frameWidth())
 
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored,
-                                       QtWidgets.QSizePolicy.Fixed)
+                                           QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -704,19 +705,19 @@ class CoqGroupBox(QtWidgets.QGroupBox):
             kwargs["title_weight"] = "normal"
         palette = options.cfg.app.palette()
         s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
-                    sign_up="sign-minimize.png",
-                    sign_down="sign-maximize.png",
-                    icon_size=icon_size, header_size=header_size,
-                    pad_right=pad,
-                    button_light=palette.color(QtGui.QPalette.Light).name(),
-                    button_midlight=palette.color(QtGui.QPalette.Midlight).name(),
-                    button_button=palette.color(QtGui.QPalette.Button).name(),
-                    button_mid=palette.color(QtGui.QPalette.Mid).name(),
-                    button_dark=palette.color(QtGui.QPalette.Dark).name(),
-                    box_light=palette.color(QtGui.QPalette.Window).name(),
-                    box_dark=palette.color(QtGui.QPalette.Window).name(),
-                    focus=palette.color(QtGui.QPalette.Highlight).name(),
-                    **kwargs)
+                     sign_up="sign-minimize.png",
+                     sign_down="sign-maximize.png",
+                     icon_size=icon_size, header_size=header_size,
+                     pad_right=pad,
+                     button_light=palette.color(QtGui.QPalette.Light).name(),
+                     button_midlight=palette.color(QtGui.QPalette.Midlight).name(),
+                     button_button=palette.color(QtGui.QPalette.Button).name(),
+                     button_mid=palette.color(QtGui.QPalette.Mid).name(),
+                     button_dark=palette.color(QtGui.QPalette.Dark).name(),
+                     box_light=palette.color(QtGui.QPalette.Window).name(),
+                     box_dark=palette.color(QtGui.QPalette.Window).name(),
+                     focus=palette.color(QtGui.QPalette.Highlight).name(),
+                     **kwargs)
         self.setStyleSheet(s)
 
     def __init__(self, *args, **kwargs):
@@ -903,6 +904,9 @@ class CoqDetailBox(QtWidgets.QWidget):
         self.update()
 
     def update(self):
+        def get_pal(x):
+            return options.cfg.app.palette().color(x).name()
+
         try:
             up = get_toplevel_window().get_icon("Chevron Up_2")
             down = get_toplevel_window().get_icon("Chevron Right_2")
@@ -928,7 +932,6 @@ class CoqDetailBox(QtWidgets.QWidget):
                     None))
                 self.header.setToolTip(s)
 
-                get_pal = lambda x: options.cfg.app.palette().color(x).name()
                 kwargs = {
                     "border": get_pal(QtGui.QPalette.Button),
                     "hoverborder": get_pal(QtGui.QPalette.Highlight),
@@ -1068,7 +1071,7 @@ class CoqTreeItem(QtWidgets.QTreeWidgetItem):
         """
         Return True if the entry represenets a linked table.
         """
-        return self._link_by != None
+        return self._link_by is not None
 
     def setText(self, column, text, *args):
         text = utf8(text)
@@ -1835,8 +1838,9 @@ class CoqTableView(QtWidgets.QTableView):
         rects = dict([
             (df.columns[i], QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)) for i in range(self.horizontalHeader().count())])
 
-        df[cols].apply(lambda x: set_height(np.where(df.index == x.name)[0], x),
-                       axis="columns")
+        df[cols].apply(
+            lambda x: set_height(pd.np.where(df.index == x.name)[0], x),
+            axis="columns")
 
     def resizeColumnsToContents(self, *args, **kwargs):
         self.setVisible(False)
@@ -1915,7 +1919,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         col = self.content.columns[index.column()]
         row = self.content.index[index.row()]
         if (role == QtCore.Qt.EditRole and
-            col.startswith("coq_userdata")):
+                col.startswith("coq_userdata")):
             self.content[col][row] = value
             self.formatted[col][row] = value
             corpus_id = self.invisible_content.iloc[index.row()]["coquery_invisible_corpus_id"]
@@ -2002,8 +2006,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             row_vis = self._session.row_visibility[session.query_type]
             ix = self.content.index[index.row()]
 
-            return (not self._manager.is_hidden_column(col) and
-                row_vis[ix])
+            return (not self._manager.is_hidden_column(index.column()) and
+                    row_vis[ix])
         except Exception as e:
             print("is_visible():", e)
             return False
@@ -2032,7 +2036,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         # ToolTipRole: return the content as a tooltip:
         elif role == QtCore.Qt.ToolTipRole:
-            val = self.content.values[index.row()][ix]
             formatted_val = self.formatted.values[index.row()][ix]
             return "<div>{}</div>".format(escape(formatted_val))
 
@@ -2067,7 +2070,9 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         if orientation == QtCore.Qt.Vertical:
             if role == QtCore.Qt.DisplayRole:
                 val = self.content.index[index]
-                return utf8(val + 1) if isinstance(val, (np.integer, int)) else utf8(val)
+                return (utf8(val + 1)
+                        if isinstance(val, (pd.np.integer, int))
+                        else utf8(val))
             else:
                 return None
 
@@ -2117,7 +2122,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         """ Return the number of columns. """
         return self.content.columns.size
-
 
 
 class CoqTabBar(QtWidgets.QTabBar):
@@ -2228,8 +2232,8 @@ class CoqFlowLayout(QtWidgets.QLayout):
                 lineHeight = 0
 
             if not testOnly:
-                item.setGeometry(QtCore.QRect(QtCore.QPoint(x, y), item.sizeHint()))
-
+                item.setGeometry(QtCore.QRect(QtCore.QPoint(x, y),
+                                              item.sizeHint()))
             x = nextX
             lineHeight = max(lineHeight, item.sizeHint().height())
 
