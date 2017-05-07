@@ -391,6 +391,7 @@ class CoqClickableLabel(QtWidgets.QLabel):
         super(CoqClickableLabel, self).setText(s)
         self.textChanged.emit()
 
+
 class CoqSwitch(QtWidgets.QWidget):
     toggled = QtCore.Signal()
 
@@ -804,6 +805,8 @@ class CoqDetailBox(QtWidgets.QWidget):
     below the button.
     """
     clicked = QtCore.Signal(QtWidgets.QWidget)
+    expanded = QtCore.Signal()
+    collapsed = QtCore.Signal()
 
     def __init__(self, text="", box=None, alternative=None, *args, **kwargs):
         if isinstance(text, QtWidgets.QWidget):
@@ -860,6 +863,13 @@ class CoqDetailBox(QtWidgets.QWidget):
         self._expanded = False
         self.update()
         self.setText(text)
+        self._data = {}
+
+    def data(self, role):
+        return self._data[role]
+
+    def setData(self, role, data):
+        self._data[role] = data
 
     def onClick(self):
         self.clicked.emit(self)
@@ -886,6 +896,10 @@ class CoqDetailBox(QtWidgets.QWidget):
 
     def toggle(self):
         self._expanded = not self._expanded
+        if self._expanded:
+            self.expanded.emit()
+        else:
+            self.collapsed.emit()
         self.update()
 
     def update(self):
@@ -959,6 +973,10 @@ class CoqDetailBox(QtWidgets.QWidget):
 
     def setExpanded(self, b):
         self._expanded = b
+        if self._expanded:
+            self.expanded.emit()
+        else:
+            self.collapsed.emit()
         self.update()
 
     def isExpanded(self):
