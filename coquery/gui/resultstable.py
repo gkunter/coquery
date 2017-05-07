@@ -173,7 +173,7 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
                 rect.setWidth(int(option.rect.width() * min(self.max_value, value)/self.max_value))
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
         if fg:
-            painter.setPen(QtPen.QPen(fg))
+            painter.setPen(QtGui.QPen(fg))
 
         try:
             if index.data(QtCore.Qt.TextAlignmentRole) == _left_align:

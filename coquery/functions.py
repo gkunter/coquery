@@ -115,22 +115,15 @@ class Function(CoqObject):
         return "Base functions"
 
     def __init__(self, columns=None, value=None, label=None, alias=None,
-                 group=None, sweep=False, aggr=None, hidden=False, **kwargs):
+                 group=None, aggr=None, **kwargs):
         """
-        Parameters
-        ----------
-        sweep: bool
-            True if the function sweeps through the coluns, and False if it
-            sticks to one row at a time during evaluation
         """
         if columns is None:
             columns = []
         if group is None:
             group = []
         super(Function, self).__init__()
-        self.column_list = columns
-        self._hidden = hidden
-        self.sweep = sweep
+        self.columns = columns
         self.alias = alias
         self.group = group
         self.value = value
@@ -149,28 +142,23 @@ class Function(CoqObject):
             return cls._name
 
     def get_label(self, session, manager, unlabel=False):
-        cols = self.columns(df=None, manager=manager, session=session)
-
         if self._label and not unlabel:
             return self._label
+
+        if self.group:
+            return "{}:{}".format(self.group.name, self.get_name())
+        elif self.no_column_labels:
+            return self.get_name()
         else:
-            if self.group:
-                template = "{func} by {cols}"
-                l = [session.translate_header(x) for x in self.group]
-                cols = "/".join(l)
-                return template.format(func=self.get_name(),cols="/".join(l))
+            args = []
+            args.append(",".join([session.translate_header(x)
+                                  for x in self.columns]))
+            if self.value:
+                args.append('"{}"'.format(self.value))
+            if len(self.columns) > 1:
+                args.append('"{}"'.format(self.aggr))
 
-            if self.no_column_labels:
-                return self.get_name()
-            else:
-                args = []
-                args.append(",".join([session.translate_header(x) for x in cols]))
-                if self.value:
-                    args.append('"{}"'.format(self.value))
-                if len(self.columns(df=None)) > 1:
-                    args.append('"{}"'.format(self.aggr))
-
-                return "{}({})".format(self.get_name(), ", ".join(args))
+            return "{}({})".format(self.get_name(), ", ".join(args))
 
     def set_label(self, label):
         self._label = label
@@ -196,7 +184,10 @@ class Function(CoqObject):
         if self.alias:
             return self.alias
         else:
-            return "func_{}_{}".format(self._name, self.get_hash())
+            if self.group:
+                return "func_{}_group_{}".format(self._name, self.get_hash())
+            else:
+                return "func_{}_{}".format(self._name, self.get_hash())
 
     def find_function(self, df, fun):
         fun_id = fun.get_id()
@@ -205,18 +196,9 @@ class Function(CoqObject):
                 return col
         return None
 
-    def columns(self, df, **kwargs):
-        if df is None or not self.sweep:
-            return self.column_list
-        else:
-            return get_visible_columns(df,
-                                       manager=kwargs["manager"],
-                                       session=kwargs["session"],
-                                       hidden=self._hidden)
-
     def evaluate(self, df, *args, **kwargs):
         try:
-            val = df[self.columns(df, **kwargs)].apply(self._func)
+            val = df[self.columns].apply(self._func)
             if len(val.columns) > 1:
                 val = val.apply(self.select, axis="columns")
         except (KeyError, ValueError):
@@ -273,9 +255,13 @@ class StringLength(StringFunction):
 
     # FIXME: there should be a decorator for functions!
     def evaluate(self, df, *args, **kwargs):
+        def _fnc(x):
+            try:
+                return(len(x))
+            except:
+                return None
         try:
-            columns = self.columns(df, **kwargs)
-            val = df[columns].applymap(len)
+            val = df[self.columns].applymap(_fnc)
             if len(val.columns) > 1:
                 val = val.apply(self.select, axis="columns")
         except (KeyError, ValueError):
@@ -305,7 +291,12 @@ class StringCount(StringRegEx):
     def _func(self, cell):
         if cell is None:
             return None
-        match = self.re.findall(cell)
+
+        try:
+            match = self.re.findall(cell)
+        except TypeError:
+            return None
+
         try:
             return len(match)
         except TypeError:
@@ -315,8 +306,7 @@ class StringCount(StringRegEx):
         try:
             if self.re is None:
                 raise ValueError
-            columns = self.columns(df, **kwargs)
-            val = df[columns].applymap(self._func)
+            val = df[self.columns].applymap(self._func)
             if len(val.columns) > 1:
                 val = val.apply(self.select, axis="columns")
         except (KeyError, ValueError):
@@ -365,13 +355,6 @@ class StringExtract(StringRegEx):
         return col.apply(lambda x: _match(x))
 
 
-class StringDecategoricalize(StringFunction):
-    _name = "DECAT"
-
-    def _func(self, col):
-        return col
-
-
 ####################
 ## Numeric functions
 ####################
@@ -385,7 +368,7 @@ class MathFunction(Function):
         return "Mathematical functions"
 
     def coerce_value(self, df, **kwargs):
-        column_dtypes = df[self.columns(df, **kwargs)].dtypes
+        column_dtypes = df[self.columns].dtypes
 
         if all([dt in (int, float) for dt in column_dtypes]):
             # if all columns are numeric, the value is coerced to float
@@ -409,12 +392,11 @@ class CalcFunction(MathFunction):
     _name = "virtual"
 
     def evaluate(self, df, *args, **kwargs):
-        val = df[self.columns(df, **kwargs)[0]].values
-        for x in self.columns(df, **kwargs)[1:]:
+        val = df[self.columns[0]].values
+        for x in self.columns[1:]:
             val = self._func(val, df[x].values)
         if self.value:
             const = self.coerce_value(df, **kwargs)
-            print(val, const)
             val = self._func(val, const)
         return pd.Series(data=val, index=df.index)
 
@@ -448,7 +430,7 @@ class NumpyFunction(MathFunction):
     parameters = 0
 
     def evaluate(self, df, *args, **kwargs):
-        _df = df[self.columns(df, **kwargs)]
+        _df = df[self.columns]
         val = self._func(_df.values)
         return pd.Series(data=val, index=df.index)
 
@@ -640,9 +622,7 @@ class Freq(BaseFreq):
         """
         Count the number of rows with equal values in the target columns.
         """
-        columns = self.columns(df, **kwargs)
-
-        fun = Freq(columns=columns, group=self.group)
+        fun = Freq(columns=self.columns, group=self.group)
         # do not calculate the frequencies again if the data frame already
         # contains an identical frequency column:
         if self.find_function(df, fun):
@@ -662,7 +642,7 @@ class Freq(BaseFreq):
             # 'coquery_dummy'
             pass
         # ignore external columns:
-        columns = [x for x in self.columns(df, **kwargs) if not x.startswith("db_")]
+        columns = [x for x in self.columns if not x.startswith("db_")]
         if len(columns) == 0:
             # if the function is applied over no columns (e.g. because all
             # columns are hidden), the function returns a Series containing
@@ -753,8 +733,7 @@ class FreqNorm(Freq):
             return pd.Series([], index=df.index)
 
         fun = SubcorpusSize(session=session,
-                            columns=self.columns(df, **kwargs),
-                            group=self.group)
+                            columns=self.columns, group=self.group)
         subsize = fun.evaluate(df, *args, **kwargs)
 
         d = pd.concat([val, subsize], axis=1)
@@ -776,7 +755,7 @@ class Rank(Freq):
     _name = "statistics_rank"
 
     def evaluate(self, df, *args, **kwargs):
-        rank_df = df[self.columns(df, **kwargs)].drop_duplicates().reset_index(drop=True)
+        rank_df = df[self.columns].drop_duplicates().reset_index(drop=True)
         rank_df[self._name] = rank_df.sort_values(by=rank_df.columns.tolist()).index.tolist()
         val = df.merge(rank_df, how="left")[self._name]
         val = val + 1
@@ -969,14 +948,8 @@ class Proportion(BaseProportion):
     _name = "statistics_proportion"
     no_column_labels = True
 
-    def __init__(self, *args, **kwargs):
-        super(Proportion, self).__init__(*args, **kwargs)
-        self.sweep = False
-
     def evaluate(self, df, *args, **kwargs):
-        columns = self.columns(df, **kwargs)
-
-        fun = Proportion(columns=columns, group=self.group)
+        fun = Proportion(columns=self.columns, group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
                 print(self._name, "using df.Proportion()")
@@ -985,7 +958,6 @@ class Proportion(BaseProportion):
             if options.cfg.verbose:
                 print(self._name, "calculating df.Proportion()")
         val = super(Proportion, self).evaluate(df, *args, **kwargs)
-        print(val)
         val = val / len(val)
         val.index = df.index
         return val
@@ -1010,7 +982,7 @@ class Entropy(Proportion):
     # this thing".
 
     def evaluate(self, df, *args, **kwargs):
-        _df = df[self.columns(df, **kwargs)]
+        _df = df[self.columns]
         _df["COQ_PROP"] = super(Entropy, self).evaluate(df, *args, **kwargs)
         _df = _df.drop_duplicates()
         props = _df["COQ_PROP"].values
@@ -1025,6 +997,8 @@ class Tokens(Function):
     _name = "statistics_tokens"
     no_column_labels = True
 
+    maximum_columns = 0
+
     def evaluate(self, df, *args, **kwargs):
         val = self.constant(df, len(df.dropna(how="all")))
         return val
@@ -1035,8 +1009,7 @@ class Types(Function):
     no_column_labels = True
 
     def evaluate(self, df, *args, **kwargs):
-        cols = self.columns(df, **kwargs)
-        val = self.constant(df, len(df[cols].drop_duplicates()))
+        val = self.constant(df, len(df[self.columns].drop_duplicates()))
         return val
 
 
@@ -1046,7 +1019,8 @@ class TypeTokenRatio(Types):
 
     def evaluate(self, df, *args, **kwargs):
         types = super(TypeTokenRatio, self).evaluate(df, *args, **kwargs)
-        tokens = Tokens(group=self.group, columns=self.column_list, hidden=self._hidden).evaluate(df, *args, **kwargs)
+        tokens = Tokens(group=self.group,
+                        columns=self.columns).evaluate(df, *args, **kwargs)
         df = pd.DataFrame(data={"types": types, "tokens": tokens},
                           index=df.index)
         val = df.apply(lambda row: row.types / row.tokens, axis="columns")
@@ -1128,15 +1102,18 @@ class SubcorpusSize(CorpusSize):
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
         manager = kwargs["manager"]
-        fun = SubcorpusSize(session=session, columns=self.columns(df, **kwargs), group=self.group)
+        fun = SubcorpusSize(session=session,
+                            columns=self.columns, group=self.group)
         if self.find_function(df, fun):
             print(self._name, "using df.SubcorpusSize()")
             return df[fun.get_id()]
         else:
             print(self._name, "calculating df.SubcorpusSize()")
 
-        corpus_features = [x for x, _ in session.Resource.get_corpus_features()]
-        column_list = [x for x in corpus_features if "coq_{}_1".format(x) in self.columns(df, **kwargs)]
+        corpus_features = [x for x, _
+                           in session.Resource.get_corpus_features()]
+        column_list = [x for x in corpus_features
+                       if "coq_{}_1".format(x) in self.columns]
 
         val = df.apply(session.Corpus.get_subcorpus_size,
                        columns=column_list,
@@ -1156,8 +1133,9 @@ class SubcorpusRangeMin(CorpusSize):
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
 
-        corpus_features = [x for x, _ in session.Resource.get_corpus_features()]
-        column_list = [x for x in self.columns(df, **kwargs) if x in
+        corpus_features = [x for x, _ in
+                           session.Resource.get_corpus_features()]
+        column_list = [col for col in self.columns if col in
                        ["coq_{}_1".format(y) for y in corpus_features]]
         val = df.apply(lambda x: self._func(x[column_list], session), axis=1)
         return val

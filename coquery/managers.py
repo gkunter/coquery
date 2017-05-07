@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import logging
+import itertools
 import collections
 import pandas as pd
 import re
@@ -43,6 +44,37 @@ class Sorter(CoqObject):
         self.position = position
 
 
+class Group(CoqObject):
+    def __init__(self, name="", columns=None, functions=None):
+        self.columns = []
+        self.functions = []
+
+        if columns is not None:
+            self.columns = columns
+        if functions is not None:
+            self.functions = functions
+
+        self.name = name
+
+    def __repr__(self):
+        S = ("Group(name='{}', columns=[{}], functions=[{}])")
+        return S.format(self.name,
+                        ", ".join(["'{}'".format(x) for x in self.columns]),
+                        ", ".join(["'{}'".format(x) for x in self.functions]))
+
+    def process(self, df, session, manager):
+        if self.columns:
+            function_list = FunctionList(self.get_functions())
+            df = (df.groupby(self.columns, as_index=False)
+                    .apply(function_list.lapply,
+                        session=session, manager=manager))
+        return df
+
+    def get_functions(self):
+        return [fnc(columns=columns, group=self)
+                for fnc, columns in self.functions]
+
+
 class Manager(CoqObject):
     name = "RESULTS"
     ignore_user_functions = False
@@ -65,7 +97,7 @@ class Manager(CoqObject):
 
         self.manager_functions = FunctionList()
 
-        self._group_filters = []
+        self._groups = []
         self._filters = []
         self._last_query_id = None
         self.reset_context_cache()
@@ -97,8 +129,8 @@ class Manager(CoqObject):
     def set_filters(self, filter_list):
         self._filters = filter_list
 
-    def set_group_filters(self, filter_list):
-        self._group_filters = filter_list
+    def set_groups(self, groups):
+        self._groups = groups
 
     def set_column_substitutions(self, d):
         self._subst = d
@@ -145,41 +177,19 @@ class Manager(CoqObject):
             print(e)
             raise e
 
-    def get_group_columns(self, df, session):
-        columns = []
-        for col in options.cfg.group_columns:
-            if col.startswith("func_"):
-                columns.append(col)
-            else:
-                formatted_cols = session.Resource.format_resource_feature(
-                                    col, session.get_max_token_count())
-                for x in formatted_cols:
-                    if x in df.columns:
-                        columns.append(x)
-        return columns
-
     def mutate_groups(self, df, session):
-        if (len(df) == 0 or
-            not options.cfg.group_columns or
-            not session.group_functions):
+        if not self._groups:
             return df
-        print("\tmutate_groups({})".format(options.cfg.group_columns))
 
-        group_cols = self.get_group_columns(df, session)
-        #if self._subst:
-            #df = (df.replace(self._subst).groupby(group_cols)
-                    #.apply(lambda x: session.group_functions.lapply(
-                                        #x, session=session, manager=self)))
-        #else:
-            #df = (df.groupby(group_cols)
-                    #.apply(lambda x: session.group_functions.lapply(
-                                        #x, session=session, manager=self)))
+        if options.cfg.verbose:
+            print("\tmutate_groups({})".format(self._groups))
 
-        df = (df.groupby(group_cols, as_index=False)
-                .apply(session.group_functions.lapply,
-                       session=session, manager=self))
+        for group in self._groups:
+            df = group.process(df, session=session, manager=self)
 
-        print("\tDone mutate_groups")
+        if options.cfg.verbose:
+            print("\tDone mutate_groups")
+
         return df
 
     def mutate(self, df, session, stage="first"):
@@ -189,7 +199,8 @@ class Manager(CoqObject):
         if len(df) == 0:
             return df
 
-        print("\tmutate(stage='{}')".format(stage))
+        if options.cfg.verbose:
+            print("\tmutate(stage='{}')".format(stage))
         # apply mutate functions, including context functions:
         mutate_functions = FunctionList(self._get_main_functions(df, session))
         kwargs = {"session": session, "manager": self}
@@ -227,7 +238,7 @@ class Manager(CoqObject):
             self.stage_two_functions = []
             for fnc in session.column_functions:
                 all_available = all([col in df.columns
-                                     for col in fnc.columns(**kwargs)])
+                                     for col in fnc.columns])
                 if all_available:
                     self.stage_one_functions.append(fnc)
                 else:
@@ -239,7 +250,8 @@ class Manager(CoqObject):
             df = FunctionList(self.stage_two_functions).lapply(**kwargs)
 
         df = df.reset_index(drop=True)
-        print("\tdone")
+        if options.cfg.verbose:
+            print("\tdone")
         return df
 
     def substitute(self, df, session, stage="first"):
@@ -294,53 +306,24 @@ class Manager(CoqObject):
         return None
 
     def arrange_groups(self, df, session):
-        if len(df) == 0 or len(options.cfg.group_columns) == 0:
+        if len(df) == 0 or len(self._groups) == 0:
             return df
 
-        print("\tarrange_groups({})".format(options.cfg.group_columns))
+        if options.cfg.verbose:
+            print("\tarrange_groups({})".format(self._groups))
 
-        columns = self.get_group_columns(df, session)
-        columns += ["coquery_invisible_corpus_id"]
-        directions = [True] * len(columns)
+        for group in self._groups:
+            # always sort minimally by the token ID
+            columns = group.columns + ["coquery_invisible_corpus_id"]
+            directions = [True] * len(columns)
 
-        # filter columns that should be in the data frame, but which aren't
-        # (this may happen for example with the contingency table which
-        # takes one column and rearranges it)
-        column_check = [x in df.columns for x in columns]
-        for i, col in enumerate(column_check):
-            if not col:
-                directions.pop(i)
-                columns.pop(i)
+            df = df.sort_values(by=columns,
+                                ascending=directions,
+                                axis="index")
 
-        if COLUMN_NAMES["statistics_column_total"] in df.index:
-            # make sure that the row containing the totals is the last row:
-            df_data = df[df.index != COLUMN_NAMES["statistics_column_total"]]
-            df_totals = df[df.index == COLUMN_NAMES["statistics_column_total"]]
-        else:
-            df_data = df
-
-        # always sort by coquery_invisible_corpus_id if there is no other
-        # sorter -- but not if the session covered multiple queries.
-
-        # sort the data frame (excluding a totals row) with backward
-        # compatibility:
-        try:
-            # pandas <= 0.16.2:
-            df_data = df_data.sort(columns=columns,
-                            ascending=directions,
-                            axis="index")[df.columns]
-        except AttributeError:
-            # pandas >= 0.17.0
-            df_data = df_data.sort_values(by=columns,
-                                    ascending=directions,
-                                    axis="index")[df.columns]
-        if COLUMN_NAMES["statistics_column_total"] in df.index:
-            # return sorted data frame plus a potentially totals row:
-            df = pd.concat([df_data, df_totals])
-        else:
-            df = df_data
         df = df.reset_index(drop=True)
-        print("\tdone")
+        if options.cfg.verbose:
+            print("\tdone")
         return df
 
     def arrange(self, df, session):
@@ -425,7 +408,8 @@ class Manager(CoqObject):
         return df
 
     def summarize(self, df, session):
-        print("\tsummarize()")
+        if options.cfg.verbose:
+            print("\tsummarize()")
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
         kwargs = {"session": session, "manager": self}
@@ -447,7 +431,8 @@ class Manager(CoqObject):
                               .index)
             self.dropped_na_count = len(df) - len(ix)
             df = df.loc[ix]
-        print("\tdone")
+        if options.cfg.verbose:
+            print("\tdone")
         return df
 
     def distinct(self, df, session):
@@ -486,6 +471,8 @@ class Manager(CoqObject):
         self._len_post_group_filter = {}
 
     def filter_groups(self, df, session):
+        return df
+
         if (len(df) == 0 or
                 len(options.cfg.group_columns) == 0 or
                 len(options.cfg.group_filter_list) == 0):
@@ -518,7 +505,9 @@ class Manager(CoqObject):
         Select the columns that will appear in the final output. Also, put
         them into the preferred order.
         """
-        print("\tselect()")
+        if options.cfg.verbose:
+            print("\tselect()")
+
         resource = session.Resource
 
         l = []
@@ -568,7 +557,8 @@ class Manager(CoqObject):
             pass
 
         df = df[columns]
-        print("\tdone")
+        if options.cfg.verbose:
+            print("\tdone")
         return df
 
     def filter_stopwords(self, df, session):
@@ -638,7 +628,9 @@ class Manager(CoqObject):
             Discard the columns that are not needed for the current
             transformation.
         """
-        print("process()")
+        if options.cfg.verbose:
+            print("process()")
+
         df = df.reset_index(drop=True)
 
         # Get index of rows that are retained if duplicates are removed from
@@ -674,20 +666,24 @@ class Manager(CoqObject):
         df = self.mutate(df, session)
         self.mutated_columns = df.columns
 
-        if options.cfg.group_columns:
-            df = self.filter_groups(df, session)
-            df = self.arrange_groups(df, session)
-            df = self.mutate_groups(df, session)
+        df = self.filter_groups(df, session)
+        df = self.arrange_groups(df, session)
+        df = self.mutate_groups(df, session)
+
         df = self.filter(df, session, stage=FILTER_STAGE_BEFORE_TRANSFORM)
         df = self.summarize(df, session)
         df = self.mutate(df, session, stage="second")
         df = self.substitute(df, session, "second")
         df = self.filter(df, session, stage=FILTER_STAGE_FINAL)
         df = self.select(df, session)
+
+        functions = list(itertools.chain.from_iterable(
+            [group.get_functions() for group in self._groups]))
+
         self._functions = (session.column_functions.get_list() +
-                           session.group_functions.get_list() +
                            session.summary_functions.get_list() +
-                           self.manager_functions.get_list())
+                           self.manager_functions.get_list() +
+                           functions)
 
         return df
 
@@ -1001,7 +997,8 @@ class ContrastMatrix(FrequencyList):
         # first, get the frequency list:
         df = super(ContrastMatrix, self).summarize(df, session)
         self._freq_function = self.manager_functions.get_list()[0]
-        l = [x if x != self._freq_function.get_id() else "coquery_invisible_count"
+        l = [x if x != self._freq_function.get_id()
+             else "coquery_invisible_count"
              for x in df.columns]
         df.columns = l
         self._freq_function.alias = "coquery_invisible_count"
@@ -1009,7 +1006,8 @@ class ContrastMatrix(FrequencyList):
         vis_cols = [x for x
                     in get_visible_columns(df, manager=self, session=session)
                     if not x == self._freq_function.get_id()]
-        self._subcorpus_size = SubcorpusSize(columns=vis_cols, alias="coquery_invisible_size")
+        self._subcorpus_size = SubcorpusSize(columns=vis_cols,
+                                             alias="coquery_invisible_size")
         self.manager_functions = FunctionList([self._subcorpus_size])
         df = super(FrequencyList, self).summarize(df, session)
 

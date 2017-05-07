@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(720, 844)
+        MainWindow.resize(720, 715)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -223,20 +223,15 @@ class Ui_MainWindow(object):
         self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.tool_widget_page_groups)
         self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.list_group_columns = CoqGroupColumns(self.tool_widget_page_groups)
-        self.list_group_columns.setObjectName("list_group_columns")
-        self.verticalLayout_6.addWidget(self.list_group_columns)
-        self.button_add_group_function = QtWidgets.QPushButton(self.tool_widget_page_groups)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.tree_groups = CoqGroupTree(self.tool_widget_page_groups)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.button_add_group_function.sizePolicy().hasHeightForWidth())
-        self.button_add_group_function.setSizePolicy(sizePolicy)
-        self.button_add_group_function.setObjectName("button_add_group_function")
-        self.verticalLayout_6.addWidget(self.button_add_group_function)
-        self.button_group_filters = QtWidgets.QPushButton(self.tool_widget_page_groups)
-        self.button_group_filters.setObjectName("button_group_filters")
-        self.verticalLayout_6.addWidget(self.button_group_filters)
+        sizePolicy.setHeightForWidth(self.tree_groups.sizePolicy().hasHeightForWidth())
+        self.tree_groups.setSizePolicy(sizePolicy)
+        self.tree_groups.setObjectName("tree_groups")
+        self.tree_groups.headerItem().setText(0, "1")
+        self.verticalLayout_6.addWidget(self.tree_groups)
         self.tool_widget.addWidget(self.tool_widget_page_groups)
         self.tool_widget_page_transform = QtWidgets.QWidget()
         self.tool_widget_page_transform.setObjectName("tool_widget_page_transform")
@@ -435,7 +430,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 30))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 24))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -753,7 +748,7 @@ class Ui_MainWindow(object):
         item = self.list_toolbox.item(1, 0)
         item.setText(_translate("MainWindow", "Filter stop words"))
         item = self.list_toolbox.item(2, 0)
-        item.setText(_translate("MainWindow", "Group data"))
+        item.setText(_translate("MainWindow", "Data groups"))
         item = self.list_toolbox.item(3, 0)
         item.setText(_translate("MainWindow", "Transform"))
         item = self.list_toolbox.item(4, 0)
@@ -768,8 +763,6 @@ class Ui_MainWindow(object):
         self.check_restrict.setText(_translate("MainWindow", "&Restrict to sentences"))
         self.label_stopwords.setText(_translate("MainWindow", "Number of stop words: {}"))
         self.button_stopwords.setText(_translate("MainWindow", "Change stop &words..."))
-        self.button_add_group_function.setText(_translate("MainWindow", "Group functions{}..."))
-        self.button_group_filters.setText(_translate("MainWindow", "Group filters{}..."))
         self.button_add_summary_function.setText(_translate("MainWindow", "Summary functions{}..."))
         self.button_filters.setText(_translate("MainWindow", "Filter results{}..."))
         self.button_apply_management.setText(_translate("MainWindow", "&Apply"))
@@ -784,8 +777,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans UI\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>"))
+"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help"))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus"))
@@ -895,6 +888,6 @@ class Ui_MainWindow(object):
 
 from ..classes import CoqClickableLabel, CoqRotatedButton, CoqTextEdit
 from ..findwidget import CoqFindWidget
-from ..groupcolumns import CoqGroupColumns
+from ..grouptree import CoqGroupTree
 from ..resultstable import CoqHiddenResultsTable, CoqResultsTableView
 
