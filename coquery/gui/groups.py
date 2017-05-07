@@ -13,7 +13,7 @@ from __future__ import division
 
 import re
 
-from coquery import options
+from coquery.defines import FUNCTION_DESC
 from coquery.unicode import utf8
 from coquery.managers import Group
 from coquery.functions import (
@@ -22,10 +22,9 @@ from coquery.functions import (
     Entropy, Percent, Proportion)
 
 from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
-from .classes import CoqDetailBox, CoqClickableLabel
-from .addfunction import FunctionItem
+from .classes import CoqClickableLabel
 from .ui.groupDialogUi import Ui_GroupDialog
-from .listselect import CoqListSelect, SelectionDialog
+from .listselect import SelectionDialog
 
 
 class FunctionWidget(QtWidgets.QWidget):
@@ -47,8 +46,9 @@ class FunctionWidget(QtWidgets.QWidget):
         self.change_highlight()
 
     def setupUi(self):
-        self.main_layout = QtWidgets.QVBoxLayout(self)
-        self.layout = QtWidgets.QHBoxLayout()
+        self.main_layout = QtWidgets.QGridLayout(self)
+        self.main_layout.setSpacing(4)
+
         self.column_text = QtWidgets.QLabel()
 
         # use smaller font for the label that displays the selected columns:
@@ -60,27 +60,30 @@ class FunctionWidget(QtWidgets.QWidget):
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                            QtWidgets.QSizePolicy.Expanding)
         self.column_text.setSizePolicy(sizePolicy)
-
-        self.main_layout.addLayout(self.layout)
-        self.main_layout.addWidget(self.column_text)
+        self.column_text.setStyleSheet("padding-left: 3px; ")
 
         self.checkbox = QtWidgets.QCheckBox()
+        desc = FUNCTION_DESC.get(self.functionClass()._name,
+                                 "no description available")
         self.function_label = CoqClickableLabel(
-            self.functionClass().get_name())
+            "{} – <span style='font-size: small;'>{}</span>".format(
+                self.functionClass().get_name(), desc))
+        self.function_label.setWordWrap(True)
         self.function_label.clicked.connect(self.checkbox.toggle)
 
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                            QtWidgets.QSizePolicy.Preferred)
         self.function_label.setSizePolicy(sizePolicy)
 
-        self.layout.addWidget(self.checkbox)
-        self.layout.addWidget(self.function_label)
+        self.main_layout.addWidget(self.checkbox, 0, 0)
+        self.main_layout.addWidget(self.function_label, 0, 1)
+        self.main_layout.addWidget(self.column_text, 1, 1, 1, 2)
 
         if (not self.functionClass().maximum_columns or
-            self.functionClass().maximum_columns > 0):
+                self.functionClass().maximum_columns > 0):
             self.button = QtWidgets.QPushButton("Change columns...")
             self.button.clicked.connect(self.selectColumns)
-            self.layout.addWidget(self.button)
+            self.main_layout.addWidget(self.button, 0, 2)
 
     def change_highlight(self):
         palette = QtWidgets.QApplication.instance().palette()
@@ -99,7 +102,7 @@ class FunctionWidget(QtWidgets.QWidget):
                     palette.color(QtGui.QPalette.HighlightedText).name(),
                     palette.color(QtGui.QPalette.HighlightedText).name())
         else:
-            style_sheet ="""
+            style_sheet = """
                 CoqClickableLabel {{ padding: 2px; }}
                 CoqClickableLabel::hover {{
                         padding: 2px;
@@ -163,18 +166,24 @@ class GroupDialog(QtWidgets.QDialog):
                      RowNumber, Tokens, Types, TypeTokenRatio,
                      Entropy, Percent, Proportion)
 
-    def __init__(self, group, df, parent=None, icon=None):
+    def __init__(self, group, all_columns, parent=None, icon=None):
         super(GroupDialog, self).__init__(parent)
         self.ui = Ui_GroupDialog()
         self.ui.setupUi(self)
+
+        self.ui.scroll_layout.setSpacing(0)
+        palette = QtWidgets.QApplication.instance().palette()
+        self.ui.scroll_content.setStyleSheet("""
+            background-color: {}; """.format(
+                palette.color(QtGui.QPalette.Base).name()))
 
         # Remove group function columns as they may not be available yet
         # when the group is formed.
         # FIXME: at some point, this needs to be redone so that earlier
         # group columns are available for later groups.
         selected_columns = [x for x in group.columns
-                   if not re.match("func_.*_group_", x)]
-        available_columns = [x for x in df.columns
+                            if not re.match("func_.*_group_", x)]
+        available_columns = [x for x in all_columns
                              if x not in group.columns and
                              not re.match("func_.*_group_", x)]
 
@@ -196,7 +205,7 @@ class GroupDialog(QtWidgets.QDialog):
                 columns = function_columns[x]
             else:
                 columns = group.columns
-            available_columns = [x for x in df.columns if x not in columns]
+            available_columns = [x for x in all_columns if x not in columns]
             function_widget = FunctionWidget(x,
                                              False,
                                              selected_columns,
@@ -222,15 +231,15 @@ class GroupDialog(QtWidgets.QDialog):
             return None
 
     @staticmethod
-    def add(group, df, parent=None):
-        dialog = GroupDialog(group, df, parent=parent)
+    def add(group, all_columns, parent=None):
+        dialog = GroupDialog(group, all_columns, parent=parent)
         dialog.setVisible(True)
         dialog.setTitle("Add a data group – Coquery")
         return dialog.exec_()
 
     @staticmethod
-    def edit(group, df, parent=None):
-        dialog = GroupDialog(group, df, parent=parent)
+    def edit(group, all_columns, parent=None):
+        dialog = GroupDialog(group, all_columns, parent=parent)
         dialog.setVisible(True)
         dialog.setWindowTitle("Edit a data group – Coquery")
         return dialog.exec_()
