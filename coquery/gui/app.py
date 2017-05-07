@@ -1019,7 +1019,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     ### action methods
     ###
 
-    #def column_properties(self, columns=[]):
+    def column_properties(self, columns=[]):
         from .columnproperties import ColumnPropertiesDialog
         manager = self.Session.get_manager()
 
@@ -2343,7 +2343,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             df, self.Session)
 
         dialog.show()
-        self.widget_list.append(dialog)
 
     def visualize_data(self, name, **kwargs):
         """
@@ -2592,11 +2591,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             x = self.ui.splitter.saveState()
             options.settings.setValue("splitter", x)
 
-            # FIXME: use topLevelWidget() instead
-            while self.widget_list:
-                x = self.widget_list.pop(0)
-                x.close()
-                del x
+
+
+            for widget in QtWidgets.qApp.topLevelWidgets():
+                widget.close()
+                del widget
 
             options.cfg.summary_functions = self.Session.summary_functions
             options.cfg.groups = self.ui.tree_groups.groups()
@@ -2822,7 +2821,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import logfile
         log_view = logfile.LogfileViewer(parent=self)
         log_view.show()
-        self.widget_list.append(log_view)
 
     def show_about(self):
         from . import about
@@ -2838,7 +2836,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import availablemodules
         available = availablemodules.AvailableModulesDialog(parent=self)
         available.show()
-        self.widget_list.append(available)
 
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """
