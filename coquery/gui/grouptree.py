@@ -11,8 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import pandas as pd
-
 from coquery.managers import Group
 
 from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
@@ -31,16 +29,16 @@ class CoqGroupTreeItem(QtWidgets.QTreeWidgetItem):
         column_node.setText(0, "Columns")
         for x in group.columns:
             column = QtWidgets.QTreeWidgetItem()
-            column.setText(0,
-                           get_toplevel_window().Session.translate_header(x))
+            name = get_toplevel_window().Session.translate_header(x)
+            column.setText(0, name)
             column_node.addChild(column)
         self.addChild(column_node)
         functions = QtWidgets.QTreeWidgetItem()
         functions.setText(0, "Functions")
         for x in group.get_functions():
             func = QtWidgets.QTreeWidgetItem()
-            func.setText(0,
-                         get_toplevel_window().Session.translate_header(x._name))
+            name = get_toplevel_window().Session.translate_header(x._name)
+            func.setText(0, name)
             functions.addChild(func)
         self.addChild(functions)
 
