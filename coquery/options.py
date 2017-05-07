@@ -956,7 +956,7 @@ class Options(object):
                     print(e)
                     pass
 
-            for i in range(max_sum_func + 1):
+            for i in range(max_sum_func):
                 col = sum_columns.get(i)
                 name = sum_names.get(i)
                 val = sum_values.get(i)
@@ -965,12 +965,10 @@ class Options(object):
                 try:
                     FUN = func_types[name]
                 except KeyError:
-                    print(i, name)
+                    pass
                 else:
                     func = FUN(columns=col, value=val, aggr=aggr)
-                    if f_type == "group":
-                        self.args.group_functions.add_function(func)
-                    elif f_type == "summary":
+                    if f_type == "summary":
                         self.args.summary_functions.add_function(func)
                     else:
                         print("Function not processed", name)
