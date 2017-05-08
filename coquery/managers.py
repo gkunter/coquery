@@ -426,16 +426,14 @@ class Manager(CoqObject):
             print("\tsummarize()")
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
-        kwargs = {"session": session, "manager": self}
-        kwargs.update({"df": df})
-        df = self.manager_functions.lapply(**kwargs)
+        df = self.manager_functions.lapply(df, session=session, manager=self)
         if not self.ignore_user_functions:
-            kwargs.update({"df": df})
             df = session.summary_group.process(
                 df, session=session, manager=self)
 
         cols = [x for x in vis_cols
-                if x.startswith("coq_") and not x.startswith("coq_context_")]
+                if x.startswith("coq_") and
+                not x.startswith("coq_context_")]
 
         if options.cfg.drop_on_na and cols:
             ix = (df[vis_cols].dropna(axis="index", subset=cols, how="all")
@@ -461,11 +459,13 @@ class Manager(CoqObject):
 
         self.reset_group_filter_statistics()
         self._len_pre_filter = len(df)
-        print("\tfilter()")
+        if options.cfg.verbose or True:
+            print("\tfilter()")
         for filt in self._filters:
             if filt.stage == stage:
                 df = filt.apply(df)
-        print("\tdone")
+        if options.cfg.verbose or True:
+            print("\tdone")
         df = df.reset_index(drop=True)
         self._len_post_filter = len(df)
         return df
