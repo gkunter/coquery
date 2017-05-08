@@ -27,6 +27,7 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
 
         self.ui = Ui_ColumnProperties()
         self.ui.setupUi(self)
+        self.ui.widget_selection.setDefocus(False)
 
         self.df = df
         self.pre_subst = pre_subst
@@ -150,7 +151,9 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         self.ui.widget_selection.setAvailableLabel("Hidden columns")
 
         if columns:
-            self.show_column(self.ui.widget_selection.currentItem())
+            current = self.ui.widget_selection.currentItem()
+            if current:
+                self.show_column(current)
         else:
             self.ui.tab_widget.setEnabled(False)
 
