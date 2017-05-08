@@ -29,6 +29,7 @@ class CoqListSelect(QtWidgets.QWidget):
         super(CoqListSelect, self).__init__(*args, **kwargs)
         self.ui = coqListSelectUi.Ui_CoqListSelect()
         self.ui.setupUi(self)
+        self.setDefocus(True)
 
         self.ui.button_add.clicked.connect(self.add_selected)
         self.ui.button_remove.clicked.connect(self.remove_selected)
@@ -67,6 +68,12 @@ class CoqListSelect(QtWidgets.QWidget):
             else:
                 item = translate(x)
             w.addItem(item)
+
+    def setDefocus(self, b):
+        self._defocus = b
+
+    def defocus(self):
+        return self._defocus
 
     def setMoveAvailable(self, b):
         if b:
@@ -225,6 +232,7 @@ class CoqListSelect(QtWidgets.QWidget):
 
     def event(self, ev):
         if ev.type() == ev.FocusIn:
+            # restore selection bars if focus is regained:
             self.blockSignals(False)
 
             if self._last_selected_row is None:
@@ -232,7 +240,8 @@ class CoqListSelect(QtWidgets.QWidget):
                     self.ui.list_selected.setCurrentItem(
                         self.ui.list_selected.item(0))
             else:
-                self.ui.list_selected.setCurrentItem(self._last_selected_row)
+                self.ui.list_selected.setCurrentItem(
+                    self._last_selected_row)
 
             if self._last_available_row is None:
                 if self.ui.list_available.count() > 0:
@@ -245,8 +254,9 @@ class CoqListSelect(QtWidgets.QWidget):
             self.blockSignals(True)
             self._last_selected_row = self.ui.list_selected.currentItem()
             self._last_available_row = self.ui.list_available.currentItem()
-            self.ui.list_selected.setCurrentItem(None)
-            self.ui.list_available.setCurrentItem(None)
+            if self.defocus():
+                self.ui.list_selected.setCurrentItem(None)
+                self.ui.list_available.setCurrentItem(None)
 
         return super(CoqListSelect, self).event(ev)
 
