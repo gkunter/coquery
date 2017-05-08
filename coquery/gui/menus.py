@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import logging
+import re
 
 from coquery import options
 from coquery.defines import *
@@ -116,8 +117,10 @@ class CoqColumnMenu(QtWidgets.QMenu):
 
         # add additional function actions, but only if all columns really
         # are functions (excluding group functions):
-        if (all([x.startswith("func_") for x in columns]) and
-            not [x for x in columns if x.find("_group_")]):
+        check_is_func = [x.startswith("func_") for x in columns]
+        check_is_group_function = [bool(re.match("func_.*_group_", x))
+                                   for x in columns]
+        if (all(check_is_func) and not any(check_is_group_function)):
             #if len(columns) == 1:
                 #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
                 #self.addAction(edit_function)

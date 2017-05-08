@@ -29,10 +29,6 @@ def add_source_path(s):
     global _source_paths
     _source_paths.append(s)
 
-def remove_source_path(s):
-    global _source_paths
-    _source_paths.remove(s)
-
 def get_source_paths():
     return _source_paths
 

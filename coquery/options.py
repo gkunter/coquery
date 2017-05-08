@@ -27,6 +27,10 @@ import codecs
 import ast
 import glob
 import imp
+import os
+import sys
+import logging
+import re
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -37,12 +41,18 @@ if not hasattr(ast, "TryFinally"):
 import hashlib
 from collections import defaultdict
 
-from . import general
+from . import general, NAME
 from . import filters
-from .errors import *
-from . import functionlist
-from . import functions
-from .managers import Group
+from .errors import (
+    IllegalImportInModuleError, IllegalCodeInModuleError,
+    add_source_path)
+from .defines import (
+    SQL_SQLITE, SQL_MYSQL,
+    DEFAULT_MISSING_VALUE,
+    QUERY_MODES, QUERY_MODE_TOKENS,
+    CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_STRING)
+from .unicode import utf8
+from .links import parse_link_text
 
 CONSOLE_DEPRECATION = """The command-line version of Coquery is deprecated.
 
@@ -121,14 +131,14 @@ class UnicodeConfigParser(RawConfigParser):
         if self._defaults:
             fp.write("[%s]\n" % DEFAULTSECT)
             for (key, value) in self._defaults.items():
-                fp.write("%s = %s\n" % (key, unicode(value).replace('\n', '\n\t')))
+                fp.write("%s = %s\n" % (key, utf8(value).replace('\n', '\n\t')))
             fp.write("\n")
         for section in self._sections:
             fp.write("[%s]\n" % section)
             for (key, value) in self._sections[section].items():
                 if key != "__name__":
                     fp.write("%s = %s\n" %
-                             (key, unicode(value).replace('\n','\n\t')))
+                             (key, utf8(value).replace('\n','\n\t')))
             fp.write("\n")
 
     # This function is needed to override default lower-case conversion
@@ -282,7 +292,6 @@ class Options(object):
         self.args.output_separator = ","
         self.args.corpus = None
         self.args.gui = True
-        self.args.summary_functions = functionlist.FunctionList()
 
         self.args.table_links = defaultdict(list)
 
@@ -698,6 +707,20 @@ class Options(object):
             "drop_on_na": False,
             }
 
+        import inspect
+        from . import functions
+        from .managers import Group
+
+        func_types = {}
+        for _, cls in inspect.getmembers(functions):
+            if callable(cls):
+                try:
+                    func_types[cls._name] = cls
+                except AttributeError:
+                    pass
+
+
+
         self.args.first_run = True
         config_file = CoqConfigParser()
 
@@ -817,7 +840,6 @@ class Options(object):
                 except ValueError:
                     pass
                 else:
-                    from .links import Link, parse_link_text
                     try:
                         link = parse_link_text(link_text)
                     except ValueError:
@@ -877,9 +899,9 @@ class Options(object):
             filt_columns = {}
             filt_operators = {}
             filt_values = {}
-            group_filt_columns = {}
-            group_filt_operators = {}
-            group_filt_values = {}
+            #group_filt_columns = {}
+            #group_filt_operators = {}
+            #group_filt_values = {}
 
             for var, value in config_file.items("filter"):
                 try:
@@ -956,24 +978,6 @@ class Options(object):
                     print(e)
                     pass
 
-            for i in range(max_sum_func):
-                col = sum_columns.get(i)
-                name = sum_names.get(i)
-                val = sum_values.get(i)
-                aggr = sum_aggrs.get(i)
-                f_type = sum_types.get(i)
-                try:
-                    FUN = func_types[name]
-                except KeyError:
-                    pass
-                else:
-                    func = FUN(columns=col, value=val, aggr=aggr)
-                    if f_type == "summary":
-                        self.args.summary_functions.add_function(func)
-                    else:
-                        print("Function not processed", name)
-                        pass
-
             # process [groups]
             grp_names = {}
             grp_columns = {}
@@ -1003,15 +1007,15 @@ class Options(object):
             for num in grp_names:
                 name = grp_names.get(num)
                 columns = grp_columns.get(num, None)
-                functions = []
+                function_list = []
                 for f_num in grp_function_types.get(num, {}):
                     f_type = grp_function_types[num][f_num]
                     f_columns = grp_function_columns[num].get(f_num, None)
                     if f_columns is not None:
-                        functions.append((func_types[f_type],
-                                          f_columns.split(",")))
+                        function_list.append((func_types[f_type],
+                                              f_columns.split(",")))
                 if columns is not None:
-                    group = Group(name, columns.split(","), functions)
+                    group = Group(name, columns.split(","), function_list)
                     self.args.groups.append(group)
 
         # Use QSettings?
@@ -1119,15 +1123,6 @@ def save_configuration():
 
     if not "functions" in config.sections():
         config.add_section("functions")
-
-    for i, func in enumerate(cfg.summary_functions):
-        config.set("functions", "func_{}_name".format(i), func._name)
-        config.set("functions", "func_{}_columns".format(i),
-                    ",".join(func.column_list))
-        config.set("functions", "func_{}_value".format(i), func.value)
-        config.set("functions", "func_{}_aggr".format(i), func.aggr)
-        config.set("functions", "func_{}_type".format(i), "summary")
-        i += 1
 
     if not "groups" in config.sections():
         config.add_section("groups")
@@ -1665,14 +1660,4 @@ for mod in ["sqlalchemy", "pandas"]:
         missing_modules.append(mod)
 
 logger = logging.getLogger(NAME)
-
-import inspect
-
-func_types = {}
-for _, cls in inspect.getmembers(functions):
-    if callable(cls):
-        try:
-            func_types[cls._name] = cls
-        except AttributeError:
-            pass
 
