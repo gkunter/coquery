@@ -2,7 +2,7 @@
 """
 functionlist.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -54,7 +54,8 @@ class FunctionList(CoqObject):
                     print(fun.get_name())
                     then = datetime.datetime.now()
                     for x in range(5000):
-                        val = fun.evaluate(df, session=session, manager=manager)
+                        val = fun.evaluate(df,
+                                           session=session, manager=manager)
                     print(datetime.datetime.now() - then)
                 else:
                     val = fun.evaluate(df, session=session, manager=manager)
