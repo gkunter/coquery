@@ -231,7 +231,9 @@ class Session(object):
                 if options.cfg.gui and number_of_queries > 1:
                     options.cfg.main_window.updateMultiProgress.emit(i+1)
                 if not self.quantified_number_labels:
-                    self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
+                    self.quantified_number_labels = [
+                        current_query.get_token_numbering(i)
+                        for i in range(self.get_max_token_count())]
                 start_time = time.time()
                 if number_of_queries > 1:
                     logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
@@ -516,16 +518,17 @@ class Session(object):
         if rc_feature == "coquery_query_token":
             try:
                 number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
             # if options.cfg.verbose: print(14)
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
         # special treatment of lexicon features:
-        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
+        if (rc_feature in [x for x, _ in resource.get_lexicon_features()]
+            or resource.is_tokenized(rc_feature)):
             try:
                 number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
             # if options.cfg.verbose: print(15)
             return "{}{}{}".format(res_prefix,
@@ -544,7 +547,7 @@ class Session(object):
         if rc_feature in COLUMN_NAMES:
             try:
                 number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
             # if options.cfg.verbose: print(17)
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
