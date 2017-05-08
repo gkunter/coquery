@@ -744,6 +744,7 @@ class FreqNorm(Freq):
 
 class RowNumber(Freq):
     _name = "statistics_row_number"
+    maximum_columns = 0
 
     def evaluate(self, df, *args, **kwargs):
         val = pd.Series(range(1, len(df)+1), index=df.index)
@@ -995,7 +996,6 @@ class Entropy(Proportion):
 class Tokens(Function):
     _name = "statistics_tokens"
     no_column_labels = True
-
     maximum_columns = 0
 
     def evaluate(self, df, *args, **kwargs):
