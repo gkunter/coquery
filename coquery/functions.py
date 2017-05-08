@@ -230,7 +230,6 @@ class StringFunction(Function):
 
 
 class StringRegEx(StringFunction):
-
     def __init__(self, value, columns=None, *args, **kwargs):
         super(StringRegEx, self).__init__(columns, *args, **kwargs)
         self.value = value
