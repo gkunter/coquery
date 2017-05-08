@@ -67,12 +67,26 @@ class Group(CoqObject):
             function_list = FunctionList(self.get_functions())
             df = (df.groupby(self.columns, as_index=False)
                     .apply(function_list.lapply,
-                        session=session, manager=manager))
+                           session=session, manager=manager))
         return df
 
     def get_functions(self):
         return [fnc(columns=columns, group=self)
                 for fnc, columns in self.functions]
+
+
+class Summary(Group):
+    def process(self, df, session, manager):
+        function_list = FunctionList(self.get_functions())
+        df = function_list.lapply(
+            df, session=session, manager=manager)
+
+        return df
+
+    def __repr__(self):
+        S = ("Summary(name='{}', functions=[{}])")
+        return S.format(self.name,
+                        ", ".join(["'{}'".format(x) for x in self.functions]))
 
 
 class Manager(CoqObject):
@@ -414,15 +428,12 @@ class Manager(CoqObject):
 
         kwargs = {"session": session, "manager": self}
         kwargs.update({"df": df})
-        #kwargs.update({"df": df if not self._subst
-                                #else df.replace(self._subst)})
         df = self.manager_functions.lapply(**kwargs)
-
         if not self.ignore_user_functions:
             kwargs.update({"df": df})
-            #kwargs.update({"df": df if not self._subst
-                                    #else df.replace(self._subst)})
-            df = session.summary_functions.lapply(**kwargs)
+            df = session.summary_group.process(
+                df, session=session, manager=self)
+
         cols = [x for x in vis_cols
                 if x.startswith("coq_") and not x.startswith("coq_context_")]
 
@@ -681,7 +692,7 @@ class Manager(CoqObject):
             [group.get_functions() for group in self._groups]))
 
         self._functions = (session.column_functions.get_list() +
-                           session.summary_functions.get_list() +
+                           session.summary_group.get_functions() +
                            self.manager_functions.get_list() +
                            functions)
 

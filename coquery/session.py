@@ -96,7 +96,7 @@ class Session(object):
         self.column_functions = functionlist.FunctionList()
         # Summary functions are functions that the user specified to be
         # applied after the summary
-        self.summary_functions = functionlist.FunctionList()
+        self.summary_group = managers.Summary("summary")
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean

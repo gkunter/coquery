@@ -209,8 +209,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.ui.centralwidget.adjustSize()
             self.adjustSize()
 
-        self.Session.summary_functions = options.cfg.summary_functions
-
     def setup_app(self):
         """ Initialize all widgets with suitable data """
 
@@ -529,7 +527,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             lambda: self.abortRequested.emit())
 
         self.ui.button_add_summary_function.clicked.connect(
-            lambda: self.add_function(summary=True))
+            self.edit_summary_function)
 
         # connect widgets that enable the Apply button:
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
@@ -898,7 +896,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 _set_icon(2, active_icon)
 
         elif row == TOOLBOX_SUMMARY:
-            l = self.Session.summary_functions.get_list()
+            l = self.Session.summary_group.get_functions()
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
             _set_icon(2, active_icon if l else None)
 
@@ -2277,7 +2275,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             self.new_session.groups = self.ui.tree_groups.groups()
             self.new_session.column_functions = self.Session.column_functions
-            self.new_session.summary_functions = self.Session.summary_functions
 
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(
@@ -2597,7 +2594,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 widget.close()
                 del widget
 
-            options.cfg.summary_functions = self.Session.summary_functions
             options.cfg.groups = self.ui.tree_groups.groups()
 
             self.save_configuration()
@@ -2931,7 +2927,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         label_stopwords = _translate("MainWindow", "Active stop words: {}", None)
 
         # summary button labels:
-        l = self.Session.summary_functions.get_list()
+        l = self.Session.summary_group.get_functions()
         self.ui.button_add_summary_function.setText(
             label_summary_functions.format(get_str(l)))
         l = options.cfg.filter_list
@@ -2947,10 +2943,26 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         header = self.ui.data_preview.horizontalHeader()
         columns = []
         for x in self.ui.data_preview.selectionModel().selectedColumns():
-            columns .append(self.table_model.header[x.column()])
+            columns.append(self.table_model.header[x.column()])
         if not columns:
             columns.append(self.table_model.header[0])
         self.add_function(columns)
+
+    def edit_summary_function(self):
+        from . import groups
+
+        try:
+            vis_cols = self.table_model.content.columns
+            hidden_cols = self.hidden_model.content.columns
+            all_columns = list(vis_cols) + list(hidden_cols)
+        except AttributeError:
+            all_columns = []
+
+        result = groups.SummaryDialog.edit(
+            self.Session.summary_group, all_columns, parent=self)
+        if result:
+            self.Session.summary_group = result
+            self.enable_apply_button()
 
     def add_function(self, columns=None, summary=False, group=False, **kwargs):
         from . import addfunction
@@ -2961,29 +2973,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
 
         if summary:
-            types = [
-                        functions.FilteredRows, functions.PassingRows,
-                        functions.Entropy,
-                        functions.Freq, functions.FreqNorm,
-                        functions.FreqPTW, functions.FreqPMW,
-                        functions.ReferenceCorpusFrequency,
-                        functions.ReferenceCorpusFrequencyPTW,
-                        functions.ReferenceCorpusFrequencyPMW,
-                        functions.ReferenceCorpusLLKeyness,
-                        functions.ReferenceCorpusDiffKeyness,
-                        functions.RowNumber,
-                        functions.Percent, functions.Proportion,
-                        functions.Tokens, functions.Types,
-                        functions.TypeTokenRatio,
-                        functions.CorpusSize, functions.SubcorpusSize]
-            checked = [type(x) for x in self.Session.summary_functions.get_list()]
-
-            kwargs.update({
-                "function_types": types,
-                "max_parameters": 0,
-                "checkable": True,
-                "checked": checked,
-                "edit_label": False})
+            pass
         else:
             dtypes = pd.Series([self.table_model.get_dtype(x) for x
                                 in columns])
@@ -3061,16 +3051,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             func = self.Session.column_functions.find_function(col)
             if func:
                 self.Session.column_functions.remove_function(func)
-            else:
-                # this can happen if the function is a summary
-                # or a grouping function:
-                summary_func = self.Session.summary_functions.find_function(col)
-                if summary_func:
-                    self.Session.summary_functions.remove_function(summary_func)
-                else:
-                    raise RuntimeError("Group functions cannot be removed from the results table. Edit the data group instead.")
-                    group_func = self.Session.group_functions.find_function(col)
-                    self.Session.group_functions.remove_function(group_func)
             try:
                 options.cfg.column_names.remove(func.get_id())
             except AttributeError:

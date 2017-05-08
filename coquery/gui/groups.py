@@ -15,11 +15,22 @@ import re
 
 from coquery.defines import FUNCTION_DESC
 from coquery.unicode import utf8
-from coquery.managers import Group
+from coquery.managers import Group, Summary
 from coquery.functions import (
-    Freq, FreqNorm, FreqPTW, FreqPMW,
-    RowNumber, Tokens, Types, TypeTokenRatio,
-    Entropy, Percent, Proportion)
+                    FilteredRows, PassingRows,
+                    Entropy,
+                    Freq, FreqNorm,
+                    FreqPTW, FreqPMW,
+                    ReferenceCorpusFrequency,
+                    ReferenceCorpusFrequencyPTW,
+                    ReferenceCorpusFrequencyPMW,
+                    ReferenceCorpusLLKeyness,
+                    ReferenceCorpusDiffKeyness,
+                    RowNumber,
+                    Percent, Proportion,
+                    Tokens, Types,
+                    TypeTokenRatio,
+                    CorpusSize, SubcorpusSize)
 
 from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
 from .classes import CoqClickableLabel
@@ -164,9 +175,10 @@ class FunctionWidget(QtWidgets.QWidget):
 class GroupDialog(QtWidgets.QDialog):
     function_list = (Freq, FreqNorm, FreqPTW, FreqPMW,
                      RowNumber, Tokens, Types, TypeTokenRatio,
+                     SubcorpusSize,
                      Entropy, Percent, Proportion)
 
-    def __init__(self, group, all_columns, parent=None, icon=None):
+    def __init__(self, group, all_columns, parent=None):
         super(GroupDialog, self).__init__(parent)
         self.ui = Ui_GroupDialog()
         self.ui.setupUi(self)
@@ -181,18 +193,19 @@ class GroupDialog(QtWidgets.QDialog):
         # when the group is formed.
         # FIXME: at some point, this needs to be redone so that earlier
         # group columns are available for later groups.
+
+        all_columns = [x for x in all_columns
+                       if not re.match("func_.*_group_", x)]
         selected_columns = [x for x in group.columns
                             if not re.match("func_.*_group_", x)]
-        available_columns = [x for x in all_columns
-                             if x not in group.columns and
-                             not re.match("func_.*_group_", x)]
-
         self.ui.edit_label.setText(group.name)
         self.ui.widget_selection.setSelectedList(
             selected_columns,
             get_toplevel_window().Session.translate_header)
+
         self.ui.widget_selection.setAvailableList(
-            available_columns,
+            [x for x in all_columns
+             if x not in group.columns],
             get_toplevel_window().Session.translate_header)
 
         function_columns = {fnc_class: columns
@@ -201,15 +214,12 @@ class GroupDialog(QtWidgets.QDialog):
         for x in sorted(self.function_list,
                         key=lambda x: x.get_name()):
 
-            if x in function_columns:
-                columns = function_columns[x]
-            else:
-                columns = group.columns
-            available_columns = [x for x in all_columns if x not in columns]
-            function_widget = FunctionWidget(x,
-                                             False,
-                                             selected_columns,
-                                             available_columns)
+            cols = function_columns.get(x, selected_columns)
+            function_widget = FunctionWidget(
+                x, False,
+                cols,
+                [x for x in all_columns if x not in cols])
+
             self.ui.scroll_layout.addWidget(function_widget)
             if x in function_columns:
                 function_widget.setCheckState(QtCore.Qt.Checked)
@@ -243,3 +253,39 @@ class GroupDialog(QtWidgets.QDialog):
         dialog.setVisible(True)
         dialog.setWindowTitle("Edit a data group – Coquery")
         return dialog.exec_()
+
+class SummaryDialog(GroupDialog):
+    function_list = (
+                    FilteredRows, PassingRows,
+                    Entropy,
+                    Freq, FreqNorm,
+                    FreqPTW, FreqPMW,
+                    ReferenceCorpusFrequency,
+                    ReferenceCorpusFrequencyPTW,
+                    ReferenceCorpusFrequencyPMW,
+                    ReferenceCorpusLLKeyness,
+                    ReferenceCorpusDiffKeyness,
+                    RowNumber,
+                    Percent, Proportion,
+                    Tokens, Types,
+                    TypeTokenRatio,
+                    CorpusSize, SubcorpusSize)
+
+
+    def __init__(self, group, all_columns, parent=None):
+        super(SummaryDialog, self).__init__(group, all_columns, parent)
+        self.ui.label.hide()
+        self.ui.label_2.hide()
+        self.ui.widget_selection.hide()
+        self.ui.edit_label.hide()
+        self.ui.verticalLayout.setRowStretch(2, 0)
+
+    @staticmethod
+    def edit(group, all_columns, parent=None):
+        dialog = SummaryDialog(group, all_columns, parent=parent)
+        dialog.setVisible(True)
+        dialog.setWindowTitle("Edit summary functions – Coquery")
+        group = dialog.exec_()
+        if group:
+            return Summary(name=group.name, functions=group.functions)
+
