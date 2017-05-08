@@ -498,7 +498,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         #self.ui.receive_rows.setText(label)
 
         self.ui.check_show_legend.setChecked(self.show_legend)
-        self.ui.spin_columns.setValue(self.legend_columns)
+        self.ui.spin_columns.setValue(int(self.legend_columns))
 
     def get_gui_values(self):
         """
@@ -584,10 +584,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
             self.reject()
 
-    def accept(self, *args):
-        super(VisualizationDesigner, self).accept(*args)
+    def close(self, *args):
         options.settings.setValue("visualizationdesigner_size", self.size())
         options.settings.setValue("visualizationdesigner_data_x", self.data_x)
         options.settings.setValue("visualizationdesigner_data_y", self.data_y)
@@ -596,10 +596,18 @@ class VisualizationDesigner(QtWidgets.QDialog):
         options.settings.setValue("visualizationdesigner_show_legend", self.show_legend)
         options.settings.setValue("visualizationdesigner_legend_columns", self.legend_columns)
         options.settings.setValue("visualizationdesigner_viewer_size", self.viewer_size)
+        super(VisualizationDesigner, self).close(*args)
+
+        if not hasattr(self, "canvas") and hasattr(self, "dialog"):
+            self.dialog.hide()
+            self.dialog.close()
+            del self.dialog
 
     def exec_(self):
         result = super(VisualizationDesigner, self).exec_()
+
         if result == QtWidgets.QDialog.Accepted:
+            self.accept()
             return result
         else:
             return None
