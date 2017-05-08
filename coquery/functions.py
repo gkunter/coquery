@@ -100,6 +100,7 @@ ALL_COMBINE = NUM_COMBINE + SEQ_COMBINE + BOOL_COMBINE
 class Function(CoqObject):
     _name = "virtual"
     parameters = 0
+    toggle_parameters = {}
     default_aggr = "first"
     allow_null = False
     combine_modes = ALL_COMBINE
@@ -140,6 +141,9 @@ class Function(CoqObject):
             return COLUMN_NAMES[cls._name]
         else:
             return cls._name
+
+    def get_flag(self, flag):
+        return False
 
     def get_label(self, session, manager, unlabel=False):
         if self._label and not unlabel:
@@ -248,44 +252,23 @@ class StringRegEx(StringFunction):
             return True
 
 
-class StringLength(StringFunction):
-    _name = "LENGTH"
-    combine_modes = NUM_COMBINE
-
-    # FIXME: there should be a decorator for functions!
-    def evaluate(self, df, *args, **kwargs):
-        def _fnc(x):
-            try:
-                return(len(x))
-            except:
-                return None
-        try:
-            val = df[self.columns].applymap(_fnc)
-            if len(val.columns) > 1:
-                val = val.apply(self.select, axis="columns")
-        except (KeyError, ValueError):
-            val = self.constant(df, None)
-        return val
-
-
 class StringChain(StringFunction):
     _name = "CONCAT"
     parameters = 1
     allow_null = True
-    combine_modes = ["join"]
 
-    def __init__(self, value, columns=None, *args, **kwargs):
-        super(StringChain, self).__init__(columns, value=value, *args, **kwargs)
-        self.select = self._select
-
-    def _select(self, row):
-        return self.value.join([str(x) for x in row])
+    def evaluate(self, df, *args, **kwargs):
+        val = df[self.columns].apply(
+                    lambda x: (x.astype(str).str.cat(sep=self.value)
+                               if x.dtype != object
+                               else x.str.cat(sep=self.value)),
+                    axis="columns")
+        return val
 
 
 class StringCount(StringRegEx):
     _name = "COUNT"
     parameters = 1
-    combine_modes = NUM_COMBINE
 
     def _func(self, cell):
         if cell is None:
@@ -313,45 +296,87 @@ class StringCount(StringRegEx):
         return val
 
 
-class StringMatch(StringRegEx):
+class StringSeriesFunction(StringFunction):
+    single_column = False
+
+    def evaluate(self, df, value=None, *args, **kwargs):
+        if value:
+            _df = pd.concat([getattr(df[col].astype(str).str
+                                     if df[col].dtype != object
+                                     else df[col].str,
+                                     self.str_func)
+                             (value, *args, **kwargs)
+                             for col in self.columns], axis="columns")
+        else:
+            _df = pd.concat([getattr(df[col].astype(str).str
+                                     if df[col].dtype != object
+                                     else df[col].str,
+                                     self.str_func)
+                             (*args, **kwargs)
+                             for col in self.columns], axis="columns")
+
+        groups = len(_df.columns) // len(self.columns)
+        if groups > 1 or len(self.columns) > 1:
+            _df.columns = ["{}_{}_{}".format(self.get_id(), grp + 1, col + 1)
+                           for grp in range(groups)
+                           for col in range(len(self.columns))]
+        else:
+            _df.columns = [self.get_id()]
+
+        return _df.fillna("")
+
+
+class StringMatch(StringSeriesFunction):
     _name = "MATCH"
     parameters = 1
-    combine_modes = STR_COMBINE
+    toggle_parameters = { "case": ("Case-sensitive", False) }
+    str_func = "contains"
 
-    def _func(self, col):
-        def _match_str(x):
-            if x is pd.np.nan or x is None:
-                return None
-            return bool(self.re.search(x))
-
-        def _match(x):
-            if x is pd.np.nan or x is None:
-                return None
-            else:
-                return (self.re.search(str(x)))
-
-        if pd.Series(col.dropna().tolist()).dtypes == object:
-            return col.apply(lambda x: _match_str(x))
-        else:
-            return col.apply(lambda x: _match(x))
+    def evaluate(self, df, *args, **kwargs):
+        return super(StringMatch, self).evaluate(df, self.value,
+                                                 self.get_flag("case"))
 
 
-class StringExtract(StringRegEx):
+class StringExtract(StringSeriesFunction):
     _name = "EXTRACT"
     parameters = 1
-    combine_modes = STR_COMBINE
+    toggle_parameter = ("Case-sensitive", False)
+    str_func = "extract"
 
-    def _func(self, col):
-        def _match(s):
-            if s is None:
-                return None
-            re = self.re.search(str(s))
-            try:
-                return re.group()
-            except AttributeError:
-                return ""
+    def evaluate(self, df, *args, **kwargs):
+        # if there is no match group, enclose the value to form one:
+        if "(" in self.value:
+            val = self.value
+        else:
+            val = "({})".format(self.value)
+        return super(StringExtract, self).evaluate(df, val, expand=True)
 
-        return col.apply(lambda x: _match(x))
+
+class StringUpper(StringSeriesFunction):
+    _name = "UPPER"
+    parameters = 0
+    str_func = "upper"
+
+    def evaluate(self, df, *args, **kwargs):
+        return super(StringUpper, self).evaluate(df)
+
+
+class StringLower(StringSeriesFunction):
+    _name = "LOWER"
+    parameters = 0
+    str_func = "lower"
+
+    def evaluate(self, df, *args, **kwargs):
+        return super(StringLower, self).evaluate(df)
+
+
+class StringLength(StringSeriesFunction):
+    _name = "LENGTH"
+    parameters = 0
+    str_func = "len"
+
+    def evaluate(self, df, *args, **kwargs):
+        return super(StringLength, self).evaluate(df)
 
 
 ####################
@@ -1224,7 +1249,7 @@ class ContextColumns(Function):
                 val = df.apply(lambda x: self._func(row=x,
                                                     session=session,
                                                     connection=db_connection),
-                            axis="columns")
+                               axis="columns")
                 get_toplevel_window().closeContextConnection.emit(db_connection)
                 val.index = df.index
                 return val

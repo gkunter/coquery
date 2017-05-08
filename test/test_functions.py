@@ -125,6 +125,7 @@ class TestStringFunctions(unittest.TestCase):
         self.assertListEqual(val.tolist(), [3, 3, 3, 1, 1])
 
     def test_chain(self):
+        options.cfg.benchmark = True
         func = StringChain(
             columns=["coq_word_label_1", "coq_source_genre_1"],
             value=" ")
@@ -132,6 +133,7 @@ class TestStringFunctions(unittest.TestCase):
         self.assertListEqual(
             val.tolist(),
             ["abc SPOK", "abc NEWS", "abc NEWS", "x SPOK", "x NEWS"])
+        options.cfg.benchmark = False
 
     def test_match(self):
         func = StringMatch(columns=["coq_word_label_1"], value="[a]")
@@ -142,10 +144,62 @@ class TestStringFunctions(unittest.TestCase):
 
     def test_extract(self):
         func = StringExtract(columns=["coq_word_label_1"], value="[abx]*")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(df0, session=None)
         self.assertListEqual(
-            val.tolist(),
+            val[[-1]].values.ravel().tolist(),
             ["ab", "ab", "ab", "x", "x"])
+
+    def test_extract_groups(self):
+        """
+        Tests issue #255
+        """
+        df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
+                           "b": [""] * 10 + ["yyannxzzz"] * 5})
+        func = StringExtract(columns=["a"], value="(a).*(x)")
+        val = FunctionList([func]).lapply(df, session=None)
+        self.assertListEqual(
+            val[[-2]].values.ravel().tolist(), ["a"] * 5 + [""] * 10)
+        self.assertListEqual(
+            val[[-1]].values.ravel().tolist(), ["x"] * 5 + [""] * 10)
+
+    def test_upper(self):
+        df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
+                           "b": [""] * 10 + ["yyannxzzz"] * 5})
+        func = StringUpper(columns=["a"])
+        val = FunctionList([func]).lapply(df, session=None)[[-1]]
+        self.assertListEqual(
+            val.values.ravel().tolist(),
+            ["ABX"] * 5 + ["A"] * 5 + ["BX"] * 5)
+
+    def test_upper_multi(self):
+        df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
+                           "b": [""] * 10 + ["yyannxzzz"] * 5})
+        func = StringUpper(columns=["a", "b"])
+        val = FunctionList([func]).lapply(df, session=None)
+        self.assertListEqual(
+            val[[-2]].values.ravel().tolist(),
+            ["ABX"] * 5 + ["A"] * 5 + ["BX"] * 5)
+        self.assertListEqual(
+            val[[-1]].values.ravel().tolist(),
+            [""] * 10 + ["YYANNXZZZ"] * 5)
+
+    def test_lower(self):
+        df = pd.DataFrame({"a": list("ABCDEFGHIJ"),
+                           "b": list("ABABABABAB")})
+        func = StringLower(columns=["a"])
+        val = FunctionList([func]).lapply(df, session=None)[[-1]]
+        self.assertListEqual(
+            val.values.ravel().tolist(), list("abcdefghij"))
+
+    def test_lower_multi(self):
+        df = pd.DataFrame({"a": list("ABCDEFGHIJ"),
+                           "b": list("ABABABABAB")})
+        func = StringLower(columns=["a", "b"])
+        val = FunctionList([func]).lapply(df, session=None)
+        self.assertListEqual(
+            val[[-2]].values.ravel().tolist(), list("abcdefghij"))
+        self.assertListEqual(
+            val[[-1]].values.ravel().tolist(), list("ababababab"))
 
 
 class TestMathFunctions(unittest.TestCase):
