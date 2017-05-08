@@ -319,7 +319,7 @@ class StringSeriesFunction(StringFunction):
         if groups > 1 or len(self.columns) > 1:
             _df.columns = ["{}_{}_{}".format(self.get_id(), grp + 1, col + 1)
                            for grp in range(groups)
-                           for col in range(len(self.columns))]
+                           for col, _ in enumerate(self.columns)]
         else:
             _df.columns = [self.get_id()]
 

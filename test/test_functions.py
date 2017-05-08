@@ -125,7 +125,6 @@ class TestStringFunctions(unittest.TestCase):
         self.assertListEqual(val.tolist(), [3, 3, 3, 1, 1])
 
     def test_chain(self):
-        options.cfg.benchmark = True
         func = StringChain(
             columns=["coq_word_label_1", "coq_source_genre_1"],
             value=" ")
@@ -133,7 +132,6 @@ class TestStringFunctions(unittest.TestCase):
         self.assertListEqual(
             val.tolist(),
             ["abc SPOK", "abc NEWS", "abc NEWS", "x SPOK", "x NEWS"])
-        options.cfg.benchmark = False
 
     def test_match(self):
         func = StringMatch(columns=["coq_word_label_1"], value="[a]")
