@@ -202,7 +202,12 @@ class TestQueryTokenCOCA(unittest.TestCase):
     def runTest(self):
         super(TestQueryToken, self).runTest()
 
+    @staticmethod
+    def pos_check_function(l):
+        return [x in ["V", "N"] for x in l]
+
     def setUp(self):
+        self.token_type.set_pos_check_function(self.pos_check_function)
         self.lexicon = TestLexicon()
 
     def test_unicode_1(self):
@@ -493,7 +498,6 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
-
 
     def test_transcripts_single_slash1(self):
         token = self.token_type("/trans", self.lexicon)
@@ -940,12 +944,43 @@ class TestQuantification(unittest.TestCase):
         self.assertEqual(tokens.get_quantifiers("xxx{a,b}"), ("xxx{a,b}", 1, 1))
         self.assertEqual(tokens.get_quantifiers("xxx{a}"), ("xxx{a}", 1, 1))
 
+    def test_preprocess_string0(self):
+        S = "a{0,1} fish"
+        L = [
+            [(1, 'a'),  (2, 'fish')],
+            [(1, None), (2, 'fish')]]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
+    def test_preprocess_string1a(self):
+        S = "one more{0,1} thing"
+        L = [
+            [(1, 'one'), (2, None),   (3, 'thing')],
+            [(1, 'one'), (2, 'more'), (3, 'thing')]]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
+    def test_preprocess_string1b(self):
+        S = "one little{0,2} thing"
+        L = [
+            [(1, 'one'), (2, None),     (2, None),     (4, 'thing')],
+            [(1, 'one'), (2, 'little'), (2, None),     (4, 'thing')],
+            [(1, 'one'), (2, 'little'), (2, 'little'), (4, 'thing')]]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
     def test_preprocess_string1(self):
         S = "[dt]{0,1} more [j*] [n*]"
 
         L = [
             [(1, '[dt]'), (2, 'more'), (3, '[j*]'), (4, '[n*]')],
-            [             (2, 'more'), (3, '[j*]'), (4, '[n*]')],
+            [(1, None),   (2, 'more'), (3, '[j*]'), (4, '[n*]')],
             ]
         try:
             self.assertItemsEqual(tokens.preprocess_query(S), L)
@@ -957,7 +992,7 @@ class TestQuantification(unittest.TestCase):
 
         L = [
             [(1, '[dt]'), (2, '[jjr]'), (3, '[n*]')],
-            [             (2, '[jjr]'), (3, '[n*]')],
+            [(1, None),   (2, '[jjr]'), (3, '[n*]')],
             ]
         try:
             self.assertItemsEqual(tokens.preprocess_query(S), L)
@@ -967,10 +1002,10 @@ class TestQuantification(unittest.TestCase):
     def test_preprocess_string3(self):
         S = "[dt]{0,1} more [j*]{1,2} [n*]"
         L = [
-            [(1, '[dt]'), (2, 'more'), (3, '[j*]'),              (5, '[n*]')],
+            [(1, '[dt]'), (2, 'more'), (3, '[j*]'), (3, None),   (5, '[n*]')],
             [(1, '[dt]'), (2, 'more'), (3, '[j*]'), (3, '[j*]'), (5, '[n*]')],
-            [             (2, 'more'), (3, '[j*]'),              (5, '[n*]')],
-            [             (2, 'more'), (3, '[j*]'), (3, '[j*]'), (5, '[n*]')],
+            [(1, None),   (2, 'more'), (3, '[j*]'), (3, None),   (5, '[n*]')],
+            [(1, None),   (2, 'more'), (3, '[j*]'), (3, '[j*]'), (5, '[n*]')],
             ]
         try:
             self.assertItemsEqual(tokens.preprocess_query(S), L)
@@ -980,15 +1015,15 @@ class TestQuantification(unittest.TestCase):
     def test_preprocess_string4(self):
         S = "more [j*]{0,4} [n*]{1,2}"
         L = [
-            [(1, 'more'),                                                     (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'),                                        (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'),                           (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'),              (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (6, '[n*]')],
-            [(1, 'more'),                                                     (6, '[n*]'), (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'),                                        (6, '[n*]'), (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'),                           (6, '[n*]'), (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'),              (6, '[n*]'), (6, '[n*]')],
+            [(1, 'more'), (2, None),   (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, None)],
+            [(1, 'more'), (2, '[j*]'), (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, None)],
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, None),   (2, None),   (6, '[n*]'), (6, None)],
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, None),   (6, '[n*]'), (6, None)],
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (6, '[n*]'), (6, None)],
+            [(1, 'more'), (2, None),   (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, '[n*]')],
+            [(1, 'more'), (2, '[j*]'), (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, '[n*]')],
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, None),   (2, None),   (6, '[n*]'), (6, '[n*]')],
+            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, None),   (6, '[n*]'), (6, '[n*]')],
             [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (6, '[n*]'), (6, '[n*]')],
             ]
         try:
@@ -1001,6 +1036,14 @@ class TestQuantification(unittest.TestCase):
         L = [
             [(1, "prove"), (2, "that")]
             ]
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
+    def test_preprocess_string_NULL_1(self):
+        S = "prove _NULL that"
+        L = [[(1, "prove"), (2, None), (3, "that")]]
         try:
             self.assertItemsEqual(tokens.preprocess_query(S), L)
         except AttributeError:

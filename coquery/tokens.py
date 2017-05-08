@@ -13,11 +13,12 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import itertools
-import string
 import re
+import string
 
-from .defines import *
-from .errors import *
+from .defines import msg_token_dangling_open
+from .errors import TokenParseError
+from .unicode import utf8
 
 class QueryToken(object):
     """
@@ -49,25 +50,18 @@ class QueryToken(object):
     transcript_close = "/"
     or_character = "|"
 
-    def __init__(self, S, lexicon, replace=True, parse=True):
-        self.lexicon = lexicon
-        # token strings should always be unicode. They are already in
-        # Python 3.x, but for Python 2.7, we convert them first:
-        try:
-            S = S.decode("utf-8")
-        except (UnicodeEncodeError):
-            # This happens if S is already a unicode string
-            pass
-        except (AttributeError):
-            # This happens in Python 3.x, because unicode strings don't have
-            # decode() any more.
-            pass
-        assert type(S) == type(u""), "'{}': Expected type {}, got {}".format(
-            S, type(u""), type(S))
+    @classmethod
+    def _check_pos_list(cls, l):
+        return [False] * len(l)
 
-        self.S = S.strip()
-        if replace:
-            self.S = self.replace_wildcards(self.S)
+    def __init__(self, S, replace=True, parse=True):
+        if S is not None:
+            S = utf8(S)
+            self.S = S.strip()
+            if replace:
+                self.S = self.replace_wildcards(self.S)
+        else:
+            self.S = S
         self.word_specifiers = []
         self.class_specifiers = []
         self.lemma_specifiers = []
@@ -85,9 +79,13 @@ class QueryToken(object):
 
     def __repr__(self):
         if self.negated:
-            return "NOT({})".format(self.S)
+            return "QueryToken(S='~{}')".format(self.S)
         else:
-            return self.S
+            return "QueryToken(S='{}')".format(self.S)
+
+    @classmethod
+    def set_pos_check_function(cls, fnc):
+        cls._check_pos_list = fnc
 
     @staticmethod
     def has_wildcards(s, replace=False):
@@ -175,6 +173,7 @@ class QueryToken(object):
         self.class_specifiers = []
         self.word_specifiers = [self.S]
 
+
 class COCAToken(QueryToken):
     """
     A QueryToken subclass that uses old-style COCA syntax.
@@ -192,12 +191,15 @@ class COCAToken(QueryToken):
     quote_open = '"'
     quote_close = '"'
 
-    def parse (self):
+    def parse(self):
         self.word_specifiers = []
         self.class_specifiers = []
         self.lemma_specifiers = []
         self.transcript_specifiers = []
         self.gloss_specifiers = []
+
+        if self.S is None:
+            return
 
         word_specification = None
         lemma_specification = None
@@ -255,7 +257,7 @@ class COCAToken(QueryToken):
 
         if lemma_specification and not class_specification:
             # check if all elements pass as part-of-speech-tags:
-            if len(self.lemma_specifiers) == self.lexicon.check_pos_list(self.lemma_specifiers):
+            if all(COCAToken._check_pos_list(self.lemma_specifiers)):
                 # if so, interpret elements as part-of-speech tags:
                 self.class_specifiers = self.lemma_specifiers
                 self.lemma_specifiers = []
@@ -464,7 +466,8 @@ def parse_query_string(S, token_type):
 
     if state != ST_NORMAL:
         if state == ST_POS_SEPARATOR:
-            raise TokenParseError("{}: Missing a part-of-speech specification after '.'".format(S))
+            err = "Missing a part-of-speech specification after '.'"
+            raise TokenParseError("{}: {}".format(S, err))
         if state == ST_IN_BRACKET:
             op = token_type.bracket_open
             cl = token_type.bracket_close
@@ -481,6 +484,7 @@ def parse_query_string(S, token_type):
     if current_word:
         tokens.append(current_word)
     return tokens
+
 
 def get_quantifiers(S):
     """
@@ -509,7 +513,8 @@ def get_quantifiers(S):
         A tuple containing three elements: the stripped token string, plus
         the lower and upper number of repetions (in order)
     """
-    match = re.match("(?P<token>.*)(\{\s*(?P<start>\d+)(,\s*(?P<end>\d+))?\s*\})+", S)
+    regexp = "(?P<token>.*)({\s*(?P<start>\d+)(,\s*(?P<end>\d+))?\s*})+"
+    match = re.match(regexp, S)
     if match:
         start = int(match.groupdict()["start"])
         try:
@@ -520,6 +525,7 @@ def get_quantifiers(S):
         return (token, start, end)
     else:
         return (S, 1, 1)
+
 
 def preprocess_query(S):
     """
@@ -537,25 +543,44 @@ def preprocess_query(S):
     Returns
     -------
     L : list
-        A list of query strings
+        A list of query string tokens
     """
 
     tokens = parse_query_string(S, COCAToken)
-    token_lists = []
-    token_map = []
+
+    outer = []
     current_pos = 1
-    for i, current_token in enumerate([x for x in tokens if x]):
-        L = []
-        token, start, end = get_quantifiers(current_token)
-        for x in range(start, end + 1):
-            if not x:
-                L.append([(current_pos, "")])
-            else:
-                L.append([(current_pos, token)] * x)
-        current_pos += end
-        token_lists.append(L)
-    L = []
-    for x in itertools.product(*token_lists):
-        l = [(number, token) for number, token in list(itertools.chain.from_iterable(x)) if token]
-        L.append(l)
-    return L
+    # is there something that replaces these nested loops?
+    for current_token in tokens:
+        val, start, end = get_quantifiers(current_token)
+
+        if val == "_NULL":
+            val = None
+        elif re.match("~?_PUNCT", val):
+            neg = val.startswith("~")
+            val = "|".join(list(".,;!-+") + ["\\?"])
+            # FIXME: negation doesn't work
+            if neg:
+                val = "~{}".format(val)
+        inner = []
+        # For each tuple, create a list of constant length
+        # Each element contains a different number of
+        # repetitions of the value of the tuple, padded
+        # by the value None if needed.
+        for n in range(start, end + 1):
+            x = ([(current_pos, val)] * n +
+                 [(current_pos, None)] * (end - n))
+            inner.append(x)
+        outer.append(inner)
+        current_pos += len(x)
+    # Outer is now a list of lists.
+
+    final = []
+    # use itertools.product to combine the elements in the
+    # list of lists:
+    for combination in itertools.product(*outer):
+        # flatten the elements in the current combination,
+        # and append them to the final list:
+        final.append([x for x
+                      in itertools.chain.from_iterable(combination)])
+    return final

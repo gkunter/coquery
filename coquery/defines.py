@@ -175,6 +175,9 @@ COLUMN_NAMES = {
     "statistics_group_ttr": "Group: Type-token ratio",
     "statistics_column_total": "ALL",
 
+    # Labels for reference corpus:
+    "reference_corpus_frequency": "Frequency_ref",
+
     # Labels that are used when displaying the corpus statistics:
     "coq_statistics_table": "Table",
     "coq_statistics_column": "Column",
@@ -204,6 +207,11 @@ FUNCTION_DESC = {
     "statistics_tokens": "Count the number of tokens",
     "statistics_types": "Count the number of types",
     "statistics_ttr": "Calculate the type-token ratio",
+    "reference_corpus_frequency": "Count the frequeny of the match in the reference corpus",
+    "reference_per_million_words": "Calculate the frequency per million words in the reference corpus",
+    "reference_per_thousand_words": "Calculate the frequency per thousand words in the reference corpus",
+    "reference_ll_keyness": "Calculate the log-likelihood keyness relative to the reference corpus",
+    "reference_diff_keyness": "Calculate the DIFF keyness relative to the reference corpus",
     "LENGTH": "Count the number of characters",
     "CONCAT": "Concatenate the columns, separated by <i>Argument</i>",
     "COUNT": "Count the number of occurrences of <i>Argument</i> (regexp)",

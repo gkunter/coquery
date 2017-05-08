@@ -35,9 +35,9 @@ df1 = pd.DataFrame({'coquery_invisible_number_of_tokens': {0: 1, 1: 1, 2: 1, 3: 
                    'coquery_invisible_origin_id': {0: 3007917, 1: 3070300, 2: 3036553, 3: 4003221, 4: 4001564, 5: 4060924, 6: 4112423, 7: 4114852, 8: 3049412, 9: 4008118, 10: 4028862, 11: 4028862, 12: 220882, 13: 232557, 14: 4114423, 15: 4119065, 16: 1050494, 17: 220882, 18: 220882, 19: 220882, 20: 220882, 21: 4001783, 22: 1051016, 23: 4004373, 24: 4004373, 25: 4004373, 26: 4004373, 27: 4004373, 28: 4004373, 29: 4004373, 30: 4004373, 31: 4004373, 32: 4004373, 33: 4004373, 34: 4004373, 35: 4004373, 36: 4004373, 37: 4004373, 38: 4004373, 39: 4076097, 40: 4076097, 41: 4076097, 42: 4076097, 43: 4076097, 44: 4076097, 45: 4076097, 46: 4076097, 47: 4076097, 48: 4076097, 49: 4076097, 50: 4076097, 51: 4076097, 52: 4076097, 53: 4076097, 54: 4076097},
                    'coq_source_genre_1': {0: 'NEWS', 1: 'NEWS', 2: 'NEWS', 3: 'ACAD', 4: 'ACAD', 5: 'NEWS', 6: 'MAG', 7: 'NEWS', 8: 'NEWS', 9: 'ACAD', 10: 'ACAD', 11: 'ACAD', 12: 'SPOK', 13: 'SPOK', 14: 'NEWS', 15: 'ACAD', 16: 'FIC', 17: 'SPOK', 18: 'SPOK', 19: 'SPOK', 20: 'SPOK', 21: 'ACAD', 22: 'FIC', 23: 'ACAD', 24: 'ACAD', 25: 'ACAD', 26: 'ACAD', 27: 'ACAD', 28: 'ACAD', 29: 'ACAD', 30: 'ACAD', 31: 'ACAD', 32: 'ACAD', 33: 'ACAD', 34: 'ACAD', 35: 'ACAD', 36: 'ACAD', 37: 'ACAD', 38: 'ACAD', 39: 'FIC', 40: 'FIC', 41: 'FIC', 42: 'FIC', 43: 'FIC', 44: 'FIC', 45: 'FIC', 46: 'FIC', 47: 'FIC', 48: 'FIC', 49: 'FIC', 50: 'FIC', 51: 'FIC', 52: 'FIC', 53: 'FIC', 54: 'FIC'}})
 
-df0 = pd.DataFrame({"coq_word_label_1": ["abc"] * 3 + ["xxx"] * 2,
-                    "coq_source_genre_1": ["SPOK", "NEWS", "NEWS", "SPOK", "NEWS"],
-                    "coquery_invisible_corpus_id": range(5)})
+df0 = {"coq_word_label_1": ["abc"] * 3 + ["xxx"] * 2,
+       "coq_source_genre_1": ["SPOK", "NEWS", "NEWS", "SPOK", "NEWS"],
+       "coquery_invisible_corpus_id": range(5)}
 
 STRING_COLUMN = "coq_word_label_1"
 INT_COLUMN = "coq_corpus_id_1"
@@ -63,28 +63,30 @@ class TestFrequencyFunctions(unittest.TestCase):
     #def test_freq(self):
         #df = pd.DataFrame(df0)
         #func = Freq(columns=[x for x in df.columns if not x.startswith("coquery_invisible")])
-        #val = FunctionList([func]).apply(df, session=None, connection=None)[func.get_id()]
+        #val = FunctionList([func]).apply(df, session=None)[func.get_id()]
         #self.assertListEqual(val.tolist(), [1, 2, 2, 1, 1])
 
     #def test_freq_with_none(self):
         #df = pd.DataFrame(df0)
         #df["coq_test_label_1"] = [None, "A", None, "B", None]
         #func = Freq(columns=[x for x in df.columns if not x.startswith("coquery_invisible")])
-        #val = FunctionList([func]).apply(df, session=None, connection=None)[func.get_id()]
+        #val = FunctionList([func]).apply(df, session=None)[func.get_id()]
         #self.assertListEqual(val.tolist(), [1, 2, 2, 1, 1])
 
     #def test_freq_with_nan1(self):
         #df = pd.DataFrame(df0)
         #df["coq_test_label_1"] = [pd.np.nan, "A", pd.np.nan, "B", pd.np.nan]
-        #func = Freq(columns=[x for x in df.columns if not x.startswith("coquery_invisible")])
-        #val = FunctionList([func]).apply(df, session=None, connection=None)[func.get_id()]
+        #columns = [x for x in df.columns
+                   #if not x.startswith("coquery_invisible")]
+        #func = Freq(columns=columns)
+        #val = FunctionList([func]).apply(df, session=None)[func.get_id()]
         #self.assertListEqual(val.tolist(), [1, 2, 2, 1, 1])
 
     #def test_freq_with_nan2(self):
         #df = pd.DataFrame(df0)
         #df["coq_test_label_1"] = [pd.np.nan, 1.0, pd.np.nan, 2.0, pd.np.nan]
         #func = Freq(columns=[x for x in df.columns if not x.startswith("coquery_invisible")])
-        #val = FunctionList([func]).apply(df, session=None, connection=None)[func.get_id()]
+        #val = FunctionList([func]).apply(df, session=None)[func.get_id()]
         #self.assertListEqual(val.tolist(), [1, 2, 2, 1, 1])
 
     #def test_freq_with_count1(self):
@@ -92,7 +94,7 @@ class TestFrequencyFunctions(unittest.TestCase):
         #df["coq_test_label_1"] = [pd.np.nan, "aaa", pd.np.nan, "abc", pd.np.nan]
         #func1 = Freq(columns=[x for x in df.columns if not x.startswith("coquery_invisible")])
         #func2 = StringCount(columns=["coq_test_label_1"], value="a")
-        #val = FunctionList([func1, func2]).apply(df, session=None, connection=None)[func1.get_id()]
+        #val = FunctionList([func1, func2]).apply(df, session=None)[func1.get_id()]
         #self.assertListEqual(val.tolist(), [1, 2, 2, 1, 1])
 
     def test_count_with_nan(self):

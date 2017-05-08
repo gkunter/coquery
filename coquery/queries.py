@@ -113,8 +113,11 @@ class TokenQuery(object):
         for x in self.query_list:
             self._max_number_of_tokens = max(self._max_number_of_tokens, len(x))
 
+        tokens.QueryToken.set_pos_check_function(
+            self.Resource.lexicon.pos_check_function)
+
         for i, self._sub_query in enumerate(self.query_list):
-            self._current_number_of_tokens = len(self._sub_query)
+            self._current_number_of_tokens = len([x for _, x in self._sub_query if x])
             self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
 
             if len(self.query_list) > 1:
@@ -124,13 +127,8 @@ class TokenQuery(object):
                             self._current_subquery_string)
                 logger.info(s)
 
-            if self.Resource.db_type == SQL_SQLITE:
-                # SQLite: keep track of databases that need to be attached.
-                self.Resource.attach_list = set([])
-                # This list is filled by get_query_string().
-
-            query_string = self.Resource.get_query_string(self,
-                                                          self._sub_query,
+            query_string = self.Resource.get_query_string(self._sub_query,
+                                                          options.cfg.selected_features,
                                                           to_file)
 
             df = None
@@ -141,6 +139,7 @@ class TokenQuery(object):
                                                       manager_hash, md5))
                 except KeyError:
                     pass
+
             if df is None:
                 if not query_string:
                     df = pd.DataFrame()
@@ -337,7 +336,8 @@ class TokenQuery(object):
             df["coquery_dummy"] = 0
             self.empty_query = False
 
-        columns = self.Session.output_order
+        columns = [x for x in options.cfg.selected_features if x.startswith("coquery_")]
+        columns += list(self.input_frame.columns)
         group_functions = self.Session.group_functions
         if group_functions or options.cfg.group_filter_list:
             columns += options.cfg.group_columns
@@ -349,7 +349,6 @@ class TokenQuery(object):
                 df[column] = self._current_subquery_string
             elif column.startswith("coquery_query_token"):
                 token_list = self.query_string.split()
-                n = int(column.rpartition("_")[-1])
                 # construct a list with the maximum number of quantified
                 # token repetitions. This is used to look up the query token
                 # string.
@@ -358,8 +357,9 @@ class TokenQuery(object):
                     token, _, length = tokens.get_quantifiers(x)
                     L += [token] * length
                 try:
+                    n = int(column.rpartition("_")[-1])
                     df[column] = L[n-1]
-                except IndexError:
+                except (ValueError, IndexError):
                     df[column] = ""
             else:
                 # add column labels for the columns in the input file:
