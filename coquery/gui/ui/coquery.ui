@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>720</width>
-    <height>715</height>
+    <height>748</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -836,8 +836,8 @@ background-color: rgb(244, 165, 130);</string>
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Oxygen-Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="textInteractionFlags">
            <set>Qt::NoTextInteraction</set>
@@ -859,7 +859,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>720</width>
-     <height>24</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -888,6 +888,7 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_available_modules"/>
     <addaction name="action_about_coquery"/>
     <addaction name="action_how_to_cite"/>
+    <addaction name="action_regex_tester"/>
    </widget>
    <widget class="QMenu" name="menuCorpus">
     <property name="title">
@@ -1533,7 +1534,12 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_how_to_cite">
    <property name="text">
-    <string>How to cite</string>
+    <string>How to &amp;cite</string>
+   </property>
+  </action>
+  <action name="action_regex_tester">
+   <property name="text">
+    <string>Regular &amp;expression tester...</string>
    </property>
   </action>
  </widget>

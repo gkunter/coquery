@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(720, 715)
+        MainWindow.resize(720, 748)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -430,7 +430,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 24))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 27))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -664,6 +664,8 @@ class Ui_MainWindow(object):
         self.action_visualization_designer.setObjectName("action_visualization_designer")
         self.action_how_to_cite = QtWidgets.QAction(MainWindow)
         self.action_how_to_cite.setObjectName("action_how_to_cite")
+        self.action_regex_tester = QtWidgets.QAction(MainWindow)
+        self.action_regex_tester.setObjectName("action_regex_tester")
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_create_textgrid)
@@ -681,6 +683,7 @@ class Ui_MainWindow(object):
         self.menuHilfe.addAction(self.action_available_modules)
         self.menuHilfe.addAction(self.action_about_coquery)
         self.menuHilfe.addAction(self.action_how_to_cite)
+        self.menuHilfe.addAction(self.action_regex_tester)
         self.menuCorpus.addAction(self.action_manage_corpus)
         self.menuCorpus.addSeparator()
         self.menuCorpus.addAction(self.action_link_external)
@@ -777,8 +780,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>"))
+"</style></head><body style=\" font-family:\'Oxygen-Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help"))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus"))
@@ -884,7 +887,8 @@ class Ui_MainWindow(object):
         self.action_find.setShortcut(_translate("MainWindow", "Ctrl+F"))
         self.action_visualization_designer.setText(_translate("MainWindow", "&Visualization designer..."))
         self.action_visualization_designer.setShortcut(_translate("MainWindow", "Ctrl+D"))
-        self.action_how_to_cite.setText(_translate("MainWindow", "How to cite"))
+        self.action_how_to_cite.setText(_translate("MainWindow", "How to &cite"))
+        self.action_regex_tester.setText(_translate("MainWindow", "Regular &expression tester..."))
 
 from ..classes import CoqClickableLabel, CoqRotatedButton, CoqTextEdit
 from ..findwidget import CoqFindWidget
