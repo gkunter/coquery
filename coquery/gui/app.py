@@ -393,6 +393,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_available_modules.triggered.connect(self.show_available_modules)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
         self.ui.action_how_to_cite.triggered.connect(self.how_to_cite)
+        self.ui.action_regex_tester.triggered.connect(self.regex_tester)
         self.ui.action_help.triggered.connect(self.help)
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
@@ -2827,6 +2828,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import cite
         cite_dialog = cite.CiteDialog(parent=self)
         cite_dialog.exec_()
+
+    def regex_tester(self):
+        from . import regextester
+        regex_dialog = regextester.RegexDialog(parent=self)
+        regex_dialog.show()
 
     def show_available_modules(self):
         from . import availablemodules
