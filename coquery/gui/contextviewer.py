@@ -67,7 +67,7 @@ class ContextView(QtWidgets.QWidget):
                 if label not in corpus.resource.audio_features:
                     self.add_source_label(label, fields[label])
                 else:
-                    import sound
+                    from coquery import sound
                     self.audio = sound.Sound(fields[label])
 
 
@@ -305,25 +305,39 @@ class ContextView(QtWidgets.QWidget):
 
 
 class ContextViewAudio(ContextView):
+    _run_first = True
+
     def __init__(self, corpus, token_id, source_id, token_width,
                  icon=None, parent=None):
+
         super(ContextViewAudio, self).__init__(corpus, token_id, source_id,
                                                token_width, icon=None,
                                                parent=None)
+
+        if ContextViewAudio._run_first:
+            s = "Initializing sound system.<br><br>Please wait..."
+            title = "Initializing sound system – Coquery"
+            msg_box = classes.CoqStaticBox(title, s, parent=self)
+            self.add_textgrid_area()
+            msg_box.close()
+            msg_box.hide()
+            del msg_box
+            ContextViewAudio._run_first = False
 
         self.ui.spin_dynamic_range.valueChanged.connect(
             self.ui.textgrid_area.change_dynamic_range)
         self.ui.spin_window_length.valueChanged.connect(
             self.ui.textgrid_area.change_window_length)
 
-        self.add_textgrid_area()
-
     def add_textgrid_area(self):
         from .textgridview import CoqTextgridView
-        del self.ui.textgrid_area
+        try:
+            del self.ui.textgrid_area
+        except AttributeError:
+            pass
         self.ui.textgrid_area = CoqTextgridView(self.ui.tab_textgrid)
-        self.ui.verticalLayout_5.insertWidget(0, self.ui.textgrid_area)
-        self.ui.verticalLayout_5.setStretch(0, 1)
+        self.ui.layout_audio_tab.insertWidget(0, self.ui.textgrid_area)
+        self.ui.layout_audio_tab.setStretch(0, 1)
 
     def finalize_context(self):
         super(ContextViewAudio, self).finalize_context()
@@ -332,7 +346,7 @@ class ContextViewAudio(ContextView):
                                             self.context["end_time"])
         textgrid = self.prepare_textgrid(self.context["df"],
                                             self.context["start_time"])
-        self.ui.verticalLayout_5.removeWidget(self.ui.textgrid_area)
+        self.ui.layout_audio_tab.removeWidget(self.ui.textgrid_area)
         self.ui.textgrid_area.clear()
         self.add_textgrid_area()
         self.ui.textgrid_area.setSound(audio)

@@ -243,14 +243,14 @@ class StringRegEx(StringFunction):
         super(StringRegEx, self).__init__(columns, *args, **kwargs)
         self.value = value
         try:
-            self.re = re.compile(value)
+            self.re = re.compile(value, re.UNICODE)
         except Exception:
             self.re = None
 
     @classmethod
     def validate_input(cls, value):
         try:
-            re.compile(value)
+            re.compile(value, re.UNICODE)
         except Exception:
             return False
         else:
@@ -305,6 +305,10 @@ class StringSeriesFunction(StringFunction):
     single_column = False
 
     def evaluate(self, df, value=None, *args, **kwargs):
+        # ensure that regex functions use unicode:
+        if self.str_func in ("contains", "extract", "count"):
+            if "(?u)" not in value:
+                value = "(?u){}".format(value)
         if value:
             _df = pd.concat([getattr(df[col].astype(str).str
                                      if df[col].dtype != object
@@ -349,11 +353,11 @@ class StringExtract(StringSeriesFunction):
     str_func = "extract"
 
     def evaluate(self, df, *args, **kwargs):
-        # if there is no match group, enclose the value to form one:
-        if "(" in self.value:
-            val = self.value
-        else:
+        # put the regex into parentheses if there is no match group:
+        if not re.search(r"\([^)]*\)", self.value):
             val = "({})".format(self.value)
+        else:
+            val = self.value
         return super(StringExtract, self).evaluate(df, val, expand=True)
 
 
