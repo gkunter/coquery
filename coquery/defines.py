@@ -326,6 +326,46 @@ except NameError:
     unicode = str
     long = int
 
+msg_parsing_error_template = """
+<p><b>Syntax error in query string</b><p>
+<p><code>{{}}<br>{{}}</code></p>
+<p>{}</p>
+"""
+
+msg_escapable_template = """
+<p><b>Syntax error in query string</b><p>
+<p><code>{{}}<br>{{}}</code></p>
+<p>{}</p>
+<p>If you want to query for the character that caused this error as a
+literal character, try to precede it by the backslash: <code>\</code><p>
+"""
+
+msg_unexpected_quantifier_start = msg_escapable_template.format("""
+Query items may not start with the quantifier bracket
+<code style='color: #aa0000'>{}</code>
+""")
+
+msg_unexpected_quantifier = msg_parsing_error_template.format("""
+Only quantifiers starting with <code style='color: #aa0000'>{}</code> are
+allowed after a query token (encountered {}).
+""")
+
+msg_unexpected_bracket = msg_parsing_error_template.format("""
+Unexpected opening bracket <code style='color: #aa0000'>{}</code> within a
+word
+""")
+
+msg_token_dangling_open = msg_escapable_template.format("""
+There is no matching closing character <code style='color:
+#aa0000'>{}</code> for the opening character <code style='color:
+#aa0000'>{}</code>.</p>
+""")
+
+msg_missing_pos_spec = msg_parsing_error_template.format("""
+Missing a part-of-speech specification after
+<code style='color: #aa0000'>{}</code>.
+""")
+
 msg_userdata_warning = """
 <p><b>Your results table contains user data.</b></p>
 <p>If you start a new query, the user data that you have entered manually
@@ -372,17 +412,6 @@ automatically lemmatize and POS-tag your new corpus.</p>"""
 msg_adhoc_builder_table = """
 <p>You can build a new corpus by storing the rows from a table in a database
 that can be queried by Coquery.</p>"""
-
-msg_token_dangling_open = """
-<p><b>Your query string <code style='color: #aa0000'>{str}</code> misses a
-closing character.</b></p>
-<p>There is no matching closing character <code style='color:
-#aa0000'>{close}</code> for the opening character <code style='color:
-#aa0000'>{open}</code>.</p>
-<p>Please fix your query string by supplying the closing character. If you
-want to query for the opening character, try to escape it by using
-<code style='color: #aa0000'>\\{open}</code> instead.</p>
-"""
 
 msg_invalid_filter = """
 <p><b>The corpus filter '{}' is not valid.</b></p>

@@ -114,9 +114,11 @@ class BarcodePlot(vis.Visualizer):
 
         if x and not y:
             self.horizontal = False
-            ax_kwargs = {"ylim": (len(levels_x), 0),
-                         "xticks": 0.5 + pd.np.arange(len(levels_x)),
+            ax_kwargs = {"xticks": 0.5 + pd.np.arange(len(levels_x)),
                          "xticklabels": levels_x}
+            if levels_x:
+                ax_kwargs["xlim"] = (0, len(levels_x))
+
             xval = data[x].apply(lambda x: levels_x.index(x))
             colors = get_colors(palette, levels_x)
             cols = xval.apply(lambda x: colors[x])
@@ -130,9 +132,11 @@ class BarcodePlot(vis.Visualizer):
         else:
             self.horizontal = True
             levels_y = levels_y[::-1]
-            ax_kwargs = {"xlim": (0, len(levels_y)),
-                         "yticks": 0.5 + pd.np.arange(len(levels_y)),
+            ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
                          "yticklabels": levels_y}
+            if levels_y:
+                ax_kwargs["ylim"] = (0, len(levels_y))
+
             if not x and not y:
                 cols = [get_colors(palette, [0])[0]] * len(data)
                 yval = 0

@@ -49,13 +49,9 @@ class TokenQuery(object):
 
     def __init__(self, S, Session):
         self.query_list = []
-        try:
-            for s in S.split("\n"):
-                if s:
-                    self.query_list += tokens.preprocess_query(s)
-        except TokenParseError as e:
-            logger.error(str(e))
-            S = ""
+        for s in S.split("\n"):
+            if s:
+                self.query_list += tokens.preprocess_query(s)
         self.query_string = S
         self.Session = Session
         self.Resource = Session.Resource
@@ -149,10 +145,11 @@ class TokenQuery(object):
 
                     # SQLite: attach external databases
                     if self.Resource.db_type == SQL_SQLITE:
-                        for db_name in self.Resource.attach_list:
-                            path = os.path.join(
-                                options.cfg.database_path,
-                                "{}.db".format(db_name))
+                        attach_list = self.Resource.get_attach_list(
+                            options.cfg.selected_features)
+                        for db_name in attach_list:
+                            path = os.path.join(options.cfg.database_path,
+                                                "{}.db".format(db_name))
                             S = "ATTACH DATABASE '{}' AS {}".format(
                                 path, db_name)
                             try:
@@ -338,9 +335,6 @@ class TokenQuery(object):
 
         columns = [x for x in options.cfg.selected_features if x.startswith("coquery_")]
         columns += list(self.input_frame.columns)
-        group_functions = self.Session.group_functions
-        if group_functions or options.cfg.group_filter_list:
-            columns += options.cfg.group_columns
 
         for column in columns:
             if column == "coquery_query_string":

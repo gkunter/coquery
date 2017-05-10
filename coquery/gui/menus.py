@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import logging
+import re
 
 from coquery import options
 from coquery.defines import *
@@ -44,9 +45,7 @@ class CoqResourceMenu(QtWidgets.QMenu):
             self.addAction(action)
 
         add_link = QtWidgets.QAction("&Link an external table", parent)
-        add_grouping = QtWidgets.QAction("Add to &group columns", parent)
         remove_link = QtWidgets.QAction("&Remove linked table", parent)
-        remove_grouping = QtWidgets.QAction("Remove from &group columns", parent)
         view_entries = QtWidgets.QAction("View all &values", parent)
         view_uniques = QtWidgets.QAction("View &unique values", parent)
 
@@ -72,13 +71,6 @@ class CoqResourceMenu(QtWidgets.QMenu):
                     self.addAction(add_link)
                     add_link.triggered.connect(lambda: self.addLinkRequested.emit(item))
 
-                if rc_feature in self.parent().ui.list_group_columns.columns:
-                    self.addAction(remove_grouping)
-                    remove_grouping.triggered.connect(
-                        lambda: self.removeGroupRequested.emit(rc_feature))
-                else:
-                    self.addAction(add_grouping)
-                    add_grouping.triggered.connect(lambda: self.addGroupRequested.emit(rc_feature))
         else:
             unavailable = QtWidgets.QAction(_translate("MainWindow", "No option available for tables.", None), self)
             unavailable.setDisabled(True)
@@ -121,29 +113,14 @@ class CoqColumnMenu(QtWidgets.QMenu):
         hide_column.triggered.connect(lambda: self.hideColumnRequested.emit(columns))
         self.addAction(hide_column)
 
-        if len(columns) == 1:
-            rc_feature = columns[0]
-
-            add_grouping = QtWidgets.QAction("Add to &group columns", parent)
-            remove_grouping = QtWidgets.QAction("Remove from &group columns", parent)
-
-            # only allow resource features as group variables:
-            if (rc_feature.startswith("coq_") and
-                  rc_feature.endswith(tuple("0123456789"))):
-                feature = rc_feature.split("_", 1)[-1].rsplit("_", 1)[0]
-                if feature in self.parent().ui.list_group_columns.columns:
-                    self.addAction(remove_grouping)
-                    remove_grouping.triggered.connect(
-                        lambda: self.removeGroupRequested.emit(feature))
-                else:
-                    self.addAction(add_grouping)
-                    add_grouping.triggered.connect(
-                        lambda: self.addGroupRequested.emit(feature))
         self.addSeparator()
 
         # add additional function actions, but only if all columns really
-        # are functions:
-        if all([x.startswith("func_") for x in columns]):
+        # are functions (excluding group functions):
+        check_is_func = [x.startswith("func_") for x in columns]
+        check_is_group_function = [bool(re.match("func_.*_group_", x))
+                                   for x in columns]
+        if (all(check_is_func) and not any(check_is_group_function)):
             #if len(columns) == 1:
                 #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
                 #self.addAction(edit_function)

@@ -550,6 +550,10 @@ class Visualizer(CoqObject):
     axes_style = None
     plotting_context = "notebook"
 
+    DEFAULT_TITLE = "(no title)"
+    DEFAULT_XLABEL = "X"
+    DEFAULT_YLABEL = "Y"
+
     def __init__(self, df, session):
         super(Visualizer, self).__init__()
         self.df = df
@@ -567,6 +571,43 @@ class Visualizer(CoqObject):
                 grid = sns.FacetGrid(**kwargs)
         return grid
 
+
+    def add_legend(self, grid, levels=None, loc="lower left"):
+        """
+        Add a legend to the figure, using the current option settings.
+        """
+        #if levels:
+            #legend_bar = [
+                #plt.Rectangle(
+                    #(0, 0), 1, 1,
+                    #fc=self.options["color_palette_values"][i],
+                    #edgecolor="none") for i, _ in enumerate(levels)
+                #]
+            #self.g.fig.get_axes()[-1].legend(
+                #legend_bar, levels,
+                #ncol=self.options.get("label_legend_columns", 1),
+                #title=utf8(self.options.get("label_legend", "")),
+                #frameon=True,
+                #framealpha=0.7,
+                #loc=loc).draggable()
+        #else:
+        ax = grid.fig.gca()
+        ax.legend(["abc"],
+                  title="Legend",
+                  frameon=True,
+                  framealpha=0.7,
+                  loc="upper left").draggable()
+
+        #grid.fig.get_axes()[-1].legend(
+            #ncol=self.options.get("label_legend_columns", 1),
+            #title=utf8(self.options.get("label_legend", "")),
+            #title="Legendary",
+            #frameon=True,
+            #framealpha=0.7,
+            #loc=loc).draggable()
+
+
+
     def plot_facet(self, data, color,
                    x=None, y=None, levels_x=None, levels_y=None,
                    palette=None, **kwargs):
@@ -574,9 +615,10 @@ class Visualizer(CoqObject):
 
     def set_annotations(self, grid, values):
         ax = grid.fig.gca()
-        ax.set_title(values.get("title", "(none)"))
-        ax.set_xlabel(values.get("xlab", "(none)"))
-        ax.set_ylabel(values.get("ylab", "(none)"))
+        grid.set_titles(values.get("title", self.DEFAULT_TITLE))
+        grid.set_xlabels(values.get("xlab", self.DEFAULT_XLABEL))
+        grid.set_ylabels(values.get("ylab", self.DEFAULT_YLABEL))
+        grid.fig.tight_layout()
 
     @staticmethod
     def dtype(feature, df):

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coqListSelect.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -48,7 +48,7 @@ class Ui_CoqListSelect(object):
         self.verticalLayout_5.addItem(spacerItem1)
         self.layout.addLayout(self.verticalLayout_5, 1, 1, 1, 1)
         self.list_available = QtWidgets.QListWidget(CoqListSelect)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.list_available.sizePolicy().hasHeightForWidth())
@@ -63,7 +63,7 @@ class Ui_CoqListSelect(object):
         self.label_select_list.setObjectName("label_select_list")
         self.layout.addWidget(self.label_select_list, 0, 0, 1, 1)
         self.list_selected = QtWidgets.QListWidget(CoqListSelect)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.list_selected.sizePolicy().hasHeightForWidth())

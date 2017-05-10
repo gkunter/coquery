@@ -34,7 +34,7 @@ except NameError:
 
 
 class Filter(CoqObject):
-    def __init__(self, feature, operator, value, stage=FILTER_STAGE_FINAL):
+    def __init__(self, feature, dtype, operator, value, stage=FILTER_STAGE_FINAL):
         super(Filter, self).__init__()
         if operator not in OPERATOR_STRINGS:
             raise ValueError("Invalid filter operator '{}'".format(operator))
@@ -44,7 +44,7 @@ class Filter(CoqObject):
         self.feature = feature
         self.operator = operator
         self.value = value
-        self.dtype = None
+        self.dtype = dtype
         self.stage = stage
 
     def __repr__(self):
@@ -70,26 +70,28 @@ class Filter(CoqObject):
         A fixed string is enclosed in simple quotation marks. Quotation
         marks inside the string are escaped.
         """
-
-        if x == "":
-            val = "''"
-
-        elif self.dtype in [int, float]:
-            # attempt to coerce the value to a numeric variable
-            if not isinstance(x, (int, float)):
-                val = pd.np.float(x)
-                try:
-                    if x == pd.np.int(x):
-                        val = pd.np.int(x)
-                except ValueError:
-                    pass
+        if pd.np.issubdtype(self.dtype, pd.np.number):
+            if x == "":
+                val = None
             else:
-                val = x
+                # attempt to coerce the value to a numeric variable
+                if not isinstance(x, (int, float)):
+                    val = pd.np.float(x)
+                    try:
+                        if x == pd.np.int(x):
+                            val = pd.np.int(x)
+                    except ValueError:
+                        pass
+                else:
+                    val = x
 
         elif self.dtype == bool:
             if isinstance(x, (float, int)):
                 val = bool(x)
-            else:
+
+            # all operators except the MATCH operators require boolean
+            # values
+            elif self.operator not in [OP_MATCH, OP_NMATCH]:
                 if x.lower() in ["yes", "y", "1", "true", "t"]:
                     val = True
                 elif x.lower() in ["no", "n", "0", "false", "f"]:
@@ -97,7 +99,8 @@ class Filter(CoqObject):
                 else:
                     S = "Filter value has to be either 'yes' or 'no'"
                     raise ValueError(S)
-
+            else:
+                val = "'{}'".format(self.value)
         else:
             if "'" in x:
                 val = x.replace("'", "\\'")
@@ -107,7 +110,7 @@ class Filter(CoqObject):
 
         return str(val)
 
-    def get_filter_string(self, df):
+    def get_filter_string(self):
         # if the value is an NA (either None or np.nan), a trick described
         # here is used: http://stackoverflow.com/a/26535881/5215507
         #
@@ -118,8 +121,6 @@ class Filter(CoqObject):
         #
         # Thus, testing whether FEATURE equals NA returns the query string
         # FEATURE != FEATURE.
-
-        self.dtype = df[self.feature].dropna().dtype
 
         if self.operator == OP_MATCH:
             raise ValueError("RegEx filters do not use query strings.")
@@ -132,7 +133,10 @@ class Filter(CoqObject):
             if self.operator not in [OP_NE, OP_EQ]:
                 raise ValueError("Only OP_EQ and OP_NE are allowed with NA values")
 
-        if self.value is None or self.value is pd.np.nan:
+        if (self.value is None or self.value is pd.np.nan or
+            (pd.np.issubdtype(self.dtype, pd.np.number)
+             and self.value == "") or
+            (self.dtype == bool and self.value == "")):
             val = self.feature
             if self.operator == OP_EQ:
                 self.operator = OP_NE
@@ -151,16 +155,15 @@ class Filter(CoqObject):
         else:
             val = self.fix(self.value)
 
-        return "{} {} {}".format(self.feature,
-                                 OPERATOR_STRINGS[self.operator],
-                                 val)
+        S = "{} {} {}".format(
+            self.feature, OPERATOR_STRINGS[self.operator], val)
+        return S
 
     def apply(self, df):
         # ignore filters that refer to non-existing columns:
         if self.feature not in df.columns:
             return df
 
-        self.dtype = df[self.feature].dropna().dtype
         if self.operator in (OP_MATCH, OP_NMATCH):
             if self.dtype == object:
                 col = df[self.feature].dropna()
@@ -174,7 +177,7 @@ class Filter(CoqObject):
             return df.iloc[col[matching].index]
         else:
             try:
-                return df.query(self.get_filter_string(df),
+                return df.query(self.get_filter_string(),
                                 engine=_query_engine)
             except SyntaxError as e:
                 S = "Could not apply filter {}: {}".format(self, str(e))

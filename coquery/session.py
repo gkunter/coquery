@@ -94,11 +94,9 @@ class Session(object):
         # Column functions are functions that the user specified from the
         # results table
         self.column_functions = functionlist.FunctionList()
-        # group functions are functions applied to each group (duh)
-        self.group_functions = functionlist.FunctionList()
         # Summary functions are functions that the user specified to be
         # applied after the summary
-        self.summary_functions = functionlist.FunctionList()
+        self.summary_group = managers.Summary("summary")
 
         # row_visibility stores for each query type a pandas Series object
         # with the same index as the respective output object, and boolean
@@ -177,6 +175,15 @@ class Session(object):
     def disconnect_from_db(self):
         self.db_connection.close()
 
+    def prepare_queries(self):
+        self.query_list = []
+        for query_string in options.cfg.query_list:
+            if self.query_type:
+                new_query = self.query_type(query_string, self)
+            else:
+                raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
+            self.query_list.append(new_query)
+
     def run_queries(self, to_file=False, **kwargs):
         """
         Run each query in the query list, and append the results to the
@@ -206,11 +213,10 @@ class Session(object):
         number_of_queries = len(self.query_list)
         manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
+        manager.set_groups(self.groups)
 
         dtype_list = []
-
         self.queries = {}
-
         _queried = []
 
         try:
@@ -225,7 +231,9 @@ class Session(object):
                 if options.cfg.gui and number_of_queries > 1:
                     options.cfg.main_window.updateMultiProgress.emit(i+1)
                 if not self.quantified_number_labels:
-                    self.quantified_number_labels = [current_query.get_token_numbering(i) for i in range(self.get_max_token_count())]
+                    self.quantified_number_labels = [
+                        current_query.get_token_numbering(i)
+                        for i in range(self.get_max_token_count())]
                 start_time = time.time()
                 if number_of_queries > 1:
                     logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
@@ -344,7 +352,7 @@ class Session(object):
 
         manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
-        manager.set_group_filters(options.cfg.group_filter_list)
+        manager.set_groups(self.groups)
 
         column_properties = {}
         try:
@@ -510,16 +518,17 @@ class Session(object):
         if rc_feature == "coquery_query_token":
             try:
                 number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
             # if options.cfg.verbose: print(14)
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
         # special treatment of lexicon features:
-        if rc_feature in [x for x, _ in resource.get_lexicon_features()] or resource.is_tokenized(rc_feature):
+        if (rc_feature in [x for x, _ in resource.get_lexicon_features()]
+            or resource.is_tokenized(rc_feature)):
             try:
                 number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
             # if options.cfg.verbose: print(15)
             return "{}{}{}".format(res_prefix,
@@ -538,7 +547,7 @@ class Session(object):
         if rc_feature in COLUMN_NAMES:
             try:
                 number = self.quantified_number_labels[int(number) - 1]
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
             # if options.cfg.verbose: print(17)
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
@@ -562,20 +571,12 @@ class SessionCommandLine(Session):
         super(SessionCommandLine, self).__init__()
         if len(options.cfg.query_list) > 1:
             logger.info("{} queries".format(len(options.cfg.query_list)))
-        for query_string in options.cfg.query_list:
-            if self.query_type:
-                new_query = self.query_type(query_string, self)
-            else:
-                raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
-            self.query_list.append(new_query)
         self.max_number_of_input_columns = 0
 
 class SessionInputFile(Session):
-    def __init__(self):
-        super(SessionInputFile, self).__init__()
+    def prepare_queries(self):
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
-
             try:
                 input_file = pd.read_table(
                     filepath_or_buffer=InputFile,
@@ -618,11 +619,9 @@ class SessionInputFile(Session):
                 read_lines += 1
             self.input_columns = ["coq_{}".format(x) for x in self.header]
 
-
         logger.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
             logger.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
-
 
 class SessionStdIn(Session):
     def __init__(self):

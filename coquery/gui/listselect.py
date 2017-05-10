@@ -14,7 +14,6 @@ from __future__ import unicode_literals
 from coquery.unicode import utf8
 
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
-from . import classes
 
 
 class CoqListSelect(QtWidgets.QWidget):
@@ -30,16 +29,18 @@ class CoqListSelect(QtWidgets.QWidget):
         super(CoqListSelect, self).__init__(*args, **kwargs)
         self.ui = coqListSelectUi.Ui_CoqListSelect()
         self.ui.setupUi(self)
+        self.setDefocus(True)
 
         self.ui.button_add.clicked.connect(self.add_selected)
         self.ui.button_remove.clicked.connect(self.remove_selected)
         self.ui.button_up.clicked.connect(self.selected_up)
         self.ui.button_down.clicked.connect(self.selected_down)
 
-        self.ui.button_up.setIcon(get_toplevel_window().get_icon("Circled Chevron Up"))
-        self.ui.button_down.setIcon(get_toplevel_window().get_icon("Circled Chevron Down"))
-        self.ui.button_add.setIcon(get_toplevel_window().get_icon("Circled Chevron Left"))
-        self.ui.button_remove.setIcon(get_toplevel_window().get_icon("Circled Chevron Right"))
+        icon_getter = get_toplevel_window().get_icon
+        self.ui.button_up.setIcon(icon_getter("Circled Chevron Up"))
+        self.ui.button_down.setIcon(icon_getter("Circled Chevron Down"))
+        self.ui.button_add.setIcon(icon_getter("Circled Chevron Left"))
+        self.ui.button_remove.setIcon(icon_getter("Circled Chevron Right"))
 
         self.ui.list_selected.itemSelectionChanged.connect(self.check_buttons)
         self.ui.list_selected.itemSelectionChanged.connect(
@@ -51,6 +52,12 @@ class CoqListSelect(QtWidgets.QWidget):
         self._minimum = 0
         self._move_available = True
         self._track_selected = False
+        self._last_selected_row = None
+        self._last_available_row = None
+
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.ui.list_selected.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.ui.list_available.setFocusPolicy(QtCore.Qt.NoFocus)
 
     @staticmethod
     def _fill_list_widget(w, l, translate):
@@ -61,6 +68,12 @@ class CoqListSelect(QtWidgets.QWidget):
             else:
                 item = translate(x)
             w.addItem(item)
+
+    def setDefocus(self, b):
+        self._defocus = b
+
+    def defocus(self):
+        return self._defocus
 
     def setMoveAvailable(self, b):
         if b:
@@ -110,8 +123,6 @@ class CoqListSelect(QtWidgets.QWidget):
 
     def setSelectedList(self, l, translate=lambda x: x):
         self._fill_list_widget(self.ui.list_selected, l, translate)
-        self.ui.list_selected.setCurrentItem(
-            self.ui.list_selected.item(0))
 
     def add_selected(self):
         for x in self.ui.list_available.selectedItems():
@@ -156,6 +167,18 @@ class CoqListSelect(QtWidgets.QWidget):
                 self.ui.list_available.setCurrentItem(item)
                 return
 
+    def selection_down(self):
+        current_row = self.ui.list_selected.currentRow()
+        if current_row < self.ui.list_selected.count() - 1:
+            self.ui.list_selected.setCurrentItem(
+                self.ui.list_selected.item(current_row + 1))
+
+    def selection_up(self):
+        current_row = self.ui.list_selected.currentRow()
+        if current_row > 0:
+            self.ui.list_selected.setCurrentItem(
+                self.ui.list_selected.item(current_row - 1))
+
     def selected_up(self):
         self.move_selected(up=True)
 
@@ -184,24 +207,78 @@ class CoqListSelect(QtWidgets.QWidget):
 
         self.ui.button_up.setEnabled(selected_row > 0)
         self.ui.button_down.setEnabled(selected_row + 1 < selected_count)
-        self.ui.button_remove.setEnabled(selected_count > self.minimumItems() and
-                                         selected_row > -1)
-        self.ui.button_add.setEnabled(available_count > 0 and
-                                      self.ui.list_available.currentRow() > -1)
+        self.ui.button_remove.setEnabled(
+            selected_count > self.minimumItems() and selected_row > -1)
+        self.ui.button_add.setEnabled(
+            available_count > 0 and self.ui.list_available.currentRow() > -1)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Left:
             self.add_selected()
         elif event.key() == QtCore.Qt.Key_Right:
             self.remove_selected()
-        elif (self.ui.list_selected.hasFocus() and
-              event.key() == QtCore.Qt.Key_Up and
-              event.modifiers() == QtCore.Qt.ShiftModifier):
-            self.selected_up()
-        elif (self.ui.list_selected.hasFocus() and
-              event.key() == QtCore.Qt.Key_Down and
-              event.modifiers() == QtCore.Qt.ShiftModifier):
-            self.selected_down()
+        elif event.key() == QtCore.Qt.Key_Up:
+            if event.modifiers() == QtCore.Qt.ShiftModifier:
+                self.selected_up()
+            else:
+                self.selection_up()
+        elif event.key() == QtCore.Qt.Key_Down:
+            if event.modifiers() == QtCore.Qt.ShiftModifier:
+                self.selected_down()
+            else:
+                self.selection_down()
         else:
             super(CoqListSelect, self).keyPressEvent(event)
 
+    def event(self, ev):
+        if ev.type() == ev.FocusIn:
+            # restore selection bars if focus is regained:
+            self.blockSignals(False)
+
+            if self._last_selected_row is None:
+                if self.ui.list_selected.count() > 0:
+                    self.ui.list_selected.setCurrentItem(
+                        self.ui.list_selected.item(0))
+            else:
+                self.ui.list_selected.setCurrentItem(
+                    self._last_selected_row)
+
+            if self._last_available_row is None:
+                if self.ui.list_available.count() > 0:
+                    self.ui.list_available.setCurrentItem(
+                        self.ui.list_available.item(0))
+            else:
+                self.ui.list_available.setCurrentItem(
+                    self._last_available_row)
+        elif ev.type() == ev.FocusOut:
+            self.blockSignals(True)
+            self._last_selected_row = self.ui.list_selected.currentItem()
+            self._last_available_row = self.ui.list_available.currentItem()
+            if self.defocus():
+                self.ui.list_selected.setCurrentItem(None)
+                self.ui.list_available.setCurrentItem(None)
+
+        return super(CoqListSelect, self).event(ev)
+
+
+class SelectionDialog(QtWidgets.QDialog):
+    def __init__(self, title, selected, available, text="", translator=None,
+                 *args, **kwargs):
+        super(SelectionDialog, self).__init__(*args, **kwargs)
+        self.setWindowTitle(title)
+        self.main_layout = QtWidgets.QVBoxLayout(self)
+        self.list_select = CoqListSelect()
+        self.list_select.setAvailableList(available, translator)
+        self.list_select.setSelectedList(selected, translator)
+        self.main_layout.addWidget(self.list_select)
+        self.resize(500, 310)
+
+    def exec_(self):
+        super(SelectionDialog, self).exec_()
+
+    @staticmethod
+    def show(*args, **kwargs):
+        dialog = SelectionDialog(*args, **kwargs)
+        dialog.exec_()
+        return [x.data(QtCore.Qt.UserRole)
+                for x in dialog.list_select.selectedItems()]

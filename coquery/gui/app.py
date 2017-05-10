@@ -18,6 +18,7 @@ import importlib
 import os
 import logging
 import pandas as pd
+import datetime
 
 from coquery import managers
 from coquery import functions
@@ -203,13 +204,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
 
         try:
-            self.restoreGeometry(options.settings.value("main_geometry"))
+            self.resize(options.settings.value("window_size"))
         except TypeError:
             self.ui.centralwidget.adjustSize()
             self.adjustSize()
-
-        self.Session.summary_functions = options.cfg.summary_functions
-        self.Session.group_functions = options.cfg.group_functions
 
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -217,8 +215,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.column_tree = CoqResourceTree(parent=self)
         self.column_tree.customContextMenuRequested.connect(
             self.get_output_column_menu)
-        self.column_tree.itemChanged.connect(
-            lambda: self.ui.list_group_columns.checkGroupColumns())
 
         self.ui.options_tree = self.column_tree
         self.ui.output_columns.insertWidget(1, self.column_tree)
@@ -336,9 +332,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.change_mysql_configuration(options.cfg.current_server)
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
 
-        self.ui.list_group_columns.setCheckAvailableFunction(
-            self.check_feature_available_for_group)
-
         state = self.test_mysql_connection()
         if not state:
             self.disable_corpus_widgets()
@@ -400,6 +393,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_available_modules.triggered.connect(self.show_available_modules)
         self.ui.action_about_coquery.triggered.connect(self.show_about)
         self.ui.action_how_to_cite.triggered.connect(self.how_to_cite)
+        self.ui.action_regex_tester.triggered.connect(self.regex_tester)
         self.ui.action_help.triggered.connect(self.help)
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
@@ -530,16 +524,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.button_apply_management.clicked.connect(
             lambda: self.reaggregate(start=True))
-        self.ui.button_cancel_management.clicked.connect(lambda: self.abortRequested.emit())
+        self.ui.button_cancel_management.clicked.connect(
+            lambda: self.abortRequested.emit())
 
-        # set up hooks for the group column list:
-        #self.ui.list_group_columns.featureDropped.connect(lambda x: self.add_group_column(item=x))
-        #self.ui.list_group_columns.featureRemoved.connect(self.uncheck_grouped_feature)
-        self.ui.button_add_summary_function.clicked.connect(lambda: self.add_function(summary=True))
-        self.ui.button_add_group_function.clicked.connect(lambda: self.add_function(group=True))
+        self.ui.button_add_summary_function.clicked.connect(
+            self.edit_summary_function)
 
         # connect widgets that enable the Apply button:
-        self.ui.list_group_columns.groupsChanged.connect(self.enable_apply_button)
         self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
         self.ui.radio_context_mode_none.toggled.connect(self.enable_apply_button)
         self.ui.radio_context_mode_kwic.toggled.connect(self.enable_apply_button)
@@ -550,7 +541,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         self.ui.button_filters.clicked.connect(self.manage_filters)
-        self.ui.button_group_filters.clicked.connect(self.manage_group_filters)
 
         self.ui.data_preview.horizontalHeader().sectionFinallyResized.connect(self.result_column_resize)
         self.ui.data_preview.horizontalHeader().customContextMenuRequested.connect(self.show_header_menu)
@@ -569,6 +559,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.useContextConnection.connect(self.add_context_connection)
         self.closeContextConnection.connect(self.close_context_connection)
+
+        self.ui.tree_groups.groupAdded.connect(self.enable_apply_button)
+        self.ui.tree_groups.groupRemoved.connect(self.enable_apply_button)
+        self.ui.tree_groups.groupModified.connect(self.enable_apply_button)
 
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
@@ -893,14 +887,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             _set_icon(1, None)
             _set_icon(2, None)
             # FIXME: take currently selected features into account
-            if self.ui.list_group_columns.columns:
-                if self.Session.group_functions:
-                    _set_icon(2, active_icon)
-                if options.cfg.group_filter_list:
-                    _set_icon(1, filter_icon)
-            elif (self.Session.group_functions.get_list() or
-                  options.cfg.group_filter_list):
-                _set_icon(2, problem_icon)
+            if self.ui.tree_groups.groups():
+                _set_icon(2, active_icon)
 
         elif row == TOOLBOX_AGGREGATE:
             if self.ui.aggregate_radio_list[0].isChecked():
@@ -909,7 +897,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 _set_icon(2, active_icon)
 
         elif row == TOOLBOX_SUMMARY:
-            l = self.Session.summary_functions.get_list()
+            l = self.Session.summary_group.get_functions()
             _set_icon(1, filter_icon if options.cfg.filter_list else None)
             _set_icon(2, active_icon if l else None)
 
@@ -925,12 +913,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 if feature in col:
                     return True
             return False
-
-    def add_group_column(self, feature):
-        self.ui.list_group_columns.addFeature(feature)
-
-    def remove_group_column(self, feature):
-        self.ui.list_group_columns.removeFeature(feature)
 
     def check_filters(self, df):
         """
@@ -1249,12 +1231,16 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             if data.index[col].startswith("coq_userdata"):
                 return
 
-        origin_id = self.Session.Corpus.get_source_id(token_id)
+        origin_id = self.Session.Resource.get_origin_id(token_id)
 
-        from . import contextviewer
-        viewer = contextviewer.ContextView(
-            self.Session.Corpus, int(token_id), int(origin_id), int(token_width),
-            icon=options.cfg.icon)
+        if self.Session.Resource.audio_features:
+            from .contextviewer import ContextViewAudio as ContextView
+        else:
+            from .contextviewer import ContextView
+
+        viewer = ContextView(self.Session.Corpus, int(token_id),
+                             int(origin_id), int(token_width),
+                             icon=options.cfg.icon)
         viewer.show()
         self.widget_list.append(viewer)
 
@@ -1283,8 +1269,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_run_query.show()
         self.ui.button_run_query.setDisabled(True)
 
+        self.Session.groups = self.ui.tree_groups.groups()
         manager = self.Session.get_manager()
         manager.reset_hidden_columns()
+        manager.set_groups(self.Session.groups)
         for hidden in self.hidden_features:
             manager.hide_column(hidden)
 
@@ -1313,9 +1301,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.resize_rows()
 
         self.show_query_status()
-        #self.check_group_items()
         self.check_filters(self.Session.output_object)
-        self.ui.list_group_columns.checkGroupColumns()
+        self.ui.tree_groups.check_buttons()
         self.set_button_labels()
         self.ui.button_apply_management.show()
         self.disable_apply_button()
@@ -1419,13 +1406,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.ui.check_restrict.setEnabled(True)
         except AttributeError:
             pass
-
-        # remove group columns that don't exist in the current resource:
-        columns = self.ui.list_group_columns.columns
-        self
-        for col in columns:
-            if not hasattr(self.resource, col):
-                self.ui.list_group_columns.removeFeature(col)
 
     def toggle_selected_feature(self, item):
         is_checked = (item.checkState(0) == QtCore.Qt.Checked)
@@ -1643,8 +1623,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         try:
             columns = (self.table_model.content.columns |
                        self.hidden_model.content.columns)
-            dtypes = (self.table_model.content.dtypes +
-                      self.hidden_model.content.dtypes)
+            dtypes = self.table_model.content.dtypes.append(
+                        self.hidden_model.content.dtypes)
         except AttributeError:
             columns = []
             dtypes = []
@@ -1655,35 +1635,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         if result is not None:
             options.cfg.filter_list = result
-
-            s1 = {x.get_hash() for x in old_list}
-            s2 = {x.get_hash() for x in result}
-
-            if (s1 != s2):
-                if AUTO_FILTER in options.settings.value(
-                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
-                    self.reaggregate()
-                else:
-                    self.enable_apply_button()
-
-    def manage_group_filters(self):
-        from . import addfilters
-        old_list = options.cfg.group_filter_list
-
-        try:
-            columns = pd.Index([x for x in self.Session.data_table.columns
-                                if not x.startswith("coquery_")])
-            dtypes = self.Session.data_table[columns].dtypes
-            dtypes = dtypes.reset_index(drop=True)
-        except AttributeError:
-            columns = []
-            dtypes = []
-
-        result = addfilters.FilterDialog.set_filters(
-            filter_list=options.cfg.group_filter_list,
-            columns=columns, session=self.Session, dtypes=dtypes)
-        if result is not None:
-            options.cfg.group_filter_list = result
 
             s1 = {x.get_hash() for x in old_list}
             s2 = {x.get_hash() for x in result}
@@ -1887,8 +1838,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         menu.viewUniquesRequested.connect(self.show_unique_values)
         menu.viewEntriesRequested.connect(lambda x: self.show_unique_values(x, uniques=False))
         menu.addLinkRequested.connect(self.add_link)
-        menu.addGroupRequested.connect(self.add_group_column)
-        menu.removeGroupRequested.connect(self.remove_group_column)
         menu.removeItemRequested.connect(self.remove_link)
 
         # if point is set, the menu was called as a context menu:
@@ -1967,8 +1916,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         menu.editFunctionRequested.connect(self.edit_function)
         menu.changeSortingRequested.connect(self.change_sorting_order)
         menu.propertiesRequested.connect(self.column_properties)
-        menu.addGroupRequested.connect(self.add_group_column)
-        menu.removeGroupRequested.connect(self.remove_group_column)
 
         return menu
 
@@ -2287,7 +2234,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                           in options.cfg.query_list[0].splitlines()
                                           if x.strip()]
                 self.new_session = SessionCommandLine()
+                self.new_session.prepare_queries()
             else:
+                self.new_session = SessionInputFile()
                 if not self.verify_file_name():
                     QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
@@ -2295,12 +2244,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 s = "Reading query strings from <br><br><code>{}</code><br><br>Please wait...".format(options.cfg.input_path)
                 title = "Reading input file – Coquery"
                 msg_box = classes.CoqStaticBox(title, s)
-                self.new_session = SessionInputFile()
+                try:
+                    self.new_session.prepare_queries()
+                except TokenParseError as e:
+                    msg_box.hide()
+                    raise e
+
                 msg_box.close()
                 msg_box.hide()
                 del msg_box
         except TokenParseError as e:
-            QtWidgets.QMessageBox.critical(self, "Query string parsing error – Coquery", e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self,
+                "Query string parsing error – Coquery",
+                e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLNoConfigurationError:
             QtWidgets.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLInitializationError as e:
@@ -2322,14 +2278,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             else:
                 self.showMessage("Writing to file...")
 
-            self.new_session.group_functions = self.Session.group_functions
+            self.new_session.groups = self.ui.tree_groups.groups()
             self.new_session.column_functions = self.Session.column_functions
-            self.new_session.summary_functions = self.Session.summary_functions
 
             self.start_progress_indicator(n=len(self.new_session.query_list))
-            self.query_thread = classes.CoqThread(self.new_session.run_queries, to_file=options.cfg.to_file, parent=self)
-            self.query_thread.taskFinished.connect(lambda: self.finalize_query(options.cfg.to_file))
-            self.query_thread.taskException.connect(self.exception_during_query)
+            self.query_thread = classes.CoqThread(
+                self.new_session.run_queries,
+                to_file=options.cfg.to_file,
+                parent=self)
+            self.query_thread.taskFinished.connect(
+                lambda: self.finalize_query(options.cfg.to_file))
+            self.query_thread.taskException.connect(
+                self.exception_during_query)
             print("run_queries: start")
             self.query_thread.start()
             self.ui.button_run_query.blockSignals(True)
@@ -2385,7 +2345,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             df, self.Session)
 
         dialog.show()
-        self.widget_list.append(dialog)
 
     def visualize_data(self, name, **kwargs):
         """
@@ -2625,7 +2584,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         def shutdown():
-            options.settings.setValue("main_geometry", self.saveGeometry())
+            #options.settings.setValue("main_geometry", self.saveGeometry())
+            options.settings.setValue("window_size", self.size())
             options.settings.setValue("main_state", self.saveState())
             options.settings.setValue("figure_font", options.cfg.figure_font)
             options.settings.setValue("table_font", options.cfg.table_font)
@@ -2633,14 +2593,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             x = self.ui.splitter.saveState()
             options.settings.setValue("splitter", x)
 
-            # FIXME: use topLevelWidget() instead
-            while self.widget_list:
-                x = self.widget_list.pop(0)
-                x.close()
-                del x
 
-            options.cfg.summary_functions = self.Session.summary_functions
-            options.cfg.group_functions = self.Session.group_functions
+
+            for widget in QtWidgets.qApp.topLevelWidgets():
+                widget.close()
+                del widget
+
+            options.cfg.groups = self.ui.tree_groups.groups()
 
             self.save_configuration()
             event.accept()
@@ -2824,8 +2783,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.cfg.external_links = self.get_external_links()
             # FIXME: eventually, selected_features should be a session variable
             options.cfg.selected_features = self.column_tree.selected()
-            options.cfg.group_columns = [x for x
-                                         in self.ui.list_group_columns.columns]
             self.get_context_values()
 
     def get_external_links(self):
@@ -2865,7 +2822,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import logfile
         log_view = logfile.LogfileViewer(parent=self)
         log_view.show()
-        self.widget_list.append(log_view)
 
     def show_about(self):
         from . import about
@@ -2877,19 +2833,22 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         cite_dialog = cite.CiteDialog(parent=self)
         cite_dialog.exec_()
 
+    def regex_tester(self):
+        from . import regextester
+        regex_dialog = regextester.RegexDialog(parent=self)
+        regex_dialog.show()
+
     def show_available_modules(self):
         from . import availablemodules
         available = availablemodules.AvailableModulesDialog(parent=self)
         available.show()
-        self.widget_list.append(available)
 
     def setGUIDefaults(self):
         """ Set up the gui values based on the values in options.cfg.* """
         self.ui.tool_widget.blockSignals(True)
 
-        for col in [x for x in options.cfg.group_columns if x]:
-            self.ui.list_group_columns.addFeature(col)
-        options.cfg.group_columns = self.ui.list_group_columns.columns
+        # add restored groups to the UI:
+        self.ui.tree_groups.add_groups(options.cfg.groups)
 
         # set corpus combo box to current corpus:
         index = self.ui.combo_corpus.findText(options.cfg.corpus)
@@ -2973,22 +2932,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except:
             manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
 
-        label_group_functions = _translate("MainWindow", "Group &functions{}...", None)
-        label_group_filters = _translate("MainWindow", "Group fi&lters{}...", None)
         label_summary_functions = _translate("MainWindow", "Summary &functions{}...", None)
         label_summary_filters = _translate("MainWindow", "Result fi&lters{}...", None)
         label_stopwords = _translate("MainWindow", "Active stop words: {}", None)
 
-        # grouping button labels:
-        l = self.Session.group_functions.get_list()
-        self.ui.button_add_group_function.setText(
-            label_group_functions.format(get_str(l)))
-        l = options.cfg.group_filter_list
-        self.ui.button_group_filters.setText(
-            label_group_filters.format(get_str(l)))
-
         # summary button labels:
-        l = self.Session.summary_functions.get_list()
+        l = self.Session.summary_group.get_functions()
         self.ui.button_add_summary_function.setText(
             label_summary_functions.format(get_str(l)))
         l = options.cfg.filter_list
@@ -3004,10 +2953,26 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         header = self.ui.data_preview.horizontalHeader()
         columns = []
         for x in self.ui.data_preview.selectionModel().selectedColumns():
-            columns .append(self.table_model.header[x.column()])
+            columns.append(self.table_model.header[x.column()])
         if not columns:
             columns.append(self.table_model.header[0])
         self.add_function(columns)
+
+    def edit_summary_function(self):
+        from . import groups
+
+        try:
+            vis_cols = self.table_model.content.columns
+            hidden_cols = self.hidden_model.content.columns
+            all_columns = list(vis_cols) + list(hidden_cols)
+        except AttributeError:
+            all_columns = []
+
+        result = groups.SummaryDialog.edit(
+            self.Session.summary_group, all_columns, parent=self)
+        if result:
+            self.Session.summary_group = result
+            self.enable_apply_button()
 
     def add_function(self, columns=None, summary=False, group=False, **kwargs):
         from . import addfunction
@@ -3017,44 +2982,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         else:
             manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
 
-        if group or summary:
-            if group:
-                types = [
-                         functions.FilteredRows, functions.PassingRows,
-                         functions.Freq, functions.FreqNorm,
-                         functions.FreqPTW, functions.FreqPMW,
-                         #functions.ReferenceCorpusFrequency,
-                         #functions.ReferenceCorpusFrequencyPTW,
-                         #functions.ReferenceCorpusFrequencyPMW,
-                         functions.RowNumber,
-                         functions.Entropy, functions.Percent,
-                         functions.Proportion, functions.Tokens,
-                         functions.Types, functions.TypeTokenRatio]
-                checked = [type(x) for x in self.Session.group_functions.get_list()]
-            else:
-                types = [
-                         functions.FilteredRows, functions.PassingRows,
-                         functions.Entropy,
-                         functions.Freq, functions.FreqNorm,
-                         functions.FreqPTW, functions.FreqPMW,
-                         functions.ReferenceCorpusFrequency,
-                         functions.ReferenceCorpusFrequencyPTW,
-                         functions.ReferenceCorpusFrequencyPMW,
-                         functions.ReferenceCorpusLLKeyness,
-                         functions.ReferenceCorpusDiffKeyness,
-                         functions.RowNumber,
-                         functions.Percent, functions.Proportion,
-                         functions.Tokens, functions.Types,
-                         functions.TypeTokenRatio,
-                         functions.CorpusSize, functions.SubcorpusSize]
-                checked = [type(x) for x in self.Session.summary_functions.get_list()]
-
-            kwargs.update({
-                "function_types": types,
-                "max_parameters": 0,
-                "checkable": True,
-                "checked": checked,
-                "edit_label": False})
+        if summary:
+            pass
         else:
             dtypes = pd.Series([self.table_model.get_dtype(x) for x
                                 in columns])
@@ -3089,15 +3018,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if response is None:
             return
 
-        if group:
-            selected = self.column_tree.selected()
-            group_columns = [x for x in self.ui.list_group_columns.columns
-                             if x in selected]
-            # FIXME: allow different columns as group columns
-            l = [x(sweep=True, hidden=True, group=group_columns)
-                 for x in response]
-            self.Session.group_functions.set_list(l)
-        elif summary:
+        if summary:
             l = [x(columns=columns, group=False) for x in response]
             self.Session.summary_functions.set_list(l)
         else:
@@ -3140,15 +3061,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             func = self.Session.column_functions.find_function(col)
             if func:
                 self.Session.column_functions.remove_function(func)
-            else:
-                # this can happen if the function is a summary
-                # or a grouping function:
-                summary_func = self.Session.summary_functions.find_function(col)
-                if summary_func:
-                    self.Session.summary_functions.remove_function(summary_func)
-                else:
-                    group_func = self.Session.group_functions.find_function(col)
-                    self.Session.group_functions.remove_function(group_func)
             try:
                 options.cfg.column_names.remove(func.get_id())
             except AttributeError:

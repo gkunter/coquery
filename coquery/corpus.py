@@ -13,15 +13,14 @@ from __future__ import unicode_literals
 from __future__ import print_function
 
 import warnings
-from collections import defaultdict, deque
+from collections import defaultdict
 import re
 import logging
 
 import sqlalchemy
 import pandas as pd
 
-from .errors import (
-    WordNotInLexiconError, UnsupportedQueryItemError)
+from .errors import UnsupportedQueryItemError
 from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
     QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
@@ -30,8 +29,8 @@ from .defines import (
     PREFERRED_ORDER,
     DEFAULT_MISSING_VALUE)
 
-from .general import collapse_words, CoqObject
-from . import tokens
+from .general import collapse_words, CoqObject, html_escape
+from . import tokens, NAME
 from . import options
 from . import sqlhelper
 from .links import get_by_hash
@@ -72,54 +71,6 @@ class LexiconClass(object):
         else:
             return False
 
-    def sql_string_get_wordid_list_where(self, token):
-        """
-        Return an SQL string that contains the WHERE conditions matching the
-        token.
-
-        Returns
-        -------
-        S : str
-            A string that can be used in an SQL query created in
-            get_wordid_list().
-        """
-        where_clauses = []
-        for spec_list, label in [(token.word_specifiers, QUERY_ITEM_WORD),
-                                (token.lemma_specifiers, QUERY_ITEM_LEMMA),
-                                (token.class_specifiers, QUERY_ITEM_POS),
-                                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT),
-                                (token.gloss_specifiers, QUERY_ITEM_GLOSS)]:
-            sub_clauses = []
-            rc_feature = getattr(self.resource, label, "")
-            if spec_list:
-                target = self.resource.get_field(rc_feature)
-                for spec in spec_list:
-                    if spec != "%":
-                        dummy = tokens.COCAToken(spec, replace=False, parse=False)
-                        dummy.negated = token.negated
-                        S = dummy.S
-                        # For the construction of the query string,
-                        # any escaped wildcard-like string is replaced
-                        # by the unescaped equivalent. This fixes
-                        # Issue #175.
-                        if not dummy.has_wildcards(S):
-                            S = S.replace("\\_", "_")
-                            S = S.replace("\\%", "%")
-                        S = S.replace("'", "''")
-                        format_string = "{} {} '{}'"
-                        if options.cfg.query_case_sensitive:
-                            if self.resource.db_type == SQL_SQLITE:
-                                format_string = "{} COLLATE BINARY".format(format_string)
-                            elif self.resource.db_type == SQL_MYSQL:
-                                format_string = "BINARY {} {} '{}'"
-
-                        sub_clauses.append(format_string.format(
-                            target, self.resource.get_operator(dummy), S))
-            if sub_clauses:
-                where_clauses.append("({})".format(" OR ".join(sub_clauses)))
-        S = " AND ".join(where_clauses)
-        return S
-
     def add_table_path(self, start_feature, end_feature):
         """
         Add the join string  needed to access end_feature from the table
@@ -144,169 +95,6 @@ class LexiconClass(object):
                 self.joined_tables.append(table)
             last_table = table
 
-    def sql_string_get_matching_wordids(self, token):
-        """
-        Return a string that may be used to query all word_ids that match the
-        token specification.
-
-        Raises ValueError if the resource does not provide a word id. This
-        indicates that the words are stored directly in the corpus table.
-        """
-
-        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-        _, table, _ = self.resource.split_resource_feature(word_feature)
-        word_table = getattr(self.resource, "{}_table".format(table))
-        word_id = getattr(self.resource, "{}_id".format(table))
-
-        if word_id == self.resource.corpus_id:
-            raise ValueError("This resource does not provide word ids.")
-
-        if hasattr(self.resource, "word_table"):
-            start_table = self.resource.word_table
-        else:
-            start_table = self.resource.corpus_table
-
-        self.joined_tables = []
-        self.table_list = [start_table]
-
-        if word_table != start_table:
-            # this happens if the lexicon table is not immediately linked to
-            # the corpus table:
-            self.add_table_path("word_id", getattr(self.resource, QUERY_ITEM_WORD))
-            _, table, _ = self.resource.split_resource_feature("word_id")
-            word_table = getattr(self.resource, "{}_table".format(table))
-            word_id = getattr(self.resource, "{}_id".format(table))
-
-        if token.lemma_specifiers:
-            self.add_table_path(word_feature,
-                                getattr(self.resource, QUERY_ITEM_LEMMA))
-
-        if token.class_specifiers:
-            self.add_table_path(word_feature,
-                                getattr(self.resource, QUERY_ITEM_POS))
-
-        if token.transcript_specifiers:
-            self.add_table_path(word_feature,
-                                getattr(self.resource, QUERY_ITEM_TRANSCRIPT))
-
-        if token.gloss_specifiers:
-            self.add_table_path(word_feature,
-                                getattr(self.resource, QUERY_ITEM_GLOSS))
-
-        if word_table == "corpus":
-            where_string = "{} LIKE {}"
-
-        where_string = self.sql_string_get_wordid_list_where(token)
-        S = "SELECT {}.{} FROM {} WHERE {}".format(
-                word_table, word_id, " ".join(self.table_list), where_string)
-
-        return S
-
-    def sql_string_get_lemmatized_wordids(self, token):
-        """
-        Return an SQL string that may be used to gather all word ids which
-        match the token while using auto-lemmatization.
-
-        Auto-lemmatization means that first, the lemmas matching the token
-        specifications are looked up, and then, all word ids linked to these
-        lemmas are determined.
-        """
-
-        # How to do that:
-        #
-        # - first, get a normal list of matching word ids
-        # - second, get the list of lemmas for these word ids
-        # - third, get a list of all word ids that have these lemmas
-
-        # if the query string already contains a lemma specification,
-        # lemmatization is ignored:
-        if not hasattr(self.resource, QUERY_ITEM_LEMMA):
-            raise UnsupportedQueryItemError("Lemmatization by \"#\" flag")
-
-        if token.lemma_specifiers:
-            return self.sql_string_get_matching_wordids(token)
-
-        # first, get a list of word ids that match the token:
-        L = self.get_matching_wordids(token)
-
-        # next, create a table path from the word table to the lemma table
-        word_feature = getattr(self.resource, QUERY_ITEM_WORD)
-        _, table, _ = self.resource.split_resource_feature(word_feature)
-        word_table = getattr(self.resource, "{}_table".format(table))
-        word_id = getattr(self.resource, "{}_id".format(table))
-
-        lemma_feature = getattr(self.resource, QUERY_ITEM_LEMMA)
-        _, table, _ = self.resource.split_resource_feature(lemma_feature)
-        lemma_table = getattr(self.resource, "{}_table".format(table))
-        lemma_id = getattr(self.resource, "{}_id".format(table))
-
-        self.joined_tables = [word_table]
-        self.table_list = [word_table]
-
-        self.add_table_path(word_feature, getattr(self.resource, QUERY_ITEM_LEMMA))
-
-        where_string = "{}.{} IN ({})".format(word_table, word_id, ", ".join(["{}".format(x) for x in L]))
-
-        # using the path, get a list of all lemma labels that belong to
-        # the word ids from the list:
-        S = "SELECT {}.{} FROM {} WHERE {}".format(
-                lemma_table,
-                getattr(self.resource, lemma_feature), " ".join(self.table_list), where_string)
-
-        engine = self.resource.get_engine()
-        df = pd.read_sql(S, engine, columns=["Lemma"]).drop_duplicates()
-        engine.dispose()
-        # construct a new token that uses the list of lemmas as its token
-        # specification:
-        token = tokens.COCAToken("[{}]".format("|".join(list(df[getattr(self.resource, lemma_feature)]))))
-        # return the SQL string for the new token:
-        return self.sql_string_get_matching_wordids(token)
-
-    def get_lemmatized_wordids(self, token, stopwords=True):
-        """
-        Return a list of all word ids that belong to the same lemmas as the
-        word ids matched by the token.
-        """
-        if token.S == "%" or token.S == "":
-            return []
-
-        S = self.sql_string_get_lemmatized_wordids(token)
-        engine = self.resource.get_engine()
-        df = pd.read_sql(S.replace("%", "%%"), engine)
-        engine.dispose()
-
-        if not len(df.index):
-            if token.negated:
-                return []
-            else:
-                raise WordNotInLexiconError
-        else:
-            return list(df.iloc[:,0])
-
-    def get_matching_wordids(self, token, stopwords=True):
-        """
-        Return a list of word ids that match the tokens. This takes the
-        entries from the stopword list into account.
-
-        Raises ValueError if the resource does not provide a word id because
-        the word labels are stored directly in the corpus table.
-        """
-        if token.S == "%" or token.S == "":
-            return []
-        S = self.sql_string_get_matching_wordids(token)
-        engine = self.resource.get_engine()
-        df = pd.read_sql(S.replace("%", "%%"), engine)
-        engine.dispose()
-
-        if not len(df.index):
-            if token.negated:
-                return []
-            else:
-                raise WordNotInLexiconError
-        else:
-            x = list(df.iloc[:,0])
-            return x
-
 class BaseResource(CoqObject):
     """
     """
@@ -324,26 +112,6 @@ class BaseResource(CoqObject):
 
     def __init__(self):
         super(BaseResource, self).__init__()
-
-    @classmethod
-    def extract_resource_feature(cls, column):
-        """
-        Returns the resource feature from the column name.
-
-        This assumes, for the time being, that the column name has the form
-        coq_xxxx_N, i.e. the form that is produced by the
-        ``format_resource_feature()`` method.
-
-        Columns from the 'special_table_list' class attribute are returned as
-        they are.
-
-        Other columns raise an AssertionError.
-        """
-        fields = column.split("_")
-        if fields[0] in cls.special_table_list:
-            return fields
-        assert fields[0] == "coq", column
-        return "_".join(fields[1:-1])
 
     @classmethod
     def format_resource_feature(cls, rc_feature, N):
@@ -382,7 +150,7 @@ class BaseResource(CoqObject):
         # handle external links by delegating the formatting to the external
         # resource:
         hashed, table, feature = cls.split_resource_feature(rc_feature)
-        if hashed != None:
+        if hashed is not None:
             link, res = get_by_hash(hashed)
             l = res.format_resource_feature("{}_{}".format(table, feature), N)
             return ["db_{}_{}".format(res.db_name, x) for x in l]
@@ -499,9 +267,9 @@ class BaseResource(CoqObject):
         # FIXME: this function might be usable to make some table IDs
         # exposable (see issue #174)
         return [x for x in l
-                if x not in cls.audio_features
-                and x not in cls.video_features
-                and x not in cls.image_features]
+                if x not in cls.audio_features and
+                x not in cls.video_features and
+                x not in cls.image_features]
 
     @classmethod
     def get_exposed_ids(cls):
@@ -654,31 +422,6 @@ class BaseResource(CoqObject):
         return [x for x in cls.get_resource_features() if getattr(cls, x) == name]
 
     @classmethod
-    def get_sub_tree(cls, rc_table, tree_structure):
-        if tree_structure["rc_table_name"] == rc_table:
-            return tree_structure
-        else:
-            for child in tree_structure["children"]:
-                sub_tree = cls.get_sub_tree(rc_table, child)
-                if sub_tree:
-                    return sub_tree
-        return None
-
-    #@classmethod
-    #def get_requested_features(cls, tree_structure):
-        #requested_features = tree_structure["rc_requested_features"]
-        #for child in tree_structure["children"]:
-            #requested_features += cls.get_requested_features(child)
-        #return requested_features
-
-    @classmethod
-    def get_table_order(cls, tree_structure):
-        table_order = [tree_structure["rc_table_name"]]
-        for child in tree_structure["children"]:
-            table_order += cls.get_table_order(child)
-        return table_order
-
-    @classmethod
     def get_corpus_features(cls):
         """ Return a list of tuples. Each tuple consists of a resource
         variable name and the display name of that variable. Only those
@@ -694,7 +437,7 @@ class BaseResource(CoqObject):
         for x in table_dict:
             if x not in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
-                    if not y in cls_lexical_features:
+                    if y not in cls_lexical_features:
                         if y == "corpus_id":
                             corpus_variables.append((y, cls.corpus_id))
                         elif not y.endswith("_id") and not y.startswith("{}_table".format(x)):
@@ -731,44 +474,44 @@ class BaseResource(CoqObject):
         return "{}.{}".format(
             getattr(cls, "{}_table".format(table)), getattr(cls, rc_feature))
 
-    @classmethod
-    def get_referent_feature(cls, rc_feature):
-        """
-        Get the referent feature name of a rc_feature.
+    #@classmethod
+    #def get_referent_feature(cls, rc_feature):
+        #"""
+        #Get the referent feature name of a rc_feature.
 
-        For normal output columns, the referent feautre name is identical
-        to the rc_feature string.
+        #For normal output columns, the referent feautre name is identical
+        #to the rc_feature string.
 
-        For columns from an external table, it is the feature name of the
-        column that the label is linked to.
+        #For columns from an external table, it is the feature name of the
+        #column that the label is linked to.
 
-        Parameters
-        ----------
-        rc_feature : string
+        #Parameters
+        #----------
+        #rc_feature : string
 
-        Returns
-        -------
-        resource : string
-        """
+        #Returns
+        #-------
+        #resource : string
+        #"""
 
-        hashed, table, feature = cls.split_resource_feature(rc_feature)
+        #hashed, table, feature = cls.split_resource_feature(rc_feature)
 
-        # Check if the feature has the same database as the current
-        # resource, i.e. check if the feature is NOT from a linked table:
-        if hashed == None:
-            return "{}_{}".format(table, feature)
-        else:
-            link, res = get_by_hash(hashed)
-            _, tab, feat = res.split_resource_feature(link.rc_from)
-            return "{}_{}".format(tab, feat)
+        ## Check if the feature has the same database as the current
+        ## resource, i.e. check if the feature is NOT from a linked table:
+        #if hashed is None:
+            #return "{}_{}".format(table, feature)
+        #else:
+            #link, res = get_by_hash(hashed)
+            #_, tab, feat = res.split_resource_feature(link.rc_from)
+            #return "{}_{}".format(tab, feat)
 
-    @classmethod
-    def is_lexical(cls, rc_feature):
-        if rc_feature not in dir(cls):
-            return False
-        lexicon_features = [x for x, _ in cls.get_lexicon_features()]
-        resource = cls.get_referent_feature(rc_feature)
-        return resource in lexicon_features or cls.is_tokenized(resource)
+    #@classmethod
+    #def is_lexical(cls, rc_feature):
+        #if rc_feature not in dir(cls):
+            #return False
+        #lexicon_features = [x for x, _ in cls.get_lexicon_features()]
+        #resource = cls.get_referent_feature(rc_feature)
+        #return resource in lexicon_features or cls.is_tokenized(resource)
 
     @classmethod
     def is_tokenized(cls, rc_feature):
@@ -783,26 +526,6 @@ class BaseResource(CoqObject):
         return (rc_feature == "corpus_id") or (
                 rc_feature.startswith("corpus_") and not rc_feature.endswith("_id"))
 
-    @classmethod
-    def get_query_item_map(cls):
-        """
-        Return the mapping of query item types to resource features for the
-        resource.
-
-        Returns
-        -------
-        d : dict
-            A dictionary with the query item type constants from defines.py as
-            keys and the resource feature that this query item type is mapped
-            to as values. Query item types that are not supported by the
-            resource will have no key in this dictionary.
-        """
-        item_map = {}
-        for x in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
-                  QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
-            if hasattr(cls, x):
-                item_map[x] = getattr(cls, x)
-        return item_map
 
 class SQLResource(BaseResource):
     _get_orth_str = None
@@ -816,7 +539,7 @@ class SQLResource(BaseResource):
             Operators = {True: "NOT LIKE", False: "LIKE"}
         else:
             Operators = {True: "!=", False: "="}
-        return Operators [False]
+        return Operators[False]
 
     def __init__(self, lexicon, corpus):
         super(SQLResource, self).__init__()
@@ -1073,7 +796,6 @@ class SQLResource(BaseResource):
             hashed, table, _ = cls.split_resource_feature(rc_feature)
             link, res = get_by_hash(hashed)
             _, int_tab, int_feat = cls.split_resource_feature(link.rc_from)
-            int_table = getattr(cls, "{}_table".format(int_tab))
             int_alias = "COQ_{}_{}".format(int_tab.upper(), n+1)
             int_column = getattr(cls, link.rc_from)
 
@@ -1144,8 +866,7 @@ class SQLResource(BaseResource):
         return attach_list
 
     @classmethod
-    def get_lemmatized_contitions(cls, i, token):
-        # FIXME: lemmatization doesn't work yet!
+    def get_lemmatized_conditions(cls, i, token):
         if not hasattr(cls, QUERY_ITEM_LEMMA):
             raise UnsupportedQueryItemError("Lemmatization by \"#\" flag")
 
@@ -1153,13 +874,10 @@ class SQLResource(BaseResource):
         word_feature = getattr(cls, QUERY_ITEM_WORD)
         _, w_tab, _ = cls.split_resource_feature(word_feature)
         word_table = getattr(cls, "{}_table".format(w_tab))
-        word_id = getattr(cls, "{}_id".format(w_tab))
         word_alias = "COQ_{}_{}".format(w_tab.upper(), i+1)
 
         lemma_feature = getattr(cls, QUERY_ITEM_LEMMA)
         _, l_tab, _ = cls.split_resource_feature(lemma_feature)
-        lemma_table = getattr(cls, "{}_table".format(l_tab))
-        lemma_id = getattr(cls, "{}_id".format(l_tab))
         lemma_column = getattr(cls, lemma_feature)
         lemma_alias = "COQ_{}_{}".format(l_tab.upper(), i+1)
 
@@ -1188,22 +906,10 @@ class SQLResource(BaseResource):
 
                 prev_alias = table_alias
 
-        if options.cfg.regexp:
-            operator = "REGEXP"
-        else:
-            if token.has_wildcards(token.S):
-                operator = "LIKE"
-            else:
-                operator = "="
-
-        where_string = "{}.{} {} '{}'".format(
-            word_table, word_feature, operator, token.S)
-
         # using the path, get a list of all lemma labels that belong to
         # the word ids from the list:
         inner_select = "SELECT DISTINCT {} FROM {} WHERE {{where}}".format(
                 lemma_column, " ".join(table_list))
-
 
         kwargs = {
             "lemma_alias": lemma_alias,
@@ -1274,7 +980,7 @@ class SQLResource(BaseResource):
 
             alias = "COQ_{}_{}".format(tab.upper(), i+1)
             if (len(spec_list) == 1):
-                x = spec_list[0]
+                x = spec_list[0].replace("'", "''")
                 format_str = handle_case("{}.{} {} '{}'")
                 s = format_str.format(alias, col, get_operator(x), x)
             else:
@@ -1288,7 +994,8 @@ class SQLResource(BaseResource):
 
                 if explicit:
                     format_str = handle_case("{}.{} IN ({})")
-                    s_list = ",".join(["'{}'".format(x) for x in explicit])
+                    s_list = ", ".join(["'{}'".format(x.replace("'", "''"))
+                                       for x in explicit])
                     s_exp = [format_str.format(alias, col, s_list)]
                 else:
                     s_exp = []
@@ -1305,7 +1012,7 @@ class SQLResource(BaseResource):
             d[tab].append(s)
 
         if token.lemmatize:
-            condition = cls.get_lemmatized_contitions(i, token)
+            condition = cls.get_lemmatized_conditions(i, token)
             d = {"word": [
                     condition.format(where=" AND ".join(
                     ["({})".format(x) for x in list(d.values())[0]]))]}
@@ -1491,8 +1198,7 @@ class SQLResource(BaseResource):
             """.format(options.cfg.number_of_tokens)
         return S
 
-    def get_context(self, token_id, origin_id, number_of_tokens, db_connection,
-                    sentence_id=None):
+    def get_context(self, token_id, origin_id, number_of_tokens, db_connection, sentence_id=None):
         def get_orth(word_id):
             """
             Return the orthographic forms of the word_ids.
@@ -1626,10 +1332,19 @@ class SQLResource(BaseResource):
 
         return df[sentence]
 
-    def get_context_sentence(self, sentence_id):
-        raise NotImplementedError
-        #S = self.sql_string_get_sentence_wordid(sentence_id)
-        #self.resource.DB.execute(S)
+    def get_origin_id(self, token_id):
+        if not options.cfg.token_origin_id:
+            return None
+        S = "SELECT {} FROM {} WHERE {} = {}".format(
+            getattr(self, options.cfg.token_origin_id),
+            self.corpus_table, self.corpus_id,
+            token_id)
+        engine = self.get_engine()
+        df = pd.read_sql(S, engine)
+        engine.dispose()
+
+        return df.values.ravel()[0]
+
 
 class CorpusClass(object):
     """
@@ -1644,20 +1359,6 @@ class CorpusClass(object):
         super(CorpusClass, self).__init__()
         self.lexicon = None
         self.resource = None
-
-    def get_source_id(self, token_id):
-        if not options.cfg.token_origin_id:
-            return None
-        S = "SELECT {} FROM {} WHERE {} = {}".format(
-            getattr(self.resource, options.cfg.token_origin_id),
-            self.resource.corpus_table,
-            self.resource.corpus_id,
-            token_id)
-        engine = self.resource.get_engine()
-        df = pd.read_sql(S, engine)
-        engine.dispose()
-
-        return df.values.ravel()[0]
 
     def get_file_data(self, token_id, features):
         """
@@ -1686,7 +1387,7 @@ class CorpusClass(object):
         token_ids = [str(x) for x in tokens]
         S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
                 features=", ".join(feature_list),
-                path = " ".join(self.lexicon.table_list),
+                path=" ".join(self.lexicon.table_list),
                 corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
                 token_ids=", ".join(token_ids))
@@ -1727,8 +1428,10 @@ class CorpusClass(object):
             self.resource.corpus_id,
             token_id)
 
-        df = pd.read_sql(S, sqlalchemy.create_engine(sqlhelper.sql_url(options.cfg.current_server, self.resource.db_name)))
-        queryable_features = self.resource.get_queryable_features()
+        engine = sqlalchemy.create_engine(
+            sqlhelper.sql_url(
+                options.cfg.current_server, self.resource.db_name))
+        df = pd.read_sql(S, engine)
 
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
@@ -1844,7 +1547,7 @@ class CorpusClass(object):
             from_str = self.resource.corpus_table
 
         S = "SELECT COUNT(*) FROM {}".format(from_str)
-        if not S in self._corpus_size_cache:
+        if S not in self._corpus_size_cache:
             engine = self.resource.get_engine()
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
@@ -1865,7 +1568,7 @@ class CorpusClass(object):
             values that match a row in the query result table.
         """
         filter_list = []
-        if columns == None:
+        if columns is None:
             columns = row.index
             corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
             for column in columns:
@@ -2018,31 +1721,6 @@ class CorpusClass(object):
         self._frequency_cache[s] = freq
         return freq
 
-    def get_lexical_item_positions(self, token_list):
-        """
-        Return a list of integers that indicate the positions of the items in
-        the token list. This list takes quantification into account so that
-        items following quantified icons can be aligned below each other.
-        """
-        last_offset = 0
-        token_counter = None
-        positions_lexical_items = []
-
-        for i, tup in enumerate(token_list):
-            offset, token = tup
-
-            if options.cfg.align_quantified:
-                if offset != last_offset:
-                    token_count = 0
-                    last_offset = offset
-                column_number = offset + token_count - 1
-                token_count += 1
-            else:
-                column_number = i
-
-            positions_lexical_items.append(column_number)
-        return positions_lexical_items
-
     def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):
         if hasattr(self.resource, "corpus_word_id"):
             word_id_column = self.resource.corpus_word_id
@@ -2089,6 +1767,9 @@ class CorpusClass(object):
         return S
 
     def get_tag_translate(self, s):
+        """
+        Translates a corpus tag string to a HTML tag string
+        """
         # Define some TEI tags:
         tag_translate = {
             "head": "h1",
@@ -2253,7 +1934,6 @@ class CorpusClass(object):
                         column_string)
             kwargs.update({"start_time": word_start, "end_time": word_end})
 
-        columns = column_string.format(**kwargs)
         kwargs["columns"] = column_string.format(**kwargs)
 
         if origin_id:
@@ -2418,3 +2098,5 @@ class CorpusClass(object):
         return {"text": s, "df": df,
                 "audio": audio,
                 "start_time": start_time, "end_time": end_time}
+
+logger = logging.getLogger(NAME)

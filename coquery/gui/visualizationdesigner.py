@@ -18,26 +18,23 @@ import sys
 from coquery import options, NAME
 from coquery.defines import ROW_NAMES
 from coquery.errors import VisualizationModuleError
-from coquery.functions import Freq
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window, pyside
+from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
 
 import matplotlib as mpl
-mpl.use("Qt5Agg")
-mpl.rcParams["backend"] = "Qt5Agg"
-import matplotlib.pyplot as plt
 
-
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
-    NavigationToolbar2QT as NavigationToolbar)
-import seaborn as sns
+    NavigationToolbar2QT)
+from matplotlib.backends.backend_qt5 import SubplotToolQt
 
 from . import classes
 from ..visualizer.visualizer import get_grid_layout
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
+
+mpl.use("Qt5Agg")
+mpl.rcParams["backend"] = "Qt5Agg"
 
 app = get_toplevel_window()
 
@@ -60,6 +57,42 @@ visualizer_mapping = (
     ("Scatterplot", "Scatter Plot", "scatterplot", "ScatterPlot"),
     ("Regression plot", "Scatter Plot", "scatterplot", "RegressionPlot"),
     )
+
+
+class NavigationToolbar(NavigationToolbar2QT):
+    """
+    See matplotlib/backends/backend_qt5.py for the implementation.
+    """
+    toolitems = [t for t in NavigationToolbar2QT.toolitems if
+                 t[0] not in ("Subplots", "Customize")]
+
+    def __init__(self, canvas, parent, coordinates=True):
+        super(NavigationToolbar, self).__init__(canvas, parent, coordinates)
+
+        self._buttons = {}
+
+        for x in self.children():
+            if isinstance(x, QtWidgets.QToolButton):
+                self._buttons[str(x.text())] = x
+
+        self._buttons["Zoom"].toggled.connect(self.toggle_zoom)
+        self._buttons["Pan"].toggled.connect(self.toggle_pan)
+
+        self._zoom = False
+        self._pan = False
+
+    def toggle_zoom(self):
+        self._zoom = not self._zoom
+
+    def toggle_pan(self):
+        self._pan = not self._pan
+
+    def isPanning(self):
+        return self._pan
+
+    def isZooming(self):
+        return self._zoom
+
 
 class VisualizationDesigner(QtWidgets.QDialog):
     moduleLoaded = QtCore.Signal(str, str)
@@ -99,6 +132,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.setup_connections()
 
+        self.dialog = QtWidgets.QWidget()
+        self.dialog_layout = QtWidgets.QVBoxLayout(self.dialog)
+        self.dialog.resize(self.viewer_size)
+        self.dialog.setWindowTitle("<no figure> – Coquery")
+        self.dialog.setWindowIcon(app.get_icon(
+            "coquerel_icon.png", small_n_flat=False))
+        self.dialog.show()
+
     def finetune_ui(self):
         """
         Finetune the UI: set widths, set translators, set icons.
@@ -114,12 +155,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.list_figures.setMinimumWidth(180 + w)
         self.ui.list_figures.setMaximumWidth(180 + w)
 
-        # add canvas layout:
-        self.ui.layout_view = QtWidgets.QVBoxLayout()
-        self.ui.layout_view.setContentsMargins(0, 0, 0, 0)
-        self.ui.layout_view.setSpacing(0)
-        self.ui.tab_view.setLayout(self.ui.layout_view)
-
         self.ui.button_columns.setIcon(app.get_icon("Select Column"))
         self.ui.button_rows.setIcon(app.get_icon("Select Row"))
 
@@ -129,16 +164,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_clear_columns.setIcon(app.get_icon("Clear Symbol"))
         self.ui.button_clear_rows.setIcon(app.get_icon("Clear Symbol"))
 
-        self.resize_previews()
-
     def add_figure_type(self, label, icon):
         item = QtWidgets.QListWidgetItem(label)
         try:
             item.setIcon(app.get_icon(icon, small_n_flat=False))
         except Exception as e:
             item.setIcon(app.get_icon(icon, size="64x64"))
-        item.setSizeHint(QtCore.QSize(180,
-                                        64 + 0 * QtWidgets.QLabel().sizeHint().height()))
+
+        size = QtCore.QSize(
+            180, 64 + 0 * QtWidgets.QLabel().sizeHint().height())
+
+        item.setSizeHint(size)
         item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
         self.ui.list_figures.addItem(item)
 
@@ -166,11 +202,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def populate_variable_lists(self):
         self.categorical = [col for col in self.df.columns
-                       if self.df.dtypes[col] in (object, bool) and not
-                       col.startswith(("coquery_invisible"))]
+                            if self.df.dtypes[col] in (object, bool) and not
+                            col.startswith(("coquery_invisible"))]
         self.numerical = [col for col in self.df.columns
-                     if self.df.dtypes[col] in (int, float) and not
-                     col.startswith(("coquery_invisible"))]
+                          if self.df.dtypes[col] in (int, float) and not
+                          col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
             new_item = classes.CoqListItem(self.session.translate_header(col))
@@ -187,28 +223,21 @@ class VisualizationDesigner(QtWidgets.QDialog):
             #new_item = classes.CoqListItem("{} (generated)".format(
                 #func.get_name()))
             #new_item.setData(QtCore.Qt.UserRole,
-                             #"func_{}".format(func._name))
+                                #"func_{}".format(func._name))
             #new_item.setData(QtCore.Qt.FontRole,
-                             #QtWidgets.QFont(QtWidgets.QLabel().font().family(),
-                                         #italic=True))
+                                #QtWidgets.QFont(QtWidgets.QLabel().font().family(),
+                                            #italic=True))
             #self.ui.table_numerical.addItem(new_item)
 
     def setup_canvas(self, figure):
         if hasattr(self, "canvas"):
-            self.ui.layout_view.removeWidget(self.canvas)
+            self.dialog_layout.removeWidget(self.canvas)
             self.canvas.hide()
             del self.canvas
         if hasattr(self, "toolbar"):
-            self.ui.layout_view.removeWidget(self.toolbar)
+            self.dialog_layout.removeWidget(self.toolbar)
             self.toolbar.hide()
             del self.toolbar
-        if hasattr(self, "preview_canvas"):
-            self.ui.layout_preview.removeWidget(self.preview_canvas)
-            self.preview_canvas.hide()
-            del self.preview_canvas
-            self.ui.layout_preview_colors.removeWidget(self.preview_canvas2)
-            self.preview_canvas2.hide()
-            del self.preview_canvas2
 
         # figure canvas:
         self.canvas = FigureCanvas(figure)
@@ -217,23 +246,23 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                   QtWidgets.QSizePolicy.Expanding)
         self.canvas.updateGeometry()
         self.toolbar = NavigationToolbar(self.canvas, self)
-        self.ui.layout_view.addWidget(self.toolbar)
-        self.ui.layout_view.addWidget(self.canvas)
+        self.dialog_layout.addWidget(self.toolbar)
+        self.dialog_layout.addWidget(self.canvas)
 
-        # preview canvases:
-        self.preview_canvas = FigureCanvas(figure)
-        self.preview_canvas.setParent(self)
-        self.preview_canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                          QtWidgets.QSizePolicy.Expanding)
-        self.preview_canvas.updateGeometry()
-        self.ui.layout_preview.addWidget(self.preview_canvas)
+        try:
+            _w = self.ui.layout_margins.takeAt(0)
+            _w.widget().hide()
+            self.ui.layout_margins.removeWidget(_w.widget())
+            del _w
+        except Exception as e:
+            print(e)
 
-        self.preview_canvas2 = FigureCanvas(figure)
-        self.preview_canvas2.setParent(self)
-        self.preview_canvas2.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                          QtWidgets.QSizePolicy.Expanding)
-        self.preview_canvas2.updateGeometry()
-        self.ui.layout_preview_colors.addWidget(self.preview_canvas2)
+        tool = SubplotToolQt(self.canvas.figure, self)
+        tool.resetbutton.hide()
+        tool.donebutton.hide()
+        tool.tightlayout.setText("&Reset")
+        tool.show()
+        self.ui.layout_margins.insertWidget(0, tool)
 
     def setup_connections(self):
         """
@@ -298,7 +327,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.tray_data_z.featureCleared.connect(self.check_grid_layout)
 
         # Hook up annotation changes:
-        self.ui.edit_figure_title.textChanged.connect(self.add_annotations)
+        self.ui.edit_figure_title.textEdited.connect(self.add_annotations)
         self.ui.edit_x_label.textChanged.connect(self.add_annotations)
         self.ui.edit_y_label.textChanged.connect(self.add_annotations)
 
@@ -343,7 +372,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.ui.radio_vertical.setDisabled(False)
 
         if (not self.ui.radio_horizontal.isChecked() and
-            not self.ui.radio_vertical.isChecked()):
+                not self.ui.radio_vertical.isChecked()):
             self.ui.radio_horizontal.blockSignals(True)
             self.ui.radio_horizontal.setChecked(True)
             self.ui.radio_horizontal.blockSignals(False)
@@ -355,8 +384,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         """
         columns = self.ui.tray_columns.data()
         rows = self.ui.tray_rows.data()
-        if ((columns is None) or
-            (columns is not None and rows is not None)):
+        if (columns is None or
+                (columns is not None and rows is not None)):
             self._last_wrap_state = self.ui.check_wrap_layout.isChecked()
             self.ui.check_wrap_layout.blockSignals(True)
             self.ui.check_wrap_layout.setChecked(False)
@@ -409,7 +438,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             else:
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
             self.ui.list_figures.insertItem(i, item)
-        if restored_position != None:
+        if restored_position is not None:
             self.ui.list_figures.setCurrentItem(
                 self.ui.list_figures.item(restored_position))
         else:
@@ -421,28 +450,21 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self._palette_name = x
             self.plot_figure()
 
-    def resizeEvent(self, new):
-        super(VisualizationDesigner, self).resizeEvent(new)
-        self.resize_previews()
-
-    def resize_previews(self):
-        size = self.ui.group_preview.size()
-        self.ui.group_preview_colors.setMinimumSize(size)
-        self.ui.group_preview_colors.setMaximumSize(size)
-
     def restore_settings(self):
         try:
             self.resize(options.settings.value("visualizationdesigner_size"))
         except TypeError:
             pass
+        self.viewer_size = options.settings.value("visualizationdesigner_viewer_size")
+        self.viewer_size = QtCore.QSize(640, 480)
 
         self.data_x = options.settings.value("visualizationdesinger_data_x", None)
-        self.data_y = options.settings.value("visualizationdesinger_data_y", None)
-        self.layout_columns = options.settings.value("visualizationdesinger_layout_columns", None)
-        self.layout_rows = options.settings.value("visualizationdesinger_layout_rows", None)
-        val = options.settings.value("visualizationdesinger_show_legend", False)
+        self.data_y = options.settings.value("visualizationdesigner_data_y", None)
+        self.layout_columns = options.settings.value("visualizationdesigner_layout_columns", None)
+        self.layout_rows = options.settings.value("visualizationdesigner_layout_rows", None)
+        val = options.settings.value("visualizationdesigner_show_legend", False)
         self.show_legend = (val == "true")
-        self.legend_columns = options.settings.value("visualizationdesinger_legend_columns", 1)
+        self.legend_columns = options.settings.value("visualizationdesigner_legend_columns", 1)
 
     def display_values(self):
         # set up Layout tab:
@@ -476,7 +498,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         #self.ui.receive_rows.setText(label)
 
         self.ui.check_show_legend.setChecked(self.show_legend)
-        self.ui.spin_columns.setValue(self.legend_columns)
+        self.ui.spin_columns.setValue(int(self.legend_columns))
 
     def get_gui_values(self):
         """
@@ -507,7 +529,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         data_y = self.ui.tray_data_y.data()
         data_z = self.ui.tray_data_z.data()
         if data_x:
-           levels_x = sorted(list(self.df[data_x].dropna().unique()))
+            levels_x = sorted(list(self.df[data_x].dropna().unique()))
         else:
             levels_x = []
         if data_y:
@@ -520,7 +542,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             levels_z = []
 
         if (self.ui.check_wrap_layout.isChecked()):
-            col_wrap, _= get_grid_layout(len(self.df[columns].unique()))
+            col_wrap, _ = get_grid_layout(len(self.df[columns].unique()))
         else:
             col_wrap = None
 
@@ -538,7 +560,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.vis = visualizer_class(df, self.session)
         self.grid = self.vis.get_grid(col=columns, row=rows, col_wrap=col_wrap,
-                                 sharex=True, sharey=True)
+                                      sharex=True, sharey=True)
 
         self.grid = self.grid.map_dataframe(self.vis.plot_facet,
                                             x=data_x, y=data_y, z=data_z,
@@ -547,9 +569,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                             levels_z=levels_z,
                                             session=self.session,
                                             palette=self._palette_name)
-        self.add_annotations()
         self.setup_canvas(self.grid.fig)
         self.grid.fig.tight_layout()
+        #self.add_annotations()
+        self.vis.add_legend(self.grid)
+        #self.canvas.draw()
+        #plt.draw()
+        self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
 
     def add_annotations(self):
         if self.vis:
@@ -558,21 +584,30 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
             self.reject()
 
-    def accept(self, *args):
-        super(VisualizationDesigner, self).accept(*args)
+    def close(self, *args):
         options.settings.setValue("visualizationdesigner_size", self.size())
-        options.settings.setValue("visualizationdesinger_data_x", self.data_x)
-        options.settings.setValue("visualizationdesinger_data_y", self.data_y)
-        options.settings.setValue("visualizationdesinger_layout_columns", self.layout_columns)
-        options.settings.setValue("visualizationdesinger_layout_rows", self.layout_rows)
-        options.settings.setValue("visualizationdesinger_show_legend", self.show_legend)
-        options.settings.setValue("visualizationdesinger_legend_columns", self.legend_columns)
+        options.settings.setValue("visualizationdesigner_data_x", self.data_x)
+        options.settings.setValue("visualizationdesigner_data_y", self.data_y)
+        options.settings.setValue("visualizationdesigner_layout_columns", self.layout_columns)
+        options.settings.setValue("visualizationdesigner_layout_rows", self.layout_rows)
+        options.settings.setValue("visualizationdesigner_show_legend", self.show_legend)
+        options.settings.setValue("visualizationdesigner_legend_columns", self.legend_columns)
+        options.settings.setValue("visualizationdesigner_viewer_size", self.viewer_size)
+        super(VisualizationDesigner, self).close(*args)
+
+        if not hasattr(self, "canvas") and hasattr(self, "dialog"):
+            self.dialog.hide()
+            self.dialog.close()
+            del self.dialog
 
     def exec_(self):
         result = super(VisualizationDesigner, self).exec_()
+
         if result == QtWidgets.QDialog.Accepted:
+            self.accept()
             return result
         else:
             return None

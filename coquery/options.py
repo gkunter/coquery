@@ -27,6 +27,10 @@ import codecs
 import ast
 import glob
 import imp
+import os
+import sys
+import logging
+import re
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -37,11 +41,18 @@ if not hasattr(ast, "TryFinally"):
 import hashlib
 from collections import defaultdict
 
-from . import general
+from . import general, NAME
 from . import filters
-from .errors import *
-from . import functionlist
-from . import functions
+from .errors import (
+    IllegalImportInModuleError, IllegalCodeInModuleError,
+    add_source_path)
+from .defines import (
+    SQL_SQLITE, SQL_MYSQL,
+    DEFAULT_MISSING_VALUE,
+    QUERY_MODES, QUERY_MODE_TOKENS,
+    CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_STRING)
+from .unicode import utf8
+from .links import parse_link_text
 
 CONSOLE_DEPRECATION = """The command-line version of Coquery is deprecated.
 
@@ -120,14 +131,14 @@ class UnicodeConfigParser(RawConfigParser):
         if self._defaults:
             fp.write("[%s]\n" % DEFAULTSECT)
             for (key, value) in self._defaults.items():
-                fp.write("%s = %s\n" % (key, unicode(value).replace('\n', '\n\t')))
+                fp.write("%s = %s\n" % (key, utf8(value).replace('\n', '\n\t')))
             fp.write("\n")
         for section in self._sections:
             fp.write("[%s]\n" % section)
             for (key, value) in self._sections[section].items():
                 if key != "__name__":
                     fp.write("%s = %s\n" %
-                             (key, unicode(value).replace('\n','\n\t')))
+                             (key, utf8(value).replace('\n','\n\t')))
             fp.write("\n")
 
     # This function is needed to override default lower-case conversion
@@ -281,8 +292,6 @@ class Options(object):
         self.args.output_separator = ","
         self.args.corpus = None
         self.args.gui = True
-        self.args.summary_functions = functionlist.FunctionList()
-        self.args.group_functions = functionlist.FunctionList()
 
         self.args.table_links = defaultdict(list)
 
@@ -301,7 +310,6 @@ class Options(object):
             self.args.parameter_string = " ".join([x for x in sys.argv [1:]])
 
         self.args.filter_list = []
-        self.args.group_filter_list = []
         self.args.selected_features= set()
         self.args.external_links = {}
 
@@ -699,6 +707,20 @@ class Options(object):
             "drop_on_na": False,
             }
 
+        import inspect
+        from . import functions
+        from .managers import Group
+
+        func_types = {}
+        for _, cls in inspect.getmembers(functions):
+            if callable(cls):
+                try:
+                    func_types[cls._name] = cls
+                except AttributeError:
+                    pass
+
+
+
         self.args.first_run = True
         config_file = CoqConfigParser()
 
@@ -714,7 +736,7 @@ class Options(object):
                 self.args.first_run = False
 
         for x in ["main", "sql", "gui", "output", "filter", "context",
-                  "links", "reference_corpora", "functions"]:
+                  "links", "reference_corpora", "functions", "groups"]:
             if x not in config_file.sections():
                 config_file.add_section(x)
 
@@ -818,7 +840,6 @@ class Options(object):
                 except ValueError:
                     pass
                 else:
-                    from .links import Link, parse_link_text
                     try:
                         link = parse_link_text(link_text)
                     except ValueError:
@@ -878,9 +899,9 @@ class Options(object):
             filt_columns = {}
             filt_operators = {}
             filt_values = {}
-            group_filt_columns = {}
-            group_filt_operators = {}
-            group_filt_values = {}
+            #group_filt_columns = {}
+            #group_filt_operators = {}
+            #group_filt_values = {}
 
             for var, value in config_file.items("filter"):
                 try:
@@ -895,13 +916,15 @@ class Options(object):
                             if cat == "column":     filt_columns[num] = value
                             elif cat == "operator": filt_operators[num] = int(value)
                             elif cat == "value":    filt_values[num] = value
-                        elif f_type == "groupfilter":
-                            if cat == "column":     group_filt_columns[num] = value
-                            elif cat == "operator": group_filt_operators[num] = int(value)
-                            elif cat == "value":    group_filt_values[num] = value
+                        #elif f_type == "groupfilter":
+                            #if cat == "column":     group_filt_columns[num] = value
+                            #elif cat == "operator": group_filt_operators[num] = int(value)
+                            #elif cat == "value":    group_filt_values[num] = value
                 except:
                     pass
-            max_filt = max(len(filt_columns), len(filt_operators), len(filt_values))
+            max_filt = max(len(filt_columns),
+                           len(filt_operators),
+                           len(filt_values))
             for i in range(max_filt):
                 col = filt_columns.get(i, None)
                 op = filt_operators.get(i, None)
@@ -914,18 +937,18 @@ class Options(object):
                     else:
                         self.args.filter_list.append(filt)
 
-            max_group_filt = max(len(group_filt_columns), len(group_filt_operators), len(group_filt_values))
-            for i in range(max_group_filt):
-                col = group_filt_columns.get(i, None)
-                op = group_filt_operators.get(i, None)
-                val = group_filt_values.get(i, None)
-                if all([col, op, val]):
-                    try:
-                        filt = filters.Filter(col, op, val)
-                    except ValueError:
-                        pass
-                    else:
-                        self.args.group_filter_list.append(filt)
+            #max_group_filt = max(len(group_filt_columns), len(group_filt_operators), len(group_filt_values))
+            #for i in range(max_group_filt):
+                #col = group_filt_columns.get(i, None)
+                #op = group_filt_operators.get(i, None)
+                #val = group_filt_values.get(i, None)
+                #if all([col, op, val]):
+                    #try:
+                        #filt = filters.Filter(col, op, val)
+                    #except ValueError:
+                        #pass
+                    #else:
+                        #self.args.group_filter_list.append(filt)
 
             # read FUNCTIONS section
             sum_columns = {}
@@ -940,7 +963,6 @@ class Options(object):
                     parsed = var.split("_")
                     if len(parsed) == 3:
                         f_type, s_num, cat = parsed
-                        print(f_type, s_num, cat)
                         try:
                             num = int(s_num)
                         except ValueError:
@@ -956,25 +978,45 @@ class Options(object):
                     print(e)
                     pass
 
-            for i in range(max_sum_func + 1):
-                col = sum_columns.get(i)
-                name = sum_names.get(i)
-                val = sum_values.get(i)
-                aggr = sum_aggrs.get(i)
-                f_type = sum_types.get(i)
-                try:
-                    FUN = func_types[name]
-                except KeyError:
-                    print(i, name)
-                else:
-                    func = FUN(columns=col, value=val, aggr=aggr)
-                    if f_type == "group":
-                        self.args.group_functions.add_function(func)
-                    elif f_type == "summary":
-                        self.args.summary_functions.add_function(func)
-                    else:
-                        print("Function not processed", name)
-                        pass
+            # process [groups]
+            grp_names = {}
+            grp_columns = {}
+            grp_function_types = defaultdict(dict)
+            grp_function_columns = defaultdict(dict)
+
+            for var, value in config_file.items("groups"):
+                parsed = var.split("_", 2)
+                if (len(parsed) == 3 and parsed[0] == "group"):
+                    num = parsed[1]
+                    attr = parsed[2]
+                    if attr.startswith("fnc"):
+                        # group functions
+                        f_parsed = attr.split("_")
+                        if len(f_parsed) == 3:
+                            _, f_num, f_attr = f_parsed
+                            if f_attr == "type":
+                                grp_function_types[num][f_num] = value
+                            elif f_attr == "columns":
+                                grp_function_columns[num][f_num] = value
+                    elif attr == "name":
+                        grp_names[num] = value
+                    elif attr == "columns":
+                        grp_columns[num] = value
+
+            self.args.groups = []
+            for num in grp_names:
+                name = grp_names.get(num)
+                columns = grp_columns.get(num, None)
+                function_list = []
+                for f_num in grp_function_types.get(num, {}):
+                    f_type = grp_function_types[num][f_num]
+                    f_columns = grp_function_columns[num].get(f_num, None)
+                    if f_columns is not None:
+                        function_list.append((func_types[f_type],
+                                              f_columns.split(",")))
+                if columns is not None:
+                    group = Group(name, columns.split(","), function_list)
+                    self.args.groups.append(group)
 
         # Use QSettings?
         if settings:
@@ -1074,30 +1116,26 @@ def save_configuration():
         config.set("filter", "filter_{}_column".format(i), filt.feature)
         config.set("filter", "filter_{}_operator".format(i), filt.operator)
         config.set("filter", "filter_{}_value".format(i), filt.value)
-    for i, filt in enumerate(cfg.group_filter_list):
-        config.set("filter", "groupfilter_{}_column".format(i), filt.feature)
-        config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
-        config.set("filter", "groupfilter_{}_value".format(i), filt.value)
+    #for i, filt in enumerate(cfg.group_filter_list):
+        #config.set("filter", "groupfilter_{}_column".format(i), filt.feature)
+        #config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
+        #config.set("filter", "groupfilter_{}_value".format(i), filt.value)
 
     if not "functions" in config.sections():
         config.add_section("functions")
-    i = 0
-    for func in cfg.summary_functions:
-        config.set("functions", "func_{}_name".format(i), func._name)
-        config.set("functions", "func_{}_columns".format(i),
-                    ",".join(func.column_list))
-        config.set("functions", "func_{}_value".format(i), func.value)
-        config.set("functions", "func_{}_aggr".format(i), func.aggr)
-        config.set("functions", "func_{}_type".format(i), "summary")
-        i += 1
-    for func in cfg.group_functions:
-        config.set("functions", "func_{}_name".format(i), func._name)
-        config.set("functions", "func_{}_columns".format(i),
-                    ",".join(func.column_list))
-        config.set("functions", "func_{}_value".format(i), func.value)
-        config.set("functions", "func_{}_aggr".format(i), func.aggr)
-        config.set("functions", "func_{}_type".format(i), "group")
-        i += 1
+
+    if not "groups" in config.sections():
+        config.add_section("groups")
+
+    for i, grp in enumerate(cfg.groups):
+        config.set("groups", "group_{}_name".format(i), grp.name)
+        config.set("groups", "group_{}_columns".format(i),
+                   ",".join(grp.columns))
+        for j, (fnc, columns) in enumerate(grp.functions):
+            config.set("groups", "group_{}_fnc_{}_type".format(i, j),
+                       fnc._name)
+            config.set("groups", "group_{}_fnc_{}_columns".format(i, j),
+                       ",".join(columns))
 
     if cfg.table_links:
         if not "links" in config.sections():
@@ -1622,14 +1660,4 @@ for mod in ["sqlalchemy", "pandas"]:
         missing_modules.append(mod)
 
 logger = logging.getLogger(NAME)
-
-import inspect
-
-func_types = {}
-for _, cls in inspect.getmembers(functions):
-    if callable(cls):
-        try:
-            func_types[cls._name] = cls
-        except AttributeError:
-            pass
 

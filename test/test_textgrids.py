@@ -42,9 +42,6 @@ class MockSession(object):
         resource.lexicon = self.lexicon
 
 
-def _get_source_id(_, token_id):
-    return [1, 1, 2, 2, 2][token_id-1]
-
 def _get_file_data(_, token_id, features):
     df = pd.DataFrame({
         "Filename": {0: "File1.txt", 1: "File1.txt",
@@ -53,7 +50,6 @@ def _get_file_data(_, token_id, features):
         "ID": {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}})
     return df
 
-CorpusClass.get_source_id = _get_source_id
 CorpusClass.get_file_data = _get_file_data
 
 # Mock a corpus module:

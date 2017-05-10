@@ -18,7 +18,7 @@ class TestLexicon(LexiconClass):
         return pos in ["N", "V"]
 
 
-class TestTokens(unittest.TestCase):
+class TestTokensModuleMethods(unittest.TestCase):
     def test_parse_query_string1(self):
         S1 = "this is a query"
         S2 = "this    is a query    "

@@ -341,6 +341,18 @@ class TestCorpus(unittest.TestCase):
              {"word": ["COQ_WORD_1.Word LIKE 'a%'",
                        "COQ_WORD_1.POS LIKE 'n%'"]})
 
+    def test_get_token_conditions_quote_char_1(self):
+        token = COCAToken("'ll")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word = '''ll'"]})
+
+    def test_get_token_conditions_quote_char_2(self):
+        token = COCAToken("'ll|ll")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
+
     def test_token_condition_empty_1(self):
         token = COCAToken("*")
         d = self.resource.get_token_conditions(0, token)
