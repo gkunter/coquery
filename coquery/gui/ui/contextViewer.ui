@@ -140,29 +140,29 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QProgressBar" name="progress_bar">
+         <property name="maximum">
+          <number>0</number>
+         </property>
+         <property name="value">
+          <number>-1</number>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_textgrid">
       <attribute name="title">
        <string>&amp;Audio</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1,0">
+      <layout class="QVBoxLayout" name="layout_audio_tab" stretch="0">
        <property name="spacing">
         <number>0</number>
        </property>
        <property name="margin">
         <number>0</number>
        </property>
-       <item>
-        <widget class="CoqTextgridView" name="textgrid_area" native="true">
-         <zorder>label</zorder>
-         <zorder>label_2</zorder>
-         <zorder>spin_dynamic_range</zorder>
-         <zorder>spin_window_length</zorder>
-         <zorder>horizontalSpacer</zorder>
-         <zorder></zorder>
-        </widget>
-       </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <property name="spacing">
@@ -251,17 +251,7 @@
     </widget>
    </item>
   </layout>
-  <zorder>tab_widget</zorder>
-  <zorder>textgrid_area</zorder>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>CoqTextgridView</class>
-   <extends>QWidget</extends>
-   <header>..textgridview</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
