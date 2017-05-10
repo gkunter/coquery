@@ -58,7 +58,7 @@ class BuilderClass(BaseCorpusBuilder):
     file_name = "Filename"
     file_path = "Path"
     file_duration = "Duration"
-    file_audio = "Audio"
+    file_audio_path = "AudioPath"
 
     segment_table = "Segments"
     segment_id = "SegmentId"
@@ -283,7 +283,7 @@ class BuilderClass(BaseCorpusBuilder):
             [Identifier(self.file_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "VARCHAR(18) NOT NULL"),
              Column(self.file_duration, "REAL NOT NULL"),
-             Column(self.file_audio, "BLOB NOT NULL"),
+             Column(self.file_audio_path, "VARCHAR(2048) NOT NULL"),
              Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
         self.create_table_description(self.speaker_table,
@@ -322,7 +322,7 @@ class BuilderClass(BaseCorpusBuilder):
         # class 'corpus_code' defined above:
         self._corpus_code = corpus_code
 
-        self.add_audio_feature(self.file_audio)
+        self.add_audio_feature(self.file_audio_path)
         self.add_time_feature(self.corpus_starttime)
         self.add_time_feature(self.corpus_endtime)
         for x in ["corpus_word", "corpus_pos", "corpus_transcript", "corpus_lemmatranscript"]:
@@ -344,7 +344,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_db_name():
-        return "buckeye"
+        return "coq_buckeye"
 
     @staticmethod
     def get_title():
@@ -418,8 +418,25 @@ class BuilderClass(BaseCorpusBuilder):
                     _io = BytesIO(zip_file.read(small_zip_name))
                 small_zip_file = zipfile.ZipFile(_io)
                 self._process_words_file(small_zip_file, speaker_name)
-                self._value_file_audio = self._get_audio(small_zip_file,
-                                                        speaker_name)
+
+                audio_path = os.path.join(options.cfg.binary_path,
+                                          self.get_name())
+                audio_file = os.path.join(
+                    audio_path,
+                    "{}.wav".format(os.path.splitext(small_zip_name)[0]))
+
+                if not os.path.exists(os.path.split(audio_file)[0]):
+                    os.makedirs(os.path.split(audio_file)[0])
+
+                if not os.path.exists(audio_file):
+                    audio_data = self._get_audio(small_zip_file, speaker_name)
+                    print("copying {}".format(audio_file))
+                    with open(audio_file, "wb") as output_file:
+                        output_file.write(audio_data)
+                else:
+                    print("skipping {}".format(audio_file))
+
+                self._value_file_audio_path = audio_file
 
                 self._value_file_name = "{}/{}".format(os.path.basename(filename), speaker_name)
                 self._value_file_path = os.path.split(filename)[0]
@@ -427,7 +444,7 @@ class BuilderClass(BaseCorpusBuilder):
                 d = {self.file_name: self._value_file_name,
                     self.file_duration: self._value_file_duration,
                     self.file_path: self._value_file_path,
-                    self.file_audio: self._value_file_audio}
+                    self.file_audio_path: self._value_file_audio_path}
                 self._file_id = self.table(self.file_table).get_or_insert(d)
                 self.commit_data()
 
