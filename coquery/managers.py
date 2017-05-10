@@ -215,15 +215,12 @@ class Manager(CoqObject):
 
         if options.cfg.verbose:
             print("\tmutate(stage='{}')".format(stage))
+
         # apply mutate functions, including context functions:
         mutate_functions = FunctionList(self._get_main_functions(df, session))
-        kwargs = {"session": session, "manager": self}
-        kwargs.update({"df": df})
-        #kwargs.update({"df": df if not self._subst
-                                #else df.replace(self._subst)})
-        df = mutate_functions.lapply(**kwargs)
+        df = mutate_functions.lapply(df, session=session, manager=self)
 
-        if options.cfg.context_mode != CONTEXT_NONE:
+        if (stage == "first" and options.cfg.context_mode != CONTEXT_NONE):
             (_, _, cached_context) = self._context_cache[options.cfg.context_mode]
             if cached_context is not None:
                 # use the cached context columns if available:
@@ -244,8 +241,6 @@ class Manager(CoqObject):
         kwargs = {"session": session,
                   "manager": self,
                   "df": df}
-        #kwargs.update({"df": df if not self._subst
-                                #else df.replace(self._subst)})
 
         self.stage_one_functions = []
         if stage == "first":
@@ -258,12 +253,15 @@ class Manager(CoqObject):
                 else:
                     self.stage_two_functions.append(fnc)
 
+        fl = None
         if stage == "first" and self.stage_one_functions:
-            df = FunctionList(self.stage_one_functions).lapply(**kwargs)
+            fl = FunctionList(self.stage_one_functions)
         if stage == "second" and self.stage_two_functions:
-            df = FunctionList(self.stage_two_functions).lapply(**kwargs)
-
+            fl = FunctionList(self.stage_two_functions)
+        if fl:
+            df = fl.lapply(df, session=session, manager=self)
         df = df.reset_index(drop=True)
+
         if options.cfg.verbose:
             print("\tdone")
         return df
@@ -432,8 +430,7 @@ class Manager(CoqObject):
                 df, session=session, manager=self)
 
         cols = [x for x in vis_cols
-                if x.startswith("coq_") and
-                not x.startswith("coq_context_")]
+                if x.startswith("coq_") and not x.startswith("coq_context_")]
 
         if options.cfg.drop_on_na and cols:
             ix = (df[vis_cols].dropna(axis="index", subset=cols, how="all")
