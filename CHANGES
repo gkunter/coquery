@@ -1,9 +1,11 @@
 (0.10.0)
+* add regular expression tester
+* add How to cite dialog
 * big change for corpora that provide audio:
     - add spectrogram and waveform contexts
     - store audio in databases
     - allow audio playback
-* internal: rewrite SQL code generator
+* internal: rewrite SQL code generator, which speeds up multi-word queries
 * regular expression queries
 * introduction of _NULL special query item (issue #97)
 * collect hidden columns in a side bar
@@ -20,17 +22,20 @@
 * use Icons8 icon set
 * add user data columns
 * drastically change data management:
-    - contexts and functions can be added at any time, not only before the query
-    - add completely revised filter dialogs
+    - contexts and functions can be added at any time, not only before the
+      query
+    - add completely revised filter dialog
     - add completely revised functions dialog
-    - introduce Group and Summary functions (the latter replaces the Statistics
-      special table)
+    - introduce data groups, which can split the results into subsets and
+      allow functions to act only on the subsets
+    - introduce Group and Summary functions (the latter replaces the
+      Statistics special table)
     - add new functions (Subcorpus size, Frequency ptw, Normalized frequency,
       Number of matches, Number of unique matches, Row number, Type-token
       ratio)
-    - add new string function (CHAIN and DECAT), use regex for COUNT, make 
-      regex more robust
-    - add logical functions (ADD, EQUAL, GREATERTHAN, ISFALSE, ISTRUE, 
+    - add new string functions (CHAIN, UPPER, LOWER), use regex for COUNT,
+      make regex more robust
+    - add logical functions (ADD, EQUAL, GREATERTHAN, ISFALSE, ISTRUE,
       LESSTHAN, NOTEQUAL, OR, XOR)
     - add data grouping
     - functions are now added to columns in the results table
@@ -51,7 +56,6 @@
     - make Query button more prominent
     - simplify query file widget
     - add Result table management sidebar
-    - Column selection and Result table management sidebar can be hidden
 * add Module information dialog
 * add support for encoding detection when reading plain text files
 * allow to build 'corpora' from CSV files
@@ -71,7 +75,7 @@
 
 0.9.1 22 March 2016
 * fix issue in Buckeye and CELEX2 installers
-* add module information to about dialog
+* add module information to About dialog
 
 0.9   21 March 2016
 * initial public release
