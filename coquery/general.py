@@ -123,12 +123,13 @@ def get_home_dir(create=True):
 
     $COQ_HOME/coquery.cfg               configuration file
     $COQ_HOME/coquery.log               log files
+    $COQ_HOME/binary/                   default directory for binary data
     $COQ_HOME/installer/                additional corpus installers
-    $COQ_HOME/connections/$MYSQL_CONFIG/corpora
+    $COQ_HOME/connections/$SQL_CONFIG/corpora
                                         installed corpus modules
-    $COQ_HOME/connections/$MYSQL_CONFIG/adhoc
+    $COQ_HOME/connections/$SQL_CONFIG/adhoc
                                         adhoc installer modules
-    $COQ_HOME/connections/$MYSQL_CONFIG/databases
+    $COQ_HOME/connections/$SQL_CONFIG/databases
                                         SQLite databases
 
     The location of $COQ_HOME depends on the operating system:
@@ -156,11 +157,13 @@ def get_home_dir(create=True):
 
     coquery_home = os.path.join(basepath, "Coquery")
     connections_path = os.path.join(coquery_home, "connections")
+    binary_path = os.path.join(coquery_home, "binary")
     custom_installer_path = os.path.join(coquery_home, "installer")
 
     if create:
         # create paths if they do not exist yet:
-        for path in [coquery_home, custom_installer_path, connections_path]:
+        for path in [coquery_home, custom_installer_path, connections_path,
+                     binary_path]:
             if not os.path.exists(path):
                 os.makedirs(path)
 
@@ -168,7 +171,6 @@ def get_home_dir(create=True):
 
 
 class CoqObject(object):
-
     """
     This class is a subclass of the default Python ``object`` class. It adds
     the method ``get_hash()``, which returns a hash based on the current
