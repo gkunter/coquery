@@ -968,6 +968,9 @@ class SQLResource(BaseResource):
             if not spec_list:
                 continue
 
+            if spec_list == ["%"]:
+                continue
+
             try:
                 col = getattr(cls, getattr(cls, label))
             except AttributeError:
