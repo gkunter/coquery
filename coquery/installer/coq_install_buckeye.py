@@ -430,15 +430,13 @@ class BuilderClass(BaseCorpusBuilder):
 
                 if not os.path.exists(audio_file):
                     audio_data = self._get_audio(small_zip_file, speaker_name)
-                    print("copying {}".format(audio_file))
                     with open(audio_file, "wb") as output_file:
                         output_file.write(audio_data)
-                else:
-                    print("skipping {}".format(audio_file))
 
                 self._value_file_audio_path = audio_file
 
-                self._value_file_name = "{}/{}".format(os.path.basename(filename), speaker_name)
+                self._value_file_name = "{}/{}".format(
+                    os.path.basename(filename), speaker_name)
                 self._value_file_path = os.path.split(filename)[0]
                 self._value_file_duration = self._duration
                 d = {self.file_name: self._value_file_name,
@@ -459,7 +457,8 @@ class BuilderClass(BaseCorpusBuilder):
         file_name, _ = os.path.splitext(filename)
         phones_file = "{}.phones".format(file_name)
         input_data = speaker_zip.read(phones_file)
-        input_data = [utf8(x.strip()) for x in input_data.splitlines() if x.strip()]
+        input_data = [utf8(x.strip())
+                      for x in input_data.splitlines() if x.strip()]
         segments = []
 
         for row in input_data:
