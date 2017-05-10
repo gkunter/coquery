@@ -32,12 +32,6 @@ import sys
 import logging
 import re
 
-# make ast work in all Python versions:
-if not hasattr(ast, "TryExcept"):
-    ast.TryExcept = ast.Try
-if not hasattr(ast, "TryFinally"):
-    ast.TryFinally = ast.Try
-
 import hashlib
 from collections import defaultdict
 
@@ -53,6 +47,14 @@ from .defines import (
     CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_STRING)
 from .unicode import utf8
 from .links import parse_link_text
+
+
+# make ast work in all Python versions:
+if not hasattr(ast, "TryExcept"):
+    ast.TryExcept = ast.Try
+if not hasattr(ast, "TryFinally"):
+    ast.TryFinally = ast.Try
+
 
 CONSOLE_DEPRECATION = """The command-line version of Coquery is deprecated.
 
@@ -80,7 +82,7 @@ class CoqConfigParser(_configparser, object):
         try:
             val = self.get(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
-            if fallback != None:
+            if fallback is not None:
                 val = fallback
             else:
                 raise e
@@ -92,7 +94,7 @@ class CoqConfigParser(_configparser, object):
         try:
             val = self.getboolean(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
-            if fallback != None:
+            if fallback is not None:
                 val = fallback
             else:
                 raise e
@@ -104,7 +106,7 @@ class CoqConfigParser(_configparser, object):
         try:
             val = self.getint(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
-            if fallback != None:
+            if fallback is not None:
                 val = fallback
             else:
                 raise e
@@ -116,11 +118,12 @@ class CoqConfigParser(_configparser, object):
         try:
             val = self.getfloat(section, option)
         except (NoOptionError, ValueError, AttributeError) as e:
-            if fallback != None:
+            if fallback is not None:
                 val = fallback
             else:
                 raise e
         return val
+
 
 class UnicodeConfigParser(RawConfigParser):
     """
@@ -138,14 +141,13 @@ class UnicodeConfigParser(RawConfigParser):
             for (key, value) in self._sections[section].items():
                 if key != "__name__":
                     fp.write("%s = %s\n" %
-                             (key, utf8(value).replace('\n','\n\t')))
+                             (key, utf8(value).replace('\n', '\n\t')))
             fp.write("\n")
 
     # This function is needed to override default lower-case conversion
     # of the parameter's names. They will be saved 'as is'.
     def optionxform(self, strOut):
         return strOut
-
 
 
 # Define a HelpFormatter class that works with Unicode corpus names both in
@@ -262,6 +264,7 @@ else:
     class CoqHelpFormatter(argparse.HelpFormatter):
         pass
 
+
 class Options(object):
     def __init__(self):
         self.args = argparse.Namespace()
@@ -275,7 +278,8 @@ class Options(object):
         self.config_name = "%s.cfg" % NAME.lower()
         self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False, formatter_class=CoqHelpFormatter)
 
-        self.args.config_path = os.path.join(self.args.coquery_home, self.config_name)
+        self.args.config_path = os.path.join(self.args.coquery_home,
+                                             self.config_name)
         self.args.current_server = "Default"
         self.args.server_configuration = {
             self.args.current_server: {
@@ -295,22 +299,30 @@ class Options(object):
 
         self.args.table_links = defaultdict(list)
 
-        self.args.installer_path = os.path.join(self.args.base_path, "installer")
-        self.args.connections_path = os.path.join(self.args.coquery_home, "connections")
-        self.args.cache_path = os.path.join(self.args.coquery_home, "cache")
-        self.args.stopword_path = os.path.join(self.args.base_path, "stopwords")
+        # set up paths:
+        self.args.installer_path = os.path.join(
+            self.args.base_path, "installer")
+        self.args.connections_path = os.path.join(
+            self.args.coquery_home, "connections")
+        self.args.cache_path = os.path.join(
+            self.args.coquery_home, "cache")
+        self.args.stopword_path = os.path.join(
+            self.args.base_path, "stopwords")
+
         self.args.verbose = False
         self.args.comment = None
 
         self.args.use_mysql = True
 
         try:
-            self.args.parameter_string = " ".join([x.decode("utf8") for x in sys.argv [1:]])
+            self.args.parameter_string = " ".join(
+                [x.decode("utf8") for x in sys.argv[1:]])
         except AttributeError:
-            self.args.parameter_string = " ".join([x for x in sys.argv [1:]])
+            self.args.parameter_string = " ".join(
+                [x for x in sys.argv[1:]])
 
         self.args.filter_list = []
-        self.args.selected_features= set()
+        self.args.selected_features = set()
         self.args.external_links = {}
 
         # these attributes are used only in the GUI:
@@ -416,8 +428,10 @@ class Options(object):
                 _, tab, _ = resource.split_resource_feature(d[shorthand])
                 table = getattr(resource, "{}_table".format(tab))
                 feature = getattr(resource, d[shorthand])
-                group.add_argument(shorthand,
-                    help="{}, equivalent to '-{} {}'".format(description, table, feature),
+                group.add_argument(
+                    shorthand,
+                    help="{}, equivalent to '-{} {}'".format(
+                        description, table, feature),
                     action="store_true")
 
         self.setup_parser()
@@ -435,7 +449,6 @@ class Options(object):
         else:
             self.args.gui = False
             self.args.to_file = True
-
 
         match = re.search("--connection\s+(.+)", self.args.parameter_string)
         if match:
@@ -655,7 +668,8 @@ class Options(object):
         try:
             self.args.input_separator = self.args.input_separator.decode('string_escape')
         except AttributeError:
-            self.args.input_separator = codecs.getdecoder("unicode_escape") (self.args.input_separator) [0]
+            self.args.input_separator = (
+                codecs.getdecoder("unicode_escape")(self.args.input_separator)[0])
 
         # make sure that a command query consisting of one string is still
         # stored as a list:
@@ -672,7 +686,8 @@ class Options(object):
         """
         Create the default SQLite connection.
         """
-        if not self.args.current_server or "Default" not in self.args.server_configuration:
+        if (not self.args.current_server or
+                "Default" not in self.args.server_configuration):
             d = {"name": "Default", "type": SQL_SQLITE, "path": ""}
             self.args.server_configuration[d["name"]] = d
             self.args.current_server = d["name"]
@@ -691,7 +706,10 @@ class Options(object):
             "output_to_lower": True,
             "drop_duplicates": True,
             "na_string": DEFAULT_MISSING_VALUE,
-            "custom_installer_path": os.path.join(self.args.coquery_home, "installer"),
+            "custom_installer_path": os.path.join(
+                self.args.coquery_home, "installer"),
+            "binary_path": os.path.join(
+                self.args.coquery_home, "binary"),
             "csv_file": "",
             "csv_separator": ",",
             "csv_column": 1,
@@ -718,8 +736,6 @@ class Options(object):
                     func_types[cls._name] = cls
                 except AttributeError:
                     pass
-
-
 
         self.args.first_run = True
         config_file = CoqConfigParser()
@@ -810,7 +826,10 @@ class Options(object):
             self.args.output_to_lower = config_file.bool("main", "output_to_lower", d=defaults)
             self.args.drop_on_na = config_file.bool("main", "drop_on_na", d=defaults)
             self.args.na_string = config_file.str("main", "na_string", d=defaults)
-            self.args.custom_installer_path = config_file.str("main", "custom_installer_path", d=defaults)
+            self.args.custom_installer_path = config_file.str(
+                "main", "custom_installer_path", d=defaults)
+            self.args.binary_path = config_file.str(
+                "main", "binary_path", d=defaults)
             if use_cachetools:
                 self.args.use_cache = config_file.bool("main", "use_cache", d=defaults)
             else:
@@ -846,7 +865,6 @@ class Options(object):
                         pass
                     else:
                         self.args.table_links[connection].append(link)
-
 
             # read GUI section:
             group = config_file.str("gui", "group_columns", fallback="")
@@ -913,9 +931,12 @@ class Options(object):
                         except ValueError:
                             continue
                         if f_type == "filter":
-                            if cat == "column":     filt_columns[num] = value
-                            elif cat == "operator": filt_operators[num] = int(value)
-                            elif cat == "value":    filt_values[num] = value
+                            if cat == "column":
+                                filt_columns[num] = value
+                            elif cat == "operator":
+                                filt_operators[num] = int(value)
+                            elif cat == "value":
+                                filt_values[num] = value
                         #elif f_type == "groupfilter":
                             #if cat == "column":     group_filt_columns[num] = value
                             #elif cat == "operator": group_filt_operators[num] = int(value)
@@ -969,11 +990,16 @@ class Options(object):
                             continue
                         if f_type == "func":
                             max_sum_func = max(num, max_sum_func)
-                            if cat == "name":      sum_names[num] = value
-                            elif cat == "columns": sum_columns[num] = value.split(",")
-                            elif cat == "value":   sum_values[num] = value
-                            elif cat == "aggr":    sum_aggrs[num] = value
-                            elif cat == "type":    sum_types[num] = value
+                            if cat == "name":
+                                sum_names[num] = value
+                            elif cat == "columns":
+                                sum_columns[num] = value.split(",")
+                            elif cat == "value":
+                                sum_values[num] = value
+                            elif cat == "aggr":
+                                sum_aggrs[num] = value
+                            elif cat == "type":
+                                sum_types[num] = value
                 except Exception as e:
                     print(e)
                     pass
@@ -1039,6 +1065,7 @@ class Options(object):
 cfg = None
 settings = None
 
+
 def save_configuration():
     config = UnicodeConfigParser()
     if os.path.exists(cfg.config_path):
@@ -1047,7 +1074,7 @@ def save_configuration():
                 config.read(input_file)
             except (IOError, TypeError):
                 warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
-    if not "main" in config.sections():
+    if "main" not in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
 
@@ -1071,15 +1098,16 @@ def save_configuration():
         config.set("main", "output_to_lower", cfg.output_to_lower)
     except AttributeError:
         pass
-    if cfg.xkcd != None:
+    if cfg.xkcd is not None:
         config.set("main", "xkcd", cfg.xkcd)
     config.set("main", "query_cache_size", cfg.query_cache_size)
     config.set("main", "use_cache", bool(cfg.use_cache))
 
     if cfg.custom_installer_path:
         config.set("main", "custom_installer_path", cfg.custom_installer_path)
+    config.set("main", "binary_path", cfg.binary_path)
 
-    if not "sql" in config.sections():
+    if "sql" not in config.sections():
         config.add_section("sql")
     if cfg.current_server:
         config.set("sql", "active_configuration", cfg.current_server)
@@ -1096,20 +1124,20 @@ def save_configuration():
             config.set("sql", "config_{}_{}".format(i, x), d[x])
 
     if cfg.selected_features:
-        if not "output" in config.sections():
+        if "output" not in config.sections():
             config.add_section("output")
         for feature in cfg.selected_features:
             if feature.strip():
                 config.set("output", feature, True)
 
     # store reference corpora:
-    if not "reference_corpora" in config.sections():
+    if "reference_corpora" not in config.sections():
         config.add_section("reference_corpora")
     for i, item in enumerate(cfg.reference_corpus.items()):
         config.set("reference_corpora",
                    "reference{}".format(i), ",".join(item))
 
-    if not "filter" in config.sections():
+    if "filter" not in config.sections():
         config.add_section("filter")
 
     for i, filt in enumerate(cfg.filter_list):
@@ -1121,10 +1149,10 @@ def save_configuration():
         #config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
         #config.set("filter", "groupfilter_{}_value".format(i), filt.value)
 
-    if not "functions" in config.sections():
+    if "functions" not in config.sections():
         config.add_section("functions")
 
-    if not "groups" in config.sections():
+    if "groups" not in config.sections():
         config.add_section("groups")
 
     for i, grp in enumerate(cfg.groups):
@@ -1138,14 +1166,14 @@ def save_configuration():
                        ",".join(columns))
 
     if cfg.table_links:
-        if not "links" in config.sections():
+        if "links" not in config.sections():
             config.add_section("links")
         for i, link in enumerate(cfg.table_links[cfg.current_server]):
             config.set("links",
                        "link{}".format(i+1),
                        '{},{}'.format(cfg.current_server, link))
 
-    if not "context" in config.sections():
+    if "context" not in config.sections():
         config.add_section("context")
     config.set("context", "context_mode", cfg.context_mode)
     config.set("context", "context_restrict", cfg.context_restrict)
@@ -1155,10 +1183,11 @@ def save_configuration():
 
     if cfg.gui:
         for x in cfg.column_width:
-            if not x.startswith("coquery_invisible") and cfg.column_width[x] and x:
+            if (not x.startswith("coquery_invisible") and
+                    cfg.column_width[x] and x):
                 settings.setValue("column_width_{}".format(x), cfg.column_width[x])
 
-        if not "gui" in config.sections():
+        if "gui" not in config.sections():
             config.add_section("gui")
 
         if cfg.stopword_list:
@@ -1274,6 +1303,7 @@ def get_con_configuration():
     else:
         return None
 
+
 def get_configuration_type():
     """
     Return the type of the current configuration.
@@ -1289,6 +1319,7 @@ def get_configuration_type():
         return cfg.server_configuration[cfg.current_server]["type"]
     else:
         return None
+
 
 def process_options(use_file=True):
     global cfg
@@ -1369,7 +1400,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
                     raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
 
         elif isinstance(node, ast.If):
-            if parent == None:
+            if parent is None:
                 if not allow_if:
 
                     raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
@@ -1406,6 +1437,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
     if hash:
         #return hashlib.md5(content.encode("utf-8"))
         return hashlib.md5(utf8("MD5 hash not available").encode("utf-8"))
+
 
 def set_current_server(name):
     """
@@ -1448,6 +1480,7 @@ def set_current_server(name):
         if not os.path.exists(cfg.database_path):
             os.makedirs(cfg.database_path)
 
+
 def get_resource_of_database(db_name):
     """
     Get the resource that uses the database.
@@ -1457,6 +1490,7 @@ def get_resource_of_database(db_name):
         if resource.db_name == db_name:
             return resource
     return None
+
 
 def get_available_resources(configuration):
     """
@@ -1491,8 +1525,8 @@ def get_available_resources(configuration):
         if not os.path.exists(os.path.join(path, "__init__.py")):
             open(os.path.join(path, "__init__.py"), "a").close()
 
-    d  = {}
-    if configuration == None:
+    d = {}
+    if configuration is None:
         return d
 
     # add corpus_path to sys.path so that modules can be imported from
@@ -1536,6 +1570,7 @@ def get_available_resources(configuration):
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
 
+
 def get_resource(name, connection=None):
     """
     Return a tuple containing the Resource, Corpus, and Lexicon of the
@@ -1559,6 +1594,7 @@ def get_resource(name, connection=None):
         connection = cfg.current_server
     Resource, Corpus, Lexicon, _ = get_available_resources(connection)[name]
     return Resource, Corpus, Lexicon
+
 
 def decode_query_string(s):
     """
@@ -1592,6 +1628,7 @@ def decode_query_string(s):
     l.append("".join(char_list))
     return "\n".join(l)
 
+
 def encode_query_string(s):
     """
     Encode a query string that has can be written to a configuration file.
@@ -1608,6 +1645,7 @@ def encode_query_string(s):
         s = s.replace('"', '\\"')
         str_list.append(s)
     return ",".join(['"{}"'.format(x) for x in str_list])
+
 
 def has_module(name):
     """
@@ -1660,4 +1698,3 @@ for mod in ["sqlalchemy", "pandas"]:
         missing_modules.append(mod)
 
 logger = logging.getLogger(NAME)
-
