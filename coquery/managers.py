@@ -709,7 +709,12 @@ class FrequencyList(Manager):
         vis_cols = get_visible_columns(df, manager=self, session=session)
         freq_function = Freq(columns=vis_cols)
 
-        if not session.summary_functions.has_function(freq_function):
+        freq_exists = False
+        for fnc, col in session.summary_group.functions:
+            if fnc == Freq and sorted(col) == sorted(vis_cols):
+                freq_exists = True
+                break
+        if not freq_exists:
             self.manager_functions = FunctionList([freq_function])
         df = super(FrequencyList, self).summarize(df, session)
         return self.distinct(df, session)
