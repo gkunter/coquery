@@ -1883,7 +1883,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 self._hidden_columns.append(i)
 
             # remember dtype of columns:
-            self._dtypes.append(df.dtypes[col])
+            self._dtypes.append(df[col].dtype)
 
             sorter = self._manager.get_sorter(col)
 
@@ -1891,7 +1891,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if sorter and sorter.reverse:
                 # right-align columns with reverse sorting:
                 self._align.append(_right_align)
-            elif df.dtypes[col] in (int, float):
+            elif df[col].dtype in (int, float):
                 # always right-align numeric columns:
                 self._align.append(_right_align)
             elif col == "coq_context_left":
