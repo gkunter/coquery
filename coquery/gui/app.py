@@ -1052,14 +1052,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 manager.reset_hidden_columns()
                 self.hide_columns(result["hidden"])
 
-            # set column names
+            # set or reset column aliases
             for col in result["alias"]:
                 name = result["alias"][col]
-                if col.startswith("func_"):
-                    fun = manager.get_function(col)
-                    fun.set_label(name)
-                else:
+                if not col.startswith("func_"):
                     options.cfg.column_names[col] = name
+
+            # set or reset function aliases
+            for fnc in manager.get_functions():
+                fnc.set_label(result["alias"].get(fnc.get_id(), ""))
 
             # set column colors:
             options.cfg.column_color = result.get("colors", {})

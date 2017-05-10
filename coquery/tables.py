@@ -13,7 +13,6 @@ from __future__ import unicode_literals
 
 import collections
 import pandas as pd
-import unicodedata
 import re
 import sys
 
@@ -49,7 +48,9 @@ class Column(object):
         self.unique = False
 
     def __repr__(self):
-        return "Column({}, {}, {})".format(self._name, self._data_type, self.index_length)
+        return "Column({}, {}, {})".format(self._name,
+                                           self._data_type,
+                                           self.index_length)
 
     @property
     def name(self):
@@ -105,7 +106,9 @@ class Identifier(Column):
         self.unique = unique
 
     def __repr__(self):
-        return "Identifier(name='{}', data_type='{}', unique={}, index_length={})".format(self._name, self._data_type, self.unique, self.index_length)
+        return ("Identifier(name='{}', data_type='{}', unique={},"
+                "index_length={})").format(self._name, self._data_type,
+                                           self.unique, self.index_length)
 
     @property
     def name(self):
@@ -126,7 +129,8 @@ class Link(Column):
         self._link = table_name
 
     def __repr__(self):
-        return "Link(name='{}', '{}', data_type='{}')".format(self._name, self._link, self._data_type)
+        return "Link(name='{}', '{}', data_type='{}')".format(
+            self._name, self._link, self._data_type)
 
 
 class Table(object):
@@ -148,7 +152,8 @@ class Table(object):
         # the returned value is the length of the lookup table at the time
         # the entry was created. In other words, this is the row id of that
         # row.
-        self._add_lookup = collections.defaultdict(lambda: len(self._add_lookup) + 1)
+        self._add_lookup = collections.defaultdict(
+            lambda: len(self._add_lookup) + 1)
         self._commited = {}
         self._col_names = None
         self._engine = None
@@ -178,11 +183,6 @@ class Table(object):
 
         if self._add_cache2:
             df = pd.DataFrame(self._add_cache2)
-            field_order = self._get_field_order()
-            assert len(field_order) == len(df.columns), "Length mismatch while committing table {}.\n{}\n\n{}".format(
-                self.name,
-                "".join(sorted(["{:20}".format(x) for x in field_order])),
-                "".join(sorted(["{:20}".format(x.name) for x in self.columns])))
 
             try:
                 df.columns = self._get_field_order()
@@ -201,11 +201,12 @@ class Table(object):
             # apply unicode normalization:
             for column in df.columns[df.dtypes == object]:
                 try:
-                    df[column] = df[column].apply(lambda x: unicodedata.normalize("NFKC", x))
+                    df[column] = df[column].str.normalize("NFKC")
                 except TypeError:
                     pass
 
-            df.to_sql(self.name, self._DB.engine, if_exists="append", index=False)
+            df.to_sql(self.name, self._DB.engine, if_exists="append",
+                      index=False)
             self._add_cache2 = list()
 
     def add(self, values):
@@ -276,7 +277,8 @@ class Table(object):
         self.columns.append(column)
         if column.name in self._row_order:
             if not column.key:
-                raise ValueError("Duplicate column: {}, {}".format(self._row_order, column.name))
+                raise ValueError("Duplicate column: {}, {}".format(
+                    self._row_order, column.name))
             else:
                 return
         if column.is_identifier:
@@ -361,8 +363,8 @@ class Table(object):
 
         # integer data types:
         elif col.base_type.endswith("INT"):
-            S = "SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL".format(
-                col.name, self.name)
+            S = ("SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL"
+                 .format(col.name, self.name))
             with self._DB.engine.connect() as connection:
                 v_min, v_max = connection.execute(S).fetchone()
 
@@ -398,8 +400,8 @@ class Table(object):
             else:
                 dt_type = col.data_type
 
-            S = "SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL".format(
-                col.name, self.name)
+            S = ("SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL"
+                 .format(col.name, self.name))
             with self._DB.engine.connect() as connection:
                 v_min, _ = connection.execute(S).fetchone()
 
@@ -451,18 +453,25 @@ class Table(object):
                     if not column.unique:
                         # add surrogate key
                         # do not add AUTO_INCREMENT to strings or ENUMs:
-                        str_list.insert(0, "`{}_primary` INT AUTO_INCREMENT".format(column.name))
-                        str_list.insert(1, "`{}` {}".format(column.name, column.data_type))
-                        str_list.append("PRIMARY KEY ({}_primary)".format(column.name))
+                        str_list.insert(0, ("`{}_primary` INT AUTO_INCREMENT"
+                                            .format(column.name)))
+                        str_list.insert(1, ("`{}` {}"
+                                            .format(column.name,
+                                                    column.data_type)))
+                        str_list.append("PRIMARY KEY ({}_primary)".format(
+                            column.name))
                     else:
                         # do not add AUTO_INCREMENT to strings or ENUMs:
-                        if column.data_type.upper().startswith(("ENUM", "VARCHAR", "TEXT")):
+                        if column.data_type.upper().startswith(
+                                ("ENUM", "VARCHAR", "TEXT")):
                             pattern = "`{}` {}"
                         else:
                             pattern = "`{}` {} AUTO_INCREMENT"
                         pattern = "`{}` {}"
-                        str_list.append(pattern.format(column.name, column.data_type))
-                        str_list.append("PRIMARY KEY (`{}`)".format(column.name))
+                        str_list.append(pattern.format(column.name,
+                                                       column.data_type))
+                        str_list.append("PRIMARY KEY (`{}`)".format(
+                            column.name))
                     # add generated index column for next token?
                     if index_gen:
                         if "mariadb" in self._DB.version.lower():
@@ -482,7 +491,9 @@ class Table(object):
                 columns_added.add(column.name)
             elif db_type == SQL_SQLITE:
                 # replace ENUM by VARCHAR:
-                match = re.match("^\s*enum\((.+)\)(.*)$", column.data_type, re.IGNORECASE)
+                match = re.match("^\s*enum\((.+)\)(.*)$",
+                                 column.data_type,
+                                 re.IGNORECASE)
                 if match:
                     max_len = 0
                     for x in match.group(1).split(","):
@@ -495,11 +506,13 @@ class Table(object):
                 if column.is_identifier:
                     if not column.unique:
                         # add surrogate key
-                        str_list.insert(0, "{}_primary INT PRIMARY KEY".format(column.name))
-                        str_list.insert(1, "{} {}".format(column.name, data_type))
+                        str_list.insert(0, ("{}_primary INT PRIMARY KEY"
+                                            .format(column.name)))
+                        str_list.insert(1, ("{} {}"
+                                            .format(column.name, data_type)))
                     else:
-                        str_list.append("{} {} PRIMARY KEY".format(
-                            column.name, data_type))
+                        str_list.append(("{} {} PRIMARY KEY"
+                                         .format(column.name, data_type)))
                 else:
                     str_list.append("{} {}".format(
                         column.name, data_type))
@@ -508,7 +521,8 @@ class Table(object):
             # make SQLite columns case-insensitive by default
             for i, x in enumerate(list(str_list)):
                 field_type = x.split()[1]
-                if "VARCHAR" in field_type.upper() or "TEXT" in field_type.upper():
+                if ("VARCHAR" in field_type.upper() or
+                        "TEXT" in field_type.upper()):
                     str_list[i] = "{} COLLATE NOCASE".format(x)
         S = ",\n\t".join(str_list)
         command_list.insert(0, S)

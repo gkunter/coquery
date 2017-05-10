@@ -203,16 +203,7 @@
        <property name="spacing">
         <number>6</number>
        </property>
-       <property name="leftMargin">
-        <number>6</number>
-       </property>
-       <property name="topMargin">
-        <number>6</number>
-       </property>
-       <property name="rightMargin">
-        <number>6</number>
-       </property>
-       <property name="bottomMargin">
+       <property name="margin">
         <number>6</number>
        </property>
        <item>
@@ -745,46 +736,8 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
-            </property>
-            <property name="shortcut">
-             <string>Alt+B</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_9">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>&amp;Visualizers:</string>
-            </property>
-            <property name="buddy">
-             <cstring>edit_visualizer_path</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="edit_visualizer_path"/>
-          </item>
-          <item row="1" column="2">
-           <widget class="QPushButton" name="button_visualizer_path">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>B&amp;rowse</string>
-            </property>
-            <property name="icon">
-             <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -823,10 +776,74 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff>.</normaloff>.</iconset>
+              <normaloff/>
+             </iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_9">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>&amp;Visualizers:</string>
+            </property>
+            <property name="buddy">
+             <cstring>edit_visualizer_path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="edit_visualizer_path"/>
+          </item>
+          <item row="3" column="2">
+           <widget class="QPushButton" name="button_visualizer_path">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>B&amp;rowse</string>
+            </property>
+            <property name="icon">
+             <iconset theme="folder">
+              <normaloff/>
+             </iconset>
+            </property>
+            <property name="shortcut">
+             <string>Alt+B</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>&amp;Binary data:</string>
+            </property>
+            <property name="buddy">
+             <cstring>edit_binary_path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="edit_binary_path"/>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="button_binary_path">
+            <property name="text">
+             <string>B&amp;rowse</string>
+            </property>
+            <property name="icon">
+             <iconset theme="folder"/>
             </property>
            </widget>
           </item>

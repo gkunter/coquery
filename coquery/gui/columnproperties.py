@@ -142,9 +142,11 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
 
         session = get_toplevel_window().Session
         self.ui.widget_selection.setSelectedList(vis_cols,
-                                                 session.translate_header)
+                                                 session.translate_header,
+                                                 ignore_alias=True)
         self.ui.widget_selection.setAvailableList(hidden_cols,
-                                                  session.translate_header)
+                                                  session.translate_header,
+                                                  ignore_alias=True)
         self.ui.widget_selection.setTrackSelected(True)
         self.ui.widget_selection.setMoveAvailable(False)
         self.ui.widget_selection.setSelectedLabel("Visible columns")
@@ -162,13 +164,20 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         self.ui.table_substitutions.cellChanged.connect(
             self.change_substitution)
         button = self.ui.buttonbox_label.button(QtWidgets.QDialogButtonBox.Reset)
-        button.clicked.connect(lambda: self.ui.edit_column_name.setText(""))
+        button.clicked.connect(self.reset_alias)
         self.ui.button_change_color.clicked.connect(self.set_color)
         self.ui.label_example.clicked.connect(self.set_color)
         button = self.ui.buttonbox_color.button(QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_color)
         button = self.ui.buttonbox_substitution.button(QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_substitution)
+
+    def reset_alias(self):
+        current_item = self.ui.widget_selection.currentItem()
+        val = current_item.data(QtCore.Qt.UserRole)
+        session = get_toplevel_window().Session
+        text = session.translate_header(val, ignore_alias=True)
+        self.ui.edit_column_name.setText(text)
 
     def reset_substitution(self):
         current_item = self.ui.widget_selection.currentItem()
