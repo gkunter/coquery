@@ -34,15 +34,13 @@ class Settings(QtWidgets.QDialog):
             self.ui.edit_cache_path.setEnabled(False)
             self.ui.button_cache_path.setEnabled(False)
 
-        self.ui.button_installer_path.clicked.connect(
-            self.select_installer_path)
-        self.ui.button_visualizer_path.clicked.connect(
-            self.select_visualizer_path)
-        self.ui.button_cache_path.clicked.connect(self.select_cache_path)
-        self.ui.button_clear_cache.clicked.connect(
-            self.cache_button_clicked)
-
-        self.setup_cache_button()
+        for button, slot in (
+                (self.ui.button_installer_path, self.select_installer_path),
+                (self.ui.button_visualizer_path, self.select_visualizer_path),
+                (self.ui.button_binary_path, self.select_binary_path),
+                (self.ui.button_cache_path, self.select_cache_path),
+                (self.ui.button_clear_cache, self.cache_button_clicked)):
+            button.clicked.connect(slot)
 
         self._table_font = self._options.table_font
         self._figure_font = self._options.figure_font
@@ -135,41 +133,39 @@ class Settings(QtWidgets.QDialog):
         label.setFont(new_font)
         label.setText(new_font.family())
 
-    def select_installer_path(self):
+    def get_path(self, prev):
         name = QtWidgets.QFileDialog.getExistingDirectory(
-            directory=self.ui.edit_installer_path.text(),
+            directory=prev,
             options=(QtWidgets.QFileDialog.ReadOnly |
                      QtWidgets.QFileDialog.ShowDirsOnly |
                      QtWidgets.QFileDialog.HideNameFilterDetails))
         if type(name) == tuple:
             name = name[0]
+        return name
+
+    def select_installer_path(self):
+        name = self.get_path(self.ui.edit_installer_path.text())
         if name:
             self._options.custom_installer_path = name
             self.ui.edit_installer_path.setText(name)
 
     def select_visualizer_path(self):
-        name = QtWidgets.QFileDialog.getExistingDirectory(
-            directory=self.ui.edit_visualizer_path.text(),
-            options=(QtWidgets.QFileDialog.ReadOnly |
-                     QtWidgets.QFileDialog.ShowDirsOnly |
-                     QtWidgets.QFileDialog.HideNameFilterDetails))
-        if type(name) == tuple:
-            name = name[0]
+        name = self.get_path(self.ui.edit_visualizer_path.text())
         if name:
             self._options.visualizer_path = name
             self.ui.edit_visualizer_path.setText(name)
 
     def select_cache_path(self):
-        name = QtWidgets.QFileDialog.getExistingDirectory(
-            directory=self.ui.edit_cache_path.text(),
-            options=(QtWidgets.QFileDialog.ReadOnly |
-                     QtWidgets.QFileDialog.ShowDirsOnly |
-                     QtWidgets.QFileDialog.HideNameFilterDetails))
-        if type(name) == tuple:
-            name = name[0]
+        name = self.get_path(self.ui.edit_cache_path.text())
         if name:
             self._options.cache_path = name
             self.ui.edit_cache_path.setText(name)
+
+    def select_binary_path(self):
+        name = self.get_path(self.ui.edit_binary_path.text())
+        if name:
+            self._options.binary_path = name
+            self.ui.edit_binary_path.setText(name)
 
     def set_ui_options(self):
         try:
@@ -232,6 +228,11 @@ class Settings(QtWidgets.QDialog):
         try:
             self.ui.edit_installer_path.setText(
                 self._options.custom_installer_path)
+        except AttributeError:
+            pass
+        try:
+            self.ui.edit_binary_path.setText(
+                self._options.binary_path)
         except AttributeError:
             pass
         try:
@@ -337,6 +338,7 @@ class Settings(QtWidgets.QDialog):
         remove_source_path(self._options.custom_installer_path)
         self._options.custom_installer_path = (
             utf8(self.ui.edit_installer_path.text()))
+        self._options.binary_path = utf8(self.ui.edit_binary_path.text())
         add_source_path(self._options.custom_installer_path)
         self._options.table_font = self._table_font
         self._options.figure_font = self._figure_font
