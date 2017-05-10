@@ -140,6 +140,9 @@ class Manager(CoqObject):
             if fun.get_id() == id:
                 return fun
 
+    def get_functions(self):
+        return self._functions
+
     def set_filters(self, filter_list):
         self._filters = filter_list
 
