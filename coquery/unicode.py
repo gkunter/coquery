@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-""" 
+"""
 unicode.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -21,9 +21,9 @@ if sys.version_info < (3, 0):
         Parameters
         ----------
         s : string or an object
-            either a string or an object that will be coerced to a string 
+            either a string or an object that will be coerced to a string
             by calling its __str__() method.
-            
+
         Returns
         -------
         uni : string
@@ -35,7 +35,7 @@ if sys.version_info < (3, 0):
             # do not attemt a conversion if string is already unicode
             return s
         else:
-            # call __str__() for non-string object, and convert the 
+            # call __str__() for non-string object, and convert the
             # result to unicode if needed:
             s_str = s.__str__()
             if isinstance(s_str, unicode):
@@ -50,9 +50,9 @@ else:
         Parameters
         ----------
         s : string or an object
-            either a string or an object that will be coerced to a string 
+            either a string or an object that will be coerced to a string
             by calling its __str__() method.
-            
+
         Returns
         -------
         uni : string

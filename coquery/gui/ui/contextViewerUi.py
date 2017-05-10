@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'contextViewer.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -69,16 +69,18 @@ class Ui_ContextView(object):
         self.context_area.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
         self.context_area.setObjectName("context_area")
         self.verticalLayout_4.addWidget(self.context_area)
+        self.progress_bar = QtWidgets.QProgressBar(self.tab_context)
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.setProperty("value", -1)
+        self.progress_bar.setObjectName("progress_bar")
+        self.verticalLayout_4.addWidget(self.progress_bar)
         self.tab_widget.addTab(self.tab_context, "")
         self.tab_textgrid = QtWidgets.QWidget()
         self.tab_textgrid.setObjectName("tab_textgrid")
-        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.tab_textgrid)
-        self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_5.setSpacing(0)
-        self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.textgrid_area = CoqTextgridView(self.tab_textgrid)
-        self.textgrid_area.setObjectName("textgrid_area")
-        self.verticalLayout_5.addWidget(self.textgrid_area)
+        self.layout_audio_tab = QtWidgets.QVBoxLayout(self.tab_textgrid)
+        self.layout_audio_tab.setContentsMargins(0, 0, 0, 0)
+        self.layout_audio_tab.setSpacing(0)
+        self.layout_audio_tab.setObjectName("layout_audio_tab")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setSpacing(10)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
@@ -109,12 +111,9 @@ class Ui_ContextView(object):
         self.horizontalLayout_2.addLayout(self.horizontalLayout_4)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
-        self.verticalLayout_5.addLayout(self.horizontalLayout_2)
-        self.verticalLayout_5.setStretch(0, 1)
+        self.layout_audio_tab.addLayout(self.horizontalLayout_2)
         self.tab_widget.addTab(self.tab_textgrid, "")
         self.verticalLayout_3.addWidget(self.tab_widget)
-        self.tab_widget.raise_()
-        self.textgrid_area.raise_()
         self.label_4.setBuddy(self.spin_context_width)
         self.label.setBuddy(self.spin_dynamic_range)
         self.label_2.setBuddy(self.spin_window_length)
@@ -136,5 +135,4 @@ class Ui_ContextView(object):
         self.spin_window_length.setSuffix(_translate("ContextView", " s"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_textgrid), _translate("ContextView", "&Audio"))
 
-from ..textgridview import CoqTextgridView
 

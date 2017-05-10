@@ -13,20 +13,18 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
+import tgt
+
 from coquery import options
 from coquery.unicode import utf8
-from coquery import sound
 from . import classes
-from coquery import textgrids
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
-from .textgridview import CoqTextgridView
+from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.contextViewerUi import Ui_ContextView
 
-if options.use_tgt:
-    import tgt
 
 class ContextView(QtWidgets.QWidget):
-    def __init__(self, corpus, token_id, source_id, token_width, icon=None, parent=None):
+    def __init__(self, corpus, token_id, source_id, token_width,
+                 icon=None, parent=None):
 
         super(ContextView, self).__init__(parent)
 
@@ -39,6 +37,7 @@ class ContextView(QtWidgets.QWidget):
 
         self.ui = Ui_ContextView()
         self.ui.setupUi(self)
+        self.ui.progress_bar.hide()
 
         if icon:
             self.setWindowIcon(icon)
@@ -46,18 +45,20 @@ class ContextView(QtWidgets.QWidget):
         self.ui.slider_context_width.setTracking(True)
 
         # Add clickable header
-        self.ui.button_ids = classes.CoqDetailBox("{} – Token ID {}".format(corpus.resource.name, token_id))
-        self.ui.button_ids.clicked.connect(lambda: options.settings.setValue("contextviewer_details", utf8(not self.ui.button_ids.isExpanded())))
+        self.ui.button_ids = classes.CoqDetailBox(
+            "{} – Token ID {}".format(corpus.resource.name, token_id))
+        self.ui.button_ids.clicked.connect(
+            lambda: options.settings.setValue(
+                "contextviewer_details",
+                utf8(not self.ui.button_ids.isExpanded())))
         self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
-        self.ui.form_information = QtWidgets.QFormLayout(self.ui.button_ids.box)
+        self.ui.form_information = QtWidgets.QFormLayout(
+            self.ui.button_ids.box)
 
         self.audio = None
         if not corpus.resource.audio_features:
             self.ui.tab_widget.removeTab(1)
             self.ui.tab_widget.tabBar().hide()
-
-        self.ui.spin_dynamic_range.valueChanged.connect(self.ui.textgrid_area.change_dynamic_range)
-        self.ui.spin_window_length.valueChanged.connect(self.ui.textgrid_area.change_window_length)
 
         L = self.corpus.get_origin_data(token_id)
         for table, fields in sorted(L):
@@ -66,6 +67,7 @@ class ContextView(QtWidgets.QWidget):
                 if label not in corpus.resource.audio_features:
                     self.add_source_label(label, fields[label])
                 else:
+                    import sound
                     self.audio = sound.Sound(fields[label])
 
 
@@ -87,7 +89,8 @@ class ContextView(QtWidgets.QWidget):
         except TypeError:
             pass
         try:
-            self.ui.slider_context_width(options.settings.value("contextviewer_words"))
+            self.ui.slider_context_width(
+                options.settings.value("contextviewer_words"))
         except TypeError:
             pass
         val = options.settings.value("contextviewer_details") != "False"
@@ -106,7 +109,8 @@ class ContextView(QtWidgets.QWidget):
 
     def closeEvent(self, *args):
         options.settings.setValue("contextviewer_size", self.size())
-        options.settings.setValue("contextviewer_words", self.ui.slider_context_width.value())
+        options.settings.setValue("contextviewer_words",
+                                  self.ui.slider_context_width.value())
 
     def add_source_label(self, name, content=None):
         """
@@ -114,10 +118,12 @@ class ContextView(QtWidgets.QWidget):
         """
         layout_row = self.ui.form_information.count()
         self.ui.source_name = QtWidgets.QLabel(self)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ui.source_name.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.ui.source_name.sizePolicy().hasHeightForWidth())
         self.ui.source_name.setSizePolicy(sizePolicy)
         self.ui.source_name.setAlignment(
             QtCore.Qt.AlignRight |
@@ -127,13 +133,17 @@ class ContextView(QtWidgets.QWidget):
             QtCore.Qt.LinksAccessibleByMouse |
             QtCore.Qt.TextSelectableByKeyboard |
             QtCore.Qt.TextSelectableByMouse)
-        self.ui.form_information.setWidget(layout_row, QtWidgets.QFormLayout.LabelRole, self.ui.source_name)
+        self.ui.form_information.setWidget(layout_row,
+                                           QtWidgets.QFormLayout.LabelRole,
+                                           self.ui.source_name)
         self.ui.source_content = QtWidgets.QLabel(self)
         self.ui.source_content.setWordWrap(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ui.source_content.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.ui.source_content.sizePolicy().hasHeightForWidth())
         self.ui.source_content.setSizePolicy(sizePolicy)
         self.ui.source_content.setAlignment(QtCore.Qt.AlignLeading |
                                             QtCore.Qt.AlignLeft |
@@ -142,7 +152,9 @@ class ContextView(QtWidgets.QWidget):
             QtCore.Qt.LinksAccessibleByMouse |
             QtCore.Qt.TextSelectableByKeyboard |
             QtCore.Qt.TextSelectableByMouse)
-        self.ui.form_information.setWidget(layout_row, QtWidgets.QFormLayout.FieldRole, self.ui.source_content)
+        self.ui.form_information.setWidget(layout_row,
+                                           QtWidgets.QFormLayout.FieldRole,
+                                           self.ui.source_content)
 
         if name:
             if content is None:
@@ -158,12 +170,14 @@ class ContextView(QtWidgets.QWidget):
             if os.path.exists(content) or "://" in content:
                 content = "<a href={0}>{0}</a>".format(content)
                 self.ui.source_content.setOpenExternalLinks(True)
-                self.ui.source_content.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+                self.ui.source_content.setTextInteractionFlags(
+                    QtCore.Qt.TextBrowserInteraction)
             self.ui.source_content.setText(content)
 
     def spin_changed(self):
         self.ui.slider_context_width.blockSignals(True)
-        self.ui.slider_context_width.setValue(self.ui.spin_context_width.value())
+        self.ui.slider_context_width.setValue(
+            self.ui.spin_context_width.value())
         self.get_context()
         self.ui.slider_context_width.blockSignals(False)
         options.settings.setValue("contextviewer_words",
@@ -171,7 +185,8 @@ class ContextView(QtWidgets.QWidget):
 
     def slider_changed(self):
         self.ui.spin_context_width.blockSignals(True)
-        self.ui.spin_context_width.setValue(self.ui.slider_context_width.value())
+        self.ui.spin_context_width.setValue(
+            self.ui.slider_context_width.value())
         self.get_context()
         self.ui.spin_context_width.blockSignals(False)
         options.settings.setValue("contextviewer_words",
@@ -187,12 +202,14 @@ class ContextView(QtWidgets.QWidget):
                                                     parent=self)
             self.context_thread.taskFinished.connect(self.finalize_context)
             self.context_thread.taskException.connect(self.onException)
+            self.ui.progress_bar.show()
             self.context_thread.start()
         else:
             print("rescheduled: ", self.rescheduled)
             if not self.rescheduled:
                 self.rescheduled = True
-                self.context_thread.taskFinished.disconnect(self.finalize_context)
+                self.context_thread.taskFinished.disconnect(
+                    self.finalize_context)
                 self.context_thread.taskFinished.connect(self.get_context)
 
     def retrieve_context(self, next_value):
@@ -209,6 +226,7 @@ class ContextView(QtWidgets.QWidget):
             self.context = context
 
     def onException(self):
+        self.ui.progress_bar.hide()
         QtWidgets.QMessageBox.critical(self,
                                        "Context error – Coquery",
                                        "Error retrieving context")
@@ -248,7 +266,8 @@ class ContextView(QtWidgets.QWidget):
         styles = []
 
         styles.append('line-height: {}px'.format(font.pointSize() * 1.5))
-        styles.append('font: {}px "{}"'.format(font.pointSize(), font.family()))
+        styles.append('font: {}px "{}"'.format(
+            font.pointSize(), font.family()))
         styles.append("font-style: {}".format(style))
         styles.append("font-weight: {}".format(weight))
         styles.append("font-strech: {}".format(stretch))
@@ -263,20 +282,8 @@ class ContextView(QtWidgets.QWidget):
         s = "<div style='{}'>{}</div>".format("; ".join(styles), text)
         self.ui.context_area.setText(s)
 
-        if self.context["audio"]:
-            audio = self.audio.extract_sound(self.context["start_time"],
-                                             self.context["end_time"])
-            textgrid = self.prepare_textgrid(self.context["df"],
-                                             self.context["start_time"])
-            self.ui.verticalLayout_5.removeWidget(self.ui.textgrid_area)
-            self.ui.textgrid_area.clear()
-            del self.ui.textgrid_area
-            self.ui.textgrid_area = CoqTextgridView(self.ui.tab_textgrid)
-            self.ui.verticalLayout_5.insertWidget(0, self.ui.textgrid_area)
-            self.ui.verticalLayout_5.setStretch(0, 1)
-            self.ui.textgrid_area.setSound(audio)
-            self.ui.textgrid_area.setTextgrid(textgrid)
-            self.ui.textgrid_area.display(offset=self.context["start_time"])
+        self.ui.progress_bar.hide()
+
 
     def prepare_textgrid(self, df, offset):
         grid = tgt.TextGrid()
@@ -295,3 +302,41 @@ class ContextView(QtWidgets.QWidget):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
+
+
+class ContextViewAudio(ContextView):
+    def __init__(self, corpus, token_id, source_id, token_width,
+                 icon=None, parent=None):
+        super(ContextViewAudio, self).__init__(corpus, token_id, source_id,
+                                               token_width, icon=None,
+                                               parent=None)
+
+        self.ui.spin_dynamic_range.valueChanged.connect(
+            self.ui.textgrid_area.change_dynamic_range)
+        self.ui.spin_window_length.valueChanged.connect(
+            self.ui.textgrid_area.change_window_length)
+
+        self.add_textgrid_area()
+
+    def add_textgrid_area(self):
+        from .textgridview import CoqTextgridView
+        del self.ui.textgrid_area
+        self.ui.textgrid_area = CoqTextgridView(self.ui.tab_textgrid)
+        self.ui.verticalLayout_5.insertWidget(0, self.ui.textgrid_area)
+        self.ui.verticalLayout_5.setStretch(0, 1)
+
+    def finalize_context(self):
+        super(ContextViewAudio, self).finalize_context()
+        self.ui.progress_bar.show()
+        audio = self.audio.extract_sound(self.context["start_time"],
+                                            self.context["end_time"])
+        textgrid = self.prepare_textgrid(self.context["df"],
+                                            self.context["start_time"])
+        self.ui.verticalLayout_5.removeWidget(self.ui.textgrid_area)
+        self.ui.textgrid_area.clear()
+        self.add_textgrid_area()
+        self.ui.textgrid_area.setSound(audio)
+        self.ui.textgrid_area.setTextgrid(textgrid)
+        self.ui.textgrid_area.display(offset=self.context["start_time"])
+
+        self.ui.progress_bar.hide()

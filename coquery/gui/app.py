@@ -1233,10 +1233,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         origin_id = self.Session.Resource.get_origin_id(token_id)
 
-        from . import contextviewer
-        viewer = contextviewer.ContextView(
-            self.Session.Corpus, int(token_id), int(origin_id), int(token_width),
-            icon=options.cfg.icon)
+        if self.Session.Resource.audio_features:
+            from .contextviewer import ContextViewAudio as ContextView
+        else:
+            from .contextviewer import ContextView
+
+        viewer = ContextView(self.Session.Corpus, int(token_id),
+                             int(origin_id), int(token_width),
+                             icon=options.cfg.icon)
         viewer.show()
         self.widget_list.append(viewer)
 

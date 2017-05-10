@@ -135,6 +135,11 @@ class Function(CoqObject):
             self.aggr = self.default_aggr
         self.select = combine_map[self.aggr]
 
+    def __repr__(self):
+        return "{}(columns=[{}], value={}, group={}".format(
+            self._name, ", ".format(self.columns),
+            self.value, self.group.name)
+
     @classmethod
     def get_name(cls):
         if cls._name in COLUMN_NAMES:
@@ -1129,10 +1134,12 @@ class SubcorpusSize(CorpusSize):
         fun = SubcorpusSize(session=session,
                             columns=self.columns, group=self.group)
         if self.find_function(df, fun):
-            print(self._name, "using df.SubcorpusSize()")
+            if options.cfg.verbose:
+                print(self._name, "using {}".format(self))
             return df[fun.get_id()]
         else:
-            print(self._name, "calculating df.SubcorpusSize()")
+            if options.cfg.verbose:
+                print(self._name, "calculating {}".format(self))
 
         corpus_features = [x for x, _
                            in session.Resource.get_corpus_features()]
@@ -1260,9 +1267,11 @@ class ContextKWIC(ContextColumns):
 
     def _func(self, row, session, connection):
         row = super(ContextKWIC, self)._func(row, session, connection)
-        return pd.Series(
-            data=[collapse_words(row[self.left_cols]), collapse_words(row[self.right_cols])],
+        val = pd.Series(
+            data=[collapse_words(row[self.left_cols]),
+                  collapse_words(row[self.right_cols])],
             index=[["coq_context_left", "coq_context_right"]])
+        return val
 
 
 class ContextString(ContextColumns):
