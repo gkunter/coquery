@@ -21,8 +21,7 @@ import numpy as np
 import sqlalchemy
 import operator
 
-from . import options
-from . import sqlhelper
+from . import options, sqlhelper, NAME
 from .defines import *
 from .general import CoqObject, collapse_words, get_visible_columns
 from .gui.pyqt_compat import get_toplevel_window
@@ -806,6 +805,19 @@ import hashlib
 class BaseReferenceCorpus(Function):
     _name = "virtual"
 
+    def _get_current_corpus(self):
+        ref_corpus = options.cfg.reference_corpus.get(
+                         options.cfg.current_server, None)
+        res = options.cfg.current_resources[ref_corpus]
+        ResourceClass, CorpusClass, LexiconClass, _ = res
+        self._current_lexicon = LexiconClass()
+        self._current_corpus = CorpusClass()
+        self._current_resource = ResourceClass(self._current_lexicon,
+                                              self._current_corpus)
+        self._current_corpus.resource = self._current_resource
+        self._current_corpus.lexicon = self._current_lexicon
+        self._current_lexicon.resource = self._current_resource
+
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
     _name = "statistics_reference_corpus_frequency"
@@ -821,15 +833,7 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         if not ref_corpus or ref_corpus not in options.cfg.current_resources:
             return self.constant(df, None)
 
-        res = options.cfg.current_resources[ref_corpus]
-        ResourceClass, CorpusClass, LexiconClass, _ = res
-        self._current_lexicon = LexiconClass()
-        self._current_corpus = CorpusClass()
-        self._current_resource = ResourceClass(self._current_lexicon,
-                                              self._current_corpus)
-        self._current_corpus.resource = self._current_resource
-        self._current_corpus.lexicon = self._current_lexicon
-        self._current_lexicon.resource = self._current_resource
+        self._get_current_corpus()
 
         engine = sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server,
@@ -857,7 +861,7 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
         val = super(ReferenceCorpusFrequencyPMW, self).evaluate(df, *args, **kwargs)
         ref_corpus = options.cfg.reference_corpus.get(
                             options.cfg.current_server, None)
-        if not ref_corpus or ref_corpus not in options.cfg.current_resource:
+        if not ref_corpus or ref_corpus not in options.cfg.current_resources:
             return self.constant(df, None)
 
         if len(val) > 0:
@@ -912,11 +916,22 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
             ext_size = self._current_corpus.get_corpus_size()
 
         _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq})
-
+        if len(word_columns) > 1:
+            logger.warning("LL calculation for more than one column is experimental!")
         val = _df.apply(lambda x: self._func(x, size=size, ext_size=ext_size,
                                              width=len(word_columns)),
                         axis="columns")
         return val
+
+
+class ReferenceCorpusSize(BaseReferenceCorpus):
+    _name = "reference_corpus_size"
+
+    def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+        self._get_current_corpus()
+        ext_size = self._current_corpus.get_corpus_size()
+        return self.constant(df, ext_size)
 
 
 class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
@@ -1327,3 +1342,5 @@ class ContextString(ContextColumns):
         #print(val)
         #val.index = df.index
         #return val
+
+logger = logging.getLogger(NAME)
