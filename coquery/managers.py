@@ -861,9 +861,6 @@ class Collocations(Manager):
         # context, the program should alert the user somehow.
         return [ContextColumns()]
 
-    def filter(self, df, session):
-        return df
-
     def summarize(self, df, session):
         """
         This returns a completely different data frame than the argument.
