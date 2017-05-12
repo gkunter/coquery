@@ -121,8 +121,6 @@ class Function(CoqObject):
         """
         if columns is None:
             columns = []
-        if group is None:
-            group = []
         super(Function, self).__init__()
         self.columns = columns
         self.alias = alias
@@ -138,7 +136,7 @@ class Function(CoqObject):
     def __repr__(self):
         return "{}(columns=[{}], value={}, group={}".format(
             self._name, ", ".format(self.columns),
-            self.value, self.group.name)
+            self.value, self.group)
 
     @classmethod
     def get_name(cls):
