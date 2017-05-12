@@ -91,7 +91,7 @@ class Ui_MainWindow(object):
         self.list_toolbox.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.list_toolbox.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.list_toolbox.setShowGrid(False)
-        self.list_toolbox.setRowCount(5)
+        self.list_toolbox.setRowCount(6)
         self.list_toolbox.setColumnCount(3)
         self.list_toolbox.setObjectName("list_toolbox")
         item = QtWidgets.QTableWidgetItem()
@@ -124,6 +124,8 @@ class Ui_MainWindow(object):
         self.list_toolbox.setItem(4, 1, item)
         item = QtWidgets.QTableWidgetItem()
         self.list_toolbox.setItem(4, 2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.list_toolbox.setItem(5, 0, item)
         self.list_toolbox.horizontalHeader().setVisible(False)
         self.list_toolbox.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.list_toolbox)
@@ -233,6 +235,15 @@ class Ui_MainWindow(object):
         self.tree_groups.headerItem().setText(0, "1")
         self.verticalLayout_6.addWidget(self.tree_groups)
         self.tool_widget.addWidget(self.tool_widget_page_groups)
+        self.tool_widget_page_columns = QtWidgets.QWidget()
+        self.tool_widget_page_columns.setObjectName("tool_widget_page_columns")
+        self.verticalLayout_9 = QtWidgets.QVBoxLayout(self.tool_widget_page_columns)
+        self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_9.setObjectName("verticalLayout_9")
+        self.widget = CoqGroupColumns(self.tool_widget_page_columns)
+        self.widget.setObjectName("widget")
+        self.verticalLayout_9.addWidget(self.widget)
+        self.tool_widget.addWidget(self.tool_widget_page_columns)
         self.tool_widget_page_transform = QtWidgets.QWidget()
         self.tool_widget_page_transform.setObjectName("tool_widget_page_transform")
         self.verticalLayout_10 = QtWidgets.QVBoxLayout(self.tool_widget_page_transform)
@@ -733,7 +744,7 @@ class Ui_MainWindow(object):
         self.label_2.setBuddy(self.combo_corpus)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(2)
+        self.tool_widget.setCurrentIndex(3)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -747,14 +758,16 @@ class Ui_MainWindow(object):
         __sortingEnabled = self.list_toolbox.isSortingEnabled()
         self.list_toolbox.setSortingEnabled(False)
         item = self.list_toolbox.item(0, 0)
-        item.setText(_translate("MainWindow", "Add context"))
+        item.setText(_translate("MainWindow", "Context/KWIC"))
         item = self.list_toolbox.item(1, 0)
         item.setText(_translate("MainWindow", "Filter stop words"))
         item = self.list_toolbox.item(2, 0)
         item.setText(_translate("MainWindow", "Data groups"))
         item = self.list_toolbox.item(3, 0)
-        item.setText(_translate("MainWindow", "Transform"))
+        item.setText(_translate("MainWindow", "Column order"))
         item = self.list_toolbox.item(4, 0)
+        item.setText(_translate("MainWindow", "Transform"))
+        item = self.list_toolbox.item(5, 0)
         item.setText(_translate("MainWindow", "Finalize"))
         self.list_toolbox.setSortingEnabled(__sortingEnabled)
         self.radio_context_mode_none.setText(_translate("MainWindow", "No context"))
@@ -892,6 +905,7 @@ class Ui_MainWindow(object):
 
 from ..classes import CoqClickableLabel, CoqRotatedButton, CoqTextEdit
 from ..findwidget import CoqFindWidget
+from ..groupcolumns import CoqGroupColumns
 from ..grouptree import CoqGroupTree
 from ..resultstable import CoqHiddenResultsTable, CoqResultsTableView
 

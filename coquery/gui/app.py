@@ -520,7 +520,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_run_query.clicked.connect(self.run_query)
         self.ui.button_stop_query.clicked.connect(self.stop_query)
 
-        self.ui.list_toolbox.currentCellChanged.connect(lambda x, _1, _2, _3: self.change_toolbox(x))
+        self.ui.list_toolbox.currentCellChanged.connect(
+            lambda x, _, _, _: self.change_toolbox(x))
 
         self.ui.button_apply_management.clicked.connect(
             lambda: self.reaggregate(start=True))
