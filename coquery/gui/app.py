@@ -512,7 +512,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.find_prev.activated.connect(self.ui.widget_find.go_to_prev)
 
         if sys.platform != "darwin":
-            self.new_query = QtWidgets.QShortcut(QtGui.QKeySequence("Alt+N"), self)
+            self.new_query = QtWidgets.QShortcut(
+                QtGui.QKeySequence("Alt+N"), self)
             self.new_query.activated.connect(self.run_query)
 
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
@@ -521,7 +522,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_stop_query.clicked.connect(self.stop_query)
 
         self.ui.list_toolbox.currentCellChanged.connect(
-            lambda x, _, _, _: self.change_toolbox(x))
+            lambda x, _1, _2, _3: self.change_toolbox(x))
 
         self.ui.button_apply_management.clicked.connect(
             lambda: self.reaggregate(start=True))
@@ -532,13 +533,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.edit_summary_function)
 
         # connect widgets that enable the Apply button:
-        self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_none.toggled.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_kwic.toggled.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_string.toggled.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_columns.toggled.connect(self.enable_apply_button)
-        self.ui.context_left_span.valueChanged.connect(self.enable_apply_button)
-        self.ui.context_right_span.valueChanged.connect(self.enable_apply_button)
+        for signal in (self.ui.check_restrict.stateChanged,
+                       self.ui.radio_context_mode_none.toggled,
+                       self.ui.radio_context_mode_kwic.toggled,
+                       self.ui.radio_context_mode_string.toggled,
+                       self.ui.radio_context_mode_columns.toggled,
+                       self.ui.context_left_span.valueChanged,
+                       self.ui.context_right_span.valueChanged,
+                       self.ui.tree_groups.groupAdded,
+                       self.ui.tree_groups.groupRemoved,
+                       self.ui.tree_groups.groupModified,
+                       self.ui.list_column_order.listOrderChanged):
+            signal.connect(self.enable_apply_button)
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         self.ui.button_filters.clicked.connect(self.manage_filters)
@@ -560,10 +566,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.useContextConnection.connect(self.add_context_connection)
         self.closeContextConnection.connect(self.close_context_connection)
-
-        self.ui.tree_groups.groupAdded.connect(self.enable_apply_button)
-        self.ui.tree_groups.groupRemoved.connect(self.enable_apply_button)
-        self.ui.tree_groups.groupModified.connect(self.enable_apply_button)
 
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
@@ -845,7 +847,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         filter_icon = "Filter"
         error_icon = "Error"
         problem_icon = "Attention"
-
         try:
             manager = self.Session.get_manager()
         except:
@@ -858,7 +859,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if not self.ui.data_preview.isEnabled():
             active_icon = "Inactive State"
 
-        if row == TOOLBOX_CONTEXT:
+        if row == TOOLBOX_ORDER:
+            _set_icon(1, None)
+            _set_icon(2, None)
+
+        elif row == TOOLBOX_CONTEXT:
             radio = self.active_context_radio()
             if radio == self.ui.radio_context_mode_none:
                 # no context mode
@@ -1278,6 +1283,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for hidden in self.hidden_features:
             manager.hide_column(hidden)
 
+        column_order = self.ui.list_column_order.items()
+        columns = ([x for _, x in column_order] +
+                    [x for x in self.Session.data_table.columns
+                    if x.startswith("coquery_")])
+        manager.set_column_order(columns)
+
         if start:
             self.Session.start_timer()
         self.showMessage("Managing data...")
@@ -1291,7 +1302,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.start_progress_indicator()
         self.reaggregating = True
 
-        print("reaggregate")
+        if options.cfg.verbose:
+            print("reaggregate")
         self.terminating = False
         self.aggr_thread.start()
 
@@ -1314,7 +1326,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)
 
-        print("reaggregation: done")
+        if options.cfg.verbose:
+            print("reaggregation: done")
         if options.cfg.stopword_list and manager.stopwords_failed:
             rc_feature = getattr(self.Session.Resource,
                                  getattr(self.Session.Resource,
@@ -1458,18 +1471,22 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         print("resize: start")
         self.resize_thread.start()
 
-    def update_table_models(self):
-        manager = self.Session.get_manager()
-        for x in list(manager.hidden_columns):
-            if x not in self.Session.output_object.columns:
-                manager.hidden_columns.remove(x)
-        hidden_cols = pd.Index(manager.hidden_columns)
+    def update_table_models(self, visible=None, hidden=None):
+        if visible is None and hidden is None:
+            manager = self.Session.get_manager()
+            for x in list(manager.hidden_columns):
+                if x not in self.Session.output_object.columns:
+                    manager.hidden_columns.remove(x)
+            hidden_cols = pd.Index(manager.hidden_columns)
 
-        vis_cols = [x for x in self.Session.output_object.columns
-                    if not x in hidden_cols]
+            vis_cols = [x for x in self.Session.output_object.columns
+                        if not x in hidden_cols]
 
-        to_show = self.Session.output_object[vis_cols]
-        to_hide = self.Session.output_object[hidden_cols]
+            to_show = self.Session.output_object[vis_cols]
+            to_hide = self.Session.output_object[hidden_cols]
+        else:
+            to_show = visible
+            to_hide = hidden
 
         self.table_model = classes.CoqTableModel(
             to_show, session=self.Session)
@@ -1544,20 +1561,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                             self.ui.data_preview.currentIndex().column())
         self.ui.data_preview.setModel(self.table_model)
         self.ui.data_preview.horizontalHeader().reset()
-        if self._last_aggregate != options.cfg.MODE:
-            print("------- resetting --------")
-            header = self.ui.data_preview.horizontalHeader()
-            for i in range(header.count()):
-                print(i, header.logicalIndex(i), header.visualIndex(i))
-            while any([header.logicalIndex(i) != i for
-                       i in range(header.count())]):
-                print(any([header.logicalIndex(i) != i for
-                       i in range(header.count())]))
-                for i in range(header.count()):
-                    if header.logicalIndex(i) != i:
-                        header.moveSection(i, header.logicalIndex(i))
-            for i in range(header.count()):
-                print(i, header.logicalIndex(i), header.visualIndex(i))
         self._last_aggregate = options.cfg.MODE
 
         self.ui.data_preview.setDelegates()
@@ -1799,6 +1802,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.statusBar().layout().setStretchFactor(self.ui.status_message, 1)
 
     def finalize_query(self, to_file=False):
+        items = [(self.new_session.translate_header(x), x) for x in
+                    self.new_session.data_table.columns
+                    if not x.startswith("coquery_")]
+        self.ui.list_column_order.setItems(items)
+
         self.query_thread = None
         if to_file:
             self.showMessage("Query results written to {}.".format(options.cfg.output_path))

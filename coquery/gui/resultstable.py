@@ -273,7 +273,6 @@ class CoqResultsTableView(classes.CoqTableView):
         self.setVerticalHeader(v_header)
 
         h_header = classes.CoqHorizontalHeader(QtCore.Qt.Horizontal)
-        h_header.setSectionsMovable(True)
         h_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.setHorizontalHeader(h_header)
 

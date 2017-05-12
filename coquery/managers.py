@@ -155,6 +155,9 @@ class Manager(CoqObject):
     def get_column_substitutions(self, d):
         return self._subst
 
+    def set_column_order(self, l):
+        self._column_order = l
+
     def _get_main_functions(self, df, session):
         """
         Returns a list of functions that are provided by this manager.
@@ -521,17 +524,7 @@ class Manager(CoqObject):
 
         resource = session.Resource
 
-        l = []
-        for x in resource.get_preferred_output_order():
-            l += resource.format_resource_feature(
-                    x, session.get_max_token_count())
-        columns = []
-        for x in l:
-            if x in df.columns:
-                columns.append(x)
-        for x in df.columns:
-            if x not in columns:
-                columns.append(x)
+        columns = list(df.columns)
 
         # align context columns around word columns:
         first_word_pos = -1
@@ -643,6 +636,7 @@ class Manager(CoqObject):
             print("process()")
 
         df = df.reset_index(drop=True)
+        df = df[self._column_order]
 
         # Get index of rows that are retained if duplicates are removed from
         # the data frame after sorting it by the number of query tokens that
