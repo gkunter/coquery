@@ -547,6 +547,7 @@ class SQLResource(BaseResource):
         self.lexicon = lexicon
         self.corpus = corpus
         self.db_type = options.get_configuration_type()
+        self.attach_list = []
 
         # FIXME: in order to make this not depend on a fixed database layout
         # (here: 'source' and 'file' tables), we should check for any table

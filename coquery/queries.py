@@ -145,10 +145,13 @@ class TokenQuery(object):
 
                     # SQLite: attach external databases
                     if self.Resource.db_type == SQL_SQLITE:
-                        attach_list = self.Resource.get_attach_list(options.cfg.selected_features)
+                        attach_list = self.Resource.get_attach_list(
+                            options.cfg.selected_features)
                         for db_name in attach_list:
-                            path = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
-                            S = "ATTACH DATABASE '{}' AS {}".format(path, db_name)
+                            path = os.path.join(options.cfg.database_path,
+                                                "{}.db".format(db_name))
+                            S = "ATTACH DATABASE '{}' AS {}".format(
+                                path, db_name)
                             try:
                                 connection.execute(S)
                             except Exception:
