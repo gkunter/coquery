@@ -12,6 +12,7 @@ setup_module("options")
 
 from coquery.corpus import LexiconClass, BaseResource
 from coquery import tokens
+from coquery import defines
 
 class TestLexicon(LexiconClass):
     def is_part_of_speech(self, pos):
@@ -136,15 +137,9 @@ class TestTokensModuleMethods(unittest.TestCase):
         L = ['"this is a query',
              '/this is a query',
              '[this is a query',
-             'th/is/ is a query',
              '/th/is is a query',
-             't/hi/s is a query',
-             'th"is" is a query',
-             '"th"is is a query',
-             't"hi"s is a query',
-             'th[is] is a query',
              '[th]is is a query',
-             't[hi]s is a query',
+             '"th"is is a query',
              '[[this]] is a query',
              '//this// is a query',
              '""this"" is a query',
@@ -159,10 +154,26 @@ class TestTokensModuleMethods(unittest.TestCase):
 
         for x in L:
             try:
-                self.assertRaises(tokens.TokenParseError, tokens.parse_query_string, x, tokens.COCAToken)
+                self.assertRaises(tokens.TokenParseError,
+                                  tokens.parse_query_string,
+                                  x, tokens.COCAToken)
             except AssertionError as e:
-                print(x)
                 raise e
+
+    def test_word_internal_slashes(self):
+        for S in ["th/is/", "t/hi/s", "th/is/"]:
+            self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken),
+                         [S])
+
+    def test_word_internal_brackets(self):
+        for S in ["th[is]", "t[hi]s", "th[is]"]:
+            self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken),
+                         [S])
+
+    def test_word_internal_quotes(self):
+        for S in ['th"is"', 't"hi"s', 'th"is"']:
+            self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken),
+                         [S])
 
     def test_parse_query_string_quantifiers(self):
         S = '[this]{1,3} *.[v*]{2} a query'
@@ -192,6 +203,12 @@ class TestTokensModuleMethods(unittest.TestCase):
     def test_parse_lemmatized_transcript(self):
         S = "#/'bɐlɐl/"
         L = [u"#/'bɐlɐl/"]
+        result = tokens.parse_query_string(S, tokens.COCAToken)
+        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+    def test_potentially_malformed_query(self):
+        S = "ABC/"
+        L = ["ABC/"]
         result = tokens.parse_query_string(S, tokens.COCAToken)
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 

@@ -1671,7 +1671,7 @@ class CorpusClass(object):
         self._corpus_range_cache[cache_key] = val
         return self._corpus_range_cache[cache_key]
 
-    def get_frequency(self, s, engine):
+    def get_frequency(self, s, literal=False, engine=False):
         """
         Return the frequency for a token specified by s.
 
@@ -1687,6 +1687,9 @@ class CorpusClass(object):
         ----------
         s : str
             A query item specification
+        literal : bool
+            True if the string should be parsed as a query token, or False
+            if it should be looked up as it is. Default is False.
         engine : An SQLAlchemy engine
             If provided, use this SQL engine. Otherwise, initialize a new
             engine, and use that.

@@ -926,7 +926,8 @@ class Collocations(Manager):
         collocates["coq_collocate_frequency"] = collocates[["coq_collocate_frequency_left", "coq_collocate_frequency_right"]].sum(axis=1)
         # calculate total frequency of collocate
         collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(
-            session.Resource.corpus.get_frequency, engine=session.db_engine)
+            session.Resource.corpus.get_frequency, engine=session.db_engine,
+            literal=True)
         # calculate conditional probabilities:
         func = ConditionalProbability()
         collocates["coq_conditional_probability"] = func.evaluate(

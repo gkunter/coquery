@@ -308,21 +308,7 @@ def parse_query_string(S, token_type):
     def add(S, ch):
         return "{}{}".format(S, ch)
 
-    ST_NORMAL = "NORMAL"
-    ST_IN_BRACKET = "BRACKET"
-    ST_IN_TRANSCRIPT = "TRANS"
-    ST_IN_QUOTE = "QUOTE"
-    ST_IN_QUANTIFICATION = "QUANT"
-    ST_POS_SEPARATOR = "POS"
 
-    tokens = []
-    state = ST_NORMAL
-    current_word = ""
-    negated = False
-
-    escaping = False
-    token_closed = False
-    comma_added = False
     try:
         S = S.decode("utf-8")
     except UnicodeEncodeError:
@@ -332,7 +318,26 @@ def parse_query_string(S, token_type):
         # using Python 3.x
         pass
 
+    ST_NORMAL = "NORMAL"
+    ST_IN_BRACKET = "BRACKET"
+    ST_IN_TRANSCRIPT = "TRANS"
+    ST_IN_QUOTE = "QUOTE"
+    ST_IN_QUANTIFICATION = "QUANT"
+    ST_POS_SEPARATOR = "POS"
+
+    tokens = []
+    current_word = ""
+    negated = False
+
+    escaping = False
+    token_closed = False
+    comma_added = False
+
+    state = ST_NORMAL
+
+    # main loop
     for char_pos, current_char in enumerate(S):
+
         # this string is used to mark the position of syntax errors
         pos_string = ("." * (char_pos) +
                       "↥" +
@@ -348,6 +353,12 @@ def parse_query_string(S, token_type):
 
         # Normal word state:
         if state == ST_NORMAL:
+            # the stripped word is the current word excluding negations and
+            # lemmatization characters
+            stripped_word = bool(
+                current_word.strip("".join([token_type.negation_flag,
+                                            token_type.lemmatize_flag])))
+
             # Check for whitespace:
             if current_char == " ":
                 if current_word:
@@ -378,44 +389,29 @@ def parse_query_string(S, token_type):
                 continue
 
             # check for opening characters:
-            if current_char in set([token_type.transcript_open, token_type.bracket_open, token_type.quantification_open, token_type.quote_open]):
-                if current_word.strip("".join([token_type.negation_flag, token_type.lemmatize_flag])):
-                    # raise an exception if an opening bracket occurs within
-                    # a word, but not after a full stop (i.e. if it does not
-                    # open a POS specification):
-                    if current_char == token_type.bracket_open:
-                        if len(current_word) < 2 or current_word[-1] != ".":
-                            raise TokenParseError(
-                                msg_unexpected_bracket.format(
-                                    S, pos_string, current_char))
+            if current_char in set([token_type.transcript_open,
+                                    token_type.bracket_open,
+                                    token_type.quote_open]):
 
-                    # any character other than an opening quantification is
-                    # forbidden if the current word is not empty
-                    elif current_char != token_type.quantification_open:
-                        raise TokenParseError(
-                            msg_unexpected_quantifier.format(
-                                S, pos_string,
-                                token_type.quantification_open,
-                                current_char))
+                if not stripped_word:
+                    # set new state:
+                    if current_char == token_type.transcript_open:
+                        state = ST_IN_TRANSCRIPT
+                    elif current_char == token_type.bracket_open:
+                        state = ST_IN_BRACKET
+                    elif current_char == token_type.quote_open:
+                        state = ST_IN_QUOTE
+
+            if current_char == token_type.quantification_open:
+                if stripped_word:
+                    state = ST_IN_QUANTIFICATION
+                    comma_added = False
                 else:
-                    # quantifications are only allowed if they follow a
-                    # query item:
                     if current_char == token_type.quantification_open:
                         raise TokenParseError(
                             msg_unexpected_quantifier_start.format(
                                 S, pos_string,
                                 token_type.quantification_open))
-
-                # set new state:
-                if current_char == token_type.transcript_open:
-                    state = ST_IN_TRANSCRIPT
-                elif current_char == token_type.bracket_open:
-                    state = ST_IN_BRACKET
-                elif current_char == token_type.quote_open:
-                    state = ST_IN_QUOTE
-                elif current_char == token_type.quantification_open:
-                    state = ST_IN_QUANTIFICATION
-                    comma_added = False
 
             current_char = current_char.strip()
 

@@ -1227,7 +1227,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if self.Session.Resource.audio_features:
             from .contextviewer import ContextViewAudio as Viewer
         else:
-            from .contextviewer import Viewer
+            from .contextviewer import ContextView as Viewer
 
         viewer = Viewer(self.Session.Corpus, int(token_id),
                              int(origin_id), int(token_width),
