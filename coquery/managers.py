@@ -661,6 +661,8 @@ class Manager(CoqObject):
             # ids.
             df = df.loc[ix.sort_values()]
 
+        df = df.reset_index(drop=True)
+
         self.drop_on_na = None
 
         if options.cfg.stopword_list:

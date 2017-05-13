@@ -1209,9 +1209,11 @@ class SentenceId(Function):
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
-        val = session.Resource.get_sentence_ids(df["coquery_invisible_corpus_id"])
-        assert len(val) == len(df)
-        return val
+        _df = pd.merge(df,
+                        session.Resource.get_sentence_ids(
+                       df["coquery_invisible_corpus_id"]),
+                       how="left", on="coquery_invisible_corpus_id")
+        return _df["coquery_invisible_sentence_id"]
 
 
 class ContextColumns(Function):

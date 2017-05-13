@@ -1270,7 +1270,6 @@ class SQLResource(BaseResource):
         # Get words in left context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 start, token_id - 1, origin_id, sentence_id)
-
         results = db_connection.execute(S)
         if not hasattr(self, "corpus_word_id"):
             left_context_words = [x for (x, ) in results]
@@ -1318,8 +1317,12 @@ class SQLResource(BaseResource):
         else:
             return [None] * len(id_list)
 
+        if id_list.isnull().all():
+            return pd.DataFrame(id_list)
+
         S = """
-        SELECT {sentence}, {token_id}
+        SELECT {sentence} AS coquery_invisible_sentence_id,
+               {token_id} AS coquery_invisible_corpus_id
         FROM {corpus}
         WHERE {token_id} IN ({id_list})""".format(
             corpus=self.corpus_table,
@@ -1327,18 +1330,12 @@ class SQLResource(BaseResource):
             sentence=sentence,
             id_list=", ".join([str(x) for x in id_list]))
 
+
         engine = self.get_engine()
         df = pd.read_sql(S, engine)
         engine.dispose()
-        try:
-            df = df.sort_values(by=[self.corpus_id])
-            id_list = id_list.sort_values()
-        except AttributeError:
-            df = df.sort(columns=[self.corpus_id])
-            id_list = id_list.sort(inplace=False)
-        df.index = id_list.index
 
-        return df[sentence]
+        return df
 
     def get_origin_id(self, token_id):
         if not options.cfg.token_origin_id:
