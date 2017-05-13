@@ -18,11 +18,14 @@ class TestQueries(unittest.TestCase):
         options.cfg.MODE = QUERY_MODE_TOKENS
         options.cfg.current_server = "MockConnection"
         options.cfg.align_quantified = True
+        options.cfg.selected_features = ["word_label"]
 
         self.session = Session()
         self.df = pd.DataFrame(
             {"coq_word_label_1": list("aaaaaabbbb"),
-            "coquery_invisible_corpus_id": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]})
+             "coq_word_label_2": list("aaaaaabbbb"),
+             "coq_word_label_3": list("aaaaaabbbb"),
+             "coquery_invisible_corpus_id": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]})
 
     def test_max_tokens_1(self):
         query = TokenQuery("item1 item2 item3", self.session)
@@ -57,7 +60,8 @@ class TestQueries(unittest.TestCase):
         df = query.insert_static_data(self.df)
         self.assertListEqual(
             df.columns.tolist(),
-            ["coq_word_label_1", "coquery_invisible_corpus_id",
+            ["coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
+             "coquery_invisible_corpus_id",
              "coquery_dummy",
              "coquery_invisible_query_id"])
         self.assertListEqual(
@@ -74,91 +78,45 @@ class TestQueries(unittest.TestCase):
         df = query.insert_static_data(self.df)
         self.assertListEqual(
             df.columns.tolist(),
-            ["coq_word_label_1", "coquery_invisible_corpus_id",
+            ["coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
+             "coquery_invisible_corpus_id",
              "coquery_dummy",
              "coquery_invisible_query_id"])
 
     def test_insert_static_data_3(self):
-        self.session = Session()
         query_string = "item1 item2 item3"
         query = TokenQuery(query_string, self.session)
         query._query_id = 999
 
-        self.session.output_order = [
-            "coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
-            "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens",
-            "coquery_query_string"]
+        options.cfg.selected_features = ["word_label", "coquery_query_string"]
 
         df = query.insert_static_data(self.df)
         self.assertListEqual(
             sorted(df.columns.tolist()),
-            sorted(["coq_word_label_1", "coquery_invisible_corpus_id",
-             "coquery_dummy", "coquery_invisible_query_id",
-             "coquery_query_string"]))
+            sorted(["coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
+                    "coquery_invisible_corpus_id",
+                    "coquery_dummy", "coquery_invisible_query_id",
+                    "coquery_query_string"]))
 
         self.assertListEqual(
             df.coquery_query_string.tolist(),
             [query_string] * len(df))
 
     def test_insert_static_data_4(self):
-        self.session = Session()
         query_string = "item1 item2 item3"
         query = TokenQuery(query_string, self.session)
         query._query_id = 999
 
-        self.session.output_order = [
-            "coquery_query_token_1", "coquery_query_token_2", "coquery_query_token_3",
-            "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens",
-            ]
-
-        df = pd.DataFrame(
-            {"coquery_invisible_corpus_id": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]})
-
-
-        df = query.insert_static_data(df)
-        self.assertListEqual(
-            sorted(df.columns.tolist()),
-            sorted(["coquery_invisible_corpus_id",
-             "coquery_dummy", "coquery_invisible_query_id",
-             "coquery_query_token_1", "coquery_query_token_2", "coquery_query_token_3"]))
-
-        self.assertListEqual(
-            df.coquery_query_token_1.tolist(), ["item1"] * len(df))
-
-        self.assertListEqual(
-            df.coquery_query_token_2.tolist(), ["item2"] * len(df))
-
-        self.assertListEqual(
-            df.coquery_query_token_3.tolist(), ["item3"] * len(df))
-
-    def test_insert_static_data_5(self):
-        self.session = Session()
-        query_string = "item1 item2 item3"
-        query = TokenQuery(query_string, self.session)
-        query._query_id = 999
-
-
-        self.df = pd.DataFrame(
-            {"coq_word_label_1": list("aaaaaabbbb"),
-             "coq_word_label_2": list("aaaaaabbbb"),
-             "coq_word_label_3": list("aaaaaabbbb"),
-             "coquery_invisible_corpus_id": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]})
-
-
-
-        self.session.output_order = [
-            "coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
-            "coquery_query_token_1", "coquery_query_token_2", "coquery_query_token_3",
-            "coquery_invisible_corpus_id", "coquery_invisible_number_of_tokens",
-            ]
+        options.cfg.selected_features = ["coquery_query_token"]
 
         df = query.insert_static_data(self.df)
+
         self.assertListEqual(
             sorted(df.columns.tolist()),
-            sorted(["coquery_invisible_corpus_id",
-             "coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
-             "coquery_dummy", "coquery_invisible_query_id",
-             "coquery_query_token_1", "coquery_query_token_2", "coquery_query_token_3"]))
+            sorted(["coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
+                    "coquery_invisible_corpus_id",
+                    "coquery_dummy", "coquery_invisible_query_id",
+                    "coquery_query_token_1", "coquery_query_token_2", "coquery_query_token_3"]))
 
         self.assertListEqual(
             df.coquery_query_token_1.tolist(), ["item1"] * len(df))

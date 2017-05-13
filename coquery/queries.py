@@ -62,6 +62,7 @@ class TokenQuery(object):
         self._keys = []
         self.empty_query = False
 
+
     @staticmethod
     def get_visible_columns(df, session, ignore_hidden=False):
         """
@@ -344,8 +345,8 @@ class TokenQuery(object):
         for column in columns:
             if column == "coquery_query_string":
                 df[column] = self.query_string
-            elif column == "coquery_expanded_query_string":
-                df[column] = self._current_subquery_string
+            #elif column == "coquery_expanded_query_string":
+                #df[column] = self._current_subquery_string
             elif column.startswith("coquery_query_token"):
                 token_list = self.query_string.split()
                 # construct a list with the maximum number of quantified
@@ -355,11 +356,8 @@ class TokenQuery(object):
                 for x in token_list:
                     token, _, length = tokens.get_quantifiers(x)
                     L += [token] * length
-                try:
-                    n = int(column.rpartition("_")[-1])
-                    df[column] = L[n-1]
-                except (ValueError, IndexError):
-                    df[column] = ""
+                for i, item in enumerate(L):
+                    df["{}_{}".format(column, i+1)] = item
             else:
                 # add column labels for the columns in the input file:
                 if all([x is None for x in self.input_frame.columns]):
