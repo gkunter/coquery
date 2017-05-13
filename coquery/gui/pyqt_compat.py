@@ -20,6 +20,7 @@ pyqt = False
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
+from PyQt5 import QtHelp
 
 QtCore.Signal = QtCore.pyqtSignal
 QtCore.Slot = QtCore.pyqtSlot
@@ -52,7 +53,7 @@ if sys.platform == 'win32':
 else:
     frameShadow = QtWidgets.QFrame.Raised
     frameShape = QtWidgets.QFrame.StyledPanel
-    
+
 def get_toplevel_window(name="MainWindow"):
     """
     Retrieves the top-level widget with the given name. By default, retrieve
