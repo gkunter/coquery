@@ -152,7 +152,6 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         try:
             value = float(index.data(QtCore.Qt.DisplayRole))
         except ValueError:
-            print(1, value)
             painter.restore()
             return
 
@@ -241,7 +240,7 @@ class CoqLikelihoodDelegate(CoqResultCellDelegate):
         else:
             try:
                 value = float(index.data(QtCore.Qt.UserRole+1))
-            except ValueError:
+            except (ValueError, TypeError):
                 value = 0
             if abs(value) > self.threshold - 0.5/(10 ** options.cfg.digits):
                 if value > 0:
@@ -273,7 +272,6 @@ class CoqResultsTableView(classes.CoqTableView):
         self.setVerticalHeader(v_header)
 
         h_header = classes.CoqHorizontalHeader(QtCore.Qt.Horizontal)
-        h_header.setSectionsMovable(True)
         h_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.setHorizontalHeader(h_header)
 

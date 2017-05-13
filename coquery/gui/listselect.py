@@ -22,7 +22,7 @@ class CoqListSelect(QtWidgets.QWidget):
     list of selected items), with controls to move between the two.
     """
     itemSelectionChanged = QtCore.Signal()
-    currentItemChanged = QtCore.Signal(QtWidgets.QListWidgetItem)
+    currentItemChanged = QtCore.Signal(object)
 
     def __init__(self, *args, **kwargs):
         from .ui import coqListSelectUi
@@ -46,8 +46,8 @@ class CoqListSelect(QtWidgets.QWidget):
         self.ui.list_selected.itemSelectionChanged.connect(
             lambda: self.currentItemChanged.emit(self.currentItem()))
         self.ui.list_available.itemSelectionChanged.connect(self.check_buttons)
-        self.ui.list_available.itemSelectionChanged.connect(
-            lambda: self.currentItemChanged.emit(self.currentItem()))
+        #self.ui.list_available.itemSelectionChanged.connect(
+            #lambda: self.currentItemChanged.emit(self.currentItem()))
 
         self._minimum = 0
         self._move_available = True
@@ -60,13 +60,21 @@ class CoqListSelect(QtWidgets.QWidget):
         self.ui.list_available.setFocusPolicy(QtCore.Qt.NoFocus)
 
     @staticmethod
-    def _fill_list_widget(w, l, translate):
+    def _fill_list_widget(w, l, translate, *args, **kwargs):
+        print(args, kwargs)
         for x in l:
-            if not isinstance(x, QtWidgets.QListWidgetItem):
-                item = QtWidgets.QListWidgetItem(translate(x))
-                item.setData(QtCore.Qt.UserRole, x)
+            if translate is not None:
+                if not isinstance(x, QtWidgets.QListWidgetItem):
+                    item = QtWidgets.QListWidgetItem(
+                                translate(x, *args, **kwargs))
+                    item.setData(QtCore.Qt.UserRole, x)
+                else:
+                    item = translate(x, *args, **kwargs)
             else:
-                item = translate(x)
+                if not isinstance(x, QtWidgets.QListWidgetItem):
+                    item = QtWidgets.QListWidgetItem(x)
+                else:
+                    item = x
             w.addItem(item)
 
     def setDefocus(self, b):
@@ -118,11 +126,13 @@ class CoqListSelect(QtWidgets.QWidget):
         return [self.ui.list_selected.item(i) for i
                 in range(self.ui.list_selected.count())]
 
-    def setAvailableList(self, l, translate=lambda x: x):
-        self._fill_list_widget(self.ui.list_available, l, translate)
+    def setAvailableList(self, l, translate=None, *args, **kwargs):
+        self._fill_list_widget(self.ui.list_available, l,
+                               translate, *args, **kwargs)
 
-    def setSelectedList(self, l, translate=lambda x: x):
-        self._fill_list_widget(self.ui.list_selected, l, translate)
+    def setSelectedList(self, l, translate=None, *args, **kwargs):
+        self._fill_list_widget(self.ui.list_selected, l,
+                               translate, *args, **kwargs)
 
     def add_selected(self):
         for x in self.ui.list_available.selectedItems():
@@ -156,14 +166,22 @@ class CoqListSelect(QtWidgets.QWidget):
             return None
 
     def setCurrentItem(self, x):
+        """
+        Set the current item to the item that has 'x' as its data.
+        """
+        # look in left list:
         for i in range(self.ui.list_selected.count()):
             item = self.ui.list_selected.item(i)
             if utf8(item.data(QtCore.Qt.UserRole)) == x:
+                _last_selected_row = item
                 self.ui.list_selected.setCurrentItem(item)
                 return
+
+        # look in right list:
         for i in range(self.ui.list_available.count()):
             item = self.ui.list_available.item(i)
             if utf8(item.data(QtCore.Qt.UserRole)) == x:
+                _last_available_row = item
                 self.ui.list_available.setCurrentItem(item)
                 return
 
@@ -232,29 +250,30 @@ class CoqListSelect(QtWidgets.QWidget):
 
     def event(self, ev):
         if ev.type() == ev.FocusIn:
-            # restore selection bars if focus is regained:
-            self.blockSignals(False)
-
-            if self._last_selected_row is None:
-                if self.ui.list_selected.count() > 0:
-                    self.ui.list_selected.setCurrentItem(
-                        self.ui.list_selected.item(0))
-            else:
-                self.ui.list_selected.setCurrentItem(
-                    self._last_selected_row)
-
-            if self._last_available_row is None:
-                if self.ui.list_available.count() > 0:
-                    self.ui.list_available.setCurrentItem(
-                        self.ui.list_available.item(0))
-            else:
-                self.ui.list_available.setCurrentItem(
-                    self._last_available_row)
-        elif ev.type() == ev.FocusOut:
-            self.blockSignals(True)
-            self._last_selected_row = self.ui.list_selected.currentItem()
-            self._last_available_row = self.ui.list_available.currentItem()
             if self.defocus():
+                # restore selection bars if focus is regained:
+                self.blockSignals(False)
+
+                if self._last_selected_row is None:
+                    if self.ui.list_selected.count() > 0:
+                        self.ui.list_selected.setCurrentItem(
+                            self.ui.list_selected.item(0))
+                else:
+                    self.ui.list_selected.setCurrentItem(
+                        self._last_selected_row)
+
+                if self._last_available_row is None:
+                    if self.ui.list_available.count() > 0:
+                        self.ui.list_available.setCurrentItem(
+                            self.ui.list_available.item(0))
+                else:
+                    self.ui.list_available.setCurrentItem(
+                        self._last_available_row)
+        elif ev.type() == ev.FocusOut:
+            if self.defocus():
+                self.blockSignals(True)
+                self._last_selected_row = self.ui.list_selected.currentItem()
+                self._last_available_row = self.ui.list_available.currentItem()
                 self.ui.list_selected.setCurrentItem(None)
                 self.ui.list_available.setCurrentItem(None)
 

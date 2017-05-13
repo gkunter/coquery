@@ -512,7 +512,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.find_prev.activated.connect(self.ui.widget_find.go_to_prev)
 
         if sys.platform != "darwin":
-            self.new_query = QtWidgets.QShortcut(QtGui.QKeySequence("Alt+N"), self)
+            self.new_query = QtWidgets.QShortcut(
+                QtGui.QKeySequence("Alt+N"), self)
             self.new_query.activated.connect(self.run_query)
 
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
@@ -520,7 +521,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_run_query.clicked.connect(self.run_query)
         self.ui.button_stop_query.clicked.connect(self.stop_query)
 
-        self.ui.list_toolbox.currentCellChanged.connect(lambda x, _1, _2, _3: self.change_toolbox(x))
+        self.ui.list_toolbox.currentCellChanged.connect(
+            lambda x, _1, _2, _3: self.change_toolbox(x))
 
         self.ui.button_apply_management.clicked.connect(
             lambda: self.reaggregate(start=True))
@@ -531,20 +533,24 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.edit_summary_function)
 
         # connect widgets that enable the Apply button:
-        self.ui.check_restrict.stateChanged.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_none.toggled.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_kwic.toggled.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_string.toggled.connect(self.enable_apply_button)
-        self.ui.radio_context_mode_columns.toggled.connect(self.enable_apply_button)
-        self.ui.context_left_span.valueChanged.connect(self.enable_apply_button)
-        self.ui.context_right_span.valueChanged.connect(self.enable_apply_button)
+        for signal in (self.ui.check_restrict.stateChanged,
+                       self.ui.radio_context_mode_none.toggled,
+                       self.ui.radio_context_mode_kwic.toggled,
+                       self.ui.radio_context_mode_string.toggled,
+                       self.ui.radio_context_mode_columns.toggled,
+                       self.ui.context_left_span.valueChanged,
+                       self.ui.context_right_span.valueChanged,
+                       self.ui.tree_groups.groupAdded,
+                       self.ui.tree_groups.groupRemoved,
+                       self.ui.tree_groups.groupModified,
+                       self.ui.list_column_order.listOrderChanged):
+            signal.connect(self.enable_apply_button)
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         self.ui.button_filters.clicked.connect(self.manage_filters)
 
         self.ui.data_preview.horizontalHeader().sectionFinallyResized.connect(self.result_column_resize)
         self.ui.data_preview.horizontalHeader().customContextMenuRequested.connect(self.show_header_menu)
-        self.ui.data_preview.horizontalHeader().sectionMoved.connect(self.column_moved)
         self.ui.data_preview.verticalHeader().customContextMenuRequested.connect(self.show_row_header_menu)
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
 
@@ -559,10 +565,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.useContextConnection.connect(self.add_context_connection)
         self.closeContextConnection.connect(self.close_context_connection)
-
-        self.ui.tree_groups.groupAdded.connect(self.enable_apply_button)
-        self.ui.tree_groups.groupRemoved.connect(self.enable_apply_button)
-        self.ui.tree_groups.groupModified.connect(self.enable_apply_button)
 
         ## FIXME: reimplement row visibility
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
@@ -844,7 +846,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         filter_icon = "Filter"
         error_icon = "Error"
         problem_icon = "Attention"
-
         try:
             manager = self.Session.get_manager()
         except:
@@ -857,7 +858,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if not self.ui.data_preview.isEnabled():
             active_icon = "Inactive State"
 
-        if row == TOOLBOX_CONTEXT:
+        if row == TOOLBOX_ORDER:
+            _set_icon(1, None)
+            _set_icon(2, None)
+
+        elif row == TOOLBOX_CONTEXT:
             radio = self.active_context_radio()
             if radio == self.ui.radio_context_mode_none:
                 # no context mode
@@ -1052,14 +1057,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 manager.reset_hidden_columns()
                 self.hide_columns(result["hidden"])
 
-            # set column names
+            # set or reset column aliases
             for col in result["alias"]:
                 name = result["alias"][col]
-                if col.startswith("func_"):
-                    fun = manager.get_function(col)
-                    fun.set_label(name)
-                else:
+                if not col.startswith("func_"):
                     options.cfg.column_names[col] = name
+
+            # set or reset function aliases
+            for fnc in manager.get_functions():
+                fnc.set_label(result["alias"].get(fnc.get_id(), ""))
 
             # set column colors:
             options.cfg.column_color = result.get("colors", {})
@@ -1148,25 +1154,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except IndexError:
             pass
 
-    def column_moved(self, *args, **kwargs):
-        section, last, new = args
-
-        if options.cfg.MODE == QUERY_MODE_TOKENS:
-            print(self.Session.data_table.columns)
-            columns = list(self.Session.data_table.columns.values)
-            vis_cols = self.table_model.header
-            for x in vis_cols[::-1]:
-                columns.remove(x)
-                columns.insert(0, x)
-            moved = self.table_model.header[section]
-            columns.remove(moved)
-            columns.insert(new, moved)
-            self.Session.data_table = self.Session.data_table[columns]
-            print(self.Session.data_table.columns)
-        #self.reaggregate()
-        #if self.Session.query_type == queries.ContingencyQuery:
-            #self.reaggregate(query_type=queries.ContingencyQuery, recalculate=True)
-
     def result_column_resize(self, index, old, new):
         #header = self.table_model.header[index].lower()
         #options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
@@ -1186,32 +1173,34 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         token_width = 1
 
-        # FIXME: these imports feels utterly misplaced.
-        from coquery import queries
-
         if index is not None:
             manager = self.Session.get_manager()
-            if isinstance(manager, managers.ContrastMatrix):
-                from . import independencetestviewer
-                if self.ui.data_preview.model().data(index, QtCore.Qt.DisplayRole):
-                    data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
-                    viewer = independencetestviewer.IndependenceTestViewer(data, icon=options.cfg.icon)
-                    viewer.show()
-                    self.widget_list.append(viewer)
-                return
+            try:
+                if isinstance(manager, managers.ContrastMatrix):
+                    from .independencetestviewer import (
+                        IndependenceTestViewer)
+                    if self.ui.data_preview.model().data(
+                            index, QtCore.Qt.DisplayRole):
+                        data = self.ui.data_preview.model().data(
+                            index, QtCore.Qt.UserRole)
+                        viewer = IndependenceTestViewer(
+                            data, icon=options.cfg.icon)
+                        viewer.show()
+                        self.widget_list.append(viewer)
+                    return
 
-            model_index = index
-            row = model_index.row()
-            col = model_index.column()
-            data = self.table_model.content.iloc[row]
-            meta_data = self.table_model.invisible_content.iloc[row]
+                model_index = index
+                row = model_index.row()
+                col = model_index.column()
+                data = self.table_model.content.iloc[row]
+                meta_data = self.table_model.invisible_content.iloc[row]
 
-            if self.Session.is_statistics_session():
-                column = data.index[col]
-                self.show_unique_values(rc_feature=meta_data["coquery_invisible_rc_feature"],
-                                        uniques=column != "coq_statistics_entries")
-            else:
-                try:
+                if self.Session.is_statistics_session():
+                    column = data.index[col]
+                    self.show_unique_values(
+                        rc_feature=meta_data["coquery_invisible_rc_feature"],
+                        uniques=column != "coq_statistics_entries")
+                else:
                     if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
                         if meta_data.index[index.column()].startswith("coquery_invisible_corpus_id"):
                             token_id = int(meta_data[index.column()])
@@ -1222,9 +1211,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     else:
                         token_id = meta_data["coquery_invisible_corpus_id"]
                     token_width = meta_data["coquery_invisible_number_of_tokens"]
-                except KeyError:
-                    QtWidgets.QMessageBox.critical(self, "Context error", msg_no_context_available)
-                    return
+            except (AttributeError, KeyError, IndexError):
+                QtWidgets.QMessageBox.critical(self,
+                                               "Context error",
+                                               msg_no_context_available)
+                return
 
             # do not show contexts if the user clicks on user data columns
             # because the cell editor should open
@@ -1234,11 +1225,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         origin_id = self.Session.Resource.get_origin_id(token_id)
 
         if self.Session.Resource.audio_features:
-            from .contextviewer import ContextViewAudio as ContextView
+            from .contextviewer import ContextViewAudio as Viewer
         else:
-            from .contextviewer import ContextView
+            from .contextviewer import Viewer
 
-        viewer = ContextView(self.Session.Corpus, int(token_id),
+        viewer = Viewer(self.Session.Corpus, int(token_id),
                              int(origin_id), int(token_width),
                              icon=options.cfg.icon)
         viewer.show()
@@ -1276,6 +1267,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for hidden in self.hidden_features:
             manager.hide_column(hidden)
 
+        column_order = self.ui.list_column_order.items()
+        columns = ([x for _, x in column_order] +
+                    [x for x in self.Session.data_table.columns
+                    if x.startswith("coquery_")])
+        manager.set_column_order(columns)
+
         if start:
             self.Session.start_timer()
         self.showMessage("Managing data...")
@@ -1289,7 +1286,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.start_progress_indicator()
         self.reaggregating = True
 
-        print("reaggregate")
+        if options.cfg.verbose:
+            print("reaggregate")
         self.terminating = False
         self.aggr_thread.start()
 
@@ -1312,7 +1310,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)
 
-        print("reaggregation: done")
+        if options.cfg.verbose:
+            print("reaggregation: done")
         if options.cfg.stopword_list and manager.stopwords_failed:
             rc_feature = getattr(self.Session.Resource,
                                  getattr(self.Session.Resource,
@@ -1456,18 +1455,22 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         print("resize: start")
         self.resize_thread.start()
 
-    def update_table_models(self):
-        manager = self.Session.get_manager()
-        for x in list(manager.hidden_columns):
-            if x not in self.Session.output_object.columns:
-                manager.hidden_columns.remove(x)
-        hidden_cols = pd.Index(manager.hidden_columns)
+    def update_table_models(self, visible=None, hidden=None):
+        if visible is None and hidden is None:
+            manager = self.Session.get_manager()
+            for x in list(manager.hidden_columns):
+                if x not in self.Session.output_object.columns:
+                    manager.hidden_columns.remove(x)
+            hidden_cols = pd.Index(manager.hidden_columns)
 
-        vis_cols = [x for x in self.Session.output_object.columns
-                    if not x in hidden_cols]
+            vis_cols = [x for x in self.Session.output_object.columns
+                        if not x in hidden_cols]
 
-        to_show = self.Session.output_object[vis_cols]
-        to_hide = self.Session.output_object[hidden_cols]
+            to_show = self.Session.output_object[vis_cols]
+            to_hide = self.Session.output_object[hidden_cols]
+        else:
+            to_show = visible
+            to_hide = hidden
 
         self.table_model = classes.CoqTableModel(
             to_show, session=self.Session)
@@ -1542,20 +1545,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                             self.ui.data_preview.currentIndex().column())
         self.ui.data_preview.setModel(self.table_model)
         self.ui.data_preview.horizontalHeader().reset()
-        if self._last_aggregate != options.cfg.MODE:
-            print("------- resetting --------")
-            header = self.ui.data_preview.horizontalHeader()
-            for i in range(header.count()):
-                print(i, header.logicalIndex(i), header.visualIndex(i))
-            while any([header.logicalIndex(i) != i for
-                       i in range(header.count())]):
-                print(any([header.logicalIndex(i) != i for
-                       i in range(header.count())]))
-                for i in range(header.count()):
-                    if header.logicalIndex(i) != i:
-                        header.moveSection(i, header.logicalIndex(i))
-            for i in range(header.count()):
-                print(i, header.logicalIndex(i), header.visualIndex(i))
         self._last_aggregate = options.cfg.MODE
 
         self.ui.data_preview.setDelegates()
@@ -1797,6 +1786,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.statusBar().layout().setStretchFactor(self.ui.status_message, 1)
 
     def finalize_query(self, to_file=False):
+        items = [(self.new_session.translate_header(x), x) for x in
+                    self.new_session.data_table.columns
+                    if not x.startswith("coquery_")]
+        self.ui.list_column_order.setItems(items)
+
         self.query_thread = None
         if to_file:
             self.showMessage("Query results written to {}.".format(options.cfg.output_path))

@@ -140,6 +140,9 @@ class Manager(CoqObject):
             if fun.get_id() == id:
                 return fun
 
+    def get_functions(self):
+        return self._functions
+
     def set_filters(self, filter_list):
         self._filters = filter_list
 
@@ -151,6 +154,9 @@ class Manager(CoqObject):
 
     def get_column_substitutions(self, d):
         return self._subst
+
+    def set_column_order(self, l):
+        self._column_order = l
 
     def _get_main_functions(self, df, session):
         """
@@ -518,17 +524,7 @@ class Manager(CoqObject):
 
         resource = session.Resource
 
-        l = []
-        for x in resource.get_preferred_output_order():
-            l += resource.format_resource_feature(
-                    x, session.get_max_token_count())
-        columns = []
-        for x in l:
-            if x in df.columns:
-                columns.append(x)
-        for x in df.columns:
-            if x not in columns:
-                columns.append(x)
+        columns = list(df.columns)
 
         # align context columns around word columns:
         first_word_pos = -1
@@ -640,6 +636,7 @@ class Manager(CoqObject):
             print("process()")
 
         df = df.reset_index(drop=True)
+        df = df[self._column_order]
 
         # Get index of rows that are retained if duplicates are removed from
         # the data frame after sorting it by the number of query tokens that
@@ -708,8 +705,13 @@ class FrequencyList(Manager):
     def summarize(self, df, session):
         vis_cols = get_visible_columns(df, manager=self, session=session)
         freq_function = Freq(columns=vis_cols)
-
-        if not session.summary_functions.has_function(freq_function):
+        freq_exists = False
+        for fnc, col in session.summary_group.functions:
+            if fnc == Freq and sorted(col) == sorted(vis_cols):
+                freq_exists = True
+                break
+        if not freq_exists:
+            #FIXME: add test that this actually works
             self.manager_functions = FunctionList([freq_function])
         df = super(FrequencyList, self).summarize(df, session)
         return self.distinct(df, session)
@@ -859,9 +861,6 @@ class Collocations(Manager):
         # context, the program should alert the user somehow.
         return [ContextColumns()]
 
-    def filter(self, df, session):
-        return df
-
     def summarize(self, df, session):
         """
         This returns a completely different data frame than the argument.
@@ -885,18 +884,30 @@ class Collocations(Manager):
         left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
         right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
 
-        left_context_span = df[left_cols]
-        right_context_span = df[right_cols]
-
-        # convert all context columns to upper or lower case unless
-        # the current setting says otherwise
-        if not options.cfg.output_case_sensitive:
-            if options.cfg.output_to_lower:
-                left_context_span = left_context_span.apply(lambda x: x.apply(str.lower))
-                right_context_span = right_context_span.apply(lambda x: x.apply(str.lower))
-            else:
-                left_context_span = left_context_span.apply(lambda x: x.apply(str.upper))
-                right_context_span = right_context_span.apply(lambda x: x.apply(str.upper))
+        try:
+            left_context_span = df[left_cols]
+            right_context_span = df[right_cols]
+        except KeyError:
+            left_context_span = pd.DataFrame(
+                data=[[None] * options.cfg.context_left],
+                columns=left_cols)
+            right_context_span = pd.DataFrame(
+                data=[[None] * options.cfg.context_right],
+                columns=left_cols)
+        else:
+            # convert all context columns to upper or lower case unless
+            # the current setting says otherwise
+            if not options.cfg.output_case_sensitive:
+                if options.cfg.output_to_lower:
+                    left_context_span = left_context_span.apply(
+                        lambda col: col.str.lower())
+                    right_context_span = right_context_span.apply(
+                        lambda col: col.str.lower())
+                else:
+                    left_context_span = left_context_span.apply(
+                        lambda col: col.str.upper())
+                    right_context_span = right_context_span.apply(
+                        lambda col: col.str.upper())
 
         left = left_context_span.stack().value_counts()
         right = right_context_span.stack().value_counts()
@@ -959,7 +970,11 @@ class Collocations(Manager):
                  "coq_conditional_probability_right",
                  "coq_mutual_information"]
 
-        return aggregate[order]
+        if not len(aggregate) and not options.cfg.drop_on_na:
+            return pd.DataFrame(data=[[None] * len(aggregate.columns)],
+                                columns=aggregate.columns)
+        else:
+            return aggregate[order]
 
 
 class ContrastMatrix(FrequencyList):
@@ -978,9 +993,13 @@ class ContrastMatrix(FrequencyList):
             columns = ["statistics_g_test_{}".format(x),
                        "COQ_P_{}".format(x)]
 
-            df[columns] = df.apply(
-                self.retrieve_loglikelihood, axis=1, label=x, df=df)
-            self.p_values = self.p_values.append(df[columns[-1]][i:])
+            try:
+                df[columns] = df.apply(
+                    self.retrieve_loglikelihood, axis=1, label=x, df=df)
+            except KeyError:
+                return df
+            else:
+                self.p_values = self.p_values.append(df[columns[-1]][i:])
         df = df[[col for col in df.columns if not col.startswith("COQ_P_")]]
         return df
 
@@ -1031,9 +1050,13 @@ class ContrastMatrix(FrequencyList):
         threshold = ((pd.Series(pd.np.arange(len(self.p_values))) + 1) /
                      len(self.p_values)) * 0.05
         check = (self.p_values <= threshold)
-        self.alpha = min(0.05, self.p_values.loc[check[::-1].idxmax()])
-        self.threshold = scipy.stats.chi2.ppf(1 - self.alpha, 1)
-
+        try:
+            self.alpha = min(0.05, self.p_values.loc[check[::-1].idxmax()])
+        except ValueError:
+            self.alpha = None
+            self.threshold = 0
+        else:
+            self.threshold = scipy.stats.chi2.ppf(1 - self.alpha, 1)
         return df
 
     def select(self, df, session):

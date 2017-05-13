@@ -236,18 +236,21 @@ class Session(object):
                         for i in range(self.get_max_token_count())]
                 start_time = time.time()
                 if number_of_queries > 1:
-                    logger.info("Start query ({} of {}): '{}'".format(i+1, number_of_queries, current_query.query_string))
+                    logger.info("Start query ({} of {}): '{}'".format(
+                        i+1, number_of_queries, current_query.query_string))
                 else:
-                    logger.info("Start query: '{}'".format(current_query.query_string))
-
-                df = current_query.run(connection=self.db_connection, to_file=to_file, **kwargs)
+                    logger.info("Start query: '{}'".format(
+                        current_query.query_string))
+                df = current_query.run(connection=self.db_connection,
+                                       to_file=to_file, **kwargs)
 
                 # apply clumsy hack that tries to make sure that the dtypes of
                 # data frames containing NaNs or empty strings does not change
                 # when appending the new data frame to the previous.
 
                 # The same hack is also needed in queries.run().
-                if len(self.data_table) > 0 and df.dtypes.tolist() != dtype_list.tolist():
+                if (len(self.data_table) > 0 and
+                        df.dtypes.tolist() != dtype_list.tolist()):
                     for x in df.columns:
                         # the idea is that pandas/numpy use the 'object'
                         # dtype as a fall-back option for strange results,

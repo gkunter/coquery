@@ -20,9 +20,9 @@ import pandas as pd
 import numpy as np
 import sqlalchemy
 import operator
+import logging
 
-from . import options
-from . import sqlhelper
+from . import options, sqlhelper, NAME
 from .defines import *
 from .general import CoqObject, collapse_words, get_visible_columns
 from .gui.pyqt_compat import get_toplevel_window
@@ -121,8 +121,6 @@ class Function(CoqObject):
         """
         if columns is None:
             columns = []
-        if group is None:
-            group = []
         super(Function, self).__init__()
         self.columns = columns
         self.alias = alias
@@ -138,7 +136,7 @@ class Function(CoqObject):
     def __repr__(self):
         return "{}(columns=[{}], value={}, group={}".format(
             self._name, ", ".format(self.columns),
-            self.value, self.group.name)
+            self.value, self.group)
 
     @classmethod
     def get_name(cls):
@@ -243,14 +241,14 @@ class StringRegEx(StringFunction):
         super(StringRegEx, self).__init__(columns, *args, **kwargs)
         self.value = value
         try:
-            self.re = re.compile(value)
+            self.re = re.compile(value, re.UNICODE)
         except Exception:
             self.re = None
 
     @classmethod
     def validate_input(cls, value):
         try:
-            re.compile(value)
+            re.compile(value, re.UNICODE)
         except Exception:
             return False
         else:
@@ -305,6 +303,10 @@ class StringSeriesFunction(StringFunction):
     single_column = False
 
     def evaluate(self, df, value=None, *args, **kwargs):
+        # ensure that regex functions use unicode:
+        if self.str_func in ("contains", "extract", "count"):
+            if "(?u)" not in value:
+                value = "(?u){}".format(value)
         if value:
             _df = pd.concat([getattr(df[col].astype(str).str
                                      if df[col].dtype != object
@@ -349,11 +351,11 @@ class StringExtract(StringSeriesFunction):
     str_func = "extract"
 
     def evaluate(self, df, *args, **kwargs):
-        # if there is no match group, enclose the value to form one:
-        if "(" in self.value:
-            val = self.value
-        else:
+        # put the regex into parentheses if there is no match group:
+        if not re.search(r"\([^)]*\)", self.value):
             val = "({})".format(self.value)
+        else:
+            val = self.value
         return super(StringExtract, self).evaluate(df, val, expand=True)
 
 
@@ -802,6 +804,19 @@ import hashlib
 class BaseReferenceCorpus(Function):
     _name = "virtual"
 
+    def _get_current_corpus(self):
+        ref_corpus = options.cfg.reference_corpus.get(
+                         options.cfg.current_server, None)
+        res = options.cfg.current_resources[ref_corpus]
+        ResourceClass, CorpusClass, LexiconClass, _ = res
+        self._current_lexicon = LexiconClass()
+        self._current_corpus = CorpusClass()
+        self._current_resource = ResourceClass(self._current_lexicon,
+                                              self._current_corpus)
+        self._current_corpus.resource = self._current_resource
+        self._current_corpus.lexicon = self._current_lexicon
+        self._current_lexicon.resource = self._current_resource
+
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
     _name = "reference_corpus_frequency"
@@ -817,15 +832,7 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         if not ref_corpus or ref_corpus not in options.cfg.current_resources:
             return self.constant(df, None)
 
-        res = options.cfg.current_resources[ref_corpus]
-        ResourceClass, CorpusClass, LexiconClass, _ = res
-        self._current_lexicon = LexiconClass()
-        self._current_corpus = CorpusClass()
-        self._current_resource = ResourceClass(self._current_lexicon,
-                                              self._current_corpus)
-        self._current_corpus.resource = self._current_resource
-        self._current_corpus.lexicon = self._current_lexicon
-        self._current_lexicon.resource = self._current_resource
+        self._get_current_corpus()
 
         engine = sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server,
@@ -853,7 +860,7 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
         val = super(ReferenceCorpusFrequencyPMW, self).evaluate(df, *args, **kwargs)
         ref_corpus = options.cfg.reference_corpus.get(
                             options.cfg.current_server, None)
-        if not ref_corpus or ref_corpus not in options.cfg.current_resource:
+        if not ref_corpus or ref_corpus not in options.cfg.current_resources:
             return self.constant(df, None)
 
         if len(val) > 0:
@@ -908,11 +915,22 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
             ext_size = self._current_corpus.get_corpus_size()
 
         _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq})
-
+        if len(word_columns) > 1:
+            logger.warning("LL calculation for more than one column is experimental!")
         val = _df.apply(lambda x: self._func(x, size=size, ext_size=ext_size,
                                              width=len(word_columns)),
                         axis="columns")
         return val
+
+
+class ReferenceCorpusSize(BaseReferenceCorpus):
+    _name = "reference_corpus_size"
+
+    def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+        self._get_current_corpus()
+        ext_size = self._current_corpus.get_corpus_size()
+        return self.constant(df, ext_size)
 
 
 class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
@@ -1146,11 +1164,13 @@ class SubcorpusSize(CorpusSize):
         column_list = [x for x in corpus_features
                        if "coq_{}_1".format(x) in self.columns]
 
-        val = df.apply(session.Corpus.get_subcorpus_size,
-                       columns=column_list,
-                       axis=1,
-                       subst=manager.get_column_substitutions)
-
+        if df[0].coquery_dummy is not pd.np.nan:
+            val = df.apply(session.Corpus.get_subcorpus_size,
+                        columns=column_list,
+                        axis=1,
+                        subst=manager.get_column_substitutions)
+        else:
+            return df.Series(name=self.get_id())
         return val
 
 
@@ -1323,3 +1343,5 @@ class ContextString(ContextColumns):
         #print(val)
         #val.index = df.index
         #return val
+
+logger = logging.getLogger(NAME)

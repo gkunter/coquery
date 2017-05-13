@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -91,7 +91,7 @@ class Ui_MainWindow(object):
         self.list_toolbox.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.list_toolbox.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.list_toolbox.setShowGrid(False)
-        self.list_toolbox.setRowCount(5)
+        self.list_toolbox.setRowCount(6)
         self.list_toolbox.setColumnCount(3)
         self.list_toolbox.setObjectName("list_toolbox")
         item = QtWidgets.QTableWidgetItem()
@@ -124,6 +124,12 @@ class Ui_MainWindow(object):
         self.list_toolbox.setItem(4, 1, item)
         item = QtWidgets.QTableWidgetItem()
         self.list_toolbox.setItem(4, 2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.list_toolbox.setItem(5, 0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.list_toolbox.setItem(5, 1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.list_toolbox.setItem(5, 2, item)
         self.list_toolbox.horizontalHeader().setVisible(False)
         self.list_toolbox.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.list_toolbox)
@@ -134,6 +140,20 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.tool_widget.sizePolicy().hasHeightForWidth())
         self.tool_widget.setSizePolicy(sizePolicy)
         self.tool_widget.setObjectName("tool_widget")
+        self.tool_widget_column_order = QtWidgets.QWidget()
+        self.tool_widget_column_order.setObjectName("tool_widget_column_order")
+        self.verticalLayout_11 = QtWidgets.QVBoxLayout(self.tool_widget_column_order)
+        self.verticalLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_11.setObjectName("verticalLayout_11")
+        self.list_column_order = CoqButtonList(self.tool_widget_column_order)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.list_column_order.sizePolicy().hasHeightForWidth())
+        self.list_column_order.setSizePolicy(sizePolicy)
+        self.list_column_order.setObjectName("list_column_order")
+        self.verticalLayout_11.addWidget(self.list_column_order)
+        self.tool_widget.addWidget(self.tool_widget_column_order)
         self.tool_widget_page_context = QtWidgets.QWidget()
         self.tool_widget_page_context.setObjectName("tool_widget_page_context")
         self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.tool_widget_page_context)
@@ -430,7 +450,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 24))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -733,7 +753,7 @@ class Ui_MainWindow(object):
         self.label_2.setBuddy(self.combo_corpus)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(2)
+        self.tool_widget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -747,14 +767,16 @@ class Ui_MainWindow(object):
         __sortingEnabled = self.list_toolbox.isSortingEnabled()
         self.list_toolbox.setSortingEnabled(False)
         item = self.list_toolbox.item(0, 0)
-        item.setText(_translate("MainWindow", "Add context"))
+        item.setText(_translate("MainWindow", "Feature order"))
         item = self.list_toolbox.item(1, 0)
-        item.setText(_translate("MainWindow", "Filter stop words"))
+        item.setText(_translate("MainWindow", "Context/KWIC"))
         item = self.list_toolbox.item(2, 0)
-        item.setText(_translate("MainWindow", "Data groups"))
+        item.setText(_translate("MainWindow", "Stopwords"))
         item = self.list_toolbox.item(3, 0)
-        item.setText(_translate("MainWindow", "Transform"))
+        item.setText(_translate("MainWindow", "Data groups"))
         item = self.list_toolbox.item(4, 0)
+        item.setText(_translate("MainWindow", "Transform"))
+        item = self.list_toolbox.item(5, 0)
         item.setText(_translate("MainWindow", "Finalize"))
         self.list_toolbox.setSortingEnabled(__sortingEnabled)
         self.radio_context_mode_none.setText(_translate("MainWindow", "No context"))
@@ -780,8 +802,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Oxygen-Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>"))
+"</style></head><body style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">No match.</span></p></body></html>"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help"))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus"))
@@ -890,6 +912,7 @@ class Ui_MainWindow(object):
         self.action_how_to_cite.setText(_translate("MainWindow", "How to &cite"))
         self.action_regex_tester.setText(_translate("MainWindow", "Regular &expression tester..."))
 
+from ..buttonlist import CoqButtonList
 from ..classes import CoqClickableLabel, CoqRotatedButton, CoqTextEdit
 from ..findwidget import CoqFindWidget
 from ..grouptree import CoqGroupTree
