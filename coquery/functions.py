@@ -1164,11 +1164,13 @@ class SubcorpusSize(CorpusSize):
         column_list = [x for x in corpus_features
                        if "coq_{}_1".format(x) in self.columns]
 
-        val = df.apply(session.Corpus.get_subcorpus_size,
-                       columns=column_list,
-                       axis=1,
-                       subst=manager.get_column_substitutions)
-
+        if df[0].coquery_dummy is not pd.np.nan:
+            val = df.apply(session.Corpus.get_subcorpus_size,
+                        columns=column_list,
+                        axis=1,
+                        subst=manager.get_column_substitutions)
+        else:
+            return df.Series(name=self.get_id())
         return val
 
 
