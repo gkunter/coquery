@@ -265,8 +265,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.list_toolbox.resizeColumnsToContents()
         header = self.ui.list_toolbox.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Interactive)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Interactive)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
 
         # use a file system model for the file name auto-completer::
         self.dirModel = QtWidgets.QFileSystemModel(parent=self)
@@ -2632,7 +2632,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 from . import contextviewer
                 for widget in self.widget_list:
                     if isinstance(widget, contextviewer.ContextView):
-                        widget.update_context()
+                        widget.get_context()
 
             if (old_drop_on_na != options.cfg.drop_on_na):
                 self.reaggregate(start=True)
