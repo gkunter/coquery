@@ -503,10 +503,8 @@ class Session(object):
             header = match.group(2)
         else:
             match = re.match("coq_(.*)", header)
-            if not match:
-                # if options.cfg.verbose: print(13)
-                return header
-            header = match.group(1)
+            if match:
+                header = match.group(1)
             res_prefix = ""
             resource = self.Resource
 
