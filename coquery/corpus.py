@@ -1065,7 +1065,7 @@ class SQLResource(BaseResource):
         # _first_item stores the number of the first item that is not
         # _NULL. This number will be used for coquery_invisible_corpus_id and
         # coquery_invisible_origin_id.
-        _first_item = None
+        _first_item = 1
 
         columns = []
         for rc_feature in selected:
