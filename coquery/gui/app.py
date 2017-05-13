@@ -200,7 +200,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # https://stackoverflow.com/questions/1551605#1552105
         if sys.platform == "win32":
             import ctypes
-            CoqId = 'Coquery.Coquery.{}'.format(VERSION)
+            CoqId = 'Coquery.Coquery.{}'.format(__version__)
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
 
         try:
