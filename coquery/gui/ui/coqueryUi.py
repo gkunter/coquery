@@ -796,7 +796,7 @@ class Ui_MainWindow(object):
         self.button_run_query.setText(_translate("MainWindow", "&New query"))
         self.button_run_query.setShortcut(_translate("MainWindow", "Ctrl+N"))
         self.button_stop_query.setText(_translate("MainWindow", "&Stop"))
-        self.box_corpus_select.setTitle(_translate("MainWindow", "&Data selection"))
+        self.box_corpus_select.setTitle(_translate("MainWindow", "Fe&ature selection"))
         self.label_2.setText(_translate("MainWindow", "&Corpus:"))
         self.button_toggle_hidden.setText(_translate("MainWindow", "Hidden columns"))
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"

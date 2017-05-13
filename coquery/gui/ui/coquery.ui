@@ -663,7 +663,7 @@
            </sizepolicy>
           </property>
           <property name="title">
-           <string>&amp;Data selection</string>
+           <string>Fe&amp;ature selection</string>
           </property>
           <layout class="QVBoxLayout" name="output_columns">
            <item>
