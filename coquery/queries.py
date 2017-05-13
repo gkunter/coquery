@@ -315,13 +315,18 @@ class TokenQuery(object):
         # if df is empty, a dummy data frame is created with NAs in all
         # content columns. This is needed so that frequency queries with empty
         # results can be displayed as 0.
+        # FIXME: "coquery_dummy" is used to handle empty queries. There
+        # is probably a better way of doing this.
         if (len(df) == 0):
             col = []
             for x in options.cfg.selected_features:
                 if x.startswith("coquery_"):
                     col.append(x)
                 else:
-                    col += [y for y in self.Resource.format_resource_feature(x, self._max_number_of_tokens) if y not in col]
+                    col += [y for y
+                            in self.Resource.format_resource_feature(
+                                x, self._max_number_of_tokens)
+                            if y not in col]
             col.append("coquery_dummy")
             if options.cfg.context_mode != CONTEXT_NONE:
                 col.append("coquery_invisible_corpus_id")
