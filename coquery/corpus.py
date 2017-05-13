@@ -100,7 +100,7 @@ class BaseResource(CoqObject):
     """
     # add internal table that can be used to access frequency information:
     coquery_query_string = "Query string"
-    coquery_expanded_query_string = "Expanded query string"
+    #coquery_expanded_query_string = "Expanded query string"
     coquery_query_token = "Query item"
 
     special_table_list = ["coquery", "tag"]
