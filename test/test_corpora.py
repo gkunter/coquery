@@ -14,7 +14,6 @@ from coquery.defines import *
 from coquery.queries import TokenQuery
 from coquery.tokens import COCAToken
 import coquery.links
-#from coquery.gui.linkselect import Link
 
 import argparse
 
