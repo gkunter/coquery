@@ -1062,10 +1062,18 @@ class SQLResource(BaseResource):
         corpus_features = [x for x, _ in cls.get_corpus_features()]
         annotations = getattr(cls, "annotations", {})
 
+        # _first_item stores the number of the first item that is not
+        # _NULL. This number will be used for coquery_invisible_corpus_id and
+        # coquery_invisible_origin_id.
+        _first_item = None
+
         columns = []
         for rc_feature in selected:
             current_pos = 1
             for i, (pos, token) in enumerate(token_list):
+                if not _first_item and token:
+                    _first_item = i + 1
+
                 hashed, tab, feat = cls.split_resource_feature(rc_feature)
                 # external resources:
                 if hashed:
@@ -1117,16 +1125,16 @@ class SQLResource(BaseResource):
                     columns.append(s)
 
         if not to_file:
-            s = "COQ_CORPUS_1.{} AS coquery_invisible_corpus_id".format(
-                cls.corpus_id)
+            s = "COQ_CORPUS_{}.{} AS coquery_invisible_corpus_id".format(
+                _first_item, cls.corpus_id)
             if s not in columns:
                 columns.append(s)
 
             origin_id = (getattr(cls, "corpus_source_id", "") or
                          getattr(cls, "corpus_file_id", ""))
             if origin_id:
-                s = "COQ_CORPUS_1.{} AS coquery_invisible_origin_id".format(
-                    origin_id)
+                s = "COQ_CORPUS_{}.{} AS coquery_invisible_origin_id".format(
+                    _first_item, origin_id)
                 columns.append(s)
         return columns
 

@@ -494,6 +494,19 @@ class TestCorpus(unittest.TestCase):
              "COQ_CORPUS_1.ID AS coquery_invisible_corpus_id",
              "COQ_CORPUS_1.FileId AS coquery_invisible_origin_id"])
 
+
+    def test_get_required_columns_NULL_1(self):
+        # tests issue #256
+        query = TokenQuery("_NULL *", self.Session)
+        l = self.resource.get_required_columns(query.query_list[0],
+                                               ["word_label"])
+        self.assertListEqual(l, ["NULL AS coq_word_label_1",
+                                 "COQ_WORD_2.Word AS coq_word_label_2",
+                                 "COQ_CORPUS_2.ID AS coquery_invisible_corpus_id",
+                                 "COQ_CORPUS_2.FileId AS coquery_invisible_origin_id"])
+
+    ### QUERY STRINGS
+
     def test_query_string_blank(self):
         query = TokenQuery("*", self.Session)
         query_string = self.resource.get_query_string(query.query_list[0],
