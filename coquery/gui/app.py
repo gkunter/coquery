@@ -265,8 +265,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.list_toolbox.resizeColumnsToContents()
         header = self.ui.list_toolbox.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
         header.resizeSection(1, 24)
         header.resizeSection(2, 24)
 
