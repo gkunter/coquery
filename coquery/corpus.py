@@ -1603,7 +1603,7 @@ class CorpusClass(CoqObject):
         self._corpus_range_cache[cache_key] = val
         return self._corpus_range_cache[cache_key]
 
-    def get_frequency(self, s, engine=False):
+    def get_frequency(self, s, literal=False, engine=False):
         """
         Return the frequency for a token specified by s.
 
@@ -1619,6 +1619,9 @@ class CorpusClass(CoqObject):
         ----------
         s : str
             A query item specification
+        literal : bool
+            True if the string should be parsed as a query token, or False
+            if it should be looked up as it is. Default is False.
         engine : An SQLAlchemy engine
             If provided, use this SQL engine. Otherwise, initialize a new
             engine, and use that.
@@ -1642,7 +1645,7 @@ class CorpusClass(CoqObject):
         if not s:
             return 0
 
-        token = tokens.COCAToken(s, self, False)
+        token = tokens.COCAToken(s, self, False, literal=literal)
 
         word_pos_column = getattr(self.resource, QUERY_ITEM_POS, None)
 
