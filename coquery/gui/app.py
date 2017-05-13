@@ -551,7 +551,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.data_preview.horizontalHeader().sectionFinallyResized.connect(self.result_column_resize)
         self.ui.data_preview.horizontalHeader().customContextMenuRequested.connect(self.show_header_menu)
-        self.ui.data_preview.horizontalHeader().sectionMoved.connect(self.column_moved)
         self.ui.data_preview.verticalHeader().customContextMenuRequested.connect(self.show_row_header_menu)
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
 
@@ -1155,25 +1154,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except IndexError:
             pass
 
-    def column_moved(self, *args, **kwargs):
-        section, last, new = args
-
-        if options.cfg.MODE == QUERY_MODE_TOKENS:
-            print(self.Session.data_table.columns)
-            columns = list(self.Session.data_table.columns.values)
-            vis_cols = self.table_model.header
-            for x in vis_cols[::-1]:
-                columns.remove(x)
-                columns.insert(0, x)
-            moved = self.table_model.header[section]
-            columns.remove(moved)
-            columns.insert(new, moved)
-            self.Session.data_table = self.Session.data_table[columns]
-            print(self.Session.data_table.columns)
-        #self.reaggregate()
-        #if self.Session.query_type == queries.ContingencyQuery:
-            #self.reaggregate(query_type=queries.ContingencyQuery, recalculate=True)
-
     def result_column_resize(self, index, old, new):
         #header = self.table_model.header[index].lower()
         #options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
@@ -1193,32 +1173,34 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         token_width = 1
 
-        # FIXME: these imports feels utterly misplaced.
-        from coquery import queries
-
         if index is not None:
             manager = self.Session.get_manager()
-            if isinstance(manager, managers.ContrastMatrix):
-                from . import independencetestviewer
-                if self.ui.data_preview.model().data(index, QtCore.Qt.DisplayRole):
-                    data = self.ui.data_preview.model().data(index, QtCore.Qt.UserRole)
-                    viewer = independencetestviewer.IndependenceTestViewer(data, icon=options.cfg.icon)
-                    viewer.show()
-                    self.widget_list.append(viewer)
-                return
+            try:
+                if isinstance(manager, managers.ContrastMatrix):
+                    from .independencetestviewer import (
+                        IndependenceTestViewer)
+                    if self.ui.data_preview.model().data(
+                            index, QtCore.Qt.DisplayRole):
+                        data = self.ui.data_preview.model().data(
+                            index, QtCore.Qt.UserRole)
+                        viewer = IndependenceTestViewer(
+                            data, icon=options.cfg.icon)
+                        viewer.show()
+                        self.widget_list.append(viewer)
+                    return
 
-            model_index = index
-            row = model_index.row()
-            col = model_index.column()
-            data = self.table_model.content.iloc[row]
-            meta_data = self.table_model.invisible_content.iloc[row]
+                model_index = index
+                row = model_index.row()
+                col = model_index.column()
+                data = self.table_model.content.iloc[row]
+                meta_data = self.table_model.invisible_content.iloc[row]
 
-            if self.Session.is_statistics_session():
-                column = data.index[col]
-                self.show_unique_values(rc_feature=meta_data["coquery_invisible_rc_feature"],
-                                        uniques=column != "coq_statistics_entries")
-            else:
-                try:
+                if self.Session.is_statistics_session():
+                    column = data.index[col]
+                    self.show_unique_values(
+                        rc_feature=meta_data["coquery_invisible_rc_feature"],
+                        uniques=column != "coq_statistics_entries")
+                else:
                     if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
                         if meta_data.index[index.column()].startswith("coquery_invisible_corpus_id"):
                             token_id = int(meta_data[index.column()])
@@ -1229,9 +1211,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     else:
                         token_id = meta_data["coquery_invisible_corpus_id"]
                     token_width = meta_data["coquery_invisible_number_of_tokens"]
-                except KeyError:
-                    QtWidgets.QMessageBox.critical(self, "Context error", msg_no_context_available)
-                    return
+            except (AttributeError, KeyError, IndexError):
+                QtWidgets.QMessageBox.critical(self,
+                                               "Context error",
+                                               msg_no_context_available)
+                return
 
             # do not show contexts if the user clicks on user data columns
             # because the cell editor should open
@@ -1241,11 +1225,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         origin_id = self.Session.Corpus.get_source_id(token_id)
 
         if self.Session.Resource.audio_features:
-            from .contextviewer import ContextViewAudio as ContextView
+            from .contextviewer import ContextViewAudio as Viewer
         else:
-            from .contextviewer import ContextView
+            from .contextviewer import Viewer
 
-        viewer = ContextView(self.Session.Corpus, int(token_id),
+        viewer = Viewer(self.Session.Corpus, int(token_id),
                              int(origin_id), int(token_width),
                              icon=options.cfg.icon)
         viewer.show()
