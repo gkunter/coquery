@@ -592,11 +592,11 @@ class Visualizer(CoqObject):
                 #loc=loc).draggable()
         #else:
         ax = grid.fig.gca()
-        ax.legend(["abc"],
-                  title="Legend",
-                  frameon=True,
-                  framealpha=0.7,
-                  loc="upper left").draggable()
+        #ax.legend(["abc"],
+                  #title="Legend",
+                  #frameon=True,
+                  #framealpha=0.7,
+                  #loc="upper left").draggable()
 
         #grid.fig.get_axes()[-1].legend(
             #ncol=self.options.get("label_legend_columns", 1),
