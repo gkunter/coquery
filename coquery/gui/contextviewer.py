@@ -260,6 +260,8 @@ class ContextView(QtWidgets.QWidget):
             stretch = "extra-expanded"
         elif font.stretch() == int(QtGui.QFont.UltraExpanded):
             stretch = "ultra-expanded"
+        else:
+            stretch = "normal"
 
         weight = int(font.weight()) * 10
 
