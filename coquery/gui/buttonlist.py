@@ -60,13 +60,14 @@ class CoqButtonList(QtWidgets.QWidget):
 
     def setItems(self, rows):
         self.ui.list_widget.clear()
-        if type(rows[0]) != tuple or len(rows[0]) != 2:
-            rows = [(x, x) for x in rows]
+        if rows:
+            if type(rows[0]) != tuple or len(rows[0]) != 2:
+                rows = [(x, x) for x in rows]
 
-        for label, data in rows:
-            item = QtWidgets.QListWidgetItem(label)
-            item.setData(QtCore.Qt.UserRole, data)
-            self.ui.list_widget.addItem(item)
+            for label, data in rows:
+                item = QtWidgets.QListWidgetItem(label)
+                item.setData(QtCore.Qt.UserRole, data)
+                self.ui.list_widget.addItem(item)
 
     def items(self):
         items = []
