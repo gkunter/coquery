@@ -451,6 +451,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.plot_figure()
 
     def restore_settings(self):
+        self.resize(640, 400)
         try:
             self.resize(options.settings.value("visualizationdesigner_size"))
         except TypeError:
