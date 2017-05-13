@@ -875,6 +875,116 @@ class BaseResource(CoqObject):
                 item_map[x] = getattr(cls, x)
         return item_map
 
+    @classmethod
+    def get_select_list(cls, query):
+        """
+        Return a list of field names that can be used to extract the
+        requested columns from the joined MySQL query table.
+
+        This list is usually stored in Session.output_order and determines
+        which columns appear in the output table. If a column is missing,
+        it may be because it is not correctly included in this set.
+
+        Parameters
+        ----------
+        query : CorpusQuery
+            The query for which a select set is required
+
+        Returns
+        -------
+        select_list : list
+            A list of strings representing the aliased columns in the joined
+            MySQL query table.
+        """
+
+        lexicon_features = [x for x, _ in cls.get_lexicon_features() if x in options.cfg.selected_features]
+        corpus_features = [x for x, _ in cls.get_corpus_features() if x in options.cfg.selected_features]
+
+        max_token_count = query.Session.get_max_token_count()
+        # the initial select list contains the columns from the input file
+        # (if present):
+        select_list = list(query.Session.input_columns)
+
+        ordered_selected_features = []
+        for feature in cls.get_preferred_output_order():
+            if feature in options.cfg.selected_features:
+                ordered_selected_features.append(feature)
+
+        # then, add an appropriately aliased name for each selected feature:
+        #for rc_feature in options.cfg.selected_features:
+        for rc_feature in ordered_selected_features:
+            select_list += cls.format_resource_feature(rc_feature, max_token_count)
+
+        # linked columns
+        for rc_feature in options.cfg.selected_features:
+            hashed, table, feature = cls.split_resource_feature(rc_feature)
+            if hashed != None:
+                link, res = get_by_hash(hashed)
+                linked_feature = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
+                if cls.is_lexical(link.rc_from):
+                    select_list += ["{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
+                else:
+                    select_list.append("{}_1".format(linked_feature))
+
+        # if requested and possible, add contexts for each query match:
+        if (options.cfg.context_mode != CONTEXT_NONE and
+            (options.cfg.context_left or options.cfg.context_right) and
+            options.cfg.token_origin_id):
+
+            # KWIC and context columns should by default be placed around
+            # the lexical features in order to be similar to standard
+            # concordancing software. In order to do so, we determine the
+            # current positions of lexical features in the output list:
+            first_lexical_feature = len(select_list)
+            last_lexical_feature = 0
+            for i, field in enumerate(select_list):
+                try:
+                    feature = re.match("coq_(.*)_\d+$", field).group(1)
+                except AttributeError:
+                    # This is raised if the RE doesn't match the field name.
+                    # In particular, it is raised for columns from special
+                    # tables (Statistics, Coquery, Tag). They never count as
+                    # Lexical features, so they should not be considered as
+                    # places for the context anyway.
+                    pass
+                else:
+                    if feature in lexicon_features:
+                        first_lexical_feature = min(i, first_lexical_feature)
+                        last_lexical_feature = max(i, last_lexical_feature)
+
+            # KWIC: add context columns to left and right of lexical features:
+            if options.cfg.context_mode == CONTEXT_KWIC:
+                if options.cfg.context_left:
+                    select_list.insert(first_lexical_feature, "coq_context_left")
+                if options.cfg.context_right:
+                    select_list.insert(last_lexical_feature + int(options.cfg.context_left > 1) + 1,
+                                       "coq_context_right")
+
+            # Strings and Sentences: add context columns after all other columns
+            elif options.cfg.context_mode == CONTEXT_STRING:
+                select_list.append("coq_context_string")
+            elif options.cfg.context_mode == CONTEXT_SENTENCE:
+                select_list.append("coq_context_string")
+
+            # Columns: add context columns for each word to left and right of
+            # lexical features:
+            elif options.cfg.context_mode == CONTEXT_COLUMNS:
+                for x in range(options.cfg.context_left):
+                    select_list.insert(first_lexical_feature,
+                                       "coq_context_lc{}".format(x+1))
+                for x in range(options.cfg.context_right):
+                    select_list.insert(last_lexical_feature + options.cfg.context_left + x + 1,
+                                       "coq_context_rc{}".format(x+1))
+
+            select_list.append("coquery_invisible_origin_id")
+
+        select_list.append("coquery_invisible_corpus_id")
+        select_list.append("coquery_invisible_number_of_tokens")
+        assert sorted(list(set(select_list))) == sorted(select_list), "Duplicates in select_list: {}".format(select_list)
+        return select_list
+
+
+
 class SQLResource(BaseResource):
     _get_orth_str = None
 
@@ -1157,113 +1267,6 @@ class SQLResource(BaseResource):
         #S = self.sql_string_get_sentence_wordid(sentence_id)
         #self.resource.DB.execute(S)
 
-    @classmethod
-    def get_select_list(cls, query):
-        """
-        Return a list of field names that can be used to extract the
-        requested columns from the joined MySQL query table.
-
-        This list is usually stored in Session.output_order and determines
-        which columns appear in the output table. If a column is missing,
-        it may be because it is not correctly included in this set.
-
-        Parameters
-        ----------
-        query : CorpusQuery
-            The query for which a select set is required
-
-        Returns
-        -------
-        select_list : list
-            A list of strings representing the aliased columns in the joined
-            MySQL query table.
-        """
-
-        lexicon_features = [x for x, _ in cls.get_lexicon_features() if x in options.cfg.selected_features]
-        corpus_features = [x for x, _ in cls.get_corpus_features() if x in options.cfg.selected_features]
-
-        max_token_count = query.Session.get_max_token_count()
-        # the initial select list contains the columns from the input file
-        # (if present):
-        select_list = list(query.Session.input_columns)
-
-        ordered_selected_features = []
-        for feature in cls.get_preferred_output_order():
-            if feature in options.cfg.selected_features:
-                ordered_selected_features.append(feature)
-
-        # then, add an appropriately aliased name for each selected feature:
-        #for rc_feature in options.cfg.selected_features:
-        for rc_feature in ordered_selected_features:
-            select_list += cls.format_resource_feature(rc_feature, max_token_count)
-
-        # linked columns
-        for rc_feature in options.cfg.selected_features:
-            hashed, table, feature = cls.split_resource_feature(rc_feature)
-            if hashed != None:
-                link, res = get_by_hash(hashed)
-                linked_feature = "db_{}_coq_{}_{}".format(res.db_name, table, feature)
-                if cls.is_lexical(link.rc_from):
-                    select_list += ["{}_{}".format(linked_feature, x+1) for x in range(max_token_count)]
-                else:
-                    select_list.append("{}_1".format(linked_feature))
-
-        # if requested and possible, add contexts for each query match:
-        if (options.cfg.context_mode != CONTEXT_NONE and
-            (options.cfg.context_left or options.cfg.context_right) and
-            options.cfg.token_origin_id):
-
-            # KWIC and context columns should by default be placed around
-            # the lexical features in order to be similar to standard
-            # concordancing software. In order to do so, we determine the
-            # current positions of lexical features in the output list:
-            first_lexical_feature = len(select_list)
-            last_lexical_feature = 0
-            for i, field in enumerate(select_list):
-                try:
-                    feature = re.match("coq_(.*)_\d+$", field).group(1)
-                except AttributeError:
-                    # This is raised if the RE doesn't match the field name.
-                    # In particular, it is raised for columns from special
-                    # tables (Statistics, Coquery, Tag). They never count as
-                    # Lexical features, so they should not be considered as
-                    # places for the context anyway.
-                    pass
-                else:
-                    if feature in lexicon_features:
-                        first_lexical_feature = min(i, first_lexical_feature)
-                        last_lexical_feature = max(i, last_lexical_feature)
-
-            # KWIC: add context columns to left and right of lexical features:
-            if options.cfg.context_mode == CONTEXT_KWIC:
-                if options.cfg.context_left:
-                    select_list.insert(first_lexical_feature, "coq_context_left")
-                if options.cfg.context_right:
-                    select_list.insert(last_lexical_feature + int(options.cfg.context_left > 1) + 1,
-                                       "coq_context_right")
-
-            # Strings and Sentences: add context columns after all other columns
-            elif options.cfg.context_mode == CONTEXT_STRING:
-                select_list.append("coq_context_string")
-            elif options.cfg.context_mode == CONTEXT_SENTENCE:
-                select_list.append("coq_context_string")
-
-            # Columns: add context columns for each word to left and right of
-            # lexical features:
-            elif options.cfg.context_mode == CONTEXT_COLUMNS:
-                for x in range(options.cfg.context_left):
-                    select_list.insert(first_lexical_feature,
-                                       "coq_context_lc{}".format(x+1))
-                for x in range(options.cfg.context_right):
-                    select_list.insert(last_lexical_feature + options.cfg.context_left + x + 1,
-                                       "coq_context_rc{}".format(x+1))
-
-            select_list.append("coquery_invisible_origin_id")
-
-        select_list.append("coquery_invisible_corpus_id")
-        select_list.append("coquery_invisible_number_of_tokens")
-        assert sorted(list(set(select_list))) == sorted(select_list), "Duplicates in select_list: {}".format(select_list)
-        return select_list
 
 class CorpusClass(CoqObject):
     """
@@ -2618,7 +2621,6 @@ class CorpusClass(CoqObject):
         lexicon_features = [(x, y) for x, y in self.resource.get_lexicon_features() if x in options.cfg.selected_features]
 
         positions_lexical_items = self.get_lexical_item_positions(token_list)
-
         max_token_count = Query.Session.get_max_token_count()
         final_select = []
         for rc_feature in self.resource.get_preferred_output_order():
