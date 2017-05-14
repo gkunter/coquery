@@ -12,8 +12,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import importlib
+import imp
 import logging
 import sys
+import os
 
 from coquery import options, NAME
 from coquery.defines import ROW_NAMES
@@ -617,10 +619,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
 def get_visualizer_module(name):
     # try to import the specified visualization module:
-    name = "coquery.visualizer.{}".format(name)
+    visualizer_path = os.path.join(options.cfg.base_path, "visualizer")
     try:
-        return importlib.import_module(name)
+        find = imp.find_module(name, [visualizer_path])
+        module = imp.load_module(name, *find)
+        return module
     except Exception as e:
+        print(e)
         msg = "<code style='color: darkred'>{type}: {code}</code>".format(
             type=type(e).__name__, code=sys.exc_info()[1])
         logger.error(msg)
