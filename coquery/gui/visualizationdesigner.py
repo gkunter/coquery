@@ -51,7 +51,7 @@ visualizer_mapping = (
     #("Change over time (lines)", "Lines", "timeseries"),
     #("Change over time (stacked)", "Areas_stacked", "timeseries"),
     #("Change over time (percent)", "Areas_percent", "timeseries"),
-    #("Heat map", "Heatmap", "heatmap"),
+    ("Heat map", "Heatmap", "heatmap", "Heatmap"),
     ("Box-Whisker plot", "Boxplot", "boxplot", "BoxPlot"),
     ("Violin plot", "Violinplot", "boxplot", "ViolinPlot"),
     #("Kernel density", "Normal Distribution Histogram", "densityplot"),

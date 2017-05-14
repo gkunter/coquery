@@ -106,3 +106,90 @@ class Visualizer(vis.BaseVisualizer):
 
         cmap = ListedColormap(self.options["color_palette_values"])
         self.map_data(plot_facet)
+
+class Heatmap(vis.Visualizer):
+    def plot_facet(self, data, color, **kwargs):
+
+        def get_crosstab(data, row_fact, col_fact, row_names, col_names):
+            ct = pd.crosstab(data[row_fact], data[col_fact])
+            ct = ct.reindex_axis(row_names, axis=0).fillna(0)
+            ct = ct.reindex_axis(col_names, axis=1).fillna(0)
+            return ct
+
+        x = kwargs.get("x")
+        y = kwargs.get("y")
+        z = kwargs.get("z")
+        levels_x = kwargs.get("levels_x")
+        levels_y = kwargs.get("levels_y")
+        levels_z = kwargs.get("levels_z")
+
+        cmap = (kwargs.get("palette", "Blues"))
+
+        if x and y and z:
+            if data[x].dtype in (int, float):
+                numeric = x
+                cat = [z, y]
+            elif data[y].dtype in (int, float):
+                numeric = y
+                cat = [x, z]
+            else:
+                numeric = z
+                cat = [x, y]
+            ct = (data[cat + [numeric]].groupby(cat)
+                                       .agg("mean")
+                                       .reset_index()
+                                       .pivot(cat[0], cat[1], numeric)
+                                       .T)
+        elif sum([bool(x), bool(y), bool(z)]) == 2:
+            numeric = None
+            cat = []
+            if x:
+                if data[x].dtype in (int, float):
+                    numeric = x
+                else:
+                    cat.append(x)
+            if y:
+                if data[y].dtype in (int, float):
+                    numeric = y
+                else:
+                    cat.append(y)
+            if z:
+                if data[z].dtype in (int, float):
+                    numeric = z
+                else:
+                    cat.append(z)
+            if numeric:
+                ct = data[[cat[0], numeric]].groupby(cat[0]).agg("mean")
+                if cat[0] == x:
+                    ct = ct.T
+            else:
+                ct = get_crosstab(data, x, y, levels_x, levels_y).T
+        elif x:
+            ct = pd.crosstab(pd.Series([""] * len(data[x]), name=""),
+                             data[x]).fillna(0)
+            ct = ct.reindex_axis(levels_x, axis=1).fillna(0)
+        elif y:
+            ct = pd.crosstab(pd.Series([""] * len(data[y]), name=""),
+                             data[y]).fillna(0).T
+            ct = ct.reindex_axis(levels_y, axis=0).fillna(0)
+
+        sns.heatmap(ct,
+            robust=True,
+            annot=True,
+            cbar=False,
+            cmap=cmap,
+            fmt="g",
+            #vmax=vmax,
+            linewidths=1)
+
+    @staticmethod
+    def validate_data(data_x, data_y, data_z, df, session):
+        cat, num, none = vis.Visualizer.count_parameters(
+            data_x, data_y, data_z, df, session)
+
+        return True
+
+        if len(num) > 2 or len(num) == 0 or len(cat) > 1:
+            return False
+        else:
+            return True
