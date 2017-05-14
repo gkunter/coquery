@@ -4,6 +4,8 @@ import os
 import sys
 import glob
 
+sys.set_recursiondepth(10000)
+
 block_cipher = None
 
 VERSION = os.getenv("COQ_VERSION")
@@ -29,6 +31,8 @@ if sys.platform == "win32":
 
 for file in glob.glob(os.path.join(coq_path, "icons", "small-n-flat", "PNG")):
 	data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
+for file in glob.glob(os.path.join(coq_path, "icons", "Icons8", "PNG")):
+    data.append((file, os.path.join("icons", "Icons8", "PNG")))
 for file in glob.glob(os.path.join(coq_path, "icons", "artwork")):
 	data.append((file, os.path.join("icons", "artwork")))
 
@@ -80,7 +84,7 @@ else:
               upx=True,
               console=False )
 
-              
+
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -94,7 +98,7 @@ if sys.platform == "darwin":
                  name='Coquery.app',
                  icon=os.path.join(coq_path, "icons", "artwork", "coquery.icns"))
 
-               
+
 # a.binaries = [x for x in a.binaries if not x[0].startswith("scipy")]
 
 # a.binaries = [x for x in a.binaries if not x[0].startswith("IPython")]
