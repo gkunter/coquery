@@ -268,7 +268,7 @@ class CoqResultsTableView(classes.CoqTableView):
 
         v_header = classes.CoqVerticalHeader(QtCore.Qt.Vertical)
         v_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        v_header.setDefaultSectionSize(QtWidgets.QLabel().sizeHint().height() + 2)
+        v_header.setDefaultSectionSize(v_header.minimumSectionSize())
         self.setVerticalHeader(v_header)
 
         h_header = classes.CoqHorizontalHeader(QtCore.Qt.Horizontal)
