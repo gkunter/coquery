@@ -41,10 +41,7 @@ class CoqSettings(QtCore.QSettings):
         return val
 
 def QWebView(*args, **kwargs):
-    if pyside:
-        import PySide.QtWebKit as QtWebKit
-    elif pyqt:
-        import PyQt4.QtWebKit as QtWebKit
+    import PyQt5.QtWebKit as QtWebKit
     return QtWebKit.QWebView(*args, **kwargs)
 
 if sys.platform == 'win32':
