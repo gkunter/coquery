@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 scatterplot.py is part of Coquery.
 
 Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
@@ -21,7 +21,7 @@ from coquery import options
 from coquery.functions import *
 
 sequential_palettes = ["Blues", "Reds", "Greens", "Oranges", "Purples",
-                       "BuGn", "BuPu", "RdPu", "OrRd", "YlGn", 
+                       "BuGn", "BuPu", "RdPu", "OrRd", "YlGn",
                        "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy"]
 
 class Visualizer(vis.BaseVisualizer):
@@ -47,7 +47,7 @@ class Visualizer(vis.BaseVisualizer):
         else:
             self.options["label_x_axis"] = self._number_columns[-2]
         self.options["label_y_axis"] = self._number_columns[-1]
-        
+
         if len(self._groupby) == 1:
             self.options["label_legend"] = self._groupby[-1]
             
@@ -58,7 +58,7 @@ class Visualizer(vis.BaseVisualizer):
             super(Visualizer, self).setup_figure()
 
     def draw(self, column_x=None, **kwargs):
-        
+
         def plot_facet(data, color, **kwargs):
             if self._value_column or True:
                 df = data.dropna(subset=self._number_columns[-2:])
@@ -100,10 +100,10 @@ class Visualizer(vis.BaseVisualizer):
                         sns.kdeplot(x=range(len(y)),
                                     y=df[x_values],
                                     ax=plt.gca())
-                                    
+
             except Exception as e:
                 print(e)
-            
+
         self._value_column = self._number_columns[-1]
         self.map_data(plot_facet)
         #self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
@@ -141,6 +141,7 @@ class Visualizer(vis.BaseVisualizer):
 
 class ScatterPlot(vis.Visualizer):
     fit_reg = False
+    axes_style = "whitegrid"
 
     def plot_facet(self, data, color, **kwargs):
         x = kwargs.get("x")
@@ -184,11 +185,6 @@ class ScatterPlot(vis.Visualizer):
             ax = sns.regplot(val_x, val_y,
                              fit_reg=self.fit_reg,
                              ax=kwargs.get("ax", plt.gca()))
-
-    def get_grid(self, **kwargs):
-        with sns.axes_style("whitegrid"):
-            grid = super(ScatterPlot, self).get_grid(**kwargs)
-        return grid
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 boxplot.py is part of Coquery.
 
 Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
@@ -13,6 +13,8 @@ from coquery.visualizer import visualizer as vis
 import seaborn as sns
 
 class BoxPlot(vis.Visualizer):
+    axes_style = "whitegrid"
+
     def plot_fnc(self, *args, **kwargs):
         sns.boxplot(*args, **kwargs)
 
@@ -53,11 +55,6 @@ class BoxPlot(vis.Visualizer):
         # case 5: one category in x and y, a numeric in z:
         else:
             self.plot_fnc(x=z, y=y, hue=x, data=data, palette=palette)
-
-    def get_grid(self, **kwargs):
-        with sns.axes_style("whitegrid"):
-            grid = super(BoxPlot, self).get_grid(**kwargs)
-        return grid
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):

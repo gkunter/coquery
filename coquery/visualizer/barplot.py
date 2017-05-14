@@ -322,6 +322,8 @@ class Visualizer(vis.BaseVisualizer):
 
 
 class BarPlot(vis.Visualizer):
+    axes_style = "whitegrid"
+
     def get_parameters(self, **kwargs):
         session = kwargs.get("session")
         self._ax = kwargs.get("ax", plt.gca())
@@ -403,17 +405,11 @@ class BarPlot(vis.Visualizer):
             params.update({"x": numeric, "y": self._y,
                            "order": self._levels_y,
                            "hue": self._x, "hue_order": self._levels_x})
-        print(params, "\n")
         return params
 
     def plot_facet(self, **kwargs):
         params = self.get_parameters(**kwargs)
         ax = sns.barplot(**params)
-
-    def get_grid(self, **kwargs):
-        with sns.axes_style("whitegrid"):
-            grid = super(BarPlot, self).get_grid(**kwargs)
-        return grid
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
@@ -443,7 +439,6 @@ class StackedBars(BarPlot):
         hue = params["hue"]
         numeric = "COQ_FUNC"
 
-        print(data.dtypes[x])
         if data.dtypes[x] != object:
             numeric = x
             axis = y
