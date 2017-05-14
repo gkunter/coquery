@@ -4,7 +4,7 @@ import os
 import sys
 import glob
 
-sys.set_recursiondepth(10000)
+sys.setrecursionlimit(10000)
 
 block_cipher = None
 
@@ -55,7 +55,7 @@ a = Analysis([os.path.join('..', 'Coquery.py')],
              binaries=binaries,
              datas=data + l,
              hiddenimports=['transpose'] + [os.path.splitext(os.path.basename(x))[0] for x, _ in l],
-             hookspath=[],
+             hookspath=["."],
              runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
