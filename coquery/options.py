@@ -1695,7 +1695,7 @@ use_winsound = has_module("winsound")
 
 
 missing_modules = []
-for mod in ["sqlalchemy", "pandas"]:
+for mod in ["sqlalchemy", "pandas", "scipy", "PyQt5"]:
     if not has_module(mod):
         missing_modules.append(mod)
 
