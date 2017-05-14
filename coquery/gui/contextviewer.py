@@ -267,9 +267,10 @@ class ContextView(QtWidgets.QWidget):
 
         styles = []
 
-        styles.append('line-height: {}px'.format(font.pointSize() * 1.5))
-        styles.append('font: {}px "{}"'.format(
-            font.pointSize(), font.family()))
+        styles.append('line-height: {}px'.format(font.pointSize() * 1.85))
+        styles.append('font-family: "{}", Times, Serif'.format(
+            font.family()))
+        styles.append("font-size: {}px".format(font.pointSize() * 1.25))
         styles.append("font-style: {}".format(style))
         styles.append("font-weight: {}".format(weight))
         styles.append("font-strech: {}".format(stretch))
@@ -280,7 +281,6 @@ class ContextView(QtWidgets.QWidget):
             text = "<u>{}</u>".format(text)
         if font.strikeOut():
             text = "<s>{}</s>".format(text)
-
         s = "<div style='{}'>{}</div>".format("; ".join(styles), text)
         self.ui.context_area.setText(s)
 
