@@ -580,6 +580,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         #self.canvas.draw()
         #plt.draw()
         self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
+        self.dialog.raise_()
 
     def add_annotations(self):
         if self.vis:
