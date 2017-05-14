@@ -188,8 +188,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
             if label not in VisualizationDesigner.visualizers:
                 module = get_visualizer_module(module_name)
-                visualizer = getattr(module, vis_class)
-                VisualizationDesigner.visualizers[label] = visualizer
+                if module:
+                    visualizer = getattr(module, vis_class)
+                    VisualizationDesigner.visualizers[label] = visualizer
             self.moduleLoaded.emit(label, icon)
         self.allLoaded.emit()
 
@@ -626,6 +627,6 @@ def get_visualizer_module(name):
         QtWidgets.QMessageBox.critical(
             None, "Visualization error – Coquery",
             VisualizationModuleError(name, msg).error_message)
-        return
+        return None
 
 logger = logging.getLogger(NAME)
