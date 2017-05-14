@@ -30,23 +30,23 @@ if sys.platform == "win32":
             binaries.append((file, "."))
 
 for file in glob.glob(os.path.join(coq_path, "icons", "small-n-flat", "PNG")):
-	data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
+    data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
 for file in glob.glob(os.path.join(coq_path, "icons", "Icons8", "PNG")):
     data.append((file, os.path.join("icons", "Icons8", "PNG")))
 for file in glob.glob(os.path.join(coq_path, "icons", "artwork")):
-	data.append((file, os.path.join("icons", "artwork")))
+    data.append((file, os.path.join("icons", "artwork")))
 
 for file in glob.glob(os.path.join(coq_path, "texts")):
-	data.append((file, os.path.join("texts")))
+    data.append((file, os.path.join("texts")))
 for file in glob.glob(os.path.join(coq_path, "help")):
-	data.append((file, os.path.join("help")))
+    data.append((file, os.path.join("help")))
 for file in glob.glob(os.path.join(coq_path, "stopwords")):
     data.append((file, os.path.join("stopwords")))
 
 for file in glob.glob(os.path.join(coq_path, "installer", "coq_install_*.py")):
-	l.append((file, "installer"))
+    l.append((file, "installer"))
 for file in glob.glob(os.path.join(coq_path, 'visualizer', '*.py')):
-	l.append((file, "visualizer"))
+    l.append((file, "visualizer"))
 
 a = Analysis([os.path.join('..', 'Coquery.py')],
              pathex=[coq_path,
