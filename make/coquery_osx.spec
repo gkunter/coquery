@@ -16,6 +16,8 @@ for file in glob.glob(os.path.join(coq_path, "icons", "small-n-flat", "PNG")):
 	data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
 for file in glob.glob(os.path.join(coq_path, "icons", "artwork")):
 	data.append((file, os.path.join("icons", "artwork")))
+for file in glob.glob(os.path.join(coq_path, "icons", "Icons8", "PNG")):
+    data.append((file, os.path.join("icons", "Icons8", "PNG")))
 
 for file in glob.glob(os.path.join(coq_path, "texts")):
 	data.append((file, os.path.join("texts")))
