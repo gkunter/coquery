@@ -1203,7 +1203,7 @@ class SQLResource(BaseResource):
         if options.cfg.limit_matches and options.cfg.number_of_tokens:
             S = """{}
             LIMIT  {}
-            """.format(options.cfg.number_of_tokens)
+            """.format(S, options.cfg.number_of_tokens)
         return S
 
     def get_context(self, token_id, origin_id, number_of_tokens, db_connection, sentence_id=None):
