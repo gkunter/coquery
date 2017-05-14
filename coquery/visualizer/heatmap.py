@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 heatmap.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -39,7 +39,7 @@ if sns.__version__ < "0.7.0":
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality=2
-    
+
     def setup_figure(self):
         with sns.axes_style("white"):
             super(Visualizer, self).setup_figure()
@@ -58,19 +58,19 @@ class Visualizer(vis.BaseVisualizer):
 
     def draw(self):
         """ Draw a heat map. """
-        
+
         def get_crosstab(data, row_fact,col_fact, row_names, col_names):
             ct = pd.crosstab(data[row_fact], data[col_fact])
             ct = ct.reindex_axis(row_names, axis=0).fillna(0)
             ct = ct.reindex_axis(col_names, axis=1).fillna(0)
             return ct
-        
+
         def plot(data, color):
             ct = get_crosstab(
-                    data, 
-                    self._groupby[0], 
-                    self._groupby[1], 
-                    self._levels[0], 
+                    data,
+                    self._groupby[0],
+                    self._groupby[1],
+                    self._levels[0],
                     self._levels[1])
 
             sns.heatmap(ct,
@@ -82,13 +82,13 @@ class Visualizer(vis.BaseVisualizer):
                 vmax=vmax,
                 #ax=plt.gca(),
                 linewidths=1)
-            
+
         if len(self._groupby) < 2:
             # create a dummy cross tab with one dimension containing empty
             # values:
             data_column = self._table[self._groupby[0]].reset_index(drop=True)
             tab = pd.crosstab(
-                pd.Series([""] * len(data_column), name=""), 
+                pd.Series([""] * len(data_column), name=""),
                 data_column)
             plot_facet = lambda data, color: sns.heatmap(
                 tab,
