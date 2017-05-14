@@ -52,12 +52,12 @@ visualizer_mapping = (
     #("Change over time (stacked)", "Areas_stacked", "timeseries"),
     #("Change over time (percent)", "Areas_percent", "timeseries"),
     #("Heat map", "Heatmap", "heatmap"),
-    ("Box-Whisker plot", "Barchart", "boxplot", "BoxPlot"),
-    ("Violin plot", "Normal Distribution Histogram", "boxplot", "ViolinPlot"),
+    ("Box-Whisker plot", "Boxplot", "boxplot", "BoxPlot"),
+    ("Violin plot", "Violinplot", "boxplot", "ViolinPlot"),
     #("Kernel density", "Normal Distribution Histogram", "densityplot"),
     #("Cumulative distribution", "Positive Dynamic", "densityplot"),
-    ("Scatterplot", "Scatter Plot", "scatterplot", "ScatterPlot"),
-    ("Regression plot", "Scatter Plot", "scatterplot", "RegressionPlot"),
+    ("Scatterplot", "Scatterplot", "scatterplot", "ScatterPlot"),
+    ("Regression plot", "Regressionplot", "scatterplot", "RegressionPlot"),
     )
 
 
@@ -563,7 +563,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
             in (data_x, data_y, data_z, columns, rows))
 
         self.vis = visualizer_class(df, self.session)
-        self.grid = self.vis.get_grid(col=columns, row=rows, col_wrap=col_wrap,
+        self.grid = self.vis.get_grid(col=columns, row=rows,
+                                      col_wrap=col_wrap,
                                       sharex=True, sharey=True)
 
         self.grid = self.grid.map_dataframe(self.vis.plot_facet,
