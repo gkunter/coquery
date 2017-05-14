@@ -261,6 +261,17 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.list_toolbox.setMinimumHeight(
             box_height + 2 * self.ui.list_toolbox.frameWidth())
 
+        # adjust size of toolbox widget:
+        min_y = 0
+        max_x = 0
+        for i in range(self.ui.tool_widget.count()):
+            widget = self.ui.tool_widget.widget(i)
+            max_x = max(widget.sizeHint().width(), max_x)
+            min_y = max(widget.sizeHint().height(), min_y)
+        self.ui.tool_widget.setMaximumWidth(max_x)
+        self.ui.tool_widget.setMinimumWidth(max_x)
+        self.ui.tool_widget.setMinimumHeight(min_y + 5)
+
         self.change_toolbox(options.cfg.last_toolbox)
         self.ui.list_toolbox.resizeColumnsToContents()
         header = self.ui.list_toolbox.horizontalHeader()

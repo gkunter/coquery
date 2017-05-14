@@ -266,13 +266,13 @@
            <item>
             <widget class="QStackedWidget" name="tool_widget">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>5</number>
              </property>
              <widget class="QWidget" name="tool_widget_column_order">
               <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -1029,7 +1029,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_open_input_file">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
@@ -1041,7 +1041,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Help</string>
@@ -1078,7 +1078,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_statistics">
    <property name="icon">
     <iconset theme="view-statistics">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Statistics</string>
@@ -1087,7 +1087,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_connection_settings">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Database connections...</string>
@@ -1096,7 +1096,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_settings">
    <property name="icon">
     <iconset theme="configure">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Settings...</string>
@@ -1105,7 +1105,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_quit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -1117,7 +1117,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_build_corpus">
    <property name="icon">
     <iconset theme="document-new">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Build new corpus...</string>
@@ -1132,7 +1132,7 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="icon">
     <iconset theme="edit-delete">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Remove corpus...</string>
@@ -1144,7 +1144,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;manager...</string>
@@ -1203,7 +1203,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
-     <normaloff>../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Documentation...</string>
@@ -1287,7 +1287,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_save_results">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Save results...</string>
@@ -1299,7 +1299,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_copy_to_clipboard">
    <property name="icon">
     <iconset theme="edit-copy">
-     <normaloff>../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Copy selection to clipboard</string>
@@ -1321,7 +1321,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_save_selection">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Sa&amp;ve selection...</string>
@@ -1480,8 +1480,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_save_query">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../../.designer/backup</normaloff>../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>S&amp;ave query...</string>
@@ -1490,8 +1489,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_load_query">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../../.designer/backup</normaloff>../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>L&amp;oad query...</string>
@@ -1500,8 +1498,7 @@ p, li { white-space: pre-wrap; }
   <action name="action_share_query">
    <property name="icon">
     <iconset theme="document-share">
-     <normaloff/>
-    </iconset>
+     <normaloff>../../../../../.designer/backup</normaloff>../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>S&amp;hare query...</string>

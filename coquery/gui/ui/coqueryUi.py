@@ -134,7 +134,7 @@ class Ui_MainWindow(object):
         self.list_toolbox.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.list_toolbox)
         self.tool_widget = QtWidgets.QStackedWidget(self.group_management)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.MinimumExpanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tool_widget.sizePolicy().hasHeightForWidth())
@@ -753,7 +753,7 @@ class Ui_MainWindow(object):
         self.label_2.setBuddy(self.combo_corpus)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(0)
+        self.tool_widget.setCurrentIndex(5)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
