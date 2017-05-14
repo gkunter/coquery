@@ -890,7 +890,9 @@ class Options(object):
             self.args.filter_file_path = config_file.str("gui", "filter_file_path", fallback=os.path.expanduser("~"))
             self.args.uniques_file_path = config_file.str("gui", "uniques_file_path", fallback=os.path.expanduser("~"))
             self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
-            self.args.text_source_path = config_file.str("gui", "text_source_path", fallback="")
+            self.args.text_source_path = config_file.str(
+                "gui", "text_source_path",
+                fallback=os.path.join(self.args.base_path, "texts"))
 
             self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=True)
             self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=True)
