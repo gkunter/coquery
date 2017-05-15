@@ -373,9 +373,8 @@ class Manager(CoqObject):
                 else:
                     columns.append(target)
                     directions.append(sorter.ascending)
-
         # drop illegal sorters:
-        self.sorters = [x for x in self.sorters if x not in drop_list]
+        self.sorters = [x for x in self.sorters if x.column not in drop_list]
 
         # filter columns that should be in the data frame, but which aren't
         # (this may happen for example with the contingency table which
