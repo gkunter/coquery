@@ -577,7 +577,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.setup_canvas(self.grid.fig)
         self.grid.fig.tight_layout()
         #self.add_annotations()
-        self.vis.add_legend(self.grid)
+        self.vis.add_legend(self.grid, palette=self._palette_name)
         #self.canvas.draw()
         #plt.draw()
         self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
