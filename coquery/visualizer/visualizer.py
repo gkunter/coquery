@@ -558,6 +558,8 @@ class Visualizer(CoqObject):
         super(Visualizer, self).__init__()
         self.df = df
         self.session = session
+        self.legend_levels = None
+        self.legend_title = None
 
     def get_grid(self, **kwargs):
         kwargs["data"] = self.df
@@ -572,7 +574,7 @@ class Visualizer(CoqObject):
         return grid
 
 
-    def add_legend(self, grid, levels=None, loc="lower left"):
+    def add_legend(self, grid, palette=None, levels=None, loc="lower left"):
         """
         Add a legend to the figure, using the current option settings.
         """
@@ -591,12 +593,21 @@ class Visualizer(CoqObject):
                 #framealpha=0.7,
                 #loc=loc).draggable()
         #else:
-        ax = grid.fig.gca()
-        #ax.legend(["abc"],
-                  #title="Legend",
-                  #frameon=True,
-                  #framealpha=0.7,
-                  #loc="upper left").draggable()
+
+        if self.legend_title and self.legend_levels:
+            col = sns.color_palette(palette,
+                                    n_colors=len(self.legend_levels))
+
+            legend_bar = [plt.Rectangle((0, 0), 1, 1,
+                                        fc=col[i], edgecolor="none")
+                          for i, _ in enumerate(self.legend_levels)]
+            ax = grid.fig.gca()
+            ax.legend(legend_bar,
+                      self.legend_levels,
+                      title=self.legend_title,
+                      frameon=True,
+                      framealpha=0.7,
+                      loc=loc).draggable()
 
         #grid.fig.get_axes()[-1].legend(
             #ncol=self.options.get("label_legend_columns", 1),
