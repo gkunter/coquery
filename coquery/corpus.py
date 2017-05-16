@@ -748,7 +748,7 @@ class SQLResource(BaseResource):
                   table=ext_table, N=n+1).upper()
 
     @classmethod
-    def get_feature_joins(cls, n, selected, conditions={}):
+    def get_feature_joins(cls, n, selected, conditions={}, first_item=1):
         """
         Returns a list of table joins that are needed to satisfy the given
         list of selected features.
@@ -820,9 +820,11 @@ class SQLResource(BaseResource):
         table_list = []
         where_list = []
 
-        if n == 0:
+        if n == 0 or n + 1 == first_item:
             features = [x for x in sorted(selected)
                         if not x.startswith("segment_")]
+            if first_item:
+                n = first_item - 1
         else:
             lexicon_features = [x for x, _ in cls.get_lexicon_features()]
             features = [x for x in sorted(selected)
@@ -1065,7 +1067,7 @@ class SQLResource(BaseResource):
         # _first_item stores the number of the first item that is not
         # _NULL. This number will be used for coquery_invisible_corpus_id and
         # coquery_invisible_origin_id.
-        _first_item = 1
+        _first_item = None
 
         columns = []
         for rc_feature in selected:
@@ -1108,17 +1110,23 @@ class SQLResource(BaseResource):
                     if s not in columns:
                         columns.append(s)
 
+        if not _first_item:
+            _first_item = 1
+
         for rc_feature in selected:
             if rc_feature in corpus_features:
                 _, tab, feat = cls.split_resource_feature(rc_feature)
-                s = "COQ_{table}_1.{name} AS coq_{rc_feature}_1".format(
-                    table=tab.upper(), name=getattr(cls, rc_feature),
+                s = "COQ_{table}_{N}.{name} AS coq_{rc_feature}_1".format(
+                    N=_first_item,
+                    table=tab.upper(),
+                    name=getattr(cls, rc_feature),
                     rc_feature=rc_feature)
                 if s not in columns:
                     columns.append(s)
 
             if tab in annotations:
-                s = "COQ_{tab_upper}_1.{tab_id} AS coquery_invisible_{tab}_id".format(
+                s = "COQ_{tab_upper}_{N}.{tab_id} AS coquery_invisible_{tab}_id".format(
+                    N=_first_item,
                     tab=tab, tab_upper=tab.upper(),
                     tab_id=getattr(cls, "{}_id".format(tab)))
                 if s not in columns:
@@ -1144,8 +1152,13 @@ class SQLResource(BaseResource):
         current_pos = 0
         # go through the query items and add all required list as well as
         # the WHERE conditions based on the query item specification
+
+        first_item = None
+
         for i, (pos, s) in enumerate(query_items):
             if s is not None:
+                if first_item is None:
+                    first_item = pos
                 token = tokens.COCAToken(s)
                 if s != "*":
                     conditions = cls.get_token_conditions(i, token)
@@ -1154,9 +1167,14 @@ class SQLResource(BaseResource):
 
                 for _, l in conditions.items():
                     condition_list += ["({})".format(x) for x in l]
-                table_list, where_list = cls.get_feature_joins(i,
-                                                               selected,
-                                                               conditions)
+
+                if first_item != 1:
+                    table_list, where_list = cls.get_feature_joins(
+                        i, selected, conditions, first_item)
+                else:
+                    table_list, where_list = cls.get_feature_joins(
+                        i, selected, conditions)
+
                 join_list += table_list
                 condition_list += ["({})".format(x) for x in where_list]
                 current_pos += 1
