@@ -339,12 +339,8 @@ class BarPlot(vis.Visualizer):
         df = kwargs.get("data")
         params = {"palette": self._palette, "ax": self._ax}
 
-        print(self.dtype(self._x, df))
-        print(self.dtype(self._y, df))
-
         cat, num, _ = self.count_parameters(self._x, self._y, self._z,
                                             df, session)
-        print(num, cat, _)
         if num:
             numeric = num[0]
             if len(cat) < 2:
