@@ -709,10 +709,13 @@ class FrequencyList(Manager):
         for fnc, col in session.summary_group.functions:
             if fnc == Freq and sorted(col) == sorted(vis_cols):
                 freq_exists = True
+                existing_func = fnc
                 break
         if not freq_exists:
             #FIXME: add test that this actually works
             self.manager_functions = FunctionList([freq_function])
+        else:
+            self.manager_functions = FunctionList([existing_func])
         df = super(FrequencyList, self).summarize(df, session)
         return self.distinct(df, session)
 
