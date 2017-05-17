@@ -1059,7 +1059,7 @@ class CoqTableItem(QtWidgets.QTableWidgetItem):
 class CoqTreeItem(QtWidgets.QTreeWidgetItem):
     """
     Define a tree element class that stores the output column options in
-    the options tree.
+    the resource feature tree.
     """
     def __init__(self, *args, **kwargs):
         super(CoqTreeItem, self).__init__(*args, **kwargs)
@@ -1110,6 +1110,13 @@ class CoqTreeItem(QtWidgets.QTreeWidgetItem):
             child_states.add(child.checkState(column))
         return len(child_states) == 1
 
+    def on_change(self):
+        if self.checkState(0) == QtCore.Qt.Unchecked:
+            if (self.childCount() and
+                    self.check_children() and
+                    self.child(0).checkState(0) != QtCore.Qt.Unchecked):
+                self.setCheckState(0, QtCore.Qt.PartiallyChecked)
+
     def update_checkboxes(self, column, expand=False):
         """
         Propagate the check state of the item to the other tree items.
@@ -1132,25 +1139,61 @@ class CoqTreeItem(QtWidgets.QTreeWidgetItem):
         """
         check_state = self.checkState(column)
 
-        if check_state == QtCore.Qt.PartiallyChecked:
-            # do not propagate a partially checked state
-            return
-
         if utf8(self._objectName).endswith("_table") and check_state:
             self.setExpanded(True)
 
-        # propagate check state to children:
-        for child in [self.child(i) for i in range(self.childCount())]:
-            if not isinstance(child, CoqTreeLinkItem):
-                child.setCheckState(column, check_state)
+        if check_state != QtCore.Qt.PartiallyChecked:
+            # propagate check state to children:
+            for child in [self.child(i) for i in range(self.childCount())]:
+                if not isinstance(child, CoqTreeLinkItem):
+                    child.setCheckState(column, check_state)
+
+        #FIXME: the following is a huge mess that needs to be cleaned up!
+
         # adjust check state of parent, but not if linked:
-        if self.parent() and not self._link_by:
-            if not self.parent().check_children():
-                self.parent().setCheckState(column, QtCore.Qt.PartiallyChecked)
+        if self.parent():
+            is_external = len(self.objectName().split(".")) == 2
+
+
+            if not self._objectName:
+                # an external table
+                if check_state == QtCore.Qt.Checked:
+                    root = self.parent()
+                    if check_state == QtCore.Qt.Checked:
+                        if root.checkState(column) == QtCore.Qt.Unchecked:
+                            root.setCheckState(column, QtCore.Qt.PartiallyChecked)
+                    else:
+                        if root.checkState(column) == QtCore.Qt.PartiallyChecked:
+                            root.setCheckState(column, QtCore.Qt.Unchecked)
+
+
+            elif not is_external:
+                if not self.parent().check_children():
+                    self.parent().setCheckState(column,
+                                                QtCore.Qt.PartiallyChecked)
+                else:
+                    self.parent().setCheckState(column, check_state)
             else:
-                self.parent().setCheckState(column, check_state)
+                root = self.parent()
+                if check_state == QtCore.Qt.Checked:
+                    if root.checkState(column) == QtCore.Qt.Unchecked:
+                        root.setCheckState(column, QtCore.Qt.PartiallyChecked)
+                else:
+                    if root.checkState(column) == QtCore.Qt.PartiallyChecked:
+                        root.setCheckState(column, QtCore.Qt.Unchecked)
+
+
+                root = self.parent().parent()
+                if check_state == QtCore.Qt.Checked:
+                    if root.checkState(column) == QtCore.Qt.Unchecked:
+                        root.setCheckState(column, QtCore.Qt.PartiallyChecked)
+                else:
+                    if root.checkState(column) == QtCore.Qt.PartiallyChecked:
+                        root.setCheckState(column, QtCore.Qt.Unchecked)
+
             if expand:
-                if self.parent().checkState(column) in (QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
+                if self.parent().checkState(column) in (
+                        QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
                     self.parent().setExpanded(True)
 
 
