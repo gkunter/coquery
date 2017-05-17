@@ -15,6 +15,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
+from scipy.spatial.distance import pdist, squareform
 
 from coquery.errors import *
 from coquery import options
@@ -50,7 +51,7 @@ class Visualizer(vis.BaseVisualizer):
 
         if len(self._groupby) == 1:
             self.options["label_legend"] = self._groupby[-1]
-            
+
         super(Visualizer, self).set_defaults()
 
     def setup_figure(self):
@@ -166,25 +167,64 @@ class ScatterPlot(vis.Visualizer):
                                      color=cols[i],
                                      fit_reg=self.fit_reg,
                                      ax=kwargs.get("ax", plt.gca()))
+                    self.x_dim = None
+                    self.y_dim = numeric
                 else:
                     ax = sns.regplot(x=df[numeric], y=df.index.values,
                                      color=cols[i],
                                      fit_reg=self.fit_reg,
                                      ax=kwargs.get("ax", plt.gca()))
+                    self.x_dim = numeric
+                    self.y_dim = None
         else:
             if x is None:
                 val_x = pd.Series(range(len(data)), name=x)
                 val_y = data[y]
+                self.x_dim = None
+                self.y_dim = y
             elif y is None:
                 val_x = data[x]
                 val_y = pd.Series(range(len(data)), name=y)
+                self.x_dim = x
+                self.y_dim = None
             else:
                 val_x = data[x]
                 val_y = data[y]
+                self.x_dim = x
+                self.y_dim = y
             col = sns.color_palette(kwargs["palette"], n_colors=1)
             ax = sns.regplot(val_x, val_y,
                              fit_reg=self.fit_reg,
                              ax=kwargs.get("ax", plt.gca()))
+
+    #def on_pick(self, event):
+        #try:
+            #x_pos = event.xdata
+            #y_pos = event.ydata
+
+            #if self.x_dim and not self.y_dim:
+                #_df = self.df[["coquery_invisible_corpus_id",
+                               #self.x_dim]]
+                #_df = _df.append(pd.Series([0, x_pos], index=_df.columns),
+                                 #ignore_index=True)
+            #elif self.y_dim and not self.x_dim:
+                #_df = self.df[["coquery_invisible_corpus_id",
+                               #self.y_dim]]
+                #_df = _df.append(pd.Series([0, y_pos], index=_df.columns),
+                                 #ignore_index=True)
+            #else:
+                #_df = self.df[["coquery_invisible_corpus_id"] +
+                              #[self.x_dim, self.y_dim]]
+                #_df = _df.append(pd.Series([0, x_pos, y_pos],
+                                           #index=_df.columns),
+                                 #ignore_index=True)
+            #dist = squareform(pdist(_df[_df.columns[1:]]))
+            #neighbor = (_df.iloc[dist[-1][:-1].argmin()]
+                        #["coquery_invisible_corpus_id"])
+            #print(self.df.iloc[neighbor][_df.columns])
+            #print(x_pos, y_pos)
+        #except Exception as e:
+            #print(e)
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
