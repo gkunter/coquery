@@ -25,6 +25,7 @@ from coquery.unicode import utf8
 from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
 
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
@@ -334,6 +335,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.edit_x_label.textChanged.connect(self.add_annotations)
         self.ui.edit_y_label.textChanged.connect(self.add_annotations)
 
+        # (6) changing the legend layout
+        self.ui.edit_legend_title.editingFinished.connect(self.change_legend)
+        self.ui.check_show_legend.toggled.connect(self.change_legend)
+        self.ui.spin_columns.valueChanged.connect(self.change_legend)
+        self.ui.spin_size_legend.valueChanged.connect(self.change_legend)
+        self.ui.spin_size_legend_entries.valueChanged.connect(self.change_legend)
+
         # Hook up figure plotting.
         # The figure will be plot only upon _explicit_ user actions. User
         # actions are:
@@ -361,13 +369,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         # (5) changing the orientation
         self.ui.radio_horizontal.toggled.connect(self.plot_figure)
         self.ui.radio_vertical.toggled.connect(self.plot_figure)
-
-        # (6) changing the legend layout
-        self.ui.edit_legend_title.editingFinished.connect(self.plot_figure)
-        self.ui.check_show_legend.toggled.connect(self.plot_figure)
-        self.ui.spin_columns.valueChanged.connect(self.plot_figure)
-        self.ui.spin_size_legend.valueChanged.connect(self.plot_figure)
-        self.ui.spin_size_legend_entries.valueChanged.connect(self.plot_figure)
 
     def check_orientation(self):
         data_x = self.ui.tray_data_x.data()
@@ -473,9 +474,23 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.data_y = options.settings.value("visualizationdesigner_data_y", None)
         self.layout_columns = options.settings.value("visualizationdesigner_layout_columns", None)
         self.layout_rows = options.settings.value("visualizationdesigner_layout_rows", None)
-        val = options.settings.value("visualizationdesigner_show_legend", False)
-        self.show_legend = (val == "true")
+        val = options.settings.value("visualizationdesigner_show_legend", "true")
+        val = val == "true"
+        self.ui.check_show_legend.setChecked(val)
+
         self.legend_columns = options.settings.value("visualizationdesigner_legend_columns", 1)
+
+        size = options.settings.value(
+            "visualizationdesigner_legend_entry_size", None)
+        if not size:
+            size = QtWidgets.QLabel().font().pointSize() * 0.7
+        self.ui.spin_size_legend_entries.setValue(int(size))
+
+        size = options.settings.value(
+            "visualizationdesigner_legend_size", None)
+        if not size:
+            size = QtWidgets.QLabel().font().pointSize()
+        self.ui.spin_size_legend.setValue(int(size))
 
     def display_values(self):
         # set up Layout tab:
@@ -508,7 +523,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
             label = None
         #self.ui.receive_rows.setText(label)
 
-        self.ui.check_show_legend.setChecked(self.show_legend)
         self.ui.spin_columns.setValue(int(self.legend_columns))
 
     def get_gui_values(self):
@@ -572,6 +586,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.vis = visualizer_class(df, self.session)
         self.grid = self.vis.get_grid(col=columns, row=rows,
                                       col_wrap=col_wrap,
+                                      legend_out=True,
                                       sharex=True, sharey=True)
 
         self.grid = self.grid.map_dataframe(self.vis.plot_facet,
@@ -582,17 +597,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                             session=self.session,
                                             palette=self._palette_name)
         self.setup_canvas(self.grid.fig)
-        self.grid.fig.tight_layout()
         self.add_annotations()
-        if self.ui.check_show_legend.isChecked():
-            self.vis.add_legend(
-                self.grid,
-                title=self.ui.edit_legend_title.text() or None,
-                palette=self._palette_name,
-                ncol=self.ui.spin_columns.value(),
-                fontsize=self.ui.spin_size_legend_entries.value())
-        #self.canvas.draw()
-        #plt.draw()
+        self.change_legend()
+
+        self.grid.fig.tight_layout()
+        self.grid.fig.canvas.draw_idle()
+
         self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
         self.dialog.show()
         self.dialog.raise_()
@@ -601,6 +611,22 @@ class VisualizationDesigner(QtWidgets.QDialog):
         if self.vis:
             values = self.get_gui_values()
             self.vis.set_annotations(self.grid, values)
+            self.canvas.draw()
+
+    def change_legend(self):
+        if self.vis:
+            if self.ui.check_show_legend.isChecked():
+                kwargs = dict(
+                    grid=self.grid,
+                    title=self.ui.edit_legend_title.text() or None,
+                    palette=self._palette_name,
+                    ncol=self.ui.spin_columns.value(),
+                    fontsize=self.ui.spin_size_legend_entries.value(),
+                    titlesize=self.ui.spin_size_legend.value())
+                self.vis.add_legend(**kwargs)
+            else:
+                self.vis.hide_legend(self.grid)
+            self.canvas.draw()
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -613,9 +639,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
         options.settings.setValue("visualizationdesigner_data_y", self.data_y)
         options.settings.setValue("visualizationdesigner_layout_columns", self.layout_columns)
         options.settings.setValue("visualizationdesigner_layout_rows", self.layout_rows)
-        options.settings.setValue("visualizationdesigner_show_legend", self.show_legend)
+        options.settings.setValue("visualizationdesigner_show_legend",
+                                  self.ui.check_show_legend.isChecked())
         options.settings.setValue("visualizationdesigner_legend_columns", self.legend_columns)
         options.settings.setValue("visualizationdesigner_viewer_size", self.viewer_size)
+        options.settings.setValue("visualizationdesigner_legend_entry_size",
+                                  self.ui.spin_size_legend_entries.value())
         super(VisualizationDesigner, self).close(*args)
 
         if not hasattr(self, "canvas") and hasattr(self, "dialog"):
