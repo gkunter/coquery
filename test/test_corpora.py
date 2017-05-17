@@ -48,12 +48,28 @@ class Resource(SQLResource):
     db_name = "MockCorpus"
     name = "Corp"
     query_item_word = "word_label"
-
     query_item_pos = "word_pos"
     query_item_lemma = "lemma_label"
     query_item_transcript = "word_transcript"
 
     annotations = {"segment": "word"}
+
+
+class MockBuckeye(SQLResource):
+    """
+    MockBuckeye simulates a super-flat corpus, i.e. one in which there is not
+    even a Lexicon table.
+    """
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word = "Word"
+    corpus_file_id = "FileId"
+    file_table = "Files"
+    file_id = "FileId",
+    file_path = "Path"
+    name = "SuperFlat"
+
+    query_item_word = "corpus_word"
 
 
 class FlatResource(SQLResource):
@@ -676,6 +692,60 @@ def _monkeypatch_get_resource(name):
     return TestCorpusWithExternal.external, None, None
 
 
+class TestSuperFlat(unittest.TestCase):
+    """
+    This TestCase tests issues with a corpus that doesn't have a Lexicon
+    table, but in which the words (and other lexical features) are stored
+    directly in the corpus table:
+
+    Issue #271
+
+    """
+    resource = MockBuckeye
+    external = ExternalCorpus
+
+    def setUp(self):
+        self.maxDiff = None
+        options.cfg = argparse.Namespace()
+        options.cfg.number_of_tokens = 0
+        options.cfg.limit_matches = False
+        options.cfg.regexp = False
+        options.cfg.query_case_sensitive = False
+        options.get_configuration_type = lambda: SQL_MYSQL
+        options.get_resource = _monkeypatch_get_resource
+        self.Session = MockOptions()
+        self.Session.Resource = self.resource
+        self.Session.Lexicon = None
+        self.Session.Corpus = None
+
+        self.link = coquery.links.Link(
+                        self.resource.name, "corpus_word",
+                        self.external.name, "word_label",
+                        join="LEFT JOIN")
+        options.cfg.current_server = "Default"
+        options.cfg.table_links = {}
+        options.cfg.table_links[options.cfg.current_server] = [self.link]
+
+    def test_linked_feature_join(self):
+        ext_feature = "{}.word_data".format(self.link.get_hash())
+        l1, l2 = self.resource.get_feature_joins(0, [ext_feature])
+
+        self.assertListEqual(l1, [
+            ("LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1 "
+             "ON EXTCORP_LEXICON_1.Word = COQ_CORPUS_1.Word")])
+        self.assertListEqual(l2, [])
+
+    def test_linked_required_columns(self):
+        query = TokenQuery("*", self.Session)
+        ext_feature = "{}.word_data".format(self.link.get_hash())
+        l = self.resource.get_required_columns(query.query_list[0],
+                                               [ext_feature])
+        self.assertListEqual(l,
+            ["EXTCORP_LEXICON_1.ExtData AS db_extcorp_coq_word_data_1",
+             "COQ_CORPUS_1.ID AS coquery_invisible_corpus_id",
+             "COQ_CORPUS_1.FileId AS coquery_invisible_origin_id"])
+
+
 class TestCorpusWithExternal(unittest.TestCase):
     external = ExternalCorpus
     resource = Resource
@@ -758,6 +828,7 @@ class TestCorpusWithExternal(unittest.TestCase):
 def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestCorpus),
+        unittest.TestLoader().loadTestsFromTestCase(TestSuperFlat),
         #unittest.TestLoader().loadTestsFromTestCase(TestCorpusWithExternal)
         ])
     unittest.TextTestRunner().run(suite)
