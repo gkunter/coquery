@@ -362,6 +362,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.radio_horizontal.toggled.connect(self.plot_figure)
         self.ui.radio_vertical.toggled.connect(self.plot_figure)
 
+        # (6) changing the legend layout
+        self.ui.edit_legend_title.editingFinished.connect(self.plot_figure)
+        self.ui.check_show_legend.toggled.connect(self.plot_figure)
+        self.ui.spin_columns.valueChanged.connect(self.plot_figure)
+        self.ui.spin_size_legend.valueChanged.connect(self.plot_figure)
+        self.ui.spin_size_legend_entries.valueChanged.connect(self.plot_figure)
+
     def check_orientation(self):
         data_x = self.ui.tray_data_x.data()
         data_y = self.ui.tray_data_y.data()
@@ -576,8 +583,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                             palette=self._palette_name)
         self.setup_canvas(self.grid.fig)
         self.grid.fig.tight_layout()
-        #self.add_annotations()
-        self.vis.add_legend(self.grid, palette=self._palette_name)
+        self.add_annotations()
+        if self.ui.check_show_legend.isChecked():
+            self.vis.add_legend(
+                self.grid,
+                title=self.ui.edit_legend_title.text() or None,
+                palette=self._palette_name,
+                ncol=self.ui.spin_columns.value(),
+                fontsize=self.ui.spin_size_legend_entries.value())
         #self.canvas.draw()
         #plt.draw()
         self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
