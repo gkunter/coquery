@@ -1047,6 +1047,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         finally:
             options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
+        prev_subst = dict(current_properties.get("substitutions"))
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
                                                manager.unique_values,
                                                current_properties,
@@ -1084,8 +1085,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # set column colors:
             options.cfg.column_color = result.get("colors", {})
 
-            if ("substitutions" not in current_properties or
-                current_properties["substitutions"] != result["substitutions"]):
+            if (prev_subst != result["substitutions"]):
                 if AUTO_SUBSTITUTE in options.settings.value(
                     "settings_auto_apply", AUTO_APPLY_DEFAULT):
                     self.reaggregate()
