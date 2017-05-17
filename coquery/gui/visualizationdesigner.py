@@ -584,6 +584,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.dialog.show()
         self.dialog.raise_()
 
+        if hasattr(self.vis, "on_pick"):
+            self.grid.fig.canvas.mpl_connect('button_press_event',
+                                             self.vis.on_pick)
+
     def add_annotations(self):
         if self.vis:
             values = self.get_gui_values()
