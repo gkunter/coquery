@@ -122,15 +122,17 @@ class Filter(CoqObject):
         # Thus, testing whether FEATURE equals NA returns the query string
         # FEATURE != FEATURE.
 
-        if self.operator == OP_MATCH:
+        op = self.operator
+
+        if op == OP_MATCH:
             raise ValueError("RegEx filters do not use query strings.")
-        if self.operator == OP_RANGE:
+        if op == OP_RANGE:
             if len(self.value) == 0:
                 raise ValueError("Filter uses an empty range.")
             if not isinstance(min(self.value), type(max(self.value))):
                 raise TypeError("Range values have different types.")
         if self.value is None or self.value is pd.np.nan:
-            if self.operator not in [OP_NE, OP_EQ]:
+            if op not in [OP_NE, OP_EQ]:
                 raise ValueError("Only OP_EQ and OP_NE are allowed with NA values")
 
         if (self.value is None or self.value is pd.np.nan or
@@ -138,13 +140,13 @@ class Filter(CoqObject):
              and self.value == "") or
             (self.dtype == bool and self.value == "")):
             val = self.feature
-            if self.operator == OP_EQ:
-                self.operator = OP_NE
+            if op == OP_EQ:
+                op = OP_NE
             else:
-                self.operator = OP_EQ
+                op = OP_EQ
 
         elif isinstance(self.value, list):
-            if self.operator == OP_RANGE:
+            if op == OP_RANGE:
                 return "{} <= {} < {}".format(
                                             self.fix(min(self.value)),
                                             self.feature,
@@ -156,7 +158,7 @@ class Filter(CoqObject):
             val = self.fix(self.value)
 
         S = "{} {} {}".format(
-            self.feature, OPERATOR_STRINGS[self.operator], val)
+            self.feature, OPERATOR_STRINGS[op], val)
         return S
 
     def apply(self, df):
@@ -184,5 +186,8 @@ class Filter(CoqObject):
                 print(S)
                 logger.warn(S)
                 return df
+            except TypeError as e:
+                S = "Could not apply filter {}: are there missing values in your data?"
+                raise RuntimeError(S)
 
 logger = logging.getLogger(NAME)
