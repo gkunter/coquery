@@ -446,10 +446,12 @@ class BaseResource(CoqObject):
 
     @classmethod
     def get_lexicon_features(cls):
-        """ Return a list of tuples. Each tuple consists of a resource
-        variable name and the display name of that variable. Only those
-        variables are returned that all resource variable names that are
-        desendants of table 'word'. """
+        """
+        Return a list of tuples. Each tuple consists of a resource variable
+        name and the display name of that variable. Only those variables are
+        returned that all resource variable names that are desendants of
+        table 'word'.
+        """
         table_dict = cls.get_table_dict()
         lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
         lexicon_variables = []
@@ -460,9 +462,19 @@ class BaseResource(CoqObject):
                     if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
                         lexicon_variables.append((y, getattr(cls, y)))
                         l.append(y)
-        for y in getattr(cls, "lexical_features", []):
-            if y not in l:
-                lexicon_variables.append((y, getattr(cls, y)))
+
+        for x in getattr(cls, "lexical_features", []):
+            if x not in l:
+                lexicon_variables.append((x, getattr(cls, x)))
+
+        # make sure that all query items are treated as lexicon features:
+        for query_item_type in [QUERY_ITEM_GLOSS, QUERY_ITEM_LEMMA,
+                                QUERY_ITEM_POS, QUERY_ITEM_TRANSCRIPT,
+                                QUERY_ITEM_WORD]:
+            query_item_col = getattr(cls, query_item_type, None)
+            if query_item_col and query_item_col not in lexicon_variables:
+                label = getattr(cls, query_item_col)
+                lexicon_variables.append((query_item_col, label))
         return lexicon_variables
 
     @classmethod
