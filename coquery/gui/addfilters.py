@@ -309,7 +309,6 @@ class FilterDialog(QtWidgets.QDialog):
             l = []
             for i in range(self.ui.table_filters.rowCount() - 1):
                 item = self.ui.table_filters.item(i, 0)
-                print(i, item)
                 filt = item.data(FilterObjectRole)
                 ix = self.columns.tolist().index(filt.feature)
                 if self.dtypes[ix] == int:

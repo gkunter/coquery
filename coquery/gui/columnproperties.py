@@ -98,7 +98,8 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
             d["alias"] = {k: v for k, v in self.alias.items()
                           if session.translate_header(k) != v}
             subst = {}
-            for col in self.substitutions:
+            for col in [x for x in self.substitutions
+                        if x in self.df.columns]:
                 # Construct a dict of substitutions. Only those substitutions
                 # are valid where the value is not empty and where the value
                 # is not also one of the keys:

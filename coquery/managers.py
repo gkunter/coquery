@@ -465,10 +465,9 @@ class Manager(CoqObject):
             print("\tfilter()")
         for filt in self._filters:
             if filt.stage == stage:
-                df = filt.apply(df)
+                df = filt.apply(df).reset_index(drop=True)
         if options.cfg.verbose or True:
             print("\tdone")
-        df = df.reset_index(drop=True)
         self._len_post_filter = len(df)
         return df
 

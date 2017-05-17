@@ -38,6 +38,7 @@ df1 = pd.DataFrame(
 
 df0 = pd.DataFrame(
     {"coq_word_label_1": ["abc"] * 3 + ["x"] * 2,
+     "coq_word_label_2": ["a"] * 4 + [None],
      "coq_source_genre_1": ["SPOK", "NEWS", "NEWS", "SPOK", "NEWS"],
      "coquery_invisible_corpus_id": range(5)})
 
@@ -137,8 +138,13 @@ class TestStringFunctions(unittest.TestCase):
         func = StringMatch(columns=["coq_word_label_1"], value="[a]")
         val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
         self.assertListEqual(
-            val.tolist(),
-            [True, True, True, False, False])
+            val.tolist(), [True, True, True, False, False])
+
+    def test_match_null(self):
+        func = StringMatch(columns=["coq_word_label_2"], value="[a]")
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(
+            val.tolist(), [True, True, True, True, False])
 
     def test_extract(self):
         func = StringExtract(columns=["coq_word_label_1"], value="[abx]*")

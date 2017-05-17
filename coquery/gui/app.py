@@ -1047,6 +1047,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         finally:
             options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
+        prev_subst = dict(current_properties.get("substitutions"))
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
                                                manager.unique_values,
                                                current_properties,
@@ -1084,8 +1085,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # set column colors:
             options.cfg.column_color = result.get("colors", {})
 
-            if ("substitutions" not in current_properties or
-                current_properties["substitutions"] != result["substitutions"]):
+            if (prev_subst != result["substitutions"]):
                 if AUTO_SUBSTITUTE in options.settings.value(
                     "settings_auto_apply", AUTO_APPLY_DEFAULT):
                     self.reaggregate()
@@ -1421,13 +1421,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             pass
 
     def toggle_selected_feature(self, item):
-        is_checked = (item.checkState(0) == QtCore.Qt.Checked)
         rc_feature = utf8(item.objectName())
         if rc_feature and not rc_feature.endswith("_table"):
-            if is_checked:
+            if (item.checkState(0) == QtCore.Qt.Checked):
                 self.selected_features.add(rc_feature)
-            else:
-                self.selected_features.remove(rc_feature)
+            elif (item.checkState(0) == QtCore.Qt.Unchecked):
+                try:
+                    self.selected_features.remove(rc_feature)
+                except KeyError:
+                    pass
 
     def fill_combo_corpus(self):
         """
@@ -1765,6 +1767,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def exception_during_query(self):
         if not self.terminating:
+            if isinstance(self.exception, RuntimeError):
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Error during execution – Coquery",
+                    str(self.exception),
+                    QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             if isinstance(self.exception, UnsupportedQueryItemError):
                 QtWidgets.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             else:

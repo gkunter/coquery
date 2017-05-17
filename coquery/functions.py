@@ -340,8 +340,12 @@ class StringMatch(StringSeriesFunction):
     str_func = "contains"
 
     def evaluate(self, df, *args, **kwargs):
-        return super(StringMatch, self).evaluate(df, self.value,
-                                                 self.get_flag("case"))
+        val = super(StringMatch, self).evaluate(df, self.value,
+                                                self.get_flag("case"))
+        # replace empty strings (which may be caused if the column contains
+        # a Null value) by False:
+        val = val.replace("", False)
+        return val
 
 
 class StringExtract(StringSeriesFunction):
