@@ -1000,7 +1000,8 @@ class ContrastMatrix(FrequencyList):
             try:
                 df[columns] = df.apply(
                     self.retrieve_loglikelihood, axis=1, label=x, df=df)
-            except KeyError:
+            except KeyError as e:
+                print(e)
                 return df
             else:
                 self.p_values = self.p_values.append(df[columns[-1]][i:])
@@ -1025,6 +1026,7 @@ class ContrastMatrix(FrequencyList):
         The corrected alpha is used by CoqLikelihoodDelegate class to
         visualize the test results in the results table.
         """
+
         # first, get the frequency list:
         df = super(ContrastMatrix, self).summarize(df, session)
         self._freq_function = self.manager_functions.get_list()[0]
@@ -1033,6 +1035,7 @@ class ContrastMatrix(FrequencyList):
              for x in df.columns]
         df.columns = l
         self._freq_function.alias = "coquery_invisible_count"
+
         # now, get a subcorpus size for each row:
         vis_cols = [x for x
                     in get_visible_columns(df, manager=self, session=session)
