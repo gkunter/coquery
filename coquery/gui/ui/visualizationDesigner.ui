@@ -774,7 +774,13 @@
                </widget>
               </item>
               <item>
-               <widget class="QSpinBox" name="spin_size_legend_entries">
+               <widget class="QSpinBox" name="spin_size_legend">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="suffix">
                  <string> pt</string>
                 </property>
@@ -830,13 +836,25 @@
              <layout class="QHBoxLayout" name="horizontalLayout_11">
               <item>
                <widget class="QLabel" name="label_19">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string>Entry size:</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QSpinBox" name="spin_size_legend">
+               <widget class="QSpinBox" name="spin_size_legend_entries">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="suffix">
                  <string> pt</string>
                 </property>

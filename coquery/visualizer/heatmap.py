@@ -124,56 +124,62 @@ class Heatmap(vis.Visualizer):
         levels_z = kwargs.get("levels_z")
 
         cmap = (kwargs.get("palette", "Blues"))
+        param_count = sum([bool(x), bool(y), bool(z)])
 
-        if x and y and z:
+        if param_count == 3:
             if data[x].dtype in (int, float):
                 numeric = x
-                cat = [z, y]
+                x = z
+                levels_x = levels_z
             elif data[y].dtype in (int, float):
                 numeric = y
-                cat = [x, z]
+                y = z
+                levels_y = levels_z
             else:
                 numeric = z
-                cat = [x, y]
-            ct = (data[cat + [numeric]].groupby(cat)
+            ct = (data[[x, y, numeric]].groupby([x, y])
                                        .agg("mean")
                                        .reset_index()
-                                       .pivot(cat[0], cat[1], numeric)
+                                       .pivot(x, y, numeric)
                                        .T)
-        elif sum([bool(x), bool(y), bool(z)]) == 2:
+            ct = ct.reindex_axis(levels_y, axis=0)
+            ct = ct.reindex_axis(levels_x, axis=1)
+
+        elif param_count == 2:
             numeric = None
             cat = []
             if x:
                 if data[x].dtype in (int, float):
                     numeric = x
-                else:
-                    cat.append(x)
+                    x = None
             if y:
                 if data[y].dtype in (int, float):
                     numeric = y
-                else:
-                    cat.append(y)
+                    y = None
             if z:
                 if data[z].dtype in (int, float):
                     numeric = z
-                else:
-                    cat.append(z)
+                    z = None
             if numeric:
-                ct = data[[cat[0], numeric]].groupby(cat[0]).agg("mean")
-                if cat[0] == x:
-                    ct = ct.T
+                cat = [fact for fact in [x, y, z] if fact][0]
+                ct = (data[[cat, numeric]].groupby(cat)
+                                          .agg("mean"))
+                if cat == x or cat == z:
+                    ct = ct.reindex_axis(levels_x).T
+                else:
+                    ct = ct.reindex_axis(levels_y)
             else:
                 ct = get_crosstab(data, x, y, levels_x, levels_y).T
         elif x:
             ct = pd.crosstab(pd.Series([""] * len(data[x]), name=""),
-                             data[x]).fillna(0)
-            ct = ct.reindex_axis(levels_x, axis=1).fillna(0)
+                             data[x])
+            ct = ct.reindex_axis(levels_x, axis=1)
         elif y:
             ct = pd.crosstab(pd.Series([""] * len(data[y]), name=""),
-                             data[y]).fillna(0).T
-            ct = ct.reindex_axis(levels_y, axis=0).fillna(0)
+                             data[y]).T
+            ct = ct.reindex_axis(levels_y, axis=0)
 
-        sns.heatmap(ct,
+        sns.heatmap(ct.fillna(0),
             robust=True,
             annot=True,
             cbar=False,

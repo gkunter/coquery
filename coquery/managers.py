@@ -373,9 +373,8 @@ class Manager(CoqObject):
                 else:
                     columns.append(target)
                     directions.append(sorter.ascending)
-
         # drop illegal sorters:
-        self.sorters = [x for x in self.sorters if x not in drop_list]
+        self.sorters = [x for x in self.sorters if x.column not in drop_list]
 
         # filter columns that should be in the data frame, but which aren't
         # (this may happen for example with the contingency table which
@@ -466,10 +465,9 @@ class Manager(CoqObject):
             print("\tfilter()")
         for filt in self._filters:
             if filt.stage == stage:
-                df = filt.apply(df)
+                df = filt.apply(df).reset_index(drop=True)
         if options.cfg.verbose or True:
             print("\tdone")
-        df = df.reset_index(drop=True)
         self._len_post_filter = len(df)
         return df
 
@@ -711,10 +709,13 @@ class FrequencyList(Manager):
         for fnc, col in session.summary_group.functions:
             if fnc == Freq and sorted(col) == sorted(vis_cols):
                 freq_exists = True
+                existing_func = fnc
                 break
         if not freq_exists:
             #FIXME: add test that this actually works
             self.manager_functions = FunctionList([freq_function])
+        else:
+            self.manager_functions = FunctionList([existing_func])
         df = super(FrequencyList, self).summarize(df, session)
         return self.distinct(df, session)
 

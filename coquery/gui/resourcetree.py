@@ -40,6 +40,10 @@ class CoqResourceTree(classes.CoqTreeWidget):
         self.setSizePolicy(sizePolicy)
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self._items_checkable = True
+        self.itemChanged.connect(self.on_change)
+
+    def on_change(self, item):
+        item.on_change()
 
     def allSetExpanded(self, b):
         def traverse(node):
@@ -346,7 +350,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
             for child in [node.child(i) for i in range(node.childCount())]:
                 if child.checkState(0) != QtCore.Qt.Unchecked:
                     resource = utf8(child.objectName())
-                    if resource and not resource.endswith("_table"):
+                    if (resource and not resource.endswith("_table") and
+                            child.checkState(0) == QtCore.Qt.Checked):
                         checked.add(resource)
                     checked.update(traverse(child))
             return checked

@@ -120,7 +120,11 @@ class CoqColumnMenu(QtWidgets.QMenu):
         check_is_func = [x.startswith("func_") for x in columns]
         check_is_group_function = [bool(re.match("func_.*_group_", x))
                                    for x in columns]
-        if (all(check_is_func) and not any(check_is_group_function)):
+        check_is_manager_function = [x in [fnc.get_id() for fnc in
+                                           manager.manager_functions]
+                                     for x in columns]
+        if (all(check_is_func) and not any(check_is_group_function) and
+            not any(check_is_manager_function)):
             #if len(columns) == 1:
                 #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
                 #self.addAction(edit_function)

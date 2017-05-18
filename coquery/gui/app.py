@@ -1041,56 +1041,71 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from .columnproperties import ColumnPropertiesDialog
         manager = self.Session.get_manager()
 
+        #FIXME: the whole way column properties are handled needs to be
+        # revised!
+
+        # Get the column properties from the settings file, and save them
+        # immediately afterwards so that the settings file always contains
+        # an up-to-date property set
         properties = {}
         try:
             properties = options.settings.value("column_properties", {})
         finally:
             options.settings.setValue("column_properties", properties)
+
+        # properties are stored separately for each corpus:
         current_properties = properties.get(options.cfg.corpus, {})
+        prev_subst = current_properties.get("substitutions", {})
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
                                                manager.unique_values,
                                                current_properties,
                                                columns,
                                                self)
         if result:
-            manager = self.Session.get_manager()
+            columns = self.Session.output_object
 
-            d = result.get("substitutions", {})
-            keys = list(d.keys())
-            values = list(d.values())
+            substitutions = result.get("substitutions", {})
+
+            # Remove any substitution in which the value and the key are
+            # identical:
+            keys = list(substitutions.keys())
+            values = list(substitutions.values())
             for val in values:
                 if val in keys:
-                    d.remove(val)
-            if d:
-                result["substitutions"] = d
+                    substitutions.remove(val)
 
-            properties[options.cfg.corpus] = result
-            options.settings.setValue("column_properties", properties)
+            result["substitutions"] = substitutions
 
+            # update if list of hidden columns has changed:
             if result["hidden"] != current_properties.get("hidden", set()):
                 manager.reset_hidden_columns()
                 self.hide_columns(result["hidden"])
 
-            # set or reset column aliases
-            for col in result["alias"]:
-                name = result["alias"][col]
-                if not col.startswith("func_"):
-                    options.cfg.column_names[col] = name
+            # Set or reset column aliases. The aliases are stored as a
+            # dictionary with the column name as the key.
+            aliases = {}
+            for col, alias in result["alias"].items():
+                if col in columns or not col.startswith("func_"):
+                    aliases[col] = alias
 
-            # set or reset function aliases
-            for fnc in manager.get_functions():
-                fnc.set_label(result["alias"].get(fnc.get_id(), ""))
+            result["alias"] = aliases
+            options.cfg.column_names = aliases
 
             # set column colors:
             options.cfg.column_color = result.get("colors", {})
 
-            if ("substitutions" not in current_properties or
-                current_properties["substitutions"] != result["substitutions"]):
+            if (prev_subst != result["substitutions"]):
                 if AUTO_SUBSTITUTE in options.settings.value(
                     "settings_auto_apply", AUTO_APPLY_DEFAULT):
                     self.reaggregate()
                 else:
                     self.enable_apply_button()
+
+            # Finally, store the new column properties:
+            properties[options.cfg.corpus] = result
+            options.settings.setValue("column_properties", properties)
+
+
 
     def show_hidden_columns(self):
         manager = self.Session.get_manager()
@@ -1421,13 +1436,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             pass
 
     def toggle_selected_feature(self, item):
-        is_checked = (item.checkState(0) == QtCore.Qt.Checked)
         rc_feature = utf8(item.objectName())
         if rc_feature and not rc_feature.endswith("_table"):
-            if is_checked:
+            if (item.checkState(0) == QtCore.Qt.Checked):
                 self.selected_features.add(rc_feature)
-            else:
-                self.selected_features.remove(rc_feature)
+            elif (item.checkState(0) == QtCore.Qt.Unchecked):
+                try:
+                    self.selected_features.remove(rc_feature)
+                except KeyError:
+                    pass
 
     def fill_combo_corpus(self):
         """
@@ -1554,6 +1571,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.settings.setValue("column_properties", properties)
         current_properties = properties.get(options.cfg.corpus, {})
         options.cfg.column_color = current_properties.get("colors", {})
+        options.cfg.column_names = current_properties.get("alias", {})
 
         old_row, old_col = (self.ui.data_preview.currentIndex().row(),
                             self.ui.data_preview.currentIndex().column())
@@ -1765,6 +1783,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def exception_during_query(self):
         if not self.terminating:
+            if isinstance(self.exception, RuntimeError):
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Error during execution – Coquery",
+                    str(self.exception),
+                    QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             if isinstance(self.exception, UnsupportedQueryItemError):
                 QtWidgets.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             else:
@@ -3031,8 +3055,16 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.Session.summary_functions.set_list(l)
         else:
             fun_type, columns, value, aggr, label = response
-            fun = fun_type(columns=columns, value=value, aggr=aggr, label=label)
+            fun = fun_type(columns=columns, value=value, aggr=aggr)
             self.Session.column_functions.add_function(fun)
+
+            if label:
+                # setup the label as a column alias in an ackward way:
+                options.cfg.column_names[fun.get_id()] = label
+                properties = options.settings.value("column_properties", {})
+                current_properties = properties.get(options.cfg.corpus, {})
+                current_properties["alias"][fun.get_id()] = label
+                options.settings.setValue("column_properties", properties)
 
         if AUTO_FUNCTION in options.settings.value(
                     "settings_auto_apply", AUTO_APPLY_DEFAULT):

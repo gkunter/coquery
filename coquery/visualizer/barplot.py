@@ -339,12 +339,8 @@ class BarPlot(vis.Visualizer):
         df = kwargs.get("data")
         params = {"palette": self._palette, "ax": self._ax}
 
-        print(self.dtype(self._x, df))
-        print(self.dtype(self._y, df))
-
         cat, num, _ = self.count_parameters(self._x, self._y, self._z,
                                             df, session)
-        print(num, cat, _)
         if num:
             numeric = num[0]
             if len(cat) < 2:
@@ -411,6 +407,11 @@ class BarPlot(vis.Visualizer):
         params = self.get_parameters(**kwargs)
         ax = sns.barplot(**params)
 
+        if self._x and self._y:
+            self.legend_title = params["hue"]
+            self.legend_levels = params["hue_order"]
+
+
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
@@ -436,6 +437,8 @@ class StackedBars(BarPlot):
         data = params["data"]
         x = params["x"]
         y = params["y"]
+        levels_x = params.get("levels_x")
+        levels_y = params.get("levels_y")
         hue = params["hue"]
         numeric = "COQ_FUNC"
 
@@ -445,6 +448,10 @@ class StackedBars(BarPlot):
         else:
             numeric = y
             axis = x
+
+        if hue and sum([bool(x), bool(y)]) == 1:
+            order = hue
+            hue = None
 
         if hue:
             data = data.sort_values([y, hue]).reset_index(drop=True)
@@ -467,10 +474,27 @@ class StackedBars(BarPlot):
 
         col = sns.color_palette(params["palette"],
                                 n_colors=len(levels))[::-1]
+
         for n, val in enumerate(levels):
-            sns.barplot(data=data[data[split] == val],
+            if split != axis:
+                d = {axis: params["order"], split: val}
+                df = (pd.merge(data[data[split] == val],
+                            pd.DataFrame(d),
+                            how="right")
+                        .fillna(0)
+                        .sort_values(by=axis)
+                        .reset_index(drop=True))
+            else:
+                df = data[data[split] == val]
+            sns.barplot(data=df,
                         color=col[n], ax=params["ax"], **kwargs)
 
+        if split == axis:
+            self.legend_title = split
+            self.legend_levels = params["order"]
+        else:
+            self.legend_title = hue
+            self.legend_levels = params["hue_order"]
 
 class PercentBars(StackedBars):
     """

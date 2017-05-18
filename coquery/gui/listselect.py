@@ -61,7 +61,6 @@ class CoqListSelect(QtWidgets.QWidget):
 
     @staticmethod
     def _fill_list_widget(w, l, translate, *args, **kwargs):
-        print(args, kwargs)
         for x in l:
             if translate is not None:
                 if not isinstance(x, QtWidgets.QListWidgetItem):

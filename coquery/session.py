@@ -475,8 +475,11 @@ class Session(object):
         # deal with function headers:
         if header.startswith("func_"):
             manager = self.get_manager()
+            # check if there is a parenthesis in the header (there shouldn't
+            # ever be one, acutally)
             match = re.search("(.*)\((.*)\)", header)
             if match:
+                print("translate_header() entered deprecated branch", header)
                 s = match.group(1)
                 # if options.cfg.verbose: print(s, header)
                 fun = manager.get_function(s)
@@ -488,13 +491,25 @@ class Session(object):
                     # if options.cfg.verbose: print(10)
                     return header
             else:
+                match = re.search("(func_\w+_\w+)_(\d+)_(\d*)", header)
+                if match:
+                    header = match.group(1)
+                    num = match.group(2)
+                else:
+                    num = ""
+
                 fun = manager.get_function(header)
                 if fun == None:
                     # if options.cfg.verbose: print(11)
                     return header
                 else:
                     # if options.cfg.verbose: print(12)
-                    return fun.get_label(session=self, manager=manager)
+                    label = fun.get_label(session=self, manager=manager,
+                                          unlabel=ignore_alias)
+                    if not num:
+                        return label
+                    else:
+                        return "{} (match {})".format(label, num)
 
         if header.startswith("db_"):
             match = re.match("db_(.*)_coq_(.*)", header)
@@ -611,6 +626,8 @@ class SessionInputFile(Session):
                     except AttributeError:
                         continue
                     new_query = self.query_type(query_string, self)
+                    if len(current_line) != len(self.header):
+                        raise TokenParseError
                     new_query.input_frame = pd.DataFrame(
                         [current_line], columns=self.header)
                     self.query_list.append(new_query)

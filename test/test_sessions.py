@@ -8,10 +8,16 @@ import argparse
 import tempfile
 import os
 
+import pandas as pd
+
 from coquery.coquery import options
-from coquery.session import SessionInputFile
-from coquery.defines import QUERY_MODE_TOKENS
+from coquery.session import SessionInputFile, SessionCommandLine
+from coquery.defines import QUERY_MODE_TOKENS, CONTEXT_NONE
 from coquery.errors import TokenParseError
+from coquery.functions import StringExtract
+from coquery.functionlist import FunctionList
+from coquery.corpus import SQLResource, LexiconClass, CorpusClass
+from coquery.managers import Manager
 
 class TestSessionInputFile(unittest.TestCase):
     def setUp(self):
@@ -159,12 +165,61 @@ class TestSessionInputFile(unittest.TestCase):
         self.write_to_temp_file(d)
 
         session = SessionInputFile()
+        session.prepare_queries()
         with self.assertRaises(TokenParseError):
             session.prepare_queries()
+
+
+class TestSessionMethods(unittest.TestCase):
+    def setUp(self):
+        options.cfg = argparse.Namespace()
+        options.cfg.corpus = None
+        options.cfg.MODE = QUERY_MODE_TOKENS
+        options.cfg.current_server = "MockConnection"
+        options.cfg.server_configuration = {}
+        options.cfg.input_separator = ","
+        options.cfg.quote_char = '"'
+        options.cfg.input_encoding = "utf-8"
+        options.cfg.drop_on_na = True
+        options.cfg.benchmark = False
+        options.cfg.query_list = []
+        options.cfg.column_names = {}
+        options.cfg.verbose = False
+        options.cfg.stopword_list = []
+        options.cfg.context_mode = CONTEXT_NONE
+
+        self.session = SessionCommandLine()
+        self.corpus = CorpusClass()
+        self.lexicon = LexiconClass()
+        self.session.Resource = SQLResource(self.lexicon, self.corpus)
+        self.session.Resource.name = "MockResource"
+        self.session.Resource.word_table = "Lexicon"
+        self.session.Resource.word_label = "Word"
+        self.session.Resource.query_item_word = "word_label"
+        self.manager = Manager()
+        options.cfg.managers = {}
+        options.cfg.managers["MockResource"] = {}
+        options.cfg.managers["MockResource"][QUERY_MODE_TOKENS] = self.manager
+
+    def test_translate_header_multicolumn_functions(self):
+        df = pd.DataFrame({"coq_word_label_1":
+                               ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5})
+        func = StringExtract(columns=["coq_word_label_1"], value="(a).*(x)")
+        self.session.column_functions = FunctionList([func])
+        self.manager.set_column_order(df.columns)
+        df = self.manager.process(df, self.session)
+
+        self.assertListEqual(
+            [self.session.translate_header(x) for x in df.columns],
+            ["Word",
+             "{} (match 1)".format(func.get_label(self.session, self.manager)),
+             "{} (match 2)".format(func.get_label(self.session, self.manager))])
+
 
 def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestSessionInputFile),
+        unittest.TestLoader().loadTestsFromTestCase(TestSessionMethods),
         ])
 
     unittest.TextTestRunner().run(suite)

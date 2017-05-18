@@ -32,22 +32,10 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         self.df = df
         self.pre_subst = pre_subst
         self.unique_cache = {}
-        try:
-            self.alias = preset["alias"]
-        except:
-            self.alias = {}
-        try:
-            self.substitutions = preset["substitutions"]
-        except:
-            self.substitutions = {}
-        try:
-            self.colors = preset["colors"]
-        except:
-            self.colors = {}
-        try:
-            self.hidden = preset["hidden"]
-        except:
-            self.hidden = {}
+        self.alias = preset.get("alias", {})
+        self.substitutions = preset.get("substitutions", {})
+        self.colors = preset.get("colors", {})
+        self.hidden = preset.get("hidden", {})
 
         self.setup_data()
 
@@ -95,10 +83,10 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         result = super(ColumnPropertiesDialog, self).exec_(*args, **kwargs)
         if result == QtWidgets.QDialog.Accepted:
             d = {}
-            d["alias"] = {k: v for k, v in self.alias.items()
-                          if session.translate_header(k) != v}
+
             subst = {}
-            for col in self.substitutions:
+            for col in [x for x in self.substitutions
+                        if x in self.df.columns]:
                 # Construct a dict of substitutions. Only those substitutions
                 # are valid where the value is not empty and where the value
                 # is not also one of the keys:
@@ -109,6 +97,7 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
                 if tmp:
                     subst[col] = tmp
 
+            d["alias"] = self.alias
             d["substitutions"] = subst
             d["colors"] = self.colors
             vis_cols = [x.data(QtCore.Qt.UserRole) for x

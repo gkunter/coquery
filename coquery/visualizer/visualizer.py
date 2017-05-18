@@ -558,6 +558,9 @@ class Visualizer(CoqObject):
         super(Visualizer, self).__init__()
         self.df = df
         self.session = session
+        self.legend_levels = None
+        self.legend_title = None
+        self._last_legend_pos = None
 
     def get_grid(self, **kwargs):
         kwargs["data"] = self.df
@@ -571,8 +574,8 @@ class Visualizer(CoqObject):
                 grid = sns.FacetGrid(**kwargs)
         return grid
 
-
-    def add_legend(self, grid, levels=None, loc="lower left"):
+    def add_legend(self, grid, title=None, palette=None, levels=None, loc="lower left",
+                   **kwargs):
         """
         Add a legend to the figure, using the current option settings.
         """
@@ -591,12 +594,29 @@ class Visualizer(CoqObject):
                 #framealpha=0.7,
                 #loc=loc).draggable()
         #else:
-        ax = grid.fig.gca()
-        #ax.legend(["abc"],
-                  #title="Legend",
-                  #frameon=True,
-                  #framealpha=0.7,
-                  #loc="upper left").draggable()
+        grid.fig.legends = []
+        if (title or self.legend_title) and self.legend_levels:
+            col = sns.color_palette(palette,
+                                    n_colors=len(self.legend_levels))
+
+            legend_bar = [plt.Rectangle((0, 0), 1, 1,
+                                        fc=col[i], edgecolor="none")
+                        for i, _ in enumerate(self.legend_levels)]
+            titlesize = kwargs.pop("titlesize")
+            grid.fig.legend(legend_bar,
+                    self.legend_levels,
+                    title=title or self.legend_title,
+                    frameon=True,
+                    framealpha=0.7,
+                    loc=loc, **kwargs).draggable()
+
+            legend = grid.fig.legends[-1]
+            legend.get_title().set_fontsize(titlesize)
+            #if self._last_legend_pos:
+                #grid.fig.legends[-1].set_bbox_to_anchor(
+                    #self._last_legend_pos)
+                #self._last_legend_pos = None
+
 
         #grid.fig.get_axes()[-1].legend(
             #ncol=self.options.get("label_legend_columns", 1),
@@ -606,7 +626,16 @@ class Visualizer(CoqObject):
             #framealpha=0.7,
             #loc=loc).draggable()
 
-
+    def hide_legend(self, grid):
+        try:
+            legend = grid.fig.legends[-1]
+        except IndexError:
+            # no legend available, pass
+            pass
+        else:
+            self._last_legend_pos = legend.get_bbox_to_anchor()
+            legend.set_visible(False)
+            grid.fig.legends = []
 
     def plot_facet(self, data, color,
                    x=None, y=None, levels_x=None, levels_y=None,
@@ -614,11 +643,10 @@ class Visualizer(CoqObject):
         pass
 
     def set_annotations(self, grid, values):
-        ax = grid.fig.gca()
-        grid.set_titles(values.get("title", self.DEFAULT_TITLE))
         grid.set_xlabels(values.get("xlab", self.DEFAULT_XLABEL))
+        grid.set_titles(values.get("title", self.DEFAULT_TITLE))
         grid.set_ylabels(values.get("ylab", self.DEFAULT_YLABEL))
-        grid.fig.tight_layout()
+
 
     @staticmethod
     def dtype(feature, df):

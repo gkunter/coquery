@@ -97,6 +97,11 @@ class FunctionWidget(QtWidgets.QWidget):
             self.button.clicked.connect(self.selectColumns)
             self.main_layout.addWidget(self.button, 0, 2)
 
+        h = self.function_label.sizeHint().height() + 1
+        self.function_label.setMinimumHeight(h)
+        self.function_label.setMaximumHeight(h)
+
+
     def change_highlight(self):
         palette = QtWidgets.QApplication.instance().palette()
 
