@@ -475,8 +475,11 @@ class Session(object):
         # deal with function headers:
         if header.startswith("func_"):
             manager = self.get_manager()
+            # check if there is a parenthesis in the header (there shouldn't
+            # ever be one, acutally)
             match = re.search("(.*)\((.*)\)", header)
             if match:
+                print("translate_header() entered deprecated branch", header)
                 s = match.group(1)
                 # if options.cfg.verbose: print(s, header)
                 fun = manager.get_function(s)
@@ -501,7 +504,8 @@ class Session(object):
                     return header
                 else:
                     # if options.cfg.verbose: print(12)
-                    label = fun.get_label(session=self, manager=manager)
+                    label = fun.get_label(session=self, manager=manager,
+                                          unlabel=ignore_alias)
                     if not num:
                         return label
                     else:
