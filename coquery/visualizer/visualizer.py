@@ -644,7 +644,13 @@ class Visualizer(CoqObject):
 
     def set_annotations(self, grid, values):
         grid.set_xlabels(values.get("xlab", self.DEFAULT_XLABEL))
-        grid.set_titles(values.get("title", self.DEFAULT_TITLE))
+        if values.get("title"):
+            grid.set_titles(values.get("title"))
+        elif grid.col_names:
+            for ax, title in zip(grid.axes.flat, grid.col_names):
+                ax.set_title(title)
+        else:
+            grid.set_titles(values.get(self.DEFAULT_TITLE))
         grid.set_ylabels(values.get("ylab", self.DEFAULT_YLABEL))
 
 
