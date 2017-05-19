@@ -479,7 +479,6 @@ class Session(object):
             # ever be one, acutally)
             match = re.search("(.*)\((.*)\)", header)
             if match:
-                print("translate_header() entered deprecated branch", header)
                 s = match.group(1)
                 # if options.cfg.verbose: print(s, header)
                 fun = manager.get_function(s)
