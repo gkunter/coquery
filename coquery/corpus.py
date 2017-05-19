@@ -1705,7 +1705,7 @@ class CorpusClass(object):
         self._corpus_range_cache[cache_key] = val
         return self._corpus_range_cache[cache_key]
 
-    def get_frequency(self, s, literal=False, engine=False):
+    def get_frequency(self, s, engine, literal=False):
         """
         Return the frequency for a token specified by s.
 
