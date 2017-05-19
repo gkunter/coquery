@@ -642,6 +642,22 @@ class Visualizer(CoqObject):
                    palette=None, **kwargs):
         pass
 
+    def rotate_annotations(self, grid):
+        for ax in grid.fig.axes:
+            #ax.get_xaxis().get_major_formatter().set_scientific(False)
+
+            xtl = ax.get_xticklabels()
+            ytl = ax.get_yticklabels()
+            plt.setp(xtl, rotation="horizontal")
+            plt.setp(ytl, rotation="horizontal")
+
+            sns_overlap = sns.utils.axis_ticklabels_overlap(xtl)
+            if sns_overlap or coq_overlap:
+                x_overlap = True
+
+        if x_overlap:
+            grid.fig.autofmt_xdate()
+
     def set_annotations(self, grid, values):
         grid.set_xlabels(values.get("xlab", self.DEFAULT_XLABEL))
         if values.get("title"):
@@ -652,7 +668,7 @@ class Visualizer(CoqObject):
         else:
             grid.set_titles(values.get(self.DEFAULT_TITLE))
         grid.set_ylabels(values.get("ylab", self.DEFAULT_YLABEL))
-
+        self.rotate_annotations(grid)
 
     @staticmethod
     def dtype(feature, df):
