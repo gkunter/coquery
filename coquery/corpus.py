@@ -63,7 +63,7 @@ class LexiconClass(object):
                 getattr(self.resource, "{}_table".format(table)),
                 getattr(self.resource, rc_feature),
                 self.resource.get_operator(current_token),
-                pos.replace("'", "''"))
+                pos)
             engine = self.resource.get_engine()
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
@@ -994,7 +994,7 @@ class SQLResource(BaseResource):
 
             alias = "COQ_{}_{}".format(tab.upper(), i+1)
             if (len(spec_list) == 1):
-                x = spec_list[0].replace("'", "''")
+                x = spec_list[0]
                 format_str = handle_case("{}.{} {} '{}'")
                 s = format_str.format(alias, col, get_operator(x), x)
             else:
@@ -1008,8 +1008,7 @@ class SQLResource(BaseResource):
 
                 if explicit:
                     format_str = handle_case("{}.{} IN ({})")
-                    s_list = ", ".join(["'{}'".format(x.replace("'", "''"))
-                                       for x in explicit])
+                    s_list = ", ".join(["'{}'".format(x) for x in explicit])
                     s_exp = [format_str.format(alias, col, s_list)]
                 else:
                     s_exp = []
@@ -1176,7 +1175,6 @@ class SQLResource(BaseResource):
                     conditions = cls.get_token_conditions(i, token)
                 else:
                     conditions = {}
-
                 for _, l in conditions.items():
                     condition_list += ["({})".format(x) for x in l]
 
@@ -1190,6 +1188,7 @@ class SQLResource(BaseResource):
                 join_list += table_list
                 condition_list += ["({})".format(x) for x in where_list]
                 current_pos += 1
+
         return condition_list
 
     @classmethod
@@ -1222,6 +1221,7 @@ class SQLResource(BaseResource):
         condition_list = cls.get_condition_list(query_items,
                                                 join_list,
                                                 selected)
+
         if condition_list:
             sql_template = """{}
             WHERE  {{conditions}}""".format(sql_template)
@@ -1555,7 +1555,7 @@ class CorpusClass(object):
             # FIXME: remove code replication with get_subcorpus_range()
             if len(values) == 1:
                 if type(values[0]) is str:
-                    val = "'{}'".format(values[0].replace("'", "''"))
+                    val = "'{}'".format(values[0])
                 else:
                     val = values[0]
                 s = "{}.{} = {}".format(
@@ -1564,8 +1564,7 @@ class CorpusClass(object):
                     val)
             else:
                 if any([type(x) is str for x in values]):
-                    l = ["'{}'".format(x.replace("'", "''")) for
-                                            x in values]
+                    l = ["'{}'".format(x) for x in values]
                 else:
                     l = values
                 s = "{}.{} IN ({})".format(
@@ -1685,13 +1684,12 @@ class CorpusClass(object):
                     s = "{}.{} = '{}'".format(
                         getattr(self.resource, "{}_table".format(tab)),
                         getattr(self.resource, rc_feature),
-                        raw_values[0].replace("'", "''"))
+                        raw_values[0])
                 else:
                     s = "{}.{} IN ({})".format(
                         getattr(self.resource, "{}_table".format(tab)),
                         getattr(self.resource, rc_feature),
-                        ",".join(["'{}'".format(x.replace("'", "''")) for
-                                                x in raw_values]))
+                        ",".join(["'{}'".format(x) for x in raw_values]))
                 conditions.append(s)
 
             tables = [self.resource.corpus_table] + self.lexicon.table_list
