@@ -1420,6 +1420,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._forgotten_features.update(self.selected_features.difference(currently_selected))
         self.selected_features = currently_selected
 
+        # delete groups (see #276)
+        self.ui.tree_groups.clear()
+
         options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
 
         self.ui.check_restrict.setEnabled(False)
