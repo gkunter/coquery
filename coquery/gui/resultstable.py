@@ -273,6 +273,9 @@ class CoqResultsTableView(classes.CoqTableView):
 
         h_header = classes.CoqHorizontalHeader(QtCore.Qt.Horizontal)
         h_header.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        h_header.setDefaultAlignment(
+            QtCore.Qt.AlignCenter |
+            QtCore.Qt.AlignmentFlag(QtCore.Qt.TextWordWrap))
         self.setHorizontalHeader(h_header)
 
     def setDelegates(self):

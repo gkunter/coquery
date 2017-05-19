@@ -614,8 +614,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def add_annotations(self):
         if self.vis:
             values = self.get_gui_values()
-            self.vis.set_annotations(self.grid, values)
-            self.canvas.draw()
+            try:
+                self.vis.set_annotations(self.grid, values)
+            except Exception as e:
+                print("ERROR: ", e)
+                pass
+            else:
+                self.canvas.draw()
+
 
     def change_legend(self):
         if self.vis:

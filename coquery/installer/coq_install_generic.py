@@ -121,6 +121,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         self._sentence_id = 0
         self._meta_table = None
+        self._meta_file = None
 
     @staticmethod
     def validate_files(l):
@@ -283,6 +284,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.special_files.append(os.path.basename(file_name))
 
         self._meta_table = df
+        self._meta_file = file_name
 
 
     def has_metadata(self, file_name):
@@ -341,6 +343,9 @@ class BuilderClass(BaseCorpusBuilder):
         file_name : string
             The path name of the file that is to be processed
         """
+
+        if file_name == self._meta_file:
+            return
 
         basename = os.path.basename(file_name)
         if basename in self.special_files:

@@ -235,8 +235,23 @@ class StringFunction(Function):
     def get_description():
         return "String functions"
 
+    @classmethod
+    def validate_regex(cls, value):
+        try:
+            re.compile(value, re.UNICODE)
+        except Exception:
+            return False
+        else:
+            return True
+
+    @classmethod
+    def validate_input(cls, value):
+        return True
+
 
 class StringRegEx(StringFunction):
+    validate_input = StringFunction.validate_regex
+
     def __init__(self, value, columns=None, *args, **kwargs):
         super(StringRegEx, self).__init__(columns, *args, **kwargs)
         self.value = value
@@ -244,15 +259,6 @@ class StringRegEx(StringFunction):
             self.re = re.compile(value, re.UNICODE)
         except Exception:
             self.re = None
-
-    @classmethod
-    def validate_input(cls, value):
-        try:
-            re.compile(value, re.UNICODE)
-        except Exception:
-            return False
-        else:
-            return True
 
 
 class StringChain(StringFunction):
@@ -338,6 +344,7 @@ class StringMatch(StringSeriesFunction):
     parameters = 1
     toggle_parameters = { "case": ("Case-sensitive", False) }
     str_func = "contains"
+    validate_input = StringFunction.validate_regex
 
     def evaluate(self, df, *args, **kwargs):
         val = super(StringMatch, self).evaluate(df, self.value,
@@ -353,6 +360,7 @@ class StringExtract(StringSeriesFunction):
     parameters = 1
     toggle_parameter = ("Case-sensitive", False)
     str_func = "extract"
+    validate_input = StringFunction.validate_regex
 
     def evaluate(self, df, *args, **kwargs):
         # put the regex into parentheses if there is no match group:
@@ -670,11 +678,11 @@ class Freq(BaseFreq):
         if len(df) == 0:
             return pd.Series(index=df.index)
         try:
-            if df["coquery_dummy"].isnull().all():
+            if df["coquery_invisible_dummy"].isnull().all():
                 return self.constant(df, 0)
         except KeyError:
             # this happens if the data frame does not have the column
-            # 'coquery_dummy'
+            # 'coquery_invisible_dummy'
             pass
         # ignore external columns:
         columns = [x for x in self.columns if not x.startswith("db_")]
@@ -725,8 +733,8 @@ class Freq(BaseFreq):
         val.index = df.index
 
         val.apply(lambda x: int(x) if x is not None else x)
-        if "coquery_dummy" in df.columns:
-            val[df["coquery_dummy"].isnull()] = 0
+        if "coquery_invisible_dummy" in df.columns:
+            val[df["coquery_invisible_dummy"].isnull()] = 0
 
         for x in replace_dict:
             df[x] = df[x].replace(replace_dict[x], pd.np.nan)
@@ -837,11 +845,9 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
             return self.constant(df, None)
 
         self._get_current_corpus()
-
-        engine = sqlalchemy.create_engine(
-            sqlhelper.sql_url(options.cfg.current_server,
-                              self._current_resource.db_name))
-
+        url = sqlhelper.sql_url(options.cfg.current_server,
+                                self._current_resource.db_name)
+        engine = sqlalchemy.create_engine(url)
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         # concatenate the word columns, separated by space
@@ -850,7 +856,8 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
         # get the frequency from the reference corpus for the concatenated
         # columns:
-        val = self._s.apply(lambda x: self._current_corpus.get_frequency(x, engine))
+        val = self._s.apply(lambda x:
+                                self._current_corpus.get_frequency(x, engine))
         val.index = df.index
         engine.dispose()
         return val
@@ -1151,32 +1158,33 @@ class SubcorpusSize(CorpusSize):
     no_column_labels = True
 
     def evaluate(self, df, *args, **kwargs):
-        session = kwargs["session"]
-        manager = kwargs["manager"]
-        fun = SubcorpusSize(session=session,
-                            columns=self.columns, group=self.group)
-        if self.find_function(df, fun):
-            if options.cfg.verbose:
-                print(self._name, "using {}".format(self))
-            return df[fun.get_id()]
-        else:
-            if options.cfg.verbose:
-                print(self._name, "calculating {}".format(self))
-
-        corpus_features = [x for x, _
-                           in session.Resource.get_corpus_features()]
-        column_list = [x for x in corpus_features
-                       if "coq_{}_1".format(x) in self.columns]
-
-        if df.iloc[0].coquery_dummy is not pd.np.nan:
-            val = df.apply(session.Corpus.get_subcorpus_size,
-                        columns=column_list,
-                        axis=1,
-                        subst=manager.get_column_substitutions)
-        else:
-            val = df.Series(name=self.get_id())
-        return val
-
+        try:
+            session = kwargs["session"]
+            manager = kwargs["manager"]
+            fun = SubcorpusSize(session=session,
+                                columns=self.columns, group=self.group)
+            if self.find_function(df, fun):
+                if options.cfg.verbose:
+                    print(self._name, "using {}".format(self))
+                return df[fun.get_id()]
+            else:
+                if options.cfg.verbose:
+                    print(self._name, "calculating {}".format(self))
+            corpus_features = [x for x, _
+                               in session.Resource.get_corpus_features()]
+            column_list = [x for x in corpus_features
+                           if "coq_{}_1".format(x) in self.columns]
+            if df.iloc[0].coquery_invisible_dummy is not pd.np.nan:
+                val = df.apply(session.Corpus.get_subcorpus_size,
+                            columns=column_list,
+                            axis=1,
+                            subst=manager.get_column_substitutions)
+            else:
+                val = df.Series(name=self.get_id())
+            return val
+        except Exception as e:
+            print(e)
+            raise e
 
 class SubcorpusRangeMin(CorpusSize):
     _name = "statistics_subcorpus_range_min"

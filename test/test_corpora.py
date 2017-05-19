@@ -148,33 +148,6 @@ class TestCorpus(unittest.TestCase):
             s = s.replace("  ", " ")
         return s.strip()
 
-    #def test_is_lexical(self):
-        #self.assertTrue(self.resource.is_lexical("word_label"))
-        #self.assertTrue(self.resource.is_lexical("cmudict.word_transcript"))
-        #self.assertFalse(self.resource.is_lexical("source_label"))
-
-    #def test_no_link(self):
-        #table_structure = ice_ng.Resource.get_table_structure("word_table", ["word_label"])
-        #self.assertEqual(table_structure["rc_features"], ['word_label', 'word_lemma_id', 'word_pos', 'word_transcript'])
-        #self.assertEqual(table_structure["rc_requested_features"], ["word_label"])
-        #self.assertEqual(table_structure["alias"], "COQ_WORD_TABLE")
-        #self.assertEqual(table_structure["parent"], "corpus_table")
-
-    #def test_linked(self):
-        #rc_features = [x for x, _ in ice_ng.Resource.get_lexicon_variables()]
-        #table_structure = buckeye.Resource.get_table_structure("word_table", rc_features)
-        #self.assertEqual(table_structure["rc_features"], sorted(["word_label", "word_pos", "word_transcript", "word_lemma_id"]))
-        #self.assertEqual(table_structure["alias"], "COQ_WORD_TABLE")
-        #self.assertEqual(table_structure["parent"], "corpus_table")
-
-    #def test_full_tree(self):
-        #rc_features = ice_ng.Resource.get_resource_features()
-        #table_structure = buckeye.Resource.get_table_structure("corpus_table", [])
-        #print(table_structure)
-        #self.assertEqual(table_structure["rc_features"], sorted(['corpus_source_id', 'corpus_time', 'corpus_word_id']))
-        #self.assertEqual(table_structure["alias"], "COQ_CORPUS_TABLE")
-        #self.assertEqual(table_structure["parent"], None)
-
     def test_get_required_tables_1(self):
         x = self.resource.get_required_tables("corpus", [], {})
         root, l = x
@@ -355,6 +328,12 @@ class TestCorpus(unittest.TestCase):
         self.assertDictEqual(d,
              {"word": ["COQ_WORD_1.Word LIKE 'a%'",
                        "COQ_WORD_1.POS LIKE 'n%'"]})
+
+    def test_get_token_conditions_5(self):
+        token = COCAToken("*'ll")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word LIKE '%''ll'"]})
 
     def test_get_token_conditions_quote_char_1(self):
         token = COCAToken("'ll")
@@ -637,6 +616,21 @@ class TestCorpus(unittest.TestCase):
         self.assertEqual(self.simple(query_string),
                          self.simple(target_string))
 
+    def test_query_string_apostrophe(self):
+        query = TokenQuery("*'ll", self.Session)
+        query_string = self.resource.get_query_string(
+            query.query_list[0], ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   COQ_CORPUS_1.ID AS coquery_invisible_corpus_id,
+                   COQ_CORPUS_1.FileId AS coquery_invisible_origin_id
+            FROM Corpus AS COQ_CORPUS_1
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = COQ_CORPUS_1.WordId
+            WHERE (COQ_WORD_1.Word LIKE '%''ll')"""
+        self.assertEqual(self.simple(query_string),
+                         self.simple(target_string))
+
     def test_query_string_NULL_1(self):
         # tests issue #256
         query = TokenQuery("_NULL *", self.Session)
@@ -672,6 +666,15 @@ class TestCorpus(unittest.TestCase):
         self.assertListEqual(l,
             ["(COQ_WORD_1.Word LIKE 'a%')",
              "(COQ_WORD_2.Word LIKE 'b%')"])
+
+    def test_where_conditions_2(self):
+        query = TokenQuery("*'ll", self.Session)
+        join_list = self.resource.get_corpus_joins(query.query_list[0])
+        l = self.resource.get_condition_list(query.query_list[0],
+                                             join_list,
+                                             ["word_label"])
+        self.assertListEqual(l,
+            ["(COQ_WORD_1.Word LIKE '%''ll')"])
 
     def test_where_conditions_quantified(self):
         s = "more * than [dt]{0,1} [jj]{0,3} [nn*]{1,2}"
@@ -829,7 +832,7 @@ def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestCorpus),
         unittest.TestLoader().loadTestsFromTestCase(TestSuperFlat),
-        #unittest.TestLoader().loadTestsFromTestCase(TestCorpusWithExternal)
+        unittest.TestLoader().loadTestsFromTestCase(TestCorpusWithExternal)
         ])
     unittest.TextTestRunner().run(suite)
 
