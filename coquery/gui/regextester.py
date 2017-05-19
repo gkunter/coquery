@@ -95,7 +95,7 @@ p, li { white-space: pre-wrap; }
 <p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Matches the start of string </p></td></tr>
 <tr>
 <td style=" vertical-align:top; padding-left:0; padding-right:0; padding-top:0; padding-bottom:0;">
-<p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-family:'Mono';">\b</span> </p></td>
+<p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-family:'Mono';">\\b</span> </p></td>
 <td style=" vertical-align:top; padding-left:0; padding-right:0; padding-top:0; padding-bottom:0;">
 <p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Matches the beginning of a word </p></td></tr>
 <tr>
@@ -204,7 +204,7 @@ p, li { white-space: pre-wrap; }
 <p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Matches the expression A, and places the result in a match group </p></td></tr>
 <tr>
 <td style=" vertical-align:top; padding-left:0; padding-right:0; padding-top:0; padding-bottom:0;">
-<p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-family:'Mono';">(:A)</span> </p></td>
+<p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-family:'Mono';">(?:A)</span> </p></td>
 <td style=" vertical-align:top; padding-left:0; padding-right:0; padding-top:0; padding-bottom:0;">
 <p style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">Matches the expression A, but do not form a match group </p></td></tr>
 <tr>
@@ -301,6 +301,7 @@ p, li { white-space: pre-wrap; }
 
             if not match:
                 self.ui.label_error.setText("No match.")
+                self.ui.table_groups.setRowCount(0)
                 self.ui.edit_regex.setStyleSheet("""
                     background-color: rgb(255, 255, 192); color: black; """)
             else:
