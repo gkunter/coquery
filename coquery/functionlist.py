@@ -13,9 +13,11 @@ from __future__ import unicode_literals
 
 import pandas as pd
 import datetime
+import logging
 
-from . import options
+from . import options, NAME
 from .general import CoqObject
+from .defines import msg_runtime_error_function
 
 
 class FunctionList(CoqObject):
@@ -44,7 +46,14 @@ class FunctionList(CoqObject):
                 drop_on_na = manager.drop_on_na
         else:
             drop_on_na = True
+
+        exception = None
+
         for fun in list(self._list):
+            if any(col not in df.columns for col in fun.columns):
+                self._list.remove(fun)
+                continue
+
             if options.cfg.drop_on_na:
                 drop_on_na = True
             else:
@@ -59,10 +68,12 @@ class FunctionList(CoqObject):
                     print(datetime.datetime.now() - then)
                 else:
                     val = fun.evaluate(df, session=session, manager=manager)
-            except KeyError as e:
-                print(e)
-                self._list.remove(fun)
+            except Exception as e:
                 # can be caused by a function applied to a non-existing column
+                self._list.remove(fun)
+                exception = RuntimeError(
+                                msg_runtime_error_function.format(
+                                    fun.get_label(session, manager), str(e)))
             else:
                 # Functions can return either single columns or data frames.
                 # Handle the function result accordingly:
@@ -70,6 +81,8 @@ class FunctionList(CoqObject):
                     df[fun.get_id()] = val
                 else:
                     df = pd.concat([df, val], axis="columns")
+        if exception:
+            raise exception
         # tell the manager whether rows with NA will be dropped:
         if manager:
             manager.drop_on_na = drop_on_na
@@ -114,3 +127,5 @@ class FunctionList(CoqObject):
         s = super(FunctionList, self).__repr__(*args, **kwargs)
         return "{}({})".format(
             s, self._list.__repr__(*args, **kwargs))
+
+logger = logging.getLogger(NAME)
