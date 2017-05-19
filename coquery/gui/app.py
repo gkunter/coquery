@@ -1095,8 +1095,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.cfg.column_color = result.get("colors", {})
 
             if (prev_subst != result["substitutions"]):
-                if AUTO_SUBSTITUTE in options.settings.value(
-                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
+                auto_apply = options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT)
+                if AUTO_SUBSTITUTE in auto_apply:
                     self.reaggregate()
                 else:
                     self.enable_apply_button()
@@ -1104,8 +1105,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # Finally, store the new column properties:
             properties[options.cfg.corpus] = result
             options.settings.setValue("column_properties", properties)
-
-
 
     def show_hidden_columns(self):
         manager = self.Session.get_manager()
@@ -1296,10 +1295,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for hidden in self.hidden_features:
             manager.hide_column(hidden)
 
-        column_order = self.ui.list_column_order.items()
-        columns = ([x for _, x in column_order] +
-                    [x for x in self.Session.data_table.columns
-                    if x.startswith("coquery_")])
+        columns = [x for _, x in self.ui.list_column_order.items()]
         manager.set_column_order(columns)
 
         if start:
@@ -1575,10 +1571,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         old_row, old_col = (self.ui.data_preview.currentIndex().row(),
                             self.ui.data_preview.currentIndex().column())
-        self.ui.data_preview.setModel(self.table_model)
-        self.ui.data_preview.horizontalHeader().reset()
-        self._last_aggregate = options.cfg.MODE
 
+        h_header = self.ui.data_preview.horizontalHeader()
+        h_header.reset()
+        self.ui.data_preview.setModel(self.table_model)
+
+        self._last_aggregate = options.cfg.MODE
         self.ui.data_preview.setDelegates()
         try:
             self.ui.data_preview.setCurrentIndex(
@@ -1789,7 +1787,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     "Error during execution – Coquery",
                     str(self.exception),
                     QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
-            if isinstance(self.exception, UnsupportedQueryItemError):
+            elif isinstance(self.exception, UnsupportedQueryItemError):
                 QtWidgets.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             else:
                 errorbox.ErrorBox.show(self.exc_info, self.exception)
@@ -1826,7 +1824,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def finalize_query(self, to_file=False):
         items = [(self.new_session.translate_header(x), x) for x in
                     self.new_session.data_table.columns
-                    if not x.startswith("coquery_")]
+                    if not x.startswith("coquery_invisible")]
         self.ui.list_column_order.setItems(items)
 
         self.query_thread = None
@@ -3098,6 +3096,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def remove_functions(self, columns):
         manager = self.Session.get_manager()
         for col in columns:
+            # is this a multicolumn function?
+            match = re.search("(func_[^_]*_[^_]*)_\d+_\d+", col)
+            if match:
+                col = match.group(1)
+
             func = self.Session.column_functions.find_function(col)
             if func:
                 self.Session.column_functions.remove_function(func)
