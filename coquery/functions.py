@@ -845,11 +845,9 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
             return self.constant(df, None)
 
         self._get_current_corpus()
-
-        engine = sqlalchemy.create_engine(
-            sqlhelper.sql_url(options.cfg.current_server,
-                              self._current_resource.db_name))
-
+        url = sqlhelper.sql_url(options.cfg.current_server,
+                                self._current_resource.db_name)
+        engine = sqlalchemy.create_engine(url)
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         # concatenate the word columns, separated by space
@@ -858,7 +856,8 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
         # get the frequency from the reference corpus for the concatenated
         # columns:
-        val = self._s.apply(lambda x: self._current_corpus.get_frequency(x, engine))
+        val = self._s.apply(lambda x:
+                                self._current_corpus.get_frequency(x, engine))
         val.index = df.index
         engine.dispose()
         return val
