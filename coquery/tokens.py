@@ -220,7 +220,8 @@ class COCAToken(QueryToken):
         self.lemmatize = bool(match.groupdict()["lemmatize"])
         work = (match.groupdict()["item"]
                      .replace("\\#", "#")
-                     .replace("\\~", "~"))
+                     .replace("\\~", "~")
+                     .replace("'", "''"))
 
         if work == "//" or work == "[]":
             word_specification = work
