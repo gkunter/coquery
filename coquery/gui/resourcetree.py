@@ -285,7 +285,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
         _, tab, feat = ext_res.split_resource_feature(link.rc_to)
         ext_table = "{}_table".format(tab)
 
-        tree = classes.CoqTreeLinkItem()
+        tree = classes.CoqTreeExternalTable()
         tree.setCheckState(0, QtCore.Qt.Unchecked)
         tree.setLink(link)
         tree.setText(0, "{}.{}".format(link.res_to,
@@ -299,7 +299,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
             _, _, feature = ext_res.split_resource_feature(rc_feature)
             # exclude special resource features
             if feature not in ("id", "table") and not feature.endswith("_id"):
-                new_item = classes.CoqTreeItem()
+                new_item = classes.CoqTreeExternalItem()
                 new_item.setText(0, getattr(ext_res, rc_feature))
                 new_item.rc_feature = rc_feature
                 new_item.setObjectName("{}.{}".format(link.get_hash(),
