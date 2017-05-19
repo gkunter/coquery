@@ -1078,7 +1078,8 @@ class CoqTreeItem(QtWidgets.QTreeWidgetItem):
         feature = utf8(self.objectName())
         if feature.endswith("_table"):
             self.setToolTip(column, "Corpus table: {}".format(text))
-        self.setToolTip(column, "Corpus field:\n{}".format(text))
+        else:
+            self.setToolTip(column, "Corpus field:\n{}".format(text))
 
         super(CoqTreeItem, self).setText(column, text)
 
@@ -1105,10 +1106,19 @@ class CoqTreeItem(QtWidgets.QTreeWidgetItem):
             True if all children have the same check state, False if at least
             one child has a different check state than another.
         """
-        child_states = set([])
-        for child in [self.child(i) for i in range(self.childCount())]:
-            child_states.add(child.checkState(column))
-        return len(child_states) == 1
+        child_states = self.get_children_states(column)
+
+        all_checked = all([x == QtCore.Qt.Checked for x in child_states])
+        all_unchecked = all([x == QtCore.Qt.Unchecked for x in child_states])
+
+        return all_checked or all_unchecked
+
+    def get_children_states(self, column=0):
+        """
+        Return a list of values representing the check states of the children.
+        """
+        return [self.child(i).checkState(column)
+                for i in range(self.childCount())]
 
     def on_change(self):
         if self.checkState(0) == QtCore.Qt.Unchecked:
@@ -1138,66 +1148,28 @@ class CoqTreeItem(QtWidgets.QTreeWidgetItem):
             If True, a parent node will be expanded if the item is checked
         """
         check_state = self.checkState(column)
-
-        if utf8(self._objectName).endswith("_table") and check_state:
-            self.setExpanded(True)
+        mother = self.parent()
 
         if check_state != QtCore.Qt.PartiallyChecked:
-            # propagate check state to children:
-            for child in [self.child(i) for i in range(self.childCount())]:
-                if not isinstance(child, CoqTreeLinkItem):
-                    child.setCheckState(column, check_state)
+            self.set_children_checkboxes(column, check_state)
 
-        #FIXME: the following is a huge mess that needs to be cleaned up!
+        if (utf8(self._objectName).endswith("_table") and
+                check_state != QtCore.Qt.Unchecked):
+            self.setExpanded(True)
 
-        # adjust check state of parent, but not if linked:
-        if self.parent():
-            is_external = len(self.objectName().split(".")) == 2
-
-
-            if not self._objectName:
-                # an external table
-                if check_state == QtCore.Qt.Checked:
-                    root = self.parent()
-                    if check_state == QtCore.Qt.Checked:
-                        if root.checkState(column) == QtCore.Qt.Unchecked:
-                            root.setCheckState(column, QtCore.Qt.PartiallyChecked)
-                    else:
-                        if root.checkState(column) == QtCore.Qt.PartiallyChecked:
-                            root.setCheckState(column, QtCore.Qt.Unchecked)
-
-
-            elif not is_external:
-                if not self.parent().check_children():
-                    self.parent().setCheckState(column,
-                                                QtCore.Qt.PartiallyChecked)
-                else:
-                    self.parent().setCheckState(column, check_state)
+        if mother:
+            if not mother.check_children():
+                mother.setCheckState(column, QtCore.Qt.PartiallyChecked)
             else:
-                root = self.parent()
-                if check_state == QtCore.Qt.Checked:
-                    if root.checkState(column) == QtCore.Qt.Unchecked:
-                        root.setCheckState(column, QtCore.Qt.PartiallyChecked)
-                else:
-                    if root.checkState(column) == QtCore.Qt.PartiallyChecked:
-                        root.setCheckState(column, QtCore.Qt.Unchecked)
+                mother.setCheckState(column, check_state)
+
+    def set_children_checkboxes(self, column, check_state):
+        for child in [self.child(i) for i in range(self.childCount())]:
+            if not isinstance(child, CoqTreeExternalTable):
+                child.setCheckState(column, check_state)
 
 
-                root = self.parent().parent()
-                if check_state == QtCore.Qt.Checked:
-                    if root.checkState(column) == QtCore.Qt.Unchecked:
-                        root.setCheckState(column, QtCore.Qt.PartiallyChecked)
-                else:
-                    if root.checkState(column) == QtCore.Qt.PartiallyChecked:
-                        root.setCheckState(column, QtCore.Qt.Unchecked)
-
-            if expand:
-                if self.parent().checkState(column) in (
-                        QtCore.Qt.PartiallyChecked, QtCore.Qt.Checked):
-                    self.parent().setExpanded(True)
-
-
-class CoqTreeLinkItem(CoqTreeItem):
+class CoqTreeExternalTable(CoqTreeItem):
     """
     Define a CoqTreeItem class that represents a linked table.
     """
@@ -1205,9 +1177,36 @@ class CoqTreeLinkItem(CoqTreeItem):
         self._link_by = link
         self.link = link
 
+    def update_checkboxes(self, column, expand=False):
+        check_state = self.checkState(column)
+        mother = self.parent()
+
+        if check_state != QtCore.Qt.PartiallyChecked:
+            self.set_children_checkboxes(column, check_state)
+
+        all_siblings_unchecked = all([x == QtCore.Qt.Unchecked for x in
+                                      mother.get_children_states(column)])
+
+        if check_state == QtCore.Qt.Unchecked:
+            if (mother.checkState(column) == QtCore.Qt.PartiallyChecked and
+                    all_siblings_unchecked):
+                mother.setCheckState(column, QtCore.Qt.Unchecked)
+        else:
+            if (mother.checkState(column) == QtCore.Qt.Unchecked):
+                mother.setCheckState(column, QtCore.Qt.PartiallyChecked)
+
     def setText(self, column, text, *args):
-        super(CoqTreeLinkItem, self).setText(column, text)
-        #self.setToolTip(column, "External table: {}\nLinked by: {}".format(text, self.link.feature_name))
+        super(CoqTreeItem, self).setText(column, text, *args)
+        self.setToolTip(column, "External table: {}".format(utf8(text)))
+
+
+class CoqTreeExternalItem(CoqTreeItem):
+    """
+    Define a CoqTreeItem class that represents a resource from a linked table.
+    """
+    def setText(self, column, text, *args):
+        super(CoqTreeItem, self).setText(column, text, *args)
+        self.setToolTip(column, "External column: {}".format(utf8(text)))
 
 
 class CoqTreeWidget(QtWidgets.QTreeWidget):
