@@ -216,11 +216,10 @@ def get_visible_columns(df, manager, session, hidden=False):
     """
     if hidden:
         l = [x for x in list(df.columns.values)
-             if not x.startswith(("coquery_dummy", "coquery_invisible"))]
+             if not x.startswith("coquery_invisible_")]
     else:
         l = [x for x in list(df.columns.values)
-             if (not x.startswith(("coquery_dummy",
-                                   "coquery_invisible")) and
+             if (not x.startswith("coquery_invisible_") and
                  x not in manager.hidden_columns)]
 
     #l = set_preferred_order(l)
