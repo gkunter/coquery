@@ -44,7 +44,7 @@ from .defines import (
     SQL_SQLITE, SQL_MYSQL,
     DEFAULT_MISSING_VALUE,
     QUERY_MODES, QUERY_MODE_TOKENS,
-    CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_STRING)
+    CONTEXT_NONE, CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_STRING)
 from .unicode import utf8
 from .links import parse_link_text
 
@@ -716,7 +716,7 @@ class Options(object):
             "csv_has_header": False,
             "csv_line_skip": 0,
             "csv_quote_char": '"',
-            "context_mode": CONTEXT_KWIC,
+            "context_mode": CONTEXT_NONE,
             "context_left": 3,
             "context_right": 3,
             "context_restrict": False,
@@ -892,7 +892,7 @@ class Options(object):
             self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
             self.args.text_source_path = config_file.str(
                 "gui", "text_source_path",
-                fallback=os.path.join(self.args.base_path, "texts"))
+                fallback=os.path.join(self.args.base_path, "texts", "alice"))
 
             self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=True)
             self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=True)
