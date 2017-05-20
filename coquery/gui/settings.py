@@ -43,26 +43,19 @@ class Settings(QtWidgets.QDialog):
             button.clicked.connect(slot)
 
         self._table_font = self._options.table_font
-        self._figure_font = self._options.figure_font
         self._context_font = self._options.context_font
 
         self.ui.label_sample_table.setFont(self._table_font)
-        self.ui.label_sample_figure.setFont(self._figure_font)
         self.ui.label_sample_context.setFont(self._context_font)
         self.ui.label_sample_table.setText(self._table_font.family())
-        self.ui.label_sample_figure.setText(self._figure_font.family())
         self.ui.label_sample_context.setText(self._context_font.family())
 
         self.ui.button_table_font.clicked.connect(
             lambda: self.select_font(self.ui.label_sample_table))
-        self.ui.button_figure_font.clicked.connect(
-            lambda: self.select_font(self.ui.label_sample_figure))
         self.ui.button_context_font.clicked.connect(
             lambda: self.select_font(self.ui.label_sample_context))
         self.ui.button_reset_table.clicked.connect(
             lambda: self.reset_font(self.ui.label_sample_table))
-        self.ui.button_reset_figure.clicked.connect(
-            lambda: self.reset_font(self.ui.label_sample_figure))
         self.ui.button_reset_context.clicked.connect(
             lambda: self.reset_font(self.ui.label_sample_context))
 
@@ -102,17 +95,13 @@ class Settings(QtWidgets.QDialog):
         font = QtWidgets.QLabel().font()
         label.setText(font.family())
         label.setFont(font)
-        if label == self.ui.label_sample_figure:
-            self._figure_font = font
-        elif label == self.ui.label_sample_table:
+        if label == self.ui.label_sample_table:
             self._table_font = font
         elif label == self.ui.label_sample_context:
             self._context_font = font
 
     def select_font(self, label):
-        if label == self.ui.label_sample_figure:
-            font = self._figure_font
-        elif label == self.ui.label_sample_table:
+        if label == self.ui.label_sample_table:
             font = self._table_font
         elif label == self.ui.label_sample_context:
             font = self._context_font
@@ -121,9 +110,7 @@ class Settings(QtWidgets.QDialog):
         if not accepted:
             return
 
-        if label == self.ui.label_sample_figure:
-            self._figure_font = new_font
-        elif label == self.ui.label_sample_table:
+        if label == self.ui.label_sample_table:
             self._table_font = new_font
         elif label == self.ui.label_sample_context:
             self._context_font = new_font
@@ -341,7 +328,6 @@ class Settings(QtWidgets.QDialog):
         self._options.binary_path = utf8(self.ui.edit_binary_path.text())
         add_source_path(self._options.custom_installer_path)
         self._options.table_font = self._table_font
-        self._options.figure_font = self._figure_font
         self._options.context_font = self._context_font
         self._options.na_string = utf8(self.ui.edit_na_string.text())
 
