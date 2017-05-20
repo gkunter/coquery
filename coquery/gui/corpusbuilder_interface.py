@@ -205,7 +205,7 @@ class InstallerGui(QtWidgets.QDialog):
     def select_path(self):
         path = utf8(self.ui.input_path.text())
         if not path:
-            path = os.path.join(options.cfg.base_path, "texts")
+            path = os.path.join(options.cfg.base_path, "texts", "alice")
         name = QtWidgets.QFileDialog.getExistingDirectory(
             directory=path,
             options=(QtWidgets.QFileDialog.ReadOnly |
