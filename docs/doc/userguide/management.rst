@@ -24,7 +24,7 @@ provides access to most of these features.
 .. figure:: ../../_static/interface/tutorial_aggregation_none.png
     :scale: 100 %
 
-Column order
+Feature order
 ++++++++++++
 
 TO BE ADDED
@@ -98,19 +98,34 @@ management is applied, there will be a new column `TTR(Word by Filename)`
 which shows the type-token ratio in each file.
 
 Transformations
----------------
++++++++++++++++
 
 Only distinct rows
-++++++++++++++++++
+------------------
+
+This transformation discards all doublets, i.e. each row that has the same
+values in its columns as a previous row.
 
 Frequency list
-++++++++++++++
+--------------
+
+The frequency list shows the number of occurrences of the values in the
+results table. If you want to exclude one of the columns from the frequency
+count, you can hide that column by right-clicking column header, and
+selecting "Hide column" from the context menu.
 
 Contingency table
-+++++++++++++++++
+-----------------
+
+A contingcy tables is a restructured feature list. The last entry in the
+feature order toolbox is the variable that defines the shape of the
+contingency table. Each value of that variable forms a separate column in the
+table. The contingency table also shows row and column totals.
+
+Currently, the behavior of numeric values is undefined.
 
 G-test matrix
-+++++++++++++
+-------------
 
 The G-test matrix takes the results table and applies pairwise log-likelihood
 tests to determine which results occur with statistically different
@@ -142,7 +157,7 @@ scientific publication, you are strongly advised to check their validity
 first.
 
 Collocation list
-++++++++++++++++
+----------------
 
 'Collocations' determines words that frequently co-occur with the
 words from the query strings. The span of words to the left and to the right

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Coquery Documentation: Tutorial &mdash; Coquery 0.9.2 documentation</title>
+    <title>Coquery Documentation: Tutorial &#8212; Coquery 0.10.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,17 +14,17 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.9.2',
+        VERSION:     '0.10.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.2 documentation" href="../../index.html" />
-    <link rel="up" title="Coquery documentation" href="../index.html" />
+    <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Users manual" href="../userguide/index.html" />
     <link rel="prev" title="Coquery documentation" href="../index.html" /> 
   </head>
@@ -35,7 +35,7 @@
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.9.2 documentation</a></div>
+          href="../../index.html">Coquery 0.10.0 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="../index.html" title="Coquery documentation"
              accesskey="P">previous</a> |
@@ -53,8 +53,6 @@
           <div class="body" role="main">
             
   <div class="toctree-wrapper compound" id="tutorial">
-<ul class="simple">
-</ul>
 </div>
 <div class="section" id="id1">
 <h1>Tutorial</h1>
@@ -75,7 +73,7 @@ containing the Coquery files, and type <code class="docutils literal"><span clas
 Linux or Mac OS X) or <code class="docutils literal"><span class="pre">python</span> <span class="pre">coquery.py</span></code> (if you are on Windows).
 the main interface will open:</p>
 <div class="figure" id="id2">
-<a class="reference internal image-reference" href="../../_images/coquery_empty.png"><img alt="../../_images/coquery_empty.png" src="../../_images/coquery_empty.png" /></a>
+<a class="reference internal image-reference" href="../../_images/coquery_empty.png"><img alt="../../_images/coquery_empty.png" src="../../_images/coquery_empty.png" style="width: 444.5px; height: 417.0px;" /></a>
 <p class="caption"><span class="caption-text">The main interface when launching Coquery for the first time.</span></p>
 </div>
 <p>Most of the functions in the main interface are inactive. This is so because
@@ -92,13 +90,13 @@ to build the ALICE corpus.</p>
 <p>First, select &#8216;Corpus manager` from the &#8216;Corpus&#8217; menu. The corpus manager
 dialog will open:</p>
 <div class="figure" id="id3">
-<a class="reference internal image-reference" href="../../_images/corpus_manager_empty.png"><img alt="../../_images/corpus_manager_empty.png" src="../../_images/corpus_manager_empty.png" /></a>
+<a class="reference internal image-reference" href="../../_images/corpus_manager_empty.png"><img alt="../../_images/corpus_manager_empty.png" src="../../_images/corpus_manager_empty.png" style="width: 442.0px; height: 353.5px;" /></a>
 <p class="caption"><span class="caption-text">The corpus manager.</span></p>
 </div>
 <p>Now, click on the green &#8216;Add&#8217; button <a class="reference internal" href="../../_images/sign-add.png"><img alt="add" src="../../_images/sign-add.png" style="height: 12px;" /></a> on the entry labelled &#8216;Build new
 corpus...&#8217; to open the Corpus builder:</p>
 <div class="figure" id="id4">
-<a class="reference internal image-reference" href="../../_images/corpus_builder.png"><img alt="../../_images/corpus_builder.png" src="../../_images/corpus_builder.png" /></a>
+<a class="reference internal image-reference" href="../../_images/corpus_builder.png"><img alt="../../_images/corpus_builder.png" src="../../_images/corpus_builder.png" style="width: 391.5px; height: 311.0px;" /></a>
 <p class="caption"><span class="caption-text">The corpus builder.</span></p>
 </div>
 <p>The path to the <em>Alice</em> text files is already set up correctly. Type in the
@@ -117,19 +115,19 @@ single asterisk &#8216;*&#8217; (without quotation marks) into the query string 
 field. The asterisk is a wild card that matches any orthographic word in the
 corpus:</p>
 <div class="figure" id="id5">
-<a class="reference internal image-reference" href="../../_images/tutorial_query_string_asterisk.png"><img alt="../../_images/tutorial_query_string_asterisk.png" src="../../_images/tutorial_query_string_asterisk.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_query_string_asterisk.png"><img alt="../../_images/tutorial_query_string_asterisk.png" src="../../_images/tutorial_query_string_asterisk.png" style="width: 159.5px; height: 161.5px;" /></a>
 <p class="caption"><span class="caption-text">A query string matching any orthographic word.</span></p>
 </div>
 <p>Next, activate the &#8216;Frequency&#8217; aggregation so that the query results will be
 arranged in the form of a frequency list:</p>
 <div class="figure" id="id6">
-<a class="reference internal image-reference" href="../../_images/tutorial_aggregation_frequency.png"><img alt="../../_images/tutorial_aggregation_frequency.png" src="../../_images/tutorial_aggregation_frequency.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_aggregation_frequency.png"><img alt="../../_images/tutorial_aggregation_frequency.png" src="../../_images/tutorial_aggregation_frequency.png" style="width: 59.5px; height: 85.0px;" /></a>
 <p class="caption"><span class="caption-text">Activating the Frequency aggregation.</span></p>
 </div>
 <p>Now, run your first query by clicking the &#8216;<a class="reference internal" href="../../_images/go.png"><img alt="go" src="../../_images/go.png" style="height: 12px;" /></a> Query&#8217; button. After a few
 moments, a frequency list will be shown in the query results table:</p>
 <div class="figure" id="id7">
-<a class="reference internal image-reference" href="../../_images/tutorial_results_table.png"><img alt="../../_images/tutorial_results_table.png" src="../../_images/tutorial_results_table.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_results_table.png"><img alt="../../_images/tutorial_results_table.png" src="../../_images/tutorial_results_table.png" style="width: 400.5px; height: 191.0px;" /></a>
 <p class="caption"><span class="caption-text">The frequency table from the ALICE corpus.</span></p>
 </div>
 <p>The status bar informs you that the query matched 33486 tokens. The results
@@ -143,7 +141,7 @@ can sort the results table by right-clicking on a table header, and selecting
 a sorting option from the context menu. If you want to see the most frequent
 types on top of the results table, select a descending sort order:</p>
 <div class="figure" id="id8">
-<a class="reference internal image-reference" href="../../_images/tutorial_sort_descending.png"><img alt="../../_images/tutorial_sort_descending.png" src="../../_images/tutorial_sort_descending.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_sort_descending.png"><img alt="../../_images/tutorial_sort_descending.png" src="../../_images/tutorial_sort_descending.png" style="width: 125.5px; height: 191.5px;" /></a>
 <p class="caption"><span class="caption-text">Selecting a descending sorting order for the column Frequency.</span></p>
 </div>
 <p>The results table will be rearranged instantly. To no great surprise, the
@@ -172,7 +170,7 @@ line (actually, I cheated and entered the <strong>eleven</strong> most frequent 
 nouns, only because the <em>Cheshire cat</em> was always my favourite character from
 the book):</p>
 <div class="figure" id="id9">
-<a class="reference internal image-reference" href="../../_images/tutorial_animate_nouns.png"><img alt="../../_images/tutorial_animate_nouns.png" src="../../_images/tutorial_animate_nouns.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_animate_nouns.png"><img alt="../../_images/tutorial_animate_nouns.png" src="../../_images/tutorial_animate_nouns.png" style="width: 157.5px; height: 154.5px;" /></a>
 <p class="caption"><span class="caption-text">The eleven most frequent animate nouns in ALICE as query strings.</span></p>
 </div>
 <p>Before we run a new query to get the matches for these query strings, we have
@@ -181,7 +179,7 @@ result table. We do this by selecting the output column &#8216;Filename&#8217; f
 &#8216;Files&#8217; table. We use the &#8216;Output column&#8217; tree in the upper right corner of
 the main interface for that:</p>
 <div class="figure" id="id10">
-<a class="reference internal image-reference" href="../../_images/tutorial_output_columns.png"><img alt="../../_images/tutorial_output_columns.png" src="../../_images/tutorial_output_columns.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_output_columns.png"><img alt="../../_images/tutorial_output_columns.png" src="../../_images/tutorial_output_columns.png" style="width: 140.0px; height: 155.0px;" /></a>
 <p class="caption"><span class="caption-text">The &#8216;Output column&#8217; tree with &#8216;Word&#8217; and &#8216;Filename&#8217; selected.</span></p>
 </div>
 <p>As you can see in the figure, the checkboxes next to &#8216;Word&#8217; and &#8216;Filename&#8217; are
@@ -192,14 +190,14 @@ result table contained the Word column in the first place.</p>
 run a new query. If you followed all steps from the tutorial, your new results
 table should look like this:</p>
 <div class="figure" id="id11">
-<a class="reference internal image-reference" href="../../_images/tutorial_results_table_filename.png"><img alt="../../_images/tutorial_results_table_filename.png" src="../../_images/tutorial_results_table_filename.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_results_table_filename.png"><img alt="../../_images/tutorial_results_table_filename.png" src="../../_images/tutorial_results_table_filename.png" style="width: 395.0px; height: 189.5px;" /></a>
 <p class="caption"><span class="caption-text">A frequency table for eleven nouns, summarized by &#8216;Filename&#8217;.</span></p>
 </div>
 <p>Apparently, <em>alice</em> occurs 50 times in chapter 7, 47 times in chapter 9, and
 so on. You can change the presentation of the frequency table by changing to
 the Contingency aggregation:</p>
 <div class="figure" id="id12">
-<a class="reference internal image-reference" href="../../_images/tutorial_results_table_contingency.png"><img alt="../../_images/tutorial_results_table_contingency.png" src="../../_images/tutorial_results_table_contingency.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_results_table_contingency.png"><img alt="../../_images/tutorial_results_table_contingency.png" src="../../_images/tutorial_results_table_contingency.png" style="width: 395.0px; height: 189.5px;" /></a>
 <p class="caption"><span class="caption-text">The contingency table for the last query.</span></p>
 </div>
 <p>In this contingency table, each row corresponds to one noun from the query
@@ -209,8 +207,8 @@ is mentioned mostly in chapters 2 and 3.</p>
 <p>You can switch between the different aggregations without having to run the
 query again. This can be very useful if you are working wiht corpora that are
 much bigger than ALICE, as queries can easily take a few minutes or more. For
-a detailled description of the different aggregations, see <a class="reference internal" href="../userguide/aggregations.html#aggregations"><span>Aggregations</span></a>
-in the <a class="reference internal" href="../userguide/index.html#users"><span>Users manual</span></a>.</p>
+a detailled description of the different aggregations, see <a class="reference internal" href="../userguide/aggregations.html#aggregations"><span class="std std-ref">Aggregations</span></a>
+in the <a class="reference internal" href="../userguide/index.html#users"><span class="std std-ref">Users manual</span></a>.</p>
 </div>
 <div class="section" id="visualizing-the-results">
 <h2>Visualizing the results</h2>
@@ -224,7 +222,7 @@ last query with the two output columns &#8216;Word&#8217; and &#8216;Filename&#8
 &#8216;Barcode plot&#8217; from the &#8216;Corpus location&#8217; submenu of the &#8216;Visualizations&#8217;
 menu. After a brief moment, the following visualization window will appear:</p>
 <div class="figure" id="id13">
-<a class="reference internal image-reference" href="../../_images/barcode_alice.png"><img alt="../../_images/barcode_alice.png" src="../../_images/barcode_alice.png" /></a>
+<a class="reference internal image-reference" href="../../_images/barcode_alice.png"><img alt="../../_images/barcode_alice.png" src="../../_images/barcode_alice.png" style="width: 442.0px; height: 353.5px;" /></a>
 <p class="caption"><span class="caption-text">A barcode plot showing the occurrences of each different noun.</span></p>
 </div>
 <p>As you can see, the plot is actually composed of several subplots, one for
@@ -248,13 +246,13 @@ header &#8216;Word&#8217; in the results table, and drag the header (with the le
 key pressed) to a position to the right of the column header &#8216;Filename&#8217;. Your
 results table should now look like this:</p>
 <div class="figure" id="id14">
-<a class="reference internal image-reference" href="../../_images/tutorial_results_table_moved.png"><img alt="../../_images/tutorial_results_table_moved.png" src="../../_images/tutorial_results_table_moved.png" /></a>
+<a class="reference internal image-reference" href="../../_images/tutorial_results_table_moved.png"><img alt="../../_images/tutorial_results_table_moved.png" src="../../_images/tutorial_results_table_moved.png" style="width: 395.0px; height: 189.5px;" /></a>
 <p class="caption"><span class="caption-text">The frequency table, now with the &#8216;Word&#8217; column in second position.</span></p>
 </div>
 <p>If you create a new barcode plot, each subplot now corresponds to one chapter,
 and the different colors correspond to the different key characters:</p>
 <div class="figure" id="id15">
-<a class="reference internal image-reference" href="../../_images/barcode_alice2.png"><img alt="../../_images/barcode_alice2.png" src="../../_images/barcode_alice2.png" /></a>
+<a class="reference internal image-reference" href="../../_images/barcode_alice2.png"><img alt="../../_images/barcode_alice2.png" src="../../_images/barcode_alice2.png" style="width: 442.0px; height: 353.5px;" /></a>
 <p class="caption"><span class="caption-text">A barcode plot showing the occurrences of key characters in the different
 chapters.</span></p>
 </div>
@@ -269,11 +267,11 @@ one key character of the story.</p>
 <p>In this tutorial, you have experimented with a few of the key features of
 Coquery: specifying query strings, selecting output columns, rearranging and
 aggregating the results table, and visualizing the data.</p>
-<p>You can learn more about these and other features in the <a class="reference internal" href="../userguide/index.html#users"><span>Users manual</span></a>. A
+<p>You can learn more about these and other features in the <a class="reference internal" href="../userguide/index.html#users"><span class="std std-ref">Users manual</span></a>. A
 detailed description of the different elements of the main interface and of
-all menu entries is given in <a class="reference internal" href="../reference/index.html#reference"><span>Reference guide</span></a>. More on building your own
+all menu entries is given in <a class="reference internal" href="../reference/index.html#reference"><span class="std std-ref">Reference guide</span></a>. More on building your own
 corpora, as well as using Coquery with one of the supported third-party
-corpora, is found in <a class="reference internal" href="../corpora/index.html#corpora"><span>Corpus guide</span></a>.</p>
+corpora, is found in <a class="reference internal" href="../corpora/index.html#corpora"><span class="std std-ref">Corpus guide</span></a>.</p>
 </div>
 </div>
 
@@ -292,9 +290,6 @@ corpora, is found in <a class="reference internal" href="../corpora/index.html#c
                 <input type="hidden" name="check_keywords" value="yes" />
                 <input type="hidden" name="area" value="default" />
             </form>
-            <p class="searchtip" style="font-size: 90%">
-                Enter search terms or a module, class or function name.
-            </p>
           </div>
         </div>
         <div class="clearer"></div>

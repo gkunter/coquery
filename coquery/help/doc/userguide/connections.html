@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Coquery Documentation: Connections &mdash; Coquery 0.9.2 documentation</title>
+    <title>Coquery Documentation: Connections &#8212; Coquery 0.10.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,19 +14,19 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.9.2',
+        VERSION:     '0.10.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.2 documentation" href="../../index.html" />
-    <link rel="up" title="Users manual" href="index.html" />
+    <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Reference guide" href="../reference/index.html" />
-    <link rel="prev" title="Aggregations" href="aggregations.html" /> 
+    <link rel="prev" title="Visualizations" href="visualizations.html" /> 
   </head>
   <body role="document">
     <div class="header-wrapper" role="banner">
@@ -35,9 +35,9 @@
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.9.2 documentation</a></div>
+          href="../../index.html">Coquery 0.10.0 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
-          <a href="aggregations.html" title="Aggregations"
+          <a href="visualizations.html" title="Visualizations"
              accesskey="P">previous</a> |
           <a href="../reference/index.html" title="Reference guide"
              accesskey="N">next</a>
@@ -54,14 +54,15 @@
             
   <div class="section" id="database-connections">
 <span id="connections"></span><h1>Database connections</h1>
-<div class="section" id="introduction">
-<h2>Introduction</h2>
-</div>
-<div class="section" id="server-less-connections">
-<h2>Server-less connections</h2>
+<div class="section" id="serverless-connections">
+<h2>Serverless connections</h2>
+<p>Serverless connections use SQLite3 databases that are stored in the user&#8217;s
+home directory.</p>
 </div>
 <div class="section" id="mysql-connections">
 <h2>MySQL connections</h2>
+<p>MySQL connections connect to a MySQL server. The MySQL server can either
+run locally (i.e. on the user&#8217;s computer) or on a network.</p>
 </div>
 <div class="section" id="setting-up-a-mysql-server">
 <h2>Setting up a MySQL server</h2>
@@ -83,9 +84,6 @@
                 <input type="hidden" name="check_keywords" value="yes" />
                 <input type="hidden" name="area" value="default" />
             </form>
-            <p class="searchtip" style="font-size: 90%">
-                Enter search terms or a module, class or function name.
-            </p>
           </div>
         </div>
         <div class="clearer"></div>
@@ -96,7 +94,7 @@
       <div class="footer">
         <div class="left">
           <div role="navigation" aria-label="related navigaton">
-            <a href="aggregations.html" title="Aggregations"
+            <a href="visualizations.html" title="Visualizations"
               >previous</a> |
             <a href="../reference/index.html" title="Reference guide"
               >next</a>

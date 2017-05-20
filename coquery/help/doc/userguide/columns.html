@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Coquery Documentation: Output columns &mdash; Coquery 0.9.2 documentation</title>
+    <title>Coquery Documentation: Output columns &#8212; Coquery 0.10.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,19 +14,17 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.9.2',
+        VERSION:     '0.10.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.2 documentation" href="../../index.html" />
-    <link rel="up" title="Users manual" href="index.html" />
-    <link rel="next" title="Working with contexts" href="contexts.html" />
-    <link rel="prev" title="Query syntax" href="syntax.html" /> 
+    <link rel="search" title="Search" href="../../search.html" /> 
   </head>
   <body role="document">
     <div class="header-wrapper" role="banner">
@@ -35,12 +33,8 @@
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.9.2 documentation</a></div>
+          href="../../index.html">Coquery 0.10.0 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
-          <a href="syntax.html" title="Query syntax"
-             accesskey="P">previous</a> |
-          <a href="contexts.html" title="Working with contexts"
-             accesskey="N">next</a>
         </div>
        </div>
     </div>
@@ -55,9 +49,10 @@
   <span class="target" id="columns"></span><div class="section" id="output-columns">
 <h1>Output columns</h1>
 <div class="toctree-wrapper compound">
-<ul class="simple">
-</ul>
 </div>
+<ul class="simple">
+<li>THIS PART OF THE DOCUMENTATION IS OUTDATED AS OF VERSION 0.10.0. *</li>
+</ul>
 <div class="section" id="overview">
 <h2>Overview</h2>
 <p>A corpus may contain information on several levels of description. For
@@ -73,10 +68,10 @@ indicates the two tables <cite>Word</cite> and <cite>Texts</cite> and the second
 (i.e. <cite>Wordform</cite>, <cite>Transcript</cite>, <cite>Part-of-speech</cite>, <cite>Lemma</cite> and <cite>Title</cite>, <cite>Year</cite>,
 <cite>Genre</cite>):</p>
 <blockquote>
-<div><ul>
+<div><ul class="simple">
 <li><dl class="first docutils">
 <dt>Words</dt>
-<dd><ul class="first last simple">
+<dd><ul class="first last">
 <li>Wordform</li>
 <li>Transcript</li>
 <li>Part-of-speech</li>
@@ -87,7 +82,7 @@ indicates the two tables <cite>Word</cite> and <cite>Texts</cite> and the second
 </li>
 <li><dl class="first docutils">
 <dt>Texts</dt>
-<dd><ul class="first last simple">
+<dd><ul class="first last">
 <li>Title</li>
 <li>Year</li>
 <li>Genre</li>
@@ -115,7 +110,7 @@ context menu. Using the commands in this window, you may view the unique
 values provided by the current corpus for this column, link the current
 column to a different column from an external table (i.e. a table from a
 corpus other than the currently selected one), and add a function to the
-output column. For details, see <a class="reference internal" href="../reference/output_menu.html#output-column-submenu"><span>Output column submenu</span></a>.</p>
+output column. For details, see <a class="reference internal" href="../reference/output_menu.html#output-column-submenu"><span class="std std-ref">Output column submenu</span></a>.</p>
 </div>
 <div class="section" id="special-tables">
 <h2>Special tables</h2>
@@ -126,7 +121,7 @@ This column includes a token identifier in the results table which is unique
 for the whole corpus, and which can be used to refer to a token unambiguously.
 Depending on the corpus, the Corpus table can contain additional columns.</p>
 <p>Another special table is the <strong>Statistics</strong> table. The columns table can only
-be selected when the Frequency aggregation mode is selected (see <a class="reference internal" href="aggregations.html#aggregations"><span>Aggregations</span></a>).</p>
+be selected when the Frequency aggregation mode is selected (see <a class="reference internal" href="aggregations.html#aggregations"><span class="std std-ref">Aggregations</span></a>).</p>
 <p>Selecting the column <em>Frequency (pmw)</em> includes a column in the results table
 in which the frequency is normalized per million words. The columns <em>Overall
 entropy</em> and <em>Query entropy</em> calculate the Shannon entropy for the overall
@@ -173,9 +168,6 @@ completed, and the name of the query input file if any was used.</p>
                 <input type="hidden" name="check_keywords" value="yes" />
                 <input type="hidden" name="area" value="default" />
             </form>
-            <p class="searchtip" style="font-size: 90%">
-                Enter search terms or a module, class or function name.
-            </p>
           </div>
         </div>
         <div class="clearer"></div>
@@ -186,10 +178,6 @@ completed, and the name of the query input file if any was used.</p>
       <div class="footer">
         <div class="left">
           <div role="navigation" aria-label="related navigaton">
-            <a href="syntax.html" title="Query syntax"
-              >previous</a> |
-            <a href="contexts.html" title="Working with contexts"
-              >next</a>
           </div>
           <div role="note" aria-label="source link">
           </div>

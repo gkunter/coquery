@@ -1,0 +1,240 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Coquery Documentation: Data management &#8212; Coquery 0.10.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.10.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Visualizations" href="visualizations.html" />
+    <link rel="prev" title="Query syntax" href="syntax.html" /> 
+  </head>
+  <body role="document">
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="../../index.html">
+            <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="../../index.html">Coquery 0.10.0 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="syntax.html" title="Query syntax"
+             accesskey="P">previous</a> |
+          <a href="visualizations.html" title="Visualizations"
+             accesskey="N">next</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="data-management">
+<span id="management"></span><h1>Data management</h1>
+<p>Once the query from the data base is completed, the results can be managed in
+different ways. You can:</p>
+<ul class="simple">
+<li>Change the order of the columns in the results table</li>
+<li>Specify the context that are displayed for each matched token</li>
+<li>Specify stopwords that are filtered out from the results</li>
+<li>Split the results into data groups, apply functions to each group, and
+merge the groups again</li>
+<li>Transform the results table into another type of table</li>
+<li>Apply summary functions and filters that remove matches from the results</li>
+</ul>
+<p>You can also apply user functions to each column in the results table.</p>
+<p>The data management toolbox in the upper right corner of the main screen
+provides access to most of these features.</p>
+<div class="figure">
+<a class="reference internal image-reference" href="../../_images/tutorial_aggregation_none.png"><img alt="../../_images/tutorial_aggregation_none.png" src="../../_images/tutorial_aggregation_none.png" style="width: 177.0px; height: 386.0px;" /></a>
+</div>
+<div class="section" id="feature-order">
+<h2>Feature order</h2>
+<p>TO BE ADDED</p>
+</div>
+<div class="section" id="context">
+<h2>Context</h2>
+<p>The <strong>Context</strong> toolbox is used to specify how much context to the left and
+to the right of the matched token should be displayed. The two controls
+<em>Left:</em> and <em>Right:</em> indicate the number of words in the left and in the
+right context. The value of these settings is also used by the <em>Collocation
+list</em> transformation described below.</p>
+<p>This toolbox also controls how the context is shown:</p>
+<ul class="simple">
+<li><em>Columns</em>: Each word in the context is shown in a separate column in the
+results table. This view has the advantage that you can sort the tokens in
+the query by words in the context.</li>
+<li><em>KWIC</em>: All words from the left context are shown in one column in the
+results table, and all words from the right coontext are shown in another.
+This view resembles the display of traditional concordancers.</li>
+<li><em>Single string</em>: The whole context as well as the matched token are shown
+in a single column. The words that are a part of the match are shown in
+capital letters so that they are easier to spot in the context.</li>
+</ul>
+<p>If the current corpus contains information about sentence boundaries (e.g.
+the BNC), the context can be restricted to sentences by checking the box
+<em>Restrict to sentences</em>. If the contexts are restricted in this way, the
+number of words that are shown can be smaller than the number of words
+selected by the <em>Left:</em> and <em>Right:</em>  controls if the sentence is shorter
+than these values.</p>
+<p>Retrieving contexts can take some time. If you do not want to include the
+contexts in your results table, choose <em>No context</em>.</p>
+</div>
+<div class="section" id="stopwords">
+<h2>Stopwords</h2>
+<p>TO BE ADDED</p>
+</div>
+<div class="section" id="data-groups">
+<h2>Data groups</h2>
+<p>The matched tokens can be temporarily split into data groups so that all
+matches in each group have the same value in one or more of their columns.
+For example, data groups may be specified by using the part-of-speech column.
+In that case, all tokens in the groups share the same part-of-speech tag. If
+the file name column is also added, each part-of-speech tag group is further
+subdivided into matches from the same files.</p>
+<p>Only those columns can be used for data groups that are included in the data
+table. This includes functions and columns that are produced by data
+transformations.</p>
+<p>For each data group, a set of group functions can be specified. These
+functions consider only the matches that are contained in each group, and
+ignore the matches in all other groups.</p>
+<p>By using group functions, it is for instance easy to obtain the type-token
+ratio for different files in a corpus. In order to do so, use the query
+string <cite>*</cite> to match all tokens in the corpus (which may take a while with
+larger corpora). Select <cite>Word</cite> and <cite>Filename</cite> (if available) as output
+features, and press <em>New query</em>.</p>
+<p>Now, specify a new data group by pressing the <em>New</em> button in the <em>Data
+groups</em> toolbox. The <strong>Data group dialog</strong> will appear. In this dialog,
+select the column <cite>Filename</cite> as the only grouping column. Scroll down in the
+list of group functions until you find the <em>Type-token ratio</em> function. Press
+the <em>Change columns</em> button, and select the <cite>Word</cite> column. If the data
+management is applied, there will be a new column <cite>TTR(Word by Filename)</cite>
+which shows the type-token ratio in each file.</p>
+</div>
+<div class="section" id="transformations">
+<h2>Transformations</h2>
+<div class="section" id="only-distinct-rows">
+<h3>Only distinct rows</h3>
+<p>This transformation discards all doublets, i.e. each row that has the same
+values in its columns as a previous row.</p>
+</div>
+<div class="section" id="frequency-list">
+<h3>Frequency list</h3>
+<p>The frequency list shows the number of occurrences of the values in the
+results table. If you want to exclude one of the columns from the frequency
+count, you can hide that column by right-clicking column header, and
+selecting &#8220;Hide column&#8221; from the context menu.</p>
+</div>
+<div class="section" id="contingency-table">
+<h3>Contingency table</h3>
+<p>A contingcy tables is a restructured feature list. The last entry in the
+feature order toolbox is the variable that defines the shape of the
+contingency table. Each value of that variable forms a separate column in the
+table. The contingency table also shows row and column totals.</p>
+<p>Currently, the behavior of numeric values is undefined.</p>
+</div>
+<div class="section" id="g-test-matrix">
+<h3>G-test matrix</h3>
+<p>The G-test matrix takes the results table and applies pairwise log-likelihood
+tests to determine which results occur with statistically different
+frequencies in the current corpus. The figure shown in the matrix is the
+<em>G</em> statistic. Colors in the matrix indicate a statistically significant
+value. A red cell indicates that the result in the row is significantly
+more frequent than the result in the column.</p>
+<p>Depending on the number of value combinations, the test matrix can become
+relatively large, and therefore, many multiple comparisons can be performed.
+To correct for an inflation of significant test results, a corrected alpha
+value is determined using the False Discovery Rate method (Benjamini &amp;
+Hochberg 1995, described in Narum 2006).</p>
+<p>If there are corpus features in the results table, these features are used
+to construct subcorpora. In this way, it is easy to compare for instance the
+number of tokens between female and male speakers, or between different
+files.</p>
+<p>If you click on a cell in the G-test matrix, the <em>Independence test viewer</em>
+opens. This dialog shows a contingency table, and calculates the corresponding
+log-likelihood test and Chi-square test. It also estimates the effect size
+by displaying the odds ratio and Cramer&#8217;s phi. The dialog offers buttons to copy the content of the dialog to the clipboard,
+either as HTML, LaTeX, or als plain text.</p>
+<p><strong>Warning:</strong> The G-test matrix is still a somewhat experimental feature. If
+you wish to report the results of the involved statistical tests in a
+scientific publication, you are strongly advised to check their validity
+first.</p>
+</div>
+<div class="section" id="collocation-list">
+<h3>Collocation list</h3>
+<p>&#8216;Collocations&#8217; determines words that frequently co-occur with the
+words from the query strings. The span of words to the left and to the right
+that are considered for the collocation list is defined in the <em>Context</em>
+toolbox.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="../../search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="syntax.html" title="Query syntax"
+              >previous</a> |
+            <a href="visualizations.html" title="Visualizations"
+              >next</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>
