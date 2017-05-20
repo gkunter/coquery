@@ -837,7 +837,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertFalse(token.negated)
         self.assertTrue(token.lemmatize)
         self.assertEqual(token.lemma_specifiers, [])
-        self.assertEqual(token.transcript_specifiers, [u"'bɪrɛr"])
+        self.assertEqual(token.transcript_specifiers, [u"''bɪrɛr"])
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
@@ -852,6 +852,72 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.class_specifiers, ["N%"])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, ["abc"])
+
+    def test_treat_apostrophes_1(self):
+        S = "'ll"
+        token = self.token_type(S, self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["''ll"])
+
+    def test_treat_apostrophes_2(self):
+        S = "x'"
+        token = self.token_type(S, self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["x''"])
+
+    def test_treat_apostrophes_3(self):
+        S = "x'x"
+        token = self.token_type(S, self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["x''x"])
+
+    def test_treat_apostrophes_4(self):
+        S = "''ll"
+        token = self.token_type(S, self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["''''ll"])
+
+    def test_treat_apostrophes_5(self):
+        S = "x''"
+        token = self.token_type(S, self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["x''''"])
+
+    def test_treat_apostrophes_6(self):
+        S = "x'''x"
+        token = self.token_type(S, self.lexicon)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["x''''''x"])
 
     def test_escape_negation1(self):
         S = "\\~abc"

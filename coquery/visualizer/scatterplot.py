@@ -147,55 +147,146 @@ class ScatterPlot(vis.Visualizer):
     def plot_facet(self, data, color, **kwargs):
         x = kwargs.get("x")
         y = kwargs.get("y")
+        z = kwargs.get("z")
         levels_x = kwargs.get("levels_x")
         levels_y = kwargs.get("levels_y")
+        levels_z = kwargs.get("levels_z")
 
-        if self.dtype(x, data) == object or self.dtype(y, data) == object:
-            if self.dtype(y, data) == object:
-                category = y
-                numeric = x
-                levels = levels_y
-            else:
+        levels = None
+
+        if (x and y and z):
+            if self.dtype(x, data) == object:
                 category = x
-                numeric = y
                 levels = levels_x
-            cols = sns.color_palette(kwargs["palette"], n_colors=len(levels))
+                num_x = z
+                num_y = y
+            elif self.dtype(y, data) == object:
+                category = y
+                levels = levels_y
+                num_x = x
+                num_y = z
+            elif self.dtype(z, data) == object:
+                category = z
+                levels = levels_z
+                num_x = x
+                num_y = y
+            else:
+                raise RuntimeError("Wrong data types for scatter plots")
+
+            cols = sns.color_palette(kwargs["palette"],
+                                        n_colors=len(levels))
             for i, val in enumerate(levels):
                 df = data[data[category] == val]
-                if category == x:
-                    ax = sns.regplot(x=df.index.values, y=df[numeric],
-                                     color=cols[i],
-                                     fit_reg=self.fit_reg,
-                                     ax=kwargs.get("ax", plt.gca()))
-                    self.x_dim = None
-                    self.y_dim = numeric
-                else:
-                    ax = sns.regplot(x=df[numeric], y=df.index.values,
-                                     color=cols[i],
-                                     fit_reg=self.fit_reg,
-                                     ax=kwargs.get("ax", plt.gca()))
-                    self.x_dim = numeric
-                    self.y_dim = None
-        else:
-            if x is None:
-                val_x = pd.Series(range(len(data)), name=x)
-                val_y = data[y]
-                self.x_dim = None
-                self.y_dim = y
-            elif y is None:
-                val_x = data[x]
-                val_y = pd.Series(range(len(data)), name=y)
-                self.x_dim = x
-                self.y_dim = None
+                self.x_label = num_x
+                self.y_label = num_y
+                sns.regplot(x=df[num_x], y=df[num_y],
+                            color=cols[i],
+                            fit_reg=self.fit_reg,
+                            ax=kwargs.get("ax", plt.gca()))
+
+        elif sum([bool(x), bool(y), bool(z)]) == 2:
+            if sum([self.dtype(x, data) == object,
+                    self.dtype(y, data) == object,
+                    self.dtype(z, data) == object]) == 1:
+                if self.dtype(x, data) == object:
+                    category = x
+                    levels = levels_x
+                    if y:
+                        num_x = None
+                        num_y = y
+                    else:
+                        num_x = z
+                        num_y = None
+                elif self.dtype(y, data) == object:
+                    category = y
+                    levels = levels_y
+                    if x:
+                        num_x = x
+                        num_y = None
+                    else:
+                        num_x = None
+                        num_y = z
+                elif self.dtype(z, data) == object:
+                    category = z
+                    levels = levels_z
+                    if x:
+                        num_x = x
+                        num_y = None
+                    else:
+                        num_x = None
+                        num_y = y
+                cols = sns.color_palette(kwargs["palette"],
+                                         n_colors=len(levels))
+                for i, val in enumerate(levels):
+                    df = data[data[category] == val]
+                    if num_x:
+                        sns.regplot(x=df[num_x],
+                                    y=pd.Series(range(len(df))),
+                                    color=cols[i],
+                                    fit_reg=self.fit_reg)
+                                    #ax=kwargs.get("ax", plt.gca()))
+                        self.x_label = num_x
+                        self.y_label = "Index"
+                    else:
+                        sns.regplot(x=pd.Series(range(len(df))),
+                                    y=df[num_y],
+                                    color=cols[i],
+                                    fit_reg=self.fit_reg)
+                                    #ax=kwargs.get("ax", plt.gca()))
+                        self.x_label = "Index"
+                        self.y_label = num_y
             else:
+                if x is None:
+                    val_x = pd.Series(range(len(data)))
+                    val_y = data[y]
+                    self.x_label = "Index"
+                    self.y_label = y
+                elif y is None:
+                    val_x = data[x]
+                    val_y = pd.Series(range(len(data)))
+                    self.x_label = x
+                    self.y_label = "Index"
+                else:
+                    val_x = data[x]
+                    val_y = data[y]
+                    self.x_label = x
+                    self.y_label = y
+                col = sns.color_palette(kwargs["palette"], n_colors=1)
+                ax = sns.regplot(val_x, val_y,
+                                 color=col[0],
+                                 fit_reg=self.fit_reg)
+                                 #ax=kwargs.get("ax", plt.gca()))
+        else:
+            if x is not None:
                 val_x = data[x]
+                self.x_label = x
+            elif z is not None:
+                val_x = data[z]
+                self.x_label = z
+            else:
+                val_x = pd.Series(range(len(data)))
+                self.x_label = "Index"
+            if y is not None:
                 val_y = data[y]
-                self.x_dim = x
-                self.y_dim = y
+                self.y_label = y
+            else:
+                val_y = pd.Series(range(len(data)))
+                self.y_label = "Index"
             col = sns.color_palette(kwargs["palette"], n_colors=1)
-            ax = sns.regplot(val_x, val_y,
-                             fit_reg=self.fit_reg,
-                             ax=kwargs.get("ax", plt.gca()))
+            sns.regplot(val_x, val_y,
+                        color=col[0], fit_reg=self.fit_reg)
+                        #ax=kwargs.get("ax", plt.gca()))
+
+        if levels:
+            self.legend_title = category
+            self.legend_levels = levels
+
+    def set_annotations(self, grid, values):
+        if not values["xlab"]:
+            values["xlab"] = self.x_label
+        if not values["ylab"]:
+            values["ylab"] = self.y_label
+        vis.Visualizer.set_annotations(self, grid, values)
 
     #def on_pick(self, event):
         #try:

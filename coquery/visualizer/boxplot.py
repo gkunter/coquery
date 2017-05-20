@@ -47,14 +47,27 @@ class BoxPlot(vis.Visualizer):
               self.dtype(z, data) == object and
               self.dtype(y, data) in (float, int)):
             self.plot_fnc(x=x, y=y, hue=z, data=data, palette=palette)
+
+            self.legend_title = kwargs["z"]
+            self.legend_levels = kwargs["levels_z"]
+
         # case 4: one category in y and z, a numeric in x:
         elif (self.dtype(y, data) == object and
               self.dtype(z, data) == object and
               self.dtype(x, data) in (float, int)):
             self.plot_fnc(x=x, y=y, hue=z, data=data, palette=palette)
+
+            self.legend_title = kwargs["z"]
+            self.legend_levels = kwargs["levels_z"]
+
+
         # case 5: one category in x and y, a numeric in z:
         else:
             self.plot_fnc(x=z, y=y, hue=x, data=data, palette=palette)
+
+            self.legend_title = kwargs["x"]
+            self.legend_levels = kwargs["levels_x"]
+
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):

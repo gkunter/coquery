@@ -4,7 +4,7 @@ from test.test_bibliography import (
     TestPerson, TestPersonList, TestEditorList, TestReference, TestArticle,
     TestBook, TestInCollection)
 from test.test_celex import TestCELEX
-from test.test_corpora import TestCorpus
+from test.test_corpora import TestCorpus, TestCorpusWithExternal
 from test.test_filters import TestFilterString, TestApply
 from test.test_functions import (
     TestFrequencyFunctions, TestStringFunctions, TestMathFunctions,
@@ -15,7 +15,7 @@ from test.test_textgrids import TestTextGridModuleMethods
 from test.test_tokens import (
     TestTokensModuleMethods, TestQueryTokenCOCA, TestQuantification)
 from test.test_unicode import TestUnicodeModuleMethods
-
+from test.test_managers import TestManager
 def main():
 
     suite = unittest.TestSuite(
@@ -23,7 +23,8 @@ def main():
          for x in [TestPerson, TestPersonList, TestEditorList, TestReference,
                    TestArticle, TestBook, TestInCollection,
                    TestCELEX,
-                   TestCorpus,
+                   TestCorpus, TestCorpusWithExternal,
+                   TestManager,
                    TestFilterString, TestApply,
                    TestQueryStringParse,
                    TestTextGridModuleMethods,

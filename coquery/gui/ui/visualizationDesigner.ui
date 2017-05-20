@@ -580,7 +580,7 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QSpinBox" name="spin_size_main">
+           <widget class="QSpinBox" name="spin_size_title">
             <property name="suffix">
              <string> pt</string>
             </property>
@@ -631,7 +631,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spin_size_x_axis">
+             <widget class="QSpinBox" name="spin_size_x_label">
               <property name="suffix">
                <string> pt</string>
               </property>
@@ -655,7 +655,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spin_size_x_ticks">
+             <widget class="QSpinBox" name="spin_size_x_ticklabels">
               <property name="suffix">
                <string> pt</string>
               </property>
@@ -702,7 +702,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spin_size_y_axis">
+             <widget class="QSpinBox" name="spin_size_y_label">
               <property name="suffix">
                <string> pt</string>
               </property>
@@ -726,7 +726,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spin_size_y_ticks">
+             <widget class="QSpinBox" name="spin_size_y_ticklabels">
               <property name="suffix">
                <string> pt</string>
               </property>
@@ -1162,7 +1162,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_10">
+        <widget class="QGroupBox" name="palette_preview">
          <layout class="QVBoxLayout" name="verticalLayout_24">
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_24">

@@ -113,6 +113,7 @@ class Manager(CoqObject):
 
         self._groups = []
         self._filters = []
+        self._column_order = None
         self._last_query_id = None
         self.reset_context_cache()
 
@@ -274,7 +275,10 @@ class Manager(CoqObject):
 
     def substitute(self, df, session, stage="first"):
         def _get_unique(column):
-            values = column.dropna().unique()
+            try:
+                values = column.dropna().unique()
+            except AttributeError:
+                print(column.head())
             to_bool = values.astype(bool)
             if (to_bool == values).all():
                 return to_bool
@@ -554,7 +558,7 @@ class Manager(CoqObject):
                 columns.insert(first_word_pos, col)
 
         try:
-            columns.remove("coquery_dummy")
+            columns.remove("coquery_invisible_dummy")
         except ValueError:
             pass
 
@@ -634,7 +638,10 @@ class Manager(CoqObject):
             print("process()")
 
         df = df.reset_index(drop=True)
-        df = df[self._column_order]
+        if self._column_order:
+            columns = (self._column_order +
+                       [x for x in df.columns if x not in self._column_order])
+            df = df[columns]
 
         # Get index of rows that are retained if duplicates are removed from
         # the data frame after sorting it by the number of query tokens that
@@ -725,7 +732,7 @@ class ContingencyTable(FrequencyList):
 
     def select(self, df, session):
         l = list(super(ContingencyTable, self).select(df, session).columns)
-        for col in [x for x in df.columns if x != "coquery_dummy"]:
+        for col in [x for x in df.columns if x != "coquery_invisible_dummy"]:
             if col not in l:
                 l.append(col)
 
@@ -1000,7 +1007,8 @@ class ContrastMatrix(FrequencyList):
             try:
                 df[columns] = df.apply(
                     self.retrieve_loglikelihood, axis=1, label=x, df=df)
-            except KeyError:
+            except KeyError as e:
+                print(e)
                 return df
             else:
                 self.p_values = self.p_values.append(df[columns[-1]][i:])
@@ -1025,6 +1033,7 @@ class ContrastMatrix(FrequencyList):
         The corrected alpha is used by CoqLikelihoodDelegate class to
         visualize the test results in the results table.
         """
+
         # first, get the frequency list:
         df = super(ContrastMatrix, self).summarize(df, session)
         self._freq_function = self.manager_functions.get_list()[0]
@@ -1033,6 +1042,7 @@ class ContrastMatrix(FrequencyList):
              for x in df.columns]
         df.columns = l
         self._freq_function.alias = "coquery_invisible_count"
+
         # now, get a subcorpus size for each row:
         vis_cols = [x for x
                     in get_visible_columns(df, manager=self, session=session)

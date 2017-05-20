@@ -326,6 +326,8 @@ class ContextViewAudio(ContextView):
             del msg_box
             ContextViewAudio._run_first = False
 
+        self.add_textgrid_area()
+
         self.ui.spin_dynamic_range.valueChanged.connect(
             self.ui.textgrid_area.change_dynamic_range)
         self.ui.spin_window_length.valueChanged.connect(
@@ -348,8 +350,12 @@ class ContextViewAudio(ContextView):
                                             self.context["end_time"])
         textgrid = self.prepare_textgrid(self.context["df"],
                                             self.context["start_time"])
-        self.ui.layout_audio_tab.removeWidget(self.ui.textgrid_area)
-        self.ui.textgrid_area.clear()
+        try:
+            self.ui.layout_audio_tab.removeWidget(self.ui.textgrid_area)
+        except AttributeError:
+            pass
+        else:
+            self.ui.textgrid_area.clear()
         self.add_textgrid_area()
         self.ui.textgrid_area.setSound(audio)
         self.ui.textgrid_area.setTextgrid(textgrid)

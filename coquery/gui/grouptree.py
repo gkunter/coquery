@@ -76,6 +76,9 @@ class CoqGroupTree(QtWidgets.QWidget):
             new_item = CoqGroupTreeItem(group)
             self.ui.tree_groups.addTopLevelItem(new_item)
 
+    def clear(self):
+        self.ui.tree_groups.clear()
+
     def groups(self):
         groups = []
         for i in range(self.ui.tree_groups.topLevelItemCount()):

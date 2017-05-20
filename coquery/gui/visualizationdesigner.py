@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import importlib
 import imp
 import logging
 import sys
@@ -22,7 +21,7 @@ from coquery.defines import ROW_NAMES
 from coquery.errors import VisualizationModuleError
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
+from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -31,6 +30,8 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT)
 from matplotlib.backends.backend_qt5 import SubplotToolQt
+
+import seaborn as sns
 
 from . import classes
 from ..visualizer.visualizer import get_grid_layout
@@ -61,6 +62,19 @@ visualizer_mapping = (
     ("Regression plot", "Regressionplot", "scatterplot", "RegressionPlot"),
     )
 
+
+class MyTool(SubplotToolQt):
+    def __init__(self, *args, **kwargs):
+        super(MyTool, self).__init__(*args, **kwargs)
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Escape:
+            self.parent.keyPressEvent(event)
+        else:
+            super(MyTool, self).keyPressEvent(event)
+
+    def functight(self):
+        return super(MyTool, self).functight()
 
 class NavigationToolbar(NavigationToolbar2QT):
     """
@@ -115,10 +129,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
             if self.df[x].dtype == bool:
                 self.df[x] = self.df[x].astype(str)
 
-        self._palette_name = "Paired"
-
         self.ui = Ui_VisualizationDesigner()
         self.ui.setupUi(self)
+
+        # disable unsupported elements:
+        self.ui.radio_custom.hide()
+        self.ui.combo_custom.hide()
+        self.ui.button_remove_custom.hide()
+        self.ui.button_reverse_order.hide()
+        self.ui.label_38.hide()
+        self.ui.spin_number.hide()
+        self.ui.label_37.hide()
 
         self.populate_figure_types()
         self.populate_variable_lists()
@@ -261,12 +282,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
         except Exception as e:
             print(e)
 
-        tool = SubplotToolQt(self.canvas.figure, self)
-        tool.resetbutton.hide()
-        tool.donebutton.hide()
-        tool.tightlayout.setText("&Reset")
-        tool.show()
-        self.ui.layout_margins.insertWidget(0, tool)
+        self.tool = MyTool(self.canvas.figure, self)
+        self.tool.resetbutton.hide()
+        self.tool.donebutton.hide()
+        self.tool.tightlayout.setText("&Optimize margins")
+        self.tool.show()
+        self.ui.layout_margins.insertWidget(0, self.tool)
 
     def setup_connections(self):
         """
@@ -278,6 +299,21 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.combo_sequential.currentIndexChanged.connect(
             lambda x: self.change_palette(utf8(self.ui.combo_sequential.currentText())))
         self.ui.combo_diverging.currentIndexChanged.connect(
+            lambda x: self.change_palette(utf8(self.ui.combo_diverging.currentText())))
+        self.ui.combo_qualitative.currentIndexChanged.connect(
+            lambda: self.ui.radio_qualitative.setChecked(True))
+        self.ui.combo_sequential.currentIndexChanged.connect(
+            lambda: self.ui.radio_sequential.setChecked(True))
+        self.ui.combo_diverging.currentIndexChanged.connect(
+            lambda: self.ui.radio_sequential.setChecked(True))
+
+
+        # Hook up palette radio buttons:
+        self.ui.radio_qualitative.toggled.connect(
+            lambda x: self.change_palette(utf8(self.ui.combo_qualitative.currentText())))
+        self.ui.radio_sequential.toggled.connect(
+            lambda x: self.change_palette(utf8(self.ui.combo_sequential.currentText())))
+        self.ui.radio_diverging.toggled.connect(
             lambda x: self.change_palette(utf8(self.ui.combo_diverging.currentText())))
 
         # Hook up clear buttons.
@@ -331,9 +367,15 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.tray_data_z.featureCleared.connect(self.check_grid_layout)
 
         # Hook up annotation changes:
-        self.ui.edit_figure_title.textEdited.connect(self.add_annotations)
+        self.ui.edit_figure_title.textChanged.connect(self.add_annotations)
         self.ui.edit_x_label.textChanged.connect(self.add_annotations)
         self.ui.edit_y_label.textChanged.connect(self.add_annotations)
+        self.ui.spin_size_title.valueChanged.connect(self.add_annotations)
+        self.ui.spin_size_x_label.valueChanged.connect(self.add_annotations)
+        self.ui.spin_size_y_label.valueChanged.connect(self.add_annotations)
+        self.ui.spin_size_x_ticklabels.valueChanged.connect(self.add_annotations)
+        self.ui.spin_size_y_ticklabels.valueChanged.connect(self.add_annotations)
+        self.ui.combo_font_figure.currentIndexChanged.connect(self.add_annotations)
 
         # (6) changing the legend layout
         self.ui.edit_legend_title.editingFinished.connect(self.change_legend)
@@ -456,12 +498,34 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.ui.list_figures.setCurrentItem(None)
         self.ui.list_figures.blockSignals(False)
 
+    def show_palette(self):
+        self.ui.color_test_area.clear()
+        #test_numbers = self.ui.spin_number.value()
+        test_numbers = 12
+        test_palette = sns.color_palette(self._palette_name, test_numbers)
+        for i, (r, g, b)in enumerate(test_palette):
+            item = QtWidgets.QListWidgetItem()
+            self.ui.color_test_area.addItem(item)
+            brush = QtGui.QBrush(QtGui.QColor(
+                        int(r * 255), int(g * 255), int(b * 255)))
+            item.setBackground(brush)
+
     def change_palette(self, x):
         if x != self._palette_name:
             self._palette_name = x
+            self.show_palette()
             self.plot_figure()
 
     def restore_settings(self):
+        def get_or_set_size(key, factor=1.0):
+            try:
+                size = int(options.settings.value(key, None))
+            except TypeError:
+                size = None
+            if size is None:
+                size = int(QtWidgets.QLabel().font().pointSize() * factor)
+            return size
+
         self.resize(640, 400)
         try:
             self.resize(options.settings.value("visualizationdesigner_size"))
@@ -478,19 +542,50 @@ class VisualizationDesigner(QtWidgets.QDialog):
         val = val == "true"
         self.ui.check_show_legend.setChecked(val)
 
-        self.legend_columns = options.settings.value("visualizationdesigner_legend_columns", 1)
 
-        size = options.settings.value(
-            "visualizationdesigner_legend_entry_size", None)
-        if not size:
-            size = QtWidgets.QLabel().font().pointSize() * 0.7
-        self.ui.spin_size_legend_entries.setValue(int(size))
+        family = options.settings.value(
+            "visualizationdesigner_figure_font", None)
+        index = self.ui.combo_font_figure.findText(family)
+        if family is None or index == -1:
+            family = utf8(QtWidgets.QLabel().font().family())
+            index = self.ui.combo_font_figure.findText(family)
+        self.ui.combo_font_figure.setCurrentIndex(index)
 
-        size = options.settings.value(
-            "visualizationdesigner_legend_size", None)
-        if not size:
-            size = QtWidgets.QLabel().font().pointSize()
-        self.ui.spin_size_legend.setValue(int(size))
+        self.legend_columns = options.settings.value(
+            "visualizationdesigner_legend_columns", 1)
+
+        self.ui.spin_size_title.setValue(
+            get_or_set_size("visualizationdesigner_size_title", 1.2))
+        self.ui.spin_size_x_label.setValue(
+            get_or_set_size("visualizationdesigner_size_x_label"))
+        self.ui.spin_size_y_label.setValue(
+            get_or_set_size("visualizationdesigner_size_y_label"))
+        self.ui.spin_size_legend.setValue(
+            get_or_set_size("visualizationdesigner_size_legend"))
+        self.ui.spin_size_x_ticklabels.setValue(
+            get_or_set_size("visualizationdesigner_size_x_ticklabels", 0.8))
+        self.ui.spin_size_y_ticklabels.setValue(
+            get_or_set_size("visualizationdesigner_size_y_ticklabels", 0.8))
+        self.ui.spin_size_legend_entries.setValue(
+            get_or_set_size("visualizationdesigner_size_legend_entries", 0.8))
+
+        palette = options.settings.value("visualizationdesigner_palette", None)
+        if palette is None:
+            palette = "Paired"
+        for box, radio in (
+                (self.ui.combo_qualitative, self.ui.radio_qualitative),
+                (self.ui.combo_diverging, self.ui.radio_diverging),
+                (self.ui.combo_sequential, self.ui.radio_sequential)):
+            if box.findText(palette):
+                radio.setChecked(True)
+                box.setCurrentIndex(box.findText(palette))
+                break
+        else:
+            self.ui.radio_qualitative.setChecked(True)
+            self.ui.combo_qualitative.setCurrentIndex(
+                self.ui.combo_qualitative.findText("Paired"))
+            palette = "Paired"
+        self._palette_name = palette
 
     def display_values(self):
         # set up Layout tab:
@@ -524,6 +619,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         #self.ui.receive_rows.setText(label)
 
         self.ui.spin_columns.setValue(int(self.legend_columns))
+        self.show_palette()
 
     def get_gui_values(self):
         """
@@ -535,10 +631,15 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 columns=self.ui.tray_columns.data(),
                 rows=self.ui.tray_rows.data(),
                 figure_type=self.ui.list_figures.currentItem(),
-                figure_font=None,
+                figure_font=utf8(self.ui.combo_font_figure.currentText()),
                 title=utf8(self.ui.edit_figure_title.text()),
                 xlab=utf8(self.ui.edit_x_label.text()),
-                ylab=utf8(self.ui.edit_y_label.text())
+                ylab=utf8(self.ui.edit_y_label.text()),
+                size_title=self.ui.spin_size_title.value(),
+                size_xlab=self.ui.spin_size_x_label.value(),
+                size_ylab=self.ui.spin_size_y_label.value(),
+                size_xticks=self.ui.spin_size_x_ticklabels.value(),
+                size_yticks=self.ui.spin_size_y_ticklabels.value(),
                 )
         return d
 
@@ -584,6 +685,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             in (data_x, data_y, data_z, columns, rows))
 
         self.vis = visualizer_class(df, self.session)
+
         self.grid = self.vis.get_grid(col=columns, row=rows,
                                       col_wrap=col_wrap,
                                       legend_out=True,
@@ -600,9 +702,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.add_annotations()
         self.change_legend()
 
-        self.grid.fig.tight_layout()
-        self.grid.fig.canvas.draw_idle()
-
         self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
         self.dialog.show()
         self.dialog.raise_()
@@ -611,11 +710,20 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.grid.fig.canvas.mpl_connect('button_press_event',
                                              self.vis.on_pick)
 
+        self.grid.fig.tight_layout()
+        self.tool.functight()
+        self.grid.fig.canvas.draw_idle()
+
     def add_annotations(self):
         if self.vis:
             values = self.get_gui_values()
-            self.vis.set_annotations(self.grid, values)
-            self.canvas.draw()
+            try:
+                self.vis.set_annotations(self.grid, values)
+            except Exception as e:
+                print("ERROR: ", e)
+                pass
+            else:
+                self.canvas.draw()
 
     def change_legend(self):
         if self.vis:
@@ -639,16 +747,36 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def close(self, *args):
         options.settings.setValue("visualizationdesigner_size", self.size())
+        options.settings.setValue("visualizationdesigner_viewer_size",
+                                  self.viewer_size)
         options.settings.setValue("visualizationdesigner_data_x", self.data_x)
         options.settings.setValue("visualizationdesigner_data_y", self.data_y)
         options.settings.setValue("visualizationdesigner_layout_columns", self.layout_columns)
         options.settings.setValue("visualizationdesigner_layout_rows", self.layout_rows)
-        options.settings.setValue("visualizationdesigner_show_legend",
-                                  self.ui.check_show_legend.isChecked())
-        options.settings.setValue("visualizationdesigner_legend_columns", self.legend_columns)
-        options.settings.setValue("visualizationdesigner_viewer_size", self.viewer_size)
-        options.settings.setValue("visualizationdesigner_legend_entry_size",
+
+        options.settings.setValue("visualizationdesigner_figure_font",
+            utf8(self.ui.combo_font_figure.currentText()))
+
+        options.settings.setValue("visualizationdesigner_size_title",
+                                  self.ui.spin_size_title.value())
+        options.settings.setValue("visualizationdesigner_size_x_label",
+                                  self.ui.spin_size_x_label.value())
+        options.settings.setValue("visualizationdesigner_size_x_ticklabels",
+                                  self.ui.spin_size_x_ticklabels.value())
+        options.settings.setValue("visualizationdesigner_size_y_label",
+                                  self.ui.spin_size_y_label.value())
+        options.settings.setValue("visualizationdesigner_size_y_ticklabels",
+                                  self.ui.spin_size_y_ticklabels.value())
+        options.settings.setValue("visualizationdesigner_size_legend",
+                                  self.ui.spin_size_legend.value())
+        options.settings.setValue("visualizationdesigner_size_legend_entries",
                                   self.ui.spin_size_legend_entries.value())
+
+        val = "true" if self.ui.check_show_legend.isChecked() else "false"
+        options.settings.setValue("visualizationdesigner_show_legend", val)
+
+        options.settings.setValue("visualizationdesigner_legend_columns", self.legend_columns)
+
         super(VisualizationDesigner, self).close(*args)
 
         if not hasattr(self, "canvas") and hasattr(self, "dialog"):

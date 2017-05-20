@@ -22,7 +22,7 @@ mpl.rcParams["backend"] = "Qt5Agg"
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from coquery.gui.pyqt_compat import QtCore, QtGui
+from coquery.gui.pyqt_compat import QtCore, QtGui, QtWidgets
 from coquery import options
 from coquery import managers
 from coquery.general import CoqObject
@@ -86,7 +86,8 @@ class BaseVisualizer(QtCore.QObject):
                 else:
                     self.options["color_palette"] = "RdPu"
 
-        self.options["figure_font"] = options.cfg.figure_font
+        self.options["figure_font"] = (
+            QtWidgets.QApplication.instance().font())
 
         if not self.options.get("color_palette_values"):
             self.set_palette_values(self.options["color_number"])
@@ -162,9 +163,6 @@ class BaseVisualizer(QtCore.QObject):
                             self.options["figure_font"] = QtGui.QFont(x, pointSize=self.options["figure_font"].pointSize())
                             break
             plt.xkcd()
-
-        sns.set_style(rc={"font.family": str(self.options["figure_font"].family())})
-        mpl.rc("font", family=str(self.options["figure_font"].family()))
 
         with sns.plotting_context("paper"):
             self.g = sns.FacetGrid(self._table,
@@ -564,11 +562,6 @@ class Visualizer(CoqObject):
 
     def get_grid(self, **kwargs):
         kwargs["data"] = self.df
-        figure_font = kwargs.get("figure_font", None)
-        if figure_font:
-            sns.set_style(rc={"font.family": figure_font})
-            mpl.rc("font", family=figure_font)
-
         with sns.axes_style(self.axes_style):
             with sns.plotting_context(self.plotting_context):
                 grid = sns.FacetGrid(**kwargs)
@@ -642,11 +635,50 @@ class Visualizer(CoqObject):
                    palette=None, **kwargs):
         pass
 
-    def set_annotations(self, grid, values):
-        grid.set_xlabels(values.get("xlab", self.DEFAULT_XLABEL))
-        grid.set_titles(values.get("title", self.DEFAULT_TITLE))
-        grid.set_ylabels(values.get("ylab", self.DEFAULT_YLABEL))
+    def rotate_annotations(self, grid):
+        for ax in grid.fig.axes:
+            #ax.get_xaxis().get_major_formatter().set_scientific(False)
 
+            xtl = ax.get_xticklabels()
+            ytl = ax.get_yticklabels()
+            plt.setp(xtl, rotation="horizontal")
+            plt.setp(ytl, rotation="horizontal")
+
+            sns_overlap = sns.utils.axis_ticklabels_overlap(xtl)
+
+        if sns_overlap:
+            grid.fig.autofmt_xdate()
+
+    def set_annotations(self, grid, values):
+        if values.get("title"):
+            plt.suptitle(values.get("title"),
+                         fontsize=values["size_title"],
+                         fontname=values["figure_font"])
+
+        if grid.col_names:
+            for ax, title in zip(grid.axes.flat, grid.col_names):
+                ax.set_title(title,
+                             fontsize=int(values["size_title"]/1.2),
+                             fontname=values["figure_font"])
+
+        grid.set_xlabels(values.get("xlab", self.DEFAULT_XLABEL),
+                         fontsize=values["size_xlab"],
+                         fontname=values["figure_font"])
+        grid.set_ylabels(values.get("ylab", self.DEFAULT_YLABEL),
+                         fontsize=values["size_ylab"],
+                         fontname=values["figure_font"])
+
+        for ax in grid.fig.axes:
+            for tick in (
+                    ax.xaxis.get_major_ticks() + ax.xaxis.get_minor_ticks()):
+                tick.label.set_fontsize(values["size_xticks"])
+                tick.label.set_fontname(values["figure_font"])
+            for tick in (
+                    ax.yaxis.get_major_ticks() + ax.yaxis.get_minor_ticks()):
+                tick.label.set_fontsize(values["size_yticks"])
+                tick.label.set_fontname(values["figure_font"])
+
+        self.rotate_annotations(grid)
 
     @staticmethod
     def dtype(feature, df):

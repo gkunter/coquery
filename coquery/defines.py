@@ -323,6 +323,11 @@ except NameError:
     unicode = str
     long = int
 
+msg_runtime_error_function = """
+<p>Error during the evaluation of function</p>
+<code style='color: #aa0000'>{}</code>:<br>{}</p>
+<p>The function will be discarded.</p>"""
+
 msg_parsing_error_template = """
 <p><b>Syntax error in query string</b><p>
 <p><code>{{}}<br>{{}}</code></p>

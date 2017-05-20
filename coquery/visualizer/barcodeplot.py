@@ -162,12 +162,16 @@ class BarcodePlot(vis.Visualizer):
         ax.set(**ax_kwargs)
 
     def set_annotations(self, grid, values):
-        super(BarcodePlot, self).set_annotations(grid, values)
         lim = (0, self.session.Corpus.get_corpus_size())
         if self.horizontal:
             grid.set(xlim=lim)
+            if not values["xlab"]:
+                values["xlab"] = "Corpus position"
         else:
             grid.set(ylim=lim)
+            if not values["ylab"]:
+                values["ylab"] = "Corpus position"
+        vis.Visualizer.set_annotations(self, grid, values)
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
