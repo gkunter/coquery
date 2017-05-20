@@ -26,10 +26,13 @@ from .ui.buttonListUi import Ui_ButtonList
 class CoqButtonList(QtWidgets.QWidget):
     listOrderChanged = QtCore.Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, remove=False, parent=None):
         super(CoqButtonList, self).__init__(parent)
         self.ui = Ui_ButtonList()
         self.ui.setupUi(self)
+
+        if remove:
+            self.ui.button_remove_group.hide()
 
         self.columns = []
         self._check_available = lambda x: x
@@ -80,8 +83,8 @@ class CoqButtonList(QtWidgets.QWidget):
         current_row = self.ui.list_widget.currentRow()
         self.ui.button_remove_group.setEnabled(current_row > -1)
         self.ui.button_group_up.setEnabled(current_row > 0)
-        self.ui.button_group_down.setEnabled(current_row <
-                                                 len(self.columns) - 1)
+        self.ui.button_group_down.setEnabled(
+            current_row < self.ui.list_widget.count() - 1)
 
     def _move_group_column(self, direction):
         current_row = self.ui.list_widget.currentRow()
@@ -90,4 +93,5 @@ class CoqButtonList(QtWidgets.QWidget):
         self.ui.list_widget.insertItem(new_row, item)
         self.ui.list_widget.setCurrentRow(new_row)
         self.listOrderChanged.emit()
+        self._check_buttons()
 
