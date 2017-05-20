@@ -104,7 +104,7 @@ produce a frequency list, so activate the corresponding option:
 .. figure:: ../../_static/interface/tutorial_aggregation_frequency.png
     :scale: 50 %
 
-    Activating the Frequency aggregation.
+    Activating the Frequency list transformation.
 
 Now, it is time to run your first query. Simply click the '|go| New query'
 button. After a few moments, a frequency list will be shown in the query
@@ -116,9 +116,9 @@ results table:
     The frequency table from the ALICE corpus.
 
 The status bar informs you that the query matched 33486 tokens. The results
-table uses the Frequency aggregation, which returns 2787 data rows. This means
-that the 33486 tokens in the ALICE corpus are split across 2787 different
-types.
+table uses the Frequency list transformation, which returns 2787 data rows.
+This means that the 33486 tokens in the ALICE corpus are split across 2787
+different types.
 
 As you can see in the results table, there are 12 tokens of the word *chapter*,
 400 tokens of the word *i*, 985 tokens of the full stop, and so on.
@@ -213,7 +213,7 @@ be applied to the results table. You can switch between the different
 transformations without having to run the query again. This can be very
 helpful if you are working with corpora that are much bigger than ALICE, as
 queries can easily take a few minutes or more. For a detailled description of
-the different aggregations, see :ref:`management` in the :ref:`users`.
+data management in Coquery, see :ref:`management` in the :ref:`users`.
 
 For now, press the 'Apply' button to produce a contingency table a
 contingency table instead of the frequency list:
@@ -329,8 +329,8 @@ What next?
 ----------
 
 In this tutorial, you have experimented with a few of the key features of
-Coquery: specifying query strings, selecting output columns, rearranging and
-aggregating the results table, and visualizing the data.
+Coquery: specifying query strings, selecting output features, rearranging and
+transforming the results table, and visualizing the data.
 
 You can learn more about these and other features in the :ref:`users`. A
 detailed description of the different elements of the main interface and of

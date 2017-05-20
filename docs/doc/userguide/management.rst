@@ -1,6 +1,5 @@
-.. title:: Coquery Documentation: Data management
-
 .. _management:
+.. title:: Coquery Documentation: Data management
 
 Data management
 ===============
