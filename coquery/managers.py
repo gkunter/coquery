@@ -118,8 +118,8 @@ class Manager(CoqObject):
         self.reset_context_cache()
 
     def reset_context_cache(self):
-        self._context_cache = collections.defaultdict(
-            lambda: (None, None, None))
+        self._context_cache = {}
+        self._context_cache_corpus = None
 
     def reset_hidden_columns(self):
         self.hidden_columns = set([])
@@ -172,16 +172,13 @@ class Manager(CoqObject):
             if self._last_query_id != session.query_id:
                 self.reset_context_cache()
                 self._last_query_id = session.query_id
-            (left, right, cached_context) = self._context_cache[options.cfg.context_mode]
-            if (left != options.cfg.context_left or
-                right != options.cfg.context_right or
-                cached_context is None):
-                if options.cfg.context_mode == CONTEXT_COLUMNS:
-                    l.append(ContextColumns())
-                elif options.cfg.context_mode == CONTEXT_KWIC:
-                    l.append(ContextKWIC())
-                elif options.cfg.context_mode == CONTEXT_STRING:
-                    l.append(ContextString())
+
+            if options.cfg.context_mode == CONTEXT_COLUMNS:
+                l.append(ContextColumns())
+            elif options.cfg.context_mode == CONTEXT_KWIC:
+                l.append(ContextKWIC())
+            elif options.cfg.context_mode == CONTEXT_STRING:
+                l.append(ContextString())
 
         return l
 
@@ -223,25 +220,34 @@ class Manager(CoqObject):
         if options.cfg.verbose:
             print("\tmutate(stage='{}')".format(stage))
 
-        # apply mutate functions, including context functions:
-        mutate_functions = FunctionList(self._get_main_functions(df, session))
+        # separate general functions from context functions:
+        fnc_all = self._get_main_functions(df, session)
+        fnc_general = [x for x in fnc_all
+                       if not x.get_id().startswith("coq_context")]
+        fnc_contexts = [x for x in fnc_all if x not in fnc_general]
+
+        # apply mutate functions, excluding context functions:
+        mutate_functions = FunctionList(fnc_general)
         df = mutate_functions.lapply(df, session=session, manager=self)
 
-        if (stage == "first" and options.cfg.context_mode != CONTEXT_NONE):
-            (_, _, cached_context) = self._context_cache[options.cfg.context_mode]
-            if cached_context is not None:
+        # only apply context functions during the first stage:
+        if stage == "first" and fnc_contexts:
+            context_key = (options.cfg.context_mode,
+                           options.cfg.context_left,
+                           options.cfg.context_right)
+            if context_key in self._context_cache:
                 # use the cached context columns if available:
-                df = pd.concat([df, cached_context], axis=1)
+                df = pd.concat([df,
+                                self._context_cache[context_key]], axis=1)
             else:
-                # take the context columns from the data frame if there is no
-                # cached context for the current context mode, and store them
-                # in the context cache:
+                # run the context functions:
+                context_functions = FunctionList(fnc_contexts)
+                df = context_functions.lapply(df,
+                                              session=session, manager=self)
                 context_columns = [x for x in df.columns
-                                   if x.startswith(("coq_context"))]
-                self._context_cache[options.cfg.context_mode] = (
-                    options.cfg.context_left,
-                    options.cfg.context_right,
-                    df[context_columns])
+                                if x.startswith(("coq_context"))]
+                # and store context in cache
+                self._context_cache[context_key] = df[context_columns]
 
         # apply user functions, i.e. functions that were added to
         # individual columns:
@@ -561,7 +567,6 @@ class Manager(CoqObject):
             columns.remove("coquery_invisible_dummy")
         except ValueError:
             pass
-
         df = df[columns]
         if options.cfg.verbose:
             print("\tdone")
@@ -674,14 +679,16 @@ class Manager(CoqObject):
             df = self.filter_stopwords(df, session)
 
         df = self.substitute(df, session, "first")
-        df = df[[x for x in df.columns if not x.startswith("func_")]]
-        df = self.mutate(df, session)
-        self.mutated_columns = df.columns
 
+        _columns = df.columns
+        df = df[[x for x in df.columns if not x.startswith("func_")]]
+        if len(_columns) != len(df.columns):
+            print("Unexpectedly discarded functions:", "\n\t".join(list(_columns)))
+
+        df = self.mutate(df, session)
         df = self.filter_groups(df, session)
         df = self.arrange_groups(df, session)
         df = self.mutate_groups(df, session)
-
         df = self.filter(df, session, stage=FILTER_STAGE_BEFORE_TRANSFORM)
         df = self.summarize(df, session)
         df = self.mutate(df, session, stage="second")
