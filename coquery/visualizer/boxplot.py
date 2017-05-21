@@ -33,6 +33,8 @@ class BoxPlot(vis.Visualizer):
             else:
                 numeric = z
             self.plot_fnc(x=x, y=numeric, data=data, palette=palette)
+            self._xlab = x
+            self._ylab = numeric
         # case 2: one category in y, one numeric elsewhere
         elif (self.dtype(y, data) == object and
               (self.dtype(x, data) != object and z is None) or
@@ -42,6 +44,8 @@ class BoxPlot(vis.Visualizer):
             else:
                 numeric = z
             self.plot_fnc(x=numeric, y=y, data=data, palette=palette)
+            self._xlab = numeric
+            self._ylab = y
         # case 3: one category in x and z, a numeric in y:
         elif (self.dtype(x, data) == object and
               self.dtype(z, data) == object and
@@ -50,6 +54,8 @@ class BoxPlot(vis.Visualizer):
 
             self.legend_title = kwargs["z"]
             self.legend_levels = kwargs["levels_z"]
+            self._xlab = x
+            self._ylab = y
 
         # case 4: one category in y and z, a numeric in x:
         elif (self.dtype(y, data) == object and
@@ -59,7 +65,8 @@ class BoxPlot(vis.Visualizer):
 
             self.legend_title = kwargs["z"]
             self.legend_levels = kwargs["levels_z"]
-
+            self._xlab = x
+            self._ylab = y
 
         # case 5: one category in x and y, a numeric in z:
         else:
@@ -67,7 +74,8 @@ class BoxPlot(vis.Visualizer):
 
             self.legend_title = kwargs["x"]
             self.legend_levels = kwargs["levels_x"]
-
+            self._xlab = z
+            self._ylab = y
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
