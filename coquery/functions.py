@@ -464,7 +464,7 @@ class Div(CalcFunction):
     _func = operator.truediv
 
 
-class NumpyFunction(MathFunction):
+class NumpyFunction(CalcFunction):
     """
     NumpyFunction is a wrapper for mathematical functions provided by Numpy.
     The function is specified in the class attribute `_func`.
@@ -544,7 +544,7 @@ class NotEqual(Comparison):
 
 
 class GreaterThan(Comparison):
-    _name = "GREATERTHAN"
+    _name = "GREATER"
     _func = operator.gt
 
 
@@ -554,7 +554,7 @@ class GreaterEqual(Comparison):
 
 
 class LessThan(Comparison):
-    _name = "LESSTHAN"
+    _name = "LESS"
     _func = operator.lt
 
 
@@ -955,40 +955,40 @@ class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
 ## Filter functions
 #############################################################################
 
-class BaseFilter(Function):
-    _name = "virtual"
+#class BaseFilter(Function):
+    #_name = "virtual"
 
 
-class FilteredRows(BaseFilter):
-    _name = "statistics_filtered_rows"
+#class FilteredRows(BaseFilter):
+    #_name = "statistics_filtered_rows"
 
-    def evaluate(self, df, *args, **kwargs):
-        manager = kwargs["manager"]
-        key = kwargs.get("key", None)
-        if key:
-            pre = manager._len_pre_group_filter.get(key, None)
-        else:
-            pre = manager._len_pre_filter
-        if pre is None:
-            pre = len(df)
-        val = self.constant(df, pre)
-        return val
+    #def evaluate(self, df, *args, **kwargs):
+        #manager = kwargs["manager"]
+        #key = kwargs.get("key", None)
+        #if key:
+            #pre = manager._len_pre_group_filter.get(key, None)
+        #else:
+            #pre = manager._len_pre_filter
+        #if pre is None:
+            #pre = len(df)
+        #val = self.constant(df, pre)
+        #return val
 
 
-class PassingRows(BaseFilter):
-    _name = "statistics_passing_rows"
+#class PassingRows(BaseFilter):
+    #_name = "statistics_passing_rows"
 
-    def evaluate(self, df, *args, **kwargs):
-        manager = kwargs["manager"]
-        key = kwargs.get("key", None)
-        if key:
-            post = manager._len_post_group_filter.get(key, None)
-        else:
-            post = manager._len_post_filter
-        if post is None:
-            post = len(df)
-        val = self.constant(df, post)
-        return val
+    #def evaluate(self, df, *args, **kwargs):
+        #manager = kwargs["manager"]
+        #key = kwargs.get("key", None)
+        #if key:
+            #post = manager._len_post_group_filter.get(key, None)
+        #else:
+            #post = manager._len_post_filter
+        #if post is None:
+            #post = len(df)
+        #val = self.constant(df, post)
+        #return val
 
 
 #############################################################################

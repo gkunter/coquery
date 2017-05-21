@@ -17,7 +17,7 @@ from coquery.defines import FUNCTION_DESC
 from coquery.unicode import utf8
 from coquery.managers import Group, Summary
 from coquery.functions import (
-                    FilteredRows, PassingRows,
+                    #FilteredRows, PassingRows,
                     Entropy,
                     Freq, FreqNorm,
                     FreqPTW, FreqPMW,
@@ -268,7 +268,7 @@ class GroupDialog(QtWidgets.QDialog):
 
 class SummaryDialog(GroupDialog):
     function_list = (
-                    FilteredRows, PassingRows,
+                    #FilteredRows, PassingRows,
                     Entropy,
                     Freq, FreqNorm,
                     FreqPTW, FreqPMW,

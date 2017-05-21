@@ -3026,7 +3026,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 if all(dtypes != object):
                     kwargs.update(
                         {"function_class": (functions.MathFunction,
-                                            functions.Comparison,
+                                            #functions.Comparison,
                                             functions.LogicFunction)})
                 else:
                     kwargs.update(

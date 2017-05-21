@@ -150,7 +150,7 @@ COLUMN_NAMES = {
     "coquery_expanded_query_string": "Matched query string",
     "coquery_query_string": "Query string",
 
-    # Labels that are used in the Statistics special table:
+    # function labels
     "statistics_proportion": "Proportion",
     "statistics_row_number": "Row number",
     "statistics_percent": "Percentage",
@@ -162,22 +162,21 @@ COLUMN_NAMES = {
     "statistics_subcorpus_range_max": "Subcorpus: Upper boundary",
     "statistics_frequency_pmw": "Frequency pmw",
     "statistics_frequency_ptw": "Frequency ptw",
-    "statistics_frequency_normalized": "Normalized frequency",
+    "statistics_frequency_normalized": "Frequency (normalized)",
     "statistics_tokens": "Number of matches",
     "statistics_types": "Number of unique matches",
     "statistics_ttr": "Type-token ratio",
-    "statistics_passing_rows": "Passing rows",
-    "statistics_filtered_rows": "Filtered rows",
-    "statistics_group_entropy": "Group: Entropy",
-    "statistics_group_tokens": "Group: Number of matches",
-    "statistics_group_types": "Group: Number of unique matches",
-    "statistics_group_proportion": "Group: Proportion",
-    "statistics_group_percent": "Group: Percent",
-    "statistics_group_ttr": "Group: Type-token ratio",
+    #"statistics_passing_rows": "Passing rows",
+    #"statistics_filtered_rows": "Filtered rows",
     "statistics_column_total": "ALL",
 
     # Labels for reference corpus:
-    "reference_corpus_frequency": "Frequency_ref",
+    "reference_corpus_frequency": "Reference Frequency",
+    "reference_corpus_size": "Reference Corpus size",
+    "reference_diff_keyness": "Keyness: %DIFF",
+    "reference_ll_keyness": "Keyness: LL",
+    "reference_per_million_words": "Reference Frequency pmw",
+    "reference_per_thousand_words": "Reference Frequency ptw",
 
     # Labels that are used when displaying the corpus statistics:
     "coq_statistics_table": "Table",
@@ -212,13 +211,36 @@ FUNCTION_DESC = {
     "reference_per_million_words": "Calculate the frequency per million words in the reference corpus",
     "reference_per_thousand_words": "Calculate the frequency per thousand words in the reference corpus",
     "reference_ll_keyness": "Calculate the log-likelihood keyness relative to the reference corpus",
-    "reference_diff_keyness": "Calculate the DIFF keyness relative to the reference corpus",
+    "reference_diff_keyness": "Calculate the %DIFF keyness relative to the reference corpus",
+
     "LENGTH": "Count the number of characters",
     "CONCAT": "Concatenate the columns, separated by <i>Argument</i>",
     "COUNT": "Count the number of occurrences of <i>Argument</i> (regexp)",
     "MATCH": "Test whether the columns match <i>Argument</i> (regexp)",
-    "EXTRACT": "Extract from the columns the string that matches <i>Argument</i> (regexp)"
+    "EXTRACT": "Extract from the columns the string that matches <i>Argument</i> (regexp)",
 
+    "EQUAL": "'yes' if values are equal, or 'false' otherwise",
+    "GREATER": "'yes' if values are greater, or 'false' otherwise",
+    "GREATEREQUAL": "'yes' if values are greater or equal, or 'false' otherwise",
+    "LESS": "'yes' if values are less, or 'false' otherwise",
+    "LESSEQUAL": "'yes' if values are less or equal, or 'false' otherwise",
+    "NOTEQUAL": "'yes' if values are not equal, or 'false' otherwise",
+
+    "AND": "Combine the selected columns by logical AND",
+    "OR": "Combine the selected columns by logical OR",
+    "XOR": "Combine the selected columns by logical XOR",
+
+    "ADD": "Add the selected column, or add the argument",
+    "DIV": "Divide the selected columns (in order), or divide by the argument",
+    "MUL": "Multiply the selected columns (in order), or multiply by the argument",
+    "SUB": "Subtract the selected columns (in order), or subtract the argument",
+
+    "IQR": "Calculate the row-wise interquartile range",
+    "MAX": "Calculate the row-wise maximum",
+    "MEAN": "Calculate the row-wise mean",
+    "MEDIAN": "Calculate the row-wise median",
+    "MIN": "Calculate the row-wise minimum",
+    "SD": "Calculate the row-wise standard deviation",
         }
 
 PREFERRED_ORDER = ["corpus_word", "word_label",
