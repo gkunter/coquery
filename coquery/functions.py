@@ -775,8 +775,14 @@ class FreqNorm(Freq):
         if len(val) == 0:
             return pd.Series([], index=df.index)
 
-        fun = SubcorpusSize(session=session,
-                            columns=self.columns, group=self.group)
+        if self.group:
+            fun = SubcorpusSize(session=session,
+                                columns=self.group.columns,
+                                group=self.group)
+
+        else:
+            fun = SubcorpusSize(session=session,
+                                columns=self.columns, group=self.group)
         subsize = fun.evaluate(df, *args, **kwargs)
 
         d = pd.concat([val, subsize], axis=1)
@@ -831,7 +837,7 @@ class BaseReferenceCorpus(Function):
 
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
-    _name = "reference_corpus_frequency"
+    _name = "reference_frequency"
     single_column = True
 
     def __init__(self, *args, **kwargs):
@@ -841,7 +847,8 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         session = kwargs["session"]
         ref_corpus = options.cfg.reference_corpus.get(
                          options.cfg.current_server, None)
-        if not ref_corpus or ref_corpus not in options.cfg.current_resources:
+        if (not ref_corpus or
+                ref_corpus not in options.cfg.current_resources):
             return self.constant(df, None)
 
         self._get_current_corpus()
@@ -864,14 +871,16 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
 
 class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
-    _name = "reference_per_million_words"
+    _name = "reference_frequency_pmw"
     words = 1000000
 
     def evaluate(self, df, *args, **kwargs):
-        val = super(ReferenceCorpusFrequencyPMW, self).evaluate(df, *args, **kwargs)
+        val = super(ReferenceCorpusFrequencyPMW, self).evaluate(
+            df, *args, **kwargs)
         ref_corpus = options.cfg.reference_corpus.get(
                             options.cfg.current_server, None)
-        if not ref_corpus or ref_corpus not in options.cfg.current_resources:
+        if (not ref_corpus or
+                ref_corpus not in options.cfg.current_resources):
             return self.constant(df, None)
 
         if len(val) > 0:
@@ -883,7 +892,7 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
 
 class ReferenceCorpusFrequencyPTW(ReferenceCorpusFrequencyPMW):
     words = 1000
-    _name = "reference_per_thousand_words"
+    _name = "reference_frequency_ptw"
 
 
 class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
@@ -896,8 +905,10 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
         try:
             tmp = stats.chi2_contingency(obs,
                                          lambda_="log-likelihood")
-        except ValueError:
+        except ValueError as e:
+            print(e)
             return pd.np.nan
+
         return tmp[0]
 
     def evaluate(self, df, *args, **kwargs):
@@ -919,16 +930,26 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
             if options.cfg.verbose:
                 print(self._name, "calculating df.Freq()")
             freq = fun.evaluate(df)
-        size = session.Resource.corpus.get_corpus_size()
 
-        ext_freq = super(ReferenceCorpusLLKeyness, self).evaluate(df, *args, **kwargs)
+        if self.columns:
+            fun = SubcorpusSize(session=session,
+                                columns=self.columns,
+                                group=self.group)
+            size = fun.evaluate(df, *args, **kwargs).unique()
+        else:
+            fun = CorpusSize(session=session)
+            size = fun.evaluate(df, *args, **kwargs).unique()
+
+        ext_freq = super(ReferenceCorpusLLKeyness, self).evaluate(
+            df, *args, **kwargs)
         if len(ext_freq) > 0:
             ext_size = self._current_corpus.get_corpus_size()
 
         _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq})
         if len(word_columns) > 1:
             logger.warning("LL calculation for more than one column is experimental!")
-        val = _df.apply(lambda x: self._func(x, size=size, ext_size=ext_size,
+        val = _df.apply(lambda x: self._func(x,
+                                             size=size, ext_size=ext_size,
                                              width=len(word_columns)),
                         axis="columns")
         return val
@@ -948,7 +969,8 @@ class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
     _name = "reference_diff_keyness"
 
     def _func(self, x, size, ext_size, width):
-        return (x.freq1/size - x.freq2/ext_size) * 100 / (x.freq2/ext_size)
+        return ((x.freq1/size - x.freq2/ext_size) * 100 /
+                (x.freq2/ext_size))
 
 
 #############################################################################
