@@ -3,10 +3,10 @@
 """
 coq_install_lob.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -21,25 +21,25 @@ REPLACE_TABLE = {
     }
 
 SOURCE_CATEGORY = {
-    "A": "PRESS: REPORTAGE", 
-    "B": "PRESS: EDITORIAL", 
-    "C": "PRESS: REVIEWS", 
-    "D": "RELIGION", 
-    "E": "SKILL AND HOBBIES", 
-    "F": "POPULAR LORE", 
-    "G": "BELLES-LETTRES", 
-    "H": "MISCELLANEOUS", 
-    "J": "LEARNED", 
-    "K": "FICTION: GENERAL", 
-    "L": "FICTION: MYSTERY", 
-    "M": "FICTION: SCIENCE", 
-    "N": "FICTION: ADVENTURE", 
-    "P": "FICTION: ROMANCE", 
+    "A": "PRESS: REPORTAGE",
+    "B": "PRESS: EDITORIAL",
+    "C": "PRESS: REVIEWS",
+    "D": "RELIGION",
+    "E": "SKILL AND HOBBIES",
+    "F": "POPULAR LORE",
+    "G": "BELLES-LETTRES",
+    "H": "MISCELLANEOUS",
+    "J": "LEARNED",
+    "K": "FICTION: GENERAL",
+    "L": "FICTION: MYSTERY",
+    "M": "FICTION: SCIENCE",
+    "N": "FICTION: ADVENTURE",
+    "P": "FICTION: ROMANCE",
     "R": "HUMOR"}
 
 SOURCE_TITLE = dict()
 
-CATEGORY_NUMBERS = {"a": 44, "b": 27, "c": 17, "d": 17, "e": 38, "f": 44, 
+CATEGORY_NUMBERS = {"a": 44, "b": 27, "c": 17, "d": 17, "e": 38, "f": 44,
                     "g": 77, "h": 30, "j": 80, "k": 29, "l": 24, "m": 6,
                     "n": 29, "p": 29, "r": 9}
 
@@ -70,8 +70,8 @@ class BuilderClass(BaseCorpusBuilder):
     source_category = "Category"
 
     expected_files = ["lobth_{}.txt".format(x) for x in CATEGORY_NUMBERS.keys()]
-        
-    
+
+
     def __init__(self, gui=False, *args):
        # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
@@ -107,24 +107,24 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_db_name():
         return "coq_lob"
-    
+
     @staticmethod
     def get_title():
         return "The Lancaster-Oslo/Bergen Corpus of British English"
-        
+
     @staticmethod
     def get_language():
         return "English"
-    
+
     @staticmethod
     def get_language_code():
         return "en-UK"
-        
+
     @staticmethod
     def get_description():
         return ["The Lancaster-Oslo/Bergen Corpus (often abbreviated as LOB Corpus) is a million-word collection of British English texts which was compiled in the 1970s in collaboration between the University of Lancaster, the University of Oslo, and the Norwegian Computing Centre for the Humanities, Bergen, to provide a British counterpart to the Brown Corpus compiled by Henry Kučera and W. Nelson Francis for American English in the 1960s.",
             "Its composition was designed to match the original Brown corpus in terms of its size and genres as closely as possible using documents published in the UK by British authors. Both corpora consist of 500 samples each comprising about 2000 words in 15 different genres. (Source: Wikipedia, <a href='https://en.wikipedia.org/wiki/Lancaster-Oslo-Bergen_Corpus'>Lancaster-Oslo-Bergen Corpus</a>)"]
-        
+
     @classmethod
     def get_file_list(cls, *args, **kwargs):
         """
@@ -164,7 +164,7 @@ class BuilderClass(BaseCorpusBuilder):
                         self.tag_token(self._corpus_id + 1, "p", {}, op=True)
                         for token in content.strip().split():
                             word, _, pos = token.partition("/")
-                            
+
                             if not in_foreign:
                                 if pos.startswith("fw-"):
                                     in_foreign = True
@@ -175,7 +175,7 @@ class BuilderClass(BaseCorpusBuilder):
                                     in_foreign = False
                                     self.tag_token(self._corpus_id, "span", {}, cl=True)
                                     _, _, pos = pos.partition("-")
-                            
+
                             if not in_headline:
                                 if pos.endswith("-hl"):
                                     in_headline = True
@@ -208,7 +208,7 @@ class BuilderClass(BaseCorpusBuilder):
                                     in_title = False
                                     self.tag_token(self._corpus_id, "b", {}, cl=True)
                                     pos, _, _ = pos.rpartition("-")
-                                
+
                             self._word_id = self.table(self.word_table).get_or_insert(
                                 {self.word_label: word, self.word_pos: pos})
                             self.add_token_to_corpus(
@@ -217,7 +217,7 @@ class BuilderClass(BaseCorpusBuilder):
                                 self.corpus_source_id: self._source_id})
 
                         self.tag_token(self._corpus_id, "p", {}, cl=True)
-                            
-                    
+
+
 if __name__ == "__main__":
     BuilderClass().build()
