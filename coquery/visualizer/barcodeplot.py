@@ -129,6 +129,11 @@ class BarcodePlot(vis.Visualizer):
                     plt.hlines(corpus_id, xval, xval + 0.1, cols)
             else:
                 plt.hlines(corpus_id, xval + self.BOTTOM, xval + self.TOP, cols)
+            self._ylab = "Corpus position"
+            if levels_x:
+                self._xlab = x
+            else:
+                self._xlab = ""
         else:
             self.horizontal = True
             levels_y = levels_y[::-1]
@@ -157,6 +162,12 @@ class BarcodePlot(vis.Visualizer):
                 plt.vlines(corpus_id,
                            yval + self.BOTTOM, yval + self.TOP,
                            cols)
+            self._xlab = "Corpus position"
+            if levels_y:
+                self._ylab = y
+            else:
+                self._ylab = ""
+
 
         ax = kwargs.get("ax", plt.gca())
         ax.set(**ax_kwargs)
@@ -165,12 +176,8 @@ class BarcodePlot(vis.Visualizer):
         lim = (0, self.session.Corpus.get_corpus_size())
         if self.horizontal:
             grid.set(xlim=lim)
-            if not values["xlab"]:
-                values["xlab"] = "Corpus position"
         else:
             grid.set(ylim=lim)
-            if not values["ylab"]:
-                values["ylab"] = "Corpus position"
         vis.Visualizer.set_annotations(self, grid, values)
 
     @staticmethod
