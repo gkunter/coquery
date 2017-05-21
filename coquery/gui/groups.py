@@ -101,7 +101,6 @@ class FunctionWidget(QtWidgets.QWidget):
         self.function_label.setMinimumHeight(h)
         self.function_label.setMaximumHeight(h)
 
-
     def change_highlight(self):
         palette = QtWidgets.QApplication.instance().palette()
 
@@ -181,6 +180,8 @@ class FunctionWidget(QtWidgets.QWidget):
 class GroupDialog(QtWidgets.QDialog):
     function_list = (Freq, FreqNorm, FreqPTW, FreqPMW,
                      RowNumber, Tokens, Types, TypeTokenRatio,
+                     ReferenceCorpusLLKeyness,
+                     ReferenceCorpusDiffKeyness,
                      SubcorpusSize,
                      Entropy, Percent, Proportion)
 
@@ -264,7 +265,8 @@ class GroupDialog(QtWidgets.QDialog):
         dialog = GroupDialog(group, all_columns, parent=parent)
         dialog.setVisible(True)
         dialog.setWindowTitle("Edit a data group – Coquery")
-        return dialog.exec_()
+        result = dialog.exec_()
+        return result
 
 class SummaryDialog(GroupDialog):
     function_list = (
