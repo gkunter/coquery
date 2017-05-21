@@ -144,6 +144,8 @@ class Heatmap(vis.Visualizer):
                                        .T)
             ct = ct.reindex_axis(levels_y, axis=0)
             ct = ct.reindex_axis(levels_x, axis=1)
+            self._xlab = x
+            self._ylab = y
 
         elif param_count == 2:
             numeric = None
@@ -170,14 +172,20 @@ class Heatmap(vis.Visualizer):
                     ct = ct.reindex_axis(levels_y)
             else:
                 ct = get_crosstab(data, x, y, levels_x, levels_y).T
+            self._xlab = x
+            self._ylab = y
         elif x:
             ct = pd.crosstab(pd.Series([""] * len(data[x]), name=""),
                              data[x])
             ct = ct.reindex_axis(levels_x, axis=1)
+            self._xlab = x
+            self._ylab = "Frequency"
         elif y:
             ct = pd.crosstab(pd.Series([""] * len(data[y]), name=""),
                              data[y]).T
             ct = ct.reindex_axis(levels_y, axis=0)
+            self._ylab = y
+            self._xlab = "Frequency"
 
         sns.heatmap(ct.fillna(0),
             robust=True,
@@ -193,9 +201,7 @@ class Heatmap(vis.Visualizer):
         cat, num, none = vis.Visualizer.count_parameters(
             data_x, data_y, data_z, df, session)
 
-        return True
-
-        if len(num) > 2 or len(num) == 0 or len(cat) > 1:
+        if len(num) > 1 or len(cat) > 2 or len(cat) == 0:
             return False
         else:
             return True
