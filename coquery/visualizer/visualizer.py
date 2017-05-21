@@ -559,6 +559,8 @@ class Visualizer(CoqObject):
         self.legend_levels = None
         self.legend_title = None
         self._last_legend_pos = None
+        self._xlab = "X"
+        self._ylab = "Y"
 
     def get_grid(self, **kwargs):
         kwargs["data"] = self.df
@@ -661,10 +663,12 @@ class Visualizer(CoqObject):
                              fontsize=int(values["size_title"]/1.2),
                              fontname=values["figure_font"])
 
-        grid.set_xlabels(values.get("xlab", self.DEFAULT_XLABEL),
+        xlab = values.get("xlab") or self._xlab
+        ylab = values.get("ylab") or self._ylab
+        grid.set_xlabels(xlab,
                          fontsize=values["size_xlab"],
                          fontname=values["figure_font"])
-        grid.set_ylabels(values.get("ylab", self.DEFAULT_YLABEL),
+        grid.set_ylabels(ylab,
                          fontsize=values["size_ylab"],
                          fontname=values["figure_font"])
 
