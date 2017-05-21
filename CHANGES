@@ -4,12 +4,13 @@ This release is a considerable update over earlier versions. These are the
 main fields that have seen large changes:
 
 * the interface has been redesigned and streamlined
-* a completely new system of specifying functions has been introduced
-* the visualization designer allows interactive construction of figures
+* a completely new data management system, including a revised way of
+  handling functions
+* the new visualization designer allows interactive construction of figures
   from the query results
 
-Here is a somwhat unsorted list of most of the things that have changed or
-hav ebeen added:
+Here is an incomplete list of most of the things that have changed or have
+been added:
 
 Interface
 * interface resdesign:
