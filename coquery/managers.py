@@ -368,24 +368,23 @@ class Manager(CoqObject):
         # list that stores unusuable sorters (e.g. because the sorter
         # refers to a function column and the function has been deleted):
         drop_list = []
-        if self.sorters:
-            # gather sorting information:
-            for sorter in self.sorters:
-                # create dummy columns for reverse sorting:
-                if sorter.reverse:
-                    target = "{}__rev".format(sorter.column)
-                    df[target] = (df[sorter.column].apply(lambda x: x[::-1]))
-                else:
-                    target = sorter.column
 
-                if target not in df.columns:
-                    drop_list.append(target)
-                else:
-                    columns.append(target)
-                    directions.append(sorter.ascending)
+        # gather sorting information:
+        for sorter in self.sorters:
+            # create dummy columns for reverse sorting:
+            if sorter.reverse:
+                target = "{}__rev".format(sorter.column)
+                df[target] = (df[sorter.column].apply(lambda x: x[::-1]))
+            else:
+                target = sorter.column
+
+            if target not in df.columns:
+                drop_list.append(target)
+            else:
+                columns.append(target)
+                directions.append(sorter.ascending)
         # drop illegal sorters:
         self.sorters = [x for x in self.sorters if x.column not in drop_list]
-
         # filter columns that should be in the data frame, but which aren't
         # (this may happen for example with the contingency table which
         # takes one column and rearranges it)
@@ -405,22 +404,10 @@ class Manager(CoqObject):
         if len(columns) == 0:
             return df
 
-        # sort the data frame (excluding a totals row) with backward
-        # compatibility:
-        try:
-            # pandas <= 0.16.2:
-            df_data = df_data.sort(columns=columns,
-                            ascending=directions,
-                            axis="index")[original_columns]
-        except AttributeError:
-            # pandas >= 0.17.0
-            df_data = df_data.sort_values(by=columns,
-                                    ascending=directions,
-                                    axis="index")[original_columns]
-        except Exception as e:
-            print(e)
-            print(columns, directions)
-            raise e
+        # sort the data frame (excluding a totals row)
+        df_data = df_data.sort_values(by=columns,
+                                      ascending=directions,
+                                      axis="index")[original_columns]
 
         df_data = df_data.reset_index(drop=True)
 
