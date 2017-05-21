@@ -87,14 +87,22 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
         self.horizontal = True
         if not x and not y:
             params.update({"x": corpus_id}),
+            self._xlab = x
+            self._ylab = ""
         elif x and not y:
             params.update({"x": x, "y": corpus_id, "order": levels_x})
             self.horizontal = False
+            self._xlab = x
+            self._ylab = "Corpus position"
         elif y and not x:
             params.update({"y": y, "x": corpus_id, "order": levels_y})
+            self._xlab = "Corpus position"
+            self._ylab = y
         elif x and y:
             params.update({"x": corpus_id, "y": y, "hue": x,
                            "order": levels_y, "hue_order": levels_x})
+            self._xlab = "Corpus position"
+            self._ylab = y
 
         sns.swarmplot(**params)
         return ax
