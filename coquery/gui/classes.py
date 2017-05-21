@@ -1918,8 +1918,15 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self._align = []
         self._dtypes = []
         self._hidden_columns = []
+
+        columns = self.header
+        if len(columns) != len(columns.unique()):
+            logger.warn("Duplicate column headers: {}".format(columns))
+            print("Duplicate column headers: {}".format(columns))
+            columns = columns.unique()
+
         # prepare look-up lists that speed up data retrieval:
-        for i, col in enumerate(self.header):
+        for i, col in enumerate(columns):
             # remember hidden columns:
             if col in self._manager.hidden_columns:
                 self._hidden_columns.append(i)
