@@ -379,7 +379,7 @@ class BarPlot(vis.Visualizer):
             #else:
                 # if there is no numeric column, use the provided function,
                 #  or Freq() as the default function:
-                numeric = _default
+                numeric = self._default
                 data_columns = [col for col in (self._x, self._y) if col]
                 func = kwargs.get("func", Freq)
                 fun = func(columns=data_columns, session=session)
@@ -481,13 +481,12 @@ class StackedBars(BarPlot):
         else:
             data = data.sort_values(axis)
             data[numeric] = self.transform(data[numeric])
+            levels = params["order"][::-1]
             if x == numeric:
-                levels = levels_y[::-1]
                 kwargs = {"x": x, "y": None}
                 self._xlab = self._default
                 self._ylab = y
             else:
-                levels = levels_x[::-1]
                 kwargs = {"y": y, "x": None}
                 self._xlab = x
                 self._ylab = self._default
