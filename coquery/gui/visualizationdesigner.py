@@ -236,11 +236,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
         for col in self.categorical:
             new_item = classes.CoqListItem(self.session.translate_header(col))
             new_item.setData(QtCore.Qt.UserRole, col)
+            new_item.setToolTip(new_item.text())
             self.ui.table_categorical.addItem(new_item)
 
         for col in self.numerical:
             new_item = classes.CoqListItem(self.session.translate_header(col))
             new_item.setData(QtCore.Qt.UserRole, col)
+            new_item.setToolTip(new_item.text())
             self.ui.table_numerical.addItem(new_item)
 
         ## add functions
@@ -305,7 +307,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.combo_sequential.currentIndexChanged.connect(
             lambda: self.ui.radio_sequential.setChecked(True))
         self.ui.combo_diverging.currentIndexChanged.connect(
-            lambda: self.ui.radio_sequential.setChecked(True))
+            lambda: self.ui.radio_diverging.setChecked(True))
 
 
         # Hook up palette radio buttons:
@@ -691,28 +693,31 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                       legend_out=True,
                                       sharex=True, sharey=True)
 
-        self.grid = self.grid.map_dataframe(self.vis.plot_facet,
-                                            x=data_x, y=data_y, z=data_z,
-                                            levels_x=levels_x,
-                                            levels_y=levels_y,
-                                            levels_z=levels_z,
-                                            session=self.session,
-                                            palette=self._palette_name)
-        self.setup_canvas(self.grid.fig)
-        self.add_annotations()
-        self.change_legend()
+        try:
+            self.grid = self.grid.map_dataframe(self.vis.plot_facet,
+                                                x=data_x, y=data_y, z=data_z,
+                                                levels_x=levels_x,
+                                                levels_y=levels_y,
+                                                levels_z=levels_z,
+                                                session=self.session,
+                                                palette=self._palette_name)
+            self.setup_canvas(self.grid.fig)
+            self.add_annotations()
+            self.change_legend()
 
-        self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
-        self.dialog.show()
-        self.dialog.raise_()
+            self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
+            self.dialog.show()
+            self.dialog.raise_()
 
-        if hasattr(self.vis, "on_pick"):
-            self.grid.fig.canvas.mpl_connect('button_press_event',
-                                             self.vis.on_pick)
+            if hasattr(self.vis, "on_pick"):
+                self.grid.fig.canvas.mpl_connect('button_press_event',
+                                                self.vis.on_pick)
 
-        self.grid.fig.tight_layout()
-        self.tool.functight()
-        self.grid.fig.canvas.draw_idle()
+            self.grid.fig.tight_layout()
+            self.tool.functight()
+            self.grid.fig.canvas.draw_idle()
+        except ValueError as e:
+            print(e)
 
     def add_annotations(self):
         if self.vis:
