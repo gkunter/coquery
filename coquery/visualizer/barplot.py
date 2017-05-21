@@ -323,6 +323,7 @@ class Visualizer(vis.BaseVisualizer):
 
 class BarPlot(vis.Visualizer):
     axes_style = "whitegrid"
+    _default = "Frequency"
 
     def get_parameters(self, **kwargs):
         session = kwargs.get("session")
@@ -378,7 +379,7 @@ class BarPlot(vis.Visualizer):
             #else:
                 # if there is no numeric column, use the provided function,
                 #  or Freq() as the default function:
-                numeric = "COQ_FUNC"
+                numeric = _default
                 data_columns = [col for col in (self._x, self._y) if col]
                 func = kwargs.get("func", Freq)
                 fun = func(columns=data_columns, session=session)
@@ -393,14 +394,21 @@ class BarPlot(vis.Visualizer):
         if self._x and not self._y:
             # show vertical bars
             params.update({"y": numeric, "order": self._levels_x})
+            self._xlab = self._x
+            self._ylab = numeric
         elif self._y and not self._x:
             # show horizontal bars
             params.update({"x": numeric, "order": self._levels_y})
+            self._xlab = numeric
+            self._ylab = self._y
         else:
             # show horizontal, hued bars
             params.update({"x": numeric, "y": self._y,
                            "order": self._levels_y,
                            "hue": self._x, "hue_order": self._levels_x})
+            self._xlab = numeric
+            self._ylab = self._y
+
         return params
 
     def plot_facet(self, **kwargs):
@@ -410,7 +418,6 @@ class BarPlot(vis.Visualizer):
         if self._x and self._y:
             self.legend_title = params["hue"]
             self.legend_levels = params["hue_order"]
-
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
@@ -426,6 +433,7 @@ class StackedBars(BarPlot):
     """
     Stacked bar chart
     """
+
     def transform(self, series):
         return series.values.cumsum()
 
@@ -440,7 +448,7 @@ class StackedBars(BarPlot):
         levels_x = params.get("levels_x")
         levels_y = params.get("levels_y")
         hue = params["hue"]
-        numeric = "COQ_FUNC"
+        numeric = self._default
 
         if data.dtypes[x] != object:
             numeric = x
@@ -461,15 +469,28 @@ class StackedBars(BarPlot):
 
             levels = params["hue_order"][::-1]
             kwargs = {"x": numeric, "y": axis}
+            if x and y and hue:
+                self._xlab = self._default
+            elif x:
+                self._xlab = x
+                self._ylab = numeric
+            else:
+                self._xlab = numeric
+                self._ylab = y
             split = hue
         else:
             data = data.sort_values(axis)
             data[numeric] = self.transform(data[numeric])
-            levels = params["order"][::-1]
             if x == numeric:
+                levels = levels_y[::-1]
                 kwargs = {"x": x, "y": None}
+                self._xlab = self._default
+                self._ylab = y
             else:
+                levels = levels_x[::-1]
                 kwargs = {"y": y, "x": None}
+                self._xlab = x
+                self._ylab = self._default
             split = axis
 
         col = sns.color_palette(params["palette"],
@@ -496,10 +517,23 @@ class StackedBars(BarPlot):
             self.legend_title = hue
             self.legend_levels = params["hue_order"]
 
+    @staticmethod
+    def validate_data(data_x, data_y, data_z, df, session):
+        cat, num, none = vis.Visualizer.count_parameters(
+            data_x, data_y, data_z, df, session)
+
+        if len(num) > 1 or len(cat) == 0:
+            return False
+        if len(num) == 1 and len(cat) == 1:
+            return False
+        return True
+
 class PercentBars(StackedBars):
     """
     Stacked bar chart showing percentages
     """
+    _default = "Percentage"
+
     def transform(self, series):
         return (series * 100 / series.sum()).cumsum()
 
