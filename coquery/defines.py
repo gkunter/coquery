@@ -171,12 +171,12 @@ COLUMN_NAMES = {
     "statistics_column_total": "ALL",
 
     # Labels for reference corpus:
-    "reference_corpus_frequency": "Reference Frequency",
+    "reference_frequency": "Reference Frequency",
     "reference_corpus_size": "Reference Corpus size",
     "reference_diff_keyness": "Keyness: %DIFF",
     "reference_ll_keyness": "Keyness: LL",
-    "reference_per_million_words": "Reference Frequency pmw",
-    "reference_per_thousand_words": "Reference Frequency ptw",
+    "reference_frequency_pmw": "Reference Frequency pmw",
+    "reference_frequency_ptw": "Reference Frequency ptw",
 
     # Labels that are used when displaying the corpus statistics:
     "coq_statistics_table": "Table",
@@ -199,17 +199,18 @@ FUNCTION_DESC = {
     "statistics_subcorpus_size": "Size of the subcorpus in words",
     "statistics_entropy": "Calculate Shannon's entropy",
     "statistics_frequency": "Count the frequency of each match",
-    "statistics_normalized": "Count the frequency of each match, normalized by corpus size in words",
-    "statistics_per_thousand_words": "Calculate the average frequency of each match per thousand words",
-    "statistics_per_million_words": "Calculate the average frequency of each match per million words",
+    "statistics_frequency_normalized": "Count the frequency of each match, normalized by corpus size in words",
+    "statistics_frequency_ptw": "Calculate the average frequency of each match per thousand words",
+    "statistics_frequency_pmw": "Calculate the average frequency of each match per million words",
+
     "statistics_proportion": "Calculate the proportion for each match",
     "statistics_percent": "Calculate the percentage for each match",
     "statistics_tokens": "Count the number of tokens",
     "statistics_types": "Count the number of types",
     "statistics_ttr": "Calculate the type-token ratio",
-    "reference_corpus_frequency": "Count the frequeny of the match in the reference corpus",
-    "reference_per_million_words": "Calculate the frequency per million words in the reference corpus",
-    "reference_per_thousand_words": "Calculate the frequency per thousand words in the reference corpus",
+    "reference_frequency": "Count the frequeny of the match in the reference corpus",
+    "reference_frequency_ptw": "Calculate the frequency per million words in the reference corpus",
+    "reference_frequency_pmw": "Calculate the frequency per thousand words in the reference corpus",
     "reference_ll_keyness": "Calculate the log-likelihood keyness relative to the reference corpus",
     "reference_diff_keyness": "Calculate the %DIFF keyness relative to the reference corpus",
 
