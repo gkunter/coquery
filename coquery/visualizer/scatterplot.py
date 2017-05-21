@@ -44,7 +44,7 @@ class Visualizer(vis.BaseVisualizer):
             raise VisualizationInvalidDataError
 
         if len(self._number_columns) == 1:
-            self.options["label_x_axis"] = "Index"
+            self.options["label_x_axis"] = self._default
         else:
             self.options["label_x_axis"] = self._number_columns[-2]
         self.options["label_y_axis"] = self._number_columns[-1]
@@ -143,6 +143,7 @@ class Visualizer(vis.BaseVisualizer):
 class ScatterPlot(vis.Visualizer):
     fit_reg = False
     axes_style = "whitegrid"
+    _default = "Index"
 
     def plot_facet(self, data, color, **kwargs):
         x = kwargs.get("x")
@@ -177,8 +178,8 @@ class ScatterPlot(vis.Visualizer):
                                         n_colors=len(levels))
             for i, val in enumerate(levels):
                 df = data[data[category] == val]
-                self.x_label = num_x
-                self.y_label = num_y
+                self._xlab = num_x
+                self._ylab = num_y
                 sns.regplot(x=df[num_x], y=df[num_y],
                             color=cols[i],
                             fit_reg=self.fit_reg,
@@ -225,32 +226,32 @@ class ScatterPlot(vis.Visualizer):
                                     color=cols[i],
                                     fit_reg=self.fit_reg)
                                     #ax=kwargs.get("ax", plt.gca()))
-                        self.x_label = num_x
-                        self.y_label = "Index"
+                        self._xlab = num_x
+                        self._ylab = self._default
                     else:
                         sns.regplot(x=pd.Series(range(len(df))),
                                     y=df[num_y],
                                     color=cols[i],
                                     fit_reg=self.fit_reg)
                                     #ax=kwargs.get("ax", plt.gca()))
-                        self.x_label = "Index"
-                        self.y_label = num_y
+                        self._xlab = self._default
+                        self._ylab = num_y
             else:
                 if x is None:
                     val_x = pd.Series(range(len(data)))
                     val_y = data[y]
-                    self.x_label = "Index"
-                    self.y_label = y
+                    self._xlab = self._default
+                    self._ylab = y
                 elif y is None:
                     val_x = data[x]
                     val_y = pd.Series(range(len(data)))
-                    self.x_label = x
-                    self.y_label = "Index"
+                    self._xlab = x
+                    self._ylab = self._default
                 else:
                     val_x = data[x]
                     val_y = data[y]
-                    self.x_label = x
-                    self.y_label = y
+                    self._xlab = x
+                    self._ylab = y
                 col = sns.color_palette(kwargs["palette"], n_colors=1)
                 ax = sns.regplot(val_x, val_y,
                                  color=col[0],
@@ -259,19 +260,19 @@ class ScatterPlot(vis.Visualizer):
         else:
             if x is not None:
                 val_x = data[x]
-                self.x_label = x
+                self._xlab = x
             elif z is not None:
                 val_x = data[z]
-                self.x_label = z
+                self._xlab = z
             else:
                 val_x = pd.Series(range(len(data)))
-                self.x_label = "Index"
+                self.x_label = self._default
             if y is not None:
                 val_y = data[y]
-                self.y_label = y
+                self._ylab = y
             else:
                 val_y = pd.Series(range(len(data)))
-                self.y_label = "Index"
+                self._ylab = self._default
             col = sns.color_palette(kwargs["palette"], n_colors=1)
             sns.regplot(val_x, val_y,
                         color=col[0], fit_reg=self.fit_reg)
@@ -280,13 +281,6 @@ class ScatterPlot(vis.Visualizer):
         if levels:
             self.legend_title = category
             self.legend_levels = levels
-
-    def set_annotations(self, grid, values):
-        if not values["xlab"]:
-            values["xlab"] = self.x_label
-        if not values["ylab"]:
-            values["ylab"] = self.y_label
-        vis.Visualizer.set_annotations(self, grid, values)
 
     #def on_pick(self, event):
         #try:
