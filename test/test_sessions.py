@@ -187,6 +187,8 @@ class TestSessionMethods(unittest.TestCase):
         options.cfg.verbose = False
         options.cfg.stopword_list = []
         options.cfg.context_mode = CONTEXT_NONE
+        options.cfg.context_left = 3
+        options.cfg.context_right = 5
 
         self.session = SessionCommandLine()
         self.corpus = CorpusClass()
@@ -215,6 +217,12 @@ class TestSessionMethods(unittest.TestCase):
              "{} (match 1)".format(func.get_label(self.session, self.manager)),
              "{} (match 2)".format(func.get_label(self.session, self.manager))])
 
+    def test_translate_header_context_labels(self):
+        df = pd.DataFrame({"coq_context_left": ["A A A"] * 5,
+                           "coq_context_right": ["B B B B B"] * 5})
+        self.assertListEqual(
+            [self.session.translate_header(x) for x in df.columns],
+            ["Left context(3)", "Right context(5)"])
 
 def main():
     suite = unittest.TestSuite([
