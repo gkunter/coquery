@@ -12,7 +12,7 @@
 
 AppId={{42204621-F37F-40C3-96E2-886FFF94D497}
 AppName=Coquery
-AppCopyright=Copyright (C) 2016 Gero Kunter
+AppCopyright=Copyright (C) 2016, 2017 Gero Kunter
 AppVersion={#coq_version}
 AppVerName=Coquery {#coq_version}
 AppPublisher=Coquery maintainers

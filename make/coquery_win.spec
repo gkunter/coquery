@@ -8,9 +8,9 @@ sys.setrecursionlimit(10000)
 
 block_cipher = None
 
-VERSION = os.getenv("COQ_VERSION")
-
-coq_path = os.path.realpath(os.path.join(os.getenv("HOMEPATH"), "coquery-{}".format(VERSION), "coquery"))
+coq_path = os.path.realpath(
+            os.path.join(os.getenv("HOMEPATH"),
+                         "coquery-release", "coquery"))
 python_path = os.path.split(sys.executable)[0]
 
 binaries = []
