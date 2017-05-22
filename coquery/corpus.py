@@ -584,8 +584,13 @@ class SQLResource(BaseResource):
         stats = []
         # determine table size for all columns
         table_sizes = {}
-        for rc_table in [x for x in dir(self) if not x.startswith("_") and x.endswith("_table") and not x.startswith("tag_")]:
+        for rc_table in [x for x in dir(self) 
+                         if not x.startswith("_") and 
+                         x.endswith("_table") and 
+                         not x.startswith("tag_")]:
             table = getattr(self, rc_table)
+            if type(table) != str:
+                continue
             S = "SELECT COUNT(*) FROM {}".format(table)
             df = pd.DataFrame(db_connection.execute(S).fetchall())
             table_sizes[table] = df.values.ravel()[0]
