@@ -12,9 +12,10 @@ import os
 
 from imp import find_module
 
-from coquery import VERSION as version
+from coquery import __version__ as version
 
-with open(os.path.join(os.path.split(os.path.realpath(__file__))[0], "README.rst"), "rb") as f:
+with open(os.path.join(os.path.split(
+        os.path.realpath(__file__))[0], "README.rst"), "rb") as f:
     long_descr = f.read().decode("utf-8")
 
 DESCRIPTION = "Coquery: a free corpus query tool"
@@ -35,7 +36,7 @@ if __name__ == "__main__":
         long_description=long_descr,
         license="GPL3",
         url="http://www.coquery.org",
-        version=version,
+        version=version.split(" ")[0],
         install_requires=required_modules,
         packages=['coquery',
                   os.path.join('coquery', 'installer'),
