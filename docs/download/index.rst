@@ -43,7 +43,7 @@ folder on your computer, e.g. the Applications folder.
 
 .. raw:: html
 
-    <p>Mac OS X disk image: <code>coquery-0.10.0-osx-el-capitan.dmg</code> <a href="coquery-0.10.0-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p>
+    <p>Mac OS X disk image: <code>coquery-0.10.0-macos-sierra.dmg</code> <a href="coquery-0.10.0-macos-sierra.dmg" class="btn btn-primary btn-sm">Download</a></p>
 
 If the disk image does not work on your version of Mac OS X, you can follow
 the installation instructions given below for Linux on your computer.
@@ -83,7 +83,7 @@ Coquery can now be started by typing ``coquery`` at the command line.
 Optional Python modules
 +++++++++++++++++++++++
 
-If you have installed Coquery as a Python package, you may want to install
+If you have installed Coquery as a Python package, you may will have to install
 the following optional Python packages to enable all features in Coquery.
 
 * `PyMySQL <https://github.com/PyMySQL/PyMySQL/>`_ 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)
