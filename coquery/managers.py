@@ -113,7 +113,7 @@ class Manager(CoqObject):
 
         self._groups = []
         self._filters = []
-        self._column_order = None
+        self._column_order = []
         self._last_query_id = None
         self.reset_context_cache()
 
