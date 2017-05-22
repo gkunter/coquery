@@ -53,6 +53,7 @@ class InstallerGui(QtWidgets.QDialog):
         self.logger = logging.getLogger(NAME)
 
         self.state = None
+        self._testing = False
         self._onefile = False
         self.builder_class = builder_class
 
@@ -119,8 +120,6 @@ class InstallerGui(QtWidgets.QDialog):
 
         self.generalUpdate.connect(self.general_update)
 
-
-
     def restore_settings(self):
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
@@ -137,8 +136,17 @@ class InstallerGui(QtWidgets.QDialog):
 
         val = options.settings.value("corpusinstaller_read_files", "true")
         self.activate_read(val == "true" or val is True)
-        val = options.settings.value("corpusinstaller_use_metafile", "false")
-        self.ui.check_use_metafile.setChecked(val == "true" or val is True)
+
+        self.ui.check_use_metafile.setChecked(False)
+        self.ui.label_metafile.setText("")
+        meta = options.settings.value("corpusinstaller_metafile", None)
+        if meta is not None:
+            val = options.settings.value("corpusinstaller_use_metafile",
+                                         "false")
+            self.ui.check_use_metafile.setChecked(val == "true" or
+                                                  val is True)
+            self.ui.label_metafile.setText(utf8(meta))
+
         val = options.settings.value("corpusinstaller_use_nltk", "false")
         self.ui.use_pos_tagging.setChecked(val == "true" or val is True)
         val = options.settings.value("corpusinstaller_use_ngram_table", "false")
@@ -158,6 +166,8 @@ class InstallerGui(QtWidgets.QDialog):
         options.settings.setValue(target, utf8(self.ui.input_path.text()))
         options.settings.setValue("corpusinstaller_read_files",
                                   self.ui.radio_read_files.isChecked())
+        options.settings.setValue("corpusinstaller_metafile",
+                                  utf8(self.ui.label_metafile.text()))
         options.settings.setValue("corpusinstaller_use_metafile",
                                   self.ui.check_use_metafile.isChecked())
         options.settings.setValue("corpusinstaller_use_nltk",
@@ -505,6 +515,9 @@ class BuilderGui(InstallerGui):
                 self.ui.layout_nltk.addWidget(self.ui.icon_nltk_check)
 
             self.ui.label_pos_tagging.setText(" ".join(label_text))
+            if self.ui.use_pos_tagging.isChecked():
+                self.pos_check()
+
 
         if self._onefile:
             self.ui.input_path.setText(options.cfg.corpus_table_source_path)
@@ -607,7 +620,6 @@ class BuilderGui(InstallerGui):
         self.ui.label_pos_tagging.setText(self._label_text)
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
-            self.nltk_exceptions.append("Lemmatization: {} Tokenization: {} Tagging: {}".format(self._nltk_lemmatize, self._nltk_tokenize, self._nltk_tagging))
             self.ui.use_pos_tagging.setChecked(False)
             from . import nltkdatafiles
             nltkdatafiles.NLTKDatafiles.ask(self.nltk_exceptions, parent=self)
