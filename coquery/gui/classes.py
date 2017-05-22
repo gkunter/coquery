@@ -1995,7 +1995,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
             dtype = pd.Series(source[col].dropna().tolist()).dtype
             # float
-            if dtype == float:
+            if dtype in (float, pd.np.float64):
                 # try to force floats to int:
                 try:
                     as_int = source[col].astype(int, error_on_fail=False)
@@ -2025,7 +2025,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                         df[col] = source[col]
 
             # int
-            elif dtype == int:
+            elif dtype in (int, pd.np.int64):
                 if num_to_str:
                     df[col] = source[col].apply(lambda x: str(x) if (
                                                     x is not None and
