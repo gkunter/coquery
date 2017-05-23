@@ -1,3 +1,4 @@
+source activate py34
 rm -rf build dist
 pyinstaller coquery_osx.spec
 cp -a dist/Coquery/ dist/Coquery.app/Contents/MacOS/
