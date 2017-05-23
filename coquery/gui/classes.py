@@ -2043,7 +2043,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 df[col] = source[col]
             # unknown column type
             else:
-                raise TypeError
+                df[col] = source[col].astype(str)
 
         df = df.fillna(options.cfg.na_string)
         return df
