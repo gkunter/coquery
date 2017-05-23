@@ -2,7 +2,7 @@
 
 .. toctree::
     :hidden:
-        
+
     download/index.rst
     about/index.rst
     about/gallery.rst
@@ -22,17 +22,23 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-lg-12">
-                <p>Coquery is a free corpus query tool for linguists, 
-                lexicographers, translators, and anybody who wishes to search and 
-                analyse a text corpus. The program is available for Windows, Linux, 
+                <p>Coquery is a free corpus query tool for linguists,
+                lexicographers, translators, and anybody who wishes to search and
+                analyse a text corpus. The program is available for Windows, Linux,
                 and Mac OS X computers.</p>
                 <h2>News</h2>
-                    <p><b>May 1, 2016</b>: Version 0.9.2 is now available. 
+                    <p><b>May 23, 2017<b>: Version 0.10.0 "ICAME38" is now
+                    available. This version is a major upgrade over the
+                    previous versions, reflecting nearly a year of development.
+                    See the <a href="about/changelog.html">Change Log</a> for
+                    an overview.
+                    <p><b>September 21, 2016</b>: Version 0.9.2a is now available for Windows. This version fixes an issue with the desktop shortcut.</p>
+                    <p><b>May 1, 2016</b>: Version 0.9.2 is now available.
                     New features:</p>
                 <ul>
-                    <li>Corpora can now be built from .docx, .odt, HTML, or 
+                    <li>Corpora can now be built from .docx, .odt, HTML, or
                         plain text files
-                    <li>Query results from speech corpora can now be saved as 
+                    <li>Query results from speech corpora can now be saved as
                         <a href="http://www.praat.org">Praat</a> TextGrids
                     <li>Support for new corpora: Switchboard, Brown
                 </ul>
@@ -44,7 +50,7 @@
                 <p>Read a summary of some of the features that Coquery offers.</p>
                 <p><a href="about/index.html" class="btn btn-primary btn-sm">Overview &raquo;</a></p>
             </div>
-            
+
             <div class="col-xs-4">
                 <h2>Gallery</h2>
                 <p>See screenshots of different components of Coquery in action.</p>

@@ -9,14 +9,14 @@ About Coquery
 Features
 ========
 
-Coquery is a free corpus query tool for linguists, lexicographers, 
+Coquery is a free corpus query tool for linguists, lexicographers,
 translators, and anybody who wishes to search and analyse a text corpus.
 
 .. image:: ../_static/interface/showcase.png
     :align: center
 
 .. raw:: html
-    
+
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-6">
@@ -40,7 +40,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
                 </ul>
             </div>
         </div>
-        
+
         <div class="row">
             <div class="col-md-6">
                 <h2>Analysis</h2>
@@ -55,14 +55,14 @@ translators, and anybody who wishes to search and analyse a text corpus.
             <div class="col-md-6">
                 <h2>Visualizations</h2>
                 <ul>
-                    <li>Use bar charts, heat maps, or bubble charts to 
+                    <li>Use bar charts, heat maps, or bubble charts to
                     visualize frequency distributions</li>
                     <li>Illustrate diachronic changes by using time series plots</li>
                     <li>Show the distribution of tokens within a corpus in a barcode or a beeswarm plot</li>
                 </ul>
             </div>
         </div>
-        
+
         <div class="row">
             <div class="col-md-3">
             </div>
@@ -78,7 +78,7 @@ translators, and anybody who wishes to search and analyse a text corpus.
             </div>
         </div>
     </div>
-    
+
 
 Supported corpora
 =================
@@ -101,19 +101,24 @@ Coquery already has installers for the following linguistic corpora:
     </div>
 
 
-Note that in order to use these corpora, you first need to obtain the corpus 
+Note that in order to use these corpora, you first need to obtain the corpus
 data from the linked websites.
 
-If you are missing a corpus from the list of supported corpora, you can 
-either program a custom installer for your corpus, or you can `contact <../contact.php>`_ 
-the Coquery developer whether an installer for your corpus may be included 
-in a future release of Coquery. 
+If you are missing a corpus from the list of supported corpora, you can
+either program a custom installer for your corpus, or you can `contact <../contact.php>`_
+the Coquery developer whether an installer for your corpus may be included
+in a future release of Coquery.
+
+Development
+===========
+
+See the :ref:`changelog` for changes.
 
 License
 =======
 
-Coquery is free software released under the terms of the 
-`GNU General Public License (version 3) <../license.html>`_. This license gives you 
-the freedom to use Coquery for any purpose. It also allows you to copy, 
-modify, and redistribute the software for as long as the modified software is 
-also licensed under the GNU GPL. 
+Coquery is free software released under the terms of the
+`GNU General Public License (version 3) <../license.html>`_. This license gives you
+the freedom to use Coquery for any purpose. It also allows you to copy,
+modify, and redistribute the software for as long as the modified software is
+also licensed under the GNU GPL.
