@@ -414,7 +414,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.action_column_properties.triggered.connect(self.column_properties)
         self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
-        self.ui.action_add_column.triggered.connect(self.add_column)
+        #self.ui.action_add_column.triggered.connect(self.add_column)
         self.ui.action_add_function.triggered.connect(self.menu_add_function)
         self.ui.action_find.triggered.connect(lambda: self.ui.widget_find.show())
 
@@ -655,7 +655,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def show_results_menu(self):
         enable = hasattr(self, "table_model")
-        self.ui.action_add_column.setEnabled(enable)
+        #self.ui.action_add_column.setEnabled(enable)
         self.ui.action_add_function.setEnabled(enable)
         self.ui.action_column_properties.setEnabled(enable)
         self.ui.action_show_hidden.setEnabled(enable)
