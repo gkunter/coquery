@@ -12,7 +12,7 @@ import os
 
 from imp import find_module
 
-from coquery import __version__ as version
+version = "0.10.0.1"
 
 with open(os.path.join(os.path.split(
         os.path.realpath(__file__))[0], "README.rst"), "rb") as f:
