@@ -6,37 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>805</width>
-    <height>727</height>
+    <width>720</width>
+    <height>748</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Coquery</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_6">
-    <property name="leftMargin">
-     <number>6</number>
-    </property>
-    <property name="topMargin">
-     <number>2</number>
-    </property>
-    <property name="rightMargin">
-     <number>6</number>
-    </property>
-    <property name="bottomMargin">
-     <number>2</number>
-    </property>
+   <layout class="QVBoxLayout" name="verticalLayout_4">
     <item>
-     <widget class="QSplitter" name="splitter_2">
+     <widget class="QSplitter" name="splitter">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
-      </property>
-      <property name="opaqueResize">
-       <bool>true</bool>
-      </property>
-      <property name="handleWidth">
-       <number>4</number>
       </property>
       <widget class="QFrame" name="options_area">
        <property name="sizePolicy">
@@ -45,10 +27,7 @@
          <verstretch>1</verstretch>
         </sizepolicy>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="0,0,0">
-        <property name="spacing">
-         <number>12</number>
-        </property>
+       <layout class="QGridLayout" name="gridLayout" rowstretch="0,0" columnstretch="0,1,0">
         <property name="leftMargin">
          <number>0</number>
         </property>
@@ -58,158 +37,321 @@
         <property name="rightMargin">
          <number>0</number>
         </property>
-        <property name="bottomMargin">
-         <number>8</number>
+        <property name="spacing">
+         <number>6</number>
         </property>
-        <item>
-         <widget class="QWidget" name="widget" native="true">
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="box_input_settings">
+          <property name="title">
+           <string>Quer&amp;y strings</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="0" column="0" alignment="Qt::AlignTop">
+            <widget class="QRadioButton" name="radio_query_string">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="CoqTextEdit" name="edit_query_string">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" alignment="Qt::AlignTop">
+            <widget class="QRadioButton" name="radio_query_file">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <layout class="QGridLayout" name="gridLayout_6" columnstretch="1,0">
+             <item row="0" column="0">
+              <widget class="CoqClickableLabel" name="edit_file_name">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::StyledPanel</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Sunken</enum>
+               </property>
+               <property name="text">
+                <string>(no &amp;query file selected)</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QPushButton" name="button_change_file">
+               <property name="text">
+                <string>C&amp;hange...</string>
+               </property>
+               <property name="shortcut">
+                <string>Alt+B</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="2" rowspan="2">
+         <widget class="QGroupBox" name="group_management">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="MinimumExpanding">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0,0,0">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="margin">
-            <number>0</number>
-           </property>
+          <property name="title">
+           <string>Data &amp;management</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
            <item>
-            <widget class="QGroupBox" name="box_corpus_select">
+            <widget class="QTableWidget" name="list_toolbox">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <sizepolicy hsizetype="Ignored" vsizetype="Minimum">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="title">
-              <string>Co&amp;rpus</string>
+             <property name="autoScroll">
+              <bool>false</bool>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_5">
-              <property name="leftMargin">
-               <number>8</number>
+             <property name="editTriggers">
+              <set>QAbstractItemView::NoEditTriggers</set>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::SingleSelection</enum>
+             </property>
+             <property name="selectionBehavior">
+              <enum>QAbstractItemView::SelectRows</enum>
+             </property>
+             <property name="showGrid">
+              <bool>false</bool>
+             </property>
+             <property name="rowCount">
+              <number>6</number>
+             </property>
+             <property name="columnCount">
+              <number>3</number>
+             </property>
+             <attribute name="horizontalHeaderVisible">
+              <bool>false</bool>
+             </attribute>
+             <attribute name="verticalHeaderVisible">
+              <bool>false</bool>
+             </attribute>
+             <row/>
+             <row/>
+             <row/>
+             <row/>
+             <row/>
+             <row/>
+             <column/>
+             <column/>
+             <column/>
+             <item row="0" column="0">
+              <property name="text">
+               <string>Feature order</string>
               </property>
-              <property name="rightMargin">
-               <number>8</number>
+             </item>
+             <item row="0" column="1">
+              <property name="text">
+               <string/>
               </property>
-              <item>
-               <widget class="QComboBox" name="combo_corpus">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::WheelFocus</enum>
-                </property>
-                <property name="editable">
-                 <bool>false</bool>
-                </property>
-                <property name="insertPolicy">
-                 <enum>QComboBox::InsertAlphabetically</enum>
-                </property>
-                <property name="sizeAdjustPolicy">
-                 <enum>QComboBox::AdjustToContents</enum>
-                </property>
-                <property name="frame">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
+             </item>
+             <item row="0" column="2">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="1" column="0">
+              <property name="text">
+               <string>Context/KWIC</string>
+              </property>
+             </item>
+             <item row="1" column="1">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="1" column="2">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="2" column="0">
+              <property name="text">
+               <string>Stopwords</string>
+              </property>
+             </item>
+             <item row="2" column="1">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="2" column="2">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="3" column="0">
+              <property name="text">
+               <string>Data groups</string>
+              </property>
+             </item>
+             <item row="3" column="1">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="3" column="2">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="4" column="0">
+              <property name="text">
+               <string>Transform</string>
+              </property>
+             </item>
+             <item row="4" column="1">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="4" column="2">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="5" column="0">
+              <property name="text">
+               <string>Finalize</string>
+              </property>
+             </item>
+             <item row="5" column="1">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
+             <item row="5" column="2">
+              <property name="text">
+               <string/>
+              </property>
+             </item>
             </widget>
            </item>
            <item>
-            <spacer name="verticalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Fixed</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>10</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="box_context_mode">
+            <widget class="QStackedWidget" name="tool_widget">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="title">
-              <string>Conte&amp;xt</string>
+             <property name="currentIndex">
+              <number>5</number>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_8">
-              <property name="sizeConstraint">
-               <enum>QLayout::SetFixedSize</enum>
-              </property>
-              <property name="leftMargin">
-               <number>8</number>
-              </property>
-              <property name="rightMargin">
-               <number>8</number>
-              </property>
-              <item>
-               <layout class="QVBoxLayout" name="verticalLayout_7">
-                <item>
-                 <widget class="QRadioButton" name="radio_context_none">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
+             <widget class="QWidget" name="tool_widget_column_order">
+              <layout class="QVBoxLayout" name="verticalLayout_11">
+               <item>
+                <widget class="CoqButtonList" name="list_column_order" native="true">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tool_widget_page_context">
+              <layout class="QVBoxLayout" name="verticalLayout_7">
+               <property name="margin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QWidget" name="widget_context" native="true">
+                 <layout class="QVBoxLayout" name="verticalLayout_2">
+                  <property name="spacing">
+                   <number>6</number>
                   </property>
-                  <property name="text">
-                   <string>None</string>
+                  <property name="margin">
+                   <number>0</number>
                   </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="radio_context_mode_kwic">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
-                  </property>
-                  <property name="text">
-                   <string>KWIC</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="radio_context_mode_string">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
-                  </property>
-                  <property name="text">
-                   <string>Single string</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QRadioButton" name="radio_context_mode_columns">
-                  <property name="styleSheet">
-                   <string notr="true">text-align: center center</string>
-                  </property>
-                  <property name="text">
-                   <string>Columns</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <widget class="QFrame" name="context_frame">
-                <property name="lineWidth">
-                 <number>0</number>
-                </property>
-                <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
-                 <property name="margin">
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_none">
+                    <property name="text">
+                     <string>No context</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="Line" name="line">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_columns">
+                    <property name="styleSheet">
+                     <string notr="true">text-align: center center</string>
+                    </property>
+                    <property name="text">
+                     <string>Colu&amp;mns</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_kwic">
+                    <property name="styleSheet">
+                     <string notr="true">text-align: center center</string>
+                    </property>
+                    <property name="text">
+                     <string>&amp;KWIC</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_string">
+                    <property name="styleSheet">
+                     <string notr="true">text-align: center center</string>
+                    </property>
+                    <property name="text">
+                     <string>Sing&amp;le string</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1">
+                 <property name="spacing">
                   <number>0</number>
                  </property>
                  <item>
@@ -231,7 +373,7 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
+                 <item alignment="Qt::AlignTop">
                   <widget class="QSpinBox" name="context_right_span">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -254,428 +396,488 @@
                   </widget>
                  </item>
                 </layout>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="check_restrict">
+                 <property name="text">
+                  <string>&amp;Restrict to sentences</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tool_widget_page_stopwords">
+              <layout class="QVBoxLayout" name="verticalLayout_5">
+               <property name="margin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="label_stopwords">
+                 <property name="text">
+                  <string>Number of stop words: {}</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_stopwords">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>Change stop &amp;words...</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_6">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tool_widget_page_groups">
+              <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0">
+               <property name="margin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="CoqGroupTree" name="tree_groups">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <column>
+                  <property name="text">
+                   <string notr="true">1</string>
+                  </property>
+                 </column>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tool_widget_page_transform">
+              <layout class="QVBoxLayout" name="verticalLayout_10">
+               <property name="margin">
+                <number>0</number>
+               </property>
+               <item>
+                <layout class="QVBoxLayout" name="layout_aggregate"/>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tool_widget_page_summary">
+              <layout class="QVBoxLayout" name="verticalLayout_13">
+               <property name="margin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QPushButton" name="button_add_summary_function">
+                 <property name="text">
+                  <string>Summary functions{}...</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="button_filters">
+                 <property name="text">
+                  <string>Filter results{}...</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="button_box_reaggregate" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <property name="margin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QPushButton" name="button_apply_management">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>&amp;Apply</string>
+                </property>
+                <property name="shortcut">
+                 <string>F5</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_cancel_management">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Cancel</string>
+                </property>
                </widget>
               </item>
              </layout>
             </widget>
            </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QGroupBox" name="groupBox_2">
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
-            <spacer name="verticalSpacer">
+            <spacer name="horizontalSpacer">
              <property name="orientation">
-              <enum>Qt::Vertical</enum>
+              <enum>Qt::Horizontal</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>20</width>
+               <width>40</width>
                <height>10</height>
               </size>
              </property>
             </spacer>
            </item>
            <item>
-            <widget class="QFrame" name="frame_buttons">
+            <widget class="QPushButton" name="button_run_query">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <layout class="QGridLayout" name="box_buttons">
-              <property name="sizeConstraint">
-               <enum>QLayout::SetFixedSize</enum>
-              </property>
-              <property name="horizontalSpacing">
-               <number>8</number>
-              </property>
-              <property name="verticalSpacing">
+             <property name="text">
+              <string>&amp;New query</string>
+             </property>
+             <property name="shortcut">
+              <string>Ctrl+N</string>
+             </property>
+             <property name="autoDefault">
+              <bool>true</bool>
+             </property>
+             <property name="default">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_stop_query">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&amp;Stop</string>
+             </property>
+             <property name="autoDefault">
+              <bool>false</bool>
+             </property>
+             <property name="default">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="0" rowspan="2">
+         <widget class="QGroupBox" name="box_corpus_select">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>Fe&amp;ature selection</string>
+          </property>
+          <layout class="QVBoxLayout" name="output_columns">
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>&amp;Corpus:</string>
+               </property>
+               <property name="buddy">
+                <cstring>combo_corpus</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="combo_corpus">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::WheelFocus</enum>
+               </property>
+               <property name="editable">
+                <bool>false</bool>
+               </property>
+               <property name="insertPolicy">
+                <enum>QComboBox::InsertAlphabetically</enum>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::AdjustToContents</enum>
+               </property>
+               <property name="frame">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_7">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="layoutWidget">
+       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0,0">
+        <item>
+         <widget class="QSplitter" name="splitter_columns">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="childrenCollapsible">
+           <bool>false</bool>
+          </property>
+          <widget class="CoqResultsTableView" name="data_preview">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="editTriggers">
+            <set>QAbstractItemView::AllEditTriggers</set>
+           </property>
+           <property name="alternatingRowColors">
+            <bool>true</bool>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+           <property name="selectionBehavior">
+            <enum>QAbstractItemView::SelectItems</enum>
+           </property>
+           <property name="textElideMode">
+            <enum>Qt::ElideRight</enum>
+           </property>
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+           <property name="horizontalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+          </widget>
+          <widget class="QWidget" name="widget_hidden_columns" native="true">
+           <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,1">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="margin">
+             <number>0</number>
+            </property>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_8">
+              <property name="spacing">
                <number>0</number>
               </property>
-              <property name="margin">
-               <number>0</number>
-              </property>
-              <item row="1" column="0">
-               <widget class="QPushButton" name="button_filters">
-                <property name="text">
-                 <string>Fil&amp;ters</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QPushButton" name="button_stopwords">
+              <item>
+               <widget class="CoqRotatedButton" name="button_toggle_hidden">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="styleSheet">
+                 <string notr="true">color: rgb(0, 0, 0);
+background-color: rgb(244, 165, 130);</string>
+                </property>
                 <property name="text">
-                 <string>Stop &amp;words</string>
+                 <string>Hidden columns</string>
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
-               <layout class="QHBoxLayout" name="stopword_layout"/>
-              </item>
-              <item row="3" column="0">
-               <widget class="QPushButton" name="button_run_query">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>&amp;Query</string>
-                </property>
-                <property name="autoDefault">
-                 <bool>false</bool>
-                </property>
-                <property name="default">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <layout class="QHBoxLayout" name="filter_layout"/>
-              </item>
-              <item row="3" column="1">
-               <layout class="QHBoxLayout" name="query_layout"/>
-              </item>
-              <item row="0" column="1">
-               <spacer name="horizontalSpacer_6">
+              <item>
+               <spacer name="verticalSpacer_5">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Vertical</enum>
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
-                  <width>32</width>
+                  <width>0</width>
                   <height>0</height>
                  </size>
                 </property>
                </spacer>
               </item>
              </layout>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="box_input_settings">
-          <property name="title">
-           <string>Query &amp;strings</string>
-          </property>
-          <layout class="QGridLayout" name="layout_query">
-           <item row="0" column="0">
-            <widget class="QRadioButton" name="radio_query_string">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1" colspan="2">
-            <widget class="QTextEdit" name="edit_query_string">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0" rowspan="2">
-            <widget class="QRadioButton" name="radio_query_file">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QPushButton" name="button_browse_file">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>&amp;Open</string>
-             </property>
-             <property name="shortcut">
-              <string>Alt+B</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QPushButton" name="button_file_options">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>O&amp;ptions</string>
-             </property>
-             <property name="shortcut">
-              <string>Alt+B</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="edit_file_name">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="accessibleDescription">
-              <string/>
-             </property>
-             <property name="placeholderText">
-              <string>Choose an input file</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="box_output_options">
-          <property name="title">
-           <string>O&amp;utput columns</string>
-          </property>
-          <layout class="QVBoxLayout" name="output_columns">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="sizeConstraint">
-            <enum>QLayout::SetMinimumSize</enum>
-           </property>
-           <property name="leftMargin">
-            <number>8</number>
-           </property>
-           <property name="rightMargin">
-            <number>8</number>
-           </property>
-           <property name="bottomMargin">
-            <number>6</number>
-           </property>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QSplitter" name="splitter">
-       <property name="lineWidth">
-        <number>0</number>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="opaqueResize">
-        <bool>true</bool>
-       </property>
-       <property name="handleWidth">
-        <number>4</number>
-       </property>
-       <widget class="QTableView" name="data_preview">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="locale">
-         <locale language="English" country="UnitedStates"/>
-        </property>
-        <property name="editTriggers">
-         <set>QAbstractItemView::SelectedClicked</set>
-        </property>
-        <property name="alternatingRowColors">
-         <bool>true</bool>
-        </property>
-        <property name="selectionMode">
-         <enum>QAbstractItemView::ExtendedSelection</enum>
-        </property>
-        <property name="selectionBehavior">
-         <enum>QAbstractItemView::SelectRows</enum>
-        </property>
-        <property name="textElideMode">
-         <enum>Qt::ElideRight</enum>
-        </property>
-        <property name="verticalScrollMode">
-         <enum>QAbstractItemView::ScrollPerPixel</enum>
-        </property>
-        <property name="horizontalScrollMode">
-         <enum>QAbstractItemView::ScrollPerPixel</enum>
-        </property>
-        <property name="sortingEnabled">
-         <bool>true</bool>
-        </property>
-       </widget>
-       <widget class="QWidget" name="layoutWidget">
-        <layout class="QVBoxLayout" name="verticalLayout_4">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="sizeConstraint">
-          <enum>QLayout::SetDefaultConstraint</enum>
-         </property>
-         <property name="leftMargin">
-          <number>4</number>
-         </property>
-         <item>
-          <widget class="QGroupBox" name="group_aggregation">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="title">
-            <string>&amp;Aggregation</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_2">
-            <property name="leftMargin">
-             <number>8</number>
-            </property>
-            <property name="rightMargin">
-             <number>8</number>
-            </property>
-            <property name="bottomMargin">
-             <number>6</number>
-            </property>
+            </item>
             <item>
-             <widget class="QRadioButton" name="radio_aggregate_none">
+             <widget class="CoqHiddenResultsTable" name="hidden_columns">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+               <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Do not aggregate the query results.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Every token that matches the query string is listed in the 'Query results' table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <property name="editTriggers">
+               <set>QAbstractItemView::SelectedClicked</set>
               </property>
-              <property name="text">
-               <string>None</string>
-              </property>
-              <property name="checked">
+              <property name="alternatingRowColors">
                <bool>true</bool>
               </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QRadioButton" name="radio_aggregate_uniques">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
+              <property name="selectionMode">
+               <enum>QAbstractItemView::ExtendedSelection</enum>
               </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show only types.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The tokens matching the query string are aggregated so that duplicate matches are dropped. The 'Query results' table shows only distinct types, and no duplicate tokens. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectRows</enum>
               </property>
-              <property name="text">
-               <string>Types</string>
+              <property name="textElideMode">
+               <enum>Qt::ElideRight</enum>
               </property>
-              <property name="checked">
-               <bool>false</bool>
+              <property name="verticalScrollMode">
+               <enum>QAbstractItemView::ScrollPerPixel</enum>
               </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QRadioButton" name="radio_aggregate_frequencies">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show the frequency of each token.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;
-The number of occurrences of each token matching the query string is counted. The 'Query results' table shows one row for each token, with the number of occurrences in the column 'Frequency' . &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Frequency</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QRadioButton" name="radio_aggregate_contingency">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show a contingency table of the last query.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;The number of occurrences of the tokens matching the query string are counted and arranged in a contingency table. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Contingency</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QRadioButton" name="radio_aggregate_collocations">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Show collocations.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;For the tokens matching the query string, the left and right context as defined by the user is also queried for collocate words. The 'Query results' table shows one row for each collocate word, together with several collocation statistics. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Collocations</string>
+              <property name="horizontalScrollMode">
+               <enum>QAbstractItemView::ScrollPerPixel</enum>
               </property>
              </widget>
             </item>
            </layout>
           </widget>
-         </item>
-         <item>
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Expanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextEdit" name="text_no_match">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="html">
+           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::NoTextInteraction</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="CoqFindWidget" name="widget_find" native="true"/>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
@@ -686,7 +888,7 @@ The number of occurrences of each token matching the query string is counted. Th
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>805</width>
+     <width>720</width>
      <height>24</height>
     </rect>
    </property>
@@ -698,6 +900,10 @@ The number of occurrences of each token matching the query string is counted. Th
     <addaction name="action_save_selection"/>
     <addaction name="action_create_textgrid"/>
     <addaction name="action_copy_to_clipboard"/>
+    <addaction name="separator"/>
+    <addaction name="action_save_query"/>
+    <addaction name="action_load_query"/>
+    <addaction name="action_share_query"/>
     <addaction name="separator"/>
     <addaction name="action_view_log"/>
     <addaction name="separator"/>
@@ -711,6 +917,8 @@ The number of occurrences of each token matching the query string is counted. Th
     <addaction name="separator"/>
     <addaction name="action_available_modules"/>
     <addaction name="action_about_coquery"/>
+    <addaction name="action_how_to_cite"/>
+    <addaction name="action_regex_tester"/>
    </widget>
    <widget class="QMenu" name="menuCorpus">
     <property name="title">
@@ -718,18 +926,21 @@ The number of occurrences of each token matching the query string is counted. Th
     </property>
     <addaction name="action_manage_corpus"/>
     <addaction name="separator"/>
+    <addaction name="action_link_external"/>
+    <addaction name="action_reference_corpus"/>
+    <addaction name="separator"/>
     <addaction name="action_statistics"/>
     <addaction name="action_corpus_documentation"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
-     <string>&amp;Preferences</string>
+     <string>Op&amp;tions</string>
     </property>
     <addaction name="action_connection_settings"/>
     <addaction name="action_settings"/>
     <addaction name="separator"/>
-    <addaction name="action_toggle_filters"/>
-    <addaction name="action_toggle_stopwords"/>
+    <addaction name="action_toggle_columns"/>
+    <addaction name="action_toggle_management"/>
    </widget>
    <widget class="QMenu" name="menuAnalyse">
     <property name="title">
@@ -745,7 +956,7 @@ The number of occurrences of each token matching the query string is counted. Th
     </widget>
     <widget class="QMenu" name="menuFrequency_maps">
      <property name="title">
-      <string>Frequency maps</string>
+      <string>&amp;Frequency maps</string>
      </property>
      <addaction name="action_heat_map"/>
      <addaction name="action_tree_map"/>
@@ -760,11 +971,15 @@ The number of occurrences of each token matching the query string is counted. Th
      <addaction name="action_beeswarm_plot"/>
     </widget>
     <widget class="QMenu" name="menuDensity_plots">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="title">
-      <string>Density plots</string>
+      <string>&amp;Numeric plots</string>
      </property>
      <addaction name="action_kde_plot"/>
      <addaction name="action_ecd_plot"/>
+     <addaction name="action_scatter_plot"/>
     </widget>
     <widget class="QMenu" name="menuTime_data">
      <property name="title">
@@ -779,11 +994,19 @@ The number of occurrences of each token matching the query string is counted. Th
     <addaction name="menuTime_data"/>
     <addaction name="menuFrequency_maps"/>
     <addaction name="menuDensity_plots"/>
+    <addaction name="separator"/>
+    <addaction name="action_visualization_designer"/>
    </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
-     <string>&amp;Output</string>
+     <string>&amp;Results</string>
     </property>
+    <addaction name="action_column_properties"/>
+    <addaction name="action_show_hidden"/>
+    <addaction name="action_add_column"/>
+    <addaction name="action_add_function"/>
+    <addaction name="separator"/>
+    <addaction name="action_find"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -799,11 +1022,14 @@ The number of occurrences of each token matching the query string is counted. Th
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
+   <property name="sizeGripEnabled">
+    <bool>true</bool>
+   </property>
   </widget>
   <action name="action_open_input_file">
    <property name="icon">
     <iconset theme="document-open">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Open input file...</string>
@@ -815,7 +1041,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Help</string>
@@ -852,16 +1078,16 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_statistics">
    <property name="icon">
     <iconset theme="view-statistics">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Corpus &amp;statistics</string>
+    <string>&amp;Statistics</string>
    </property>
   </action>
   <action name="action_connection_settings">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Database connections...</string>
@@ -870,7 +1096,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_settings">
    <property name="icon">
     <iconset theme="configure">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Settings...</string>
@@ -879,7 +1105,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_quit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -891,7 +1117,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_build_corpus">
    <property name="icon">
     <iconset theme="document-new">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Build new corpus...</string>
@@ -906,7 +1132,7 @@ The number of occurrences of each token matching the query string is counted. Th
    </property>
    <property name="icon">
     <iconset theme="edit-delete">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Remove corpus...</string>
@@ -918,7 +1144,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
-     <normaloff>../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Corpus &amp;manager...</string>
@@ -951,7 +1177,7 @@ The number of occurrences of each token matching the query string is counted. Th
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Word cloud</string>
+    <string>&amp;Word cloud</string>
    </property>
   </action>
   <action name="action_barcode_plot">
@@ -977,10 +1203,10 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
-     <normaloff>../../../../../../../../.designer/backup</normaloff>../../../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
-    <string>Corpus &amp;documentation...</string>
+    <string>&amp;Documentation...</string>
    </property>
   </action>
   <action name="action_percentage_area_plot">
@@ -1020,7 +1246,7 @@ The number of occurrences of each token matching the query string is counted. Th
   </action>
   <action name="action_view_log">
    <property name="text">
-    <string>View &amp;log file...</string>
+    <string>View session &amp;log...</string>
    </property>
   </action>
   <action name="action_mysql_server_help">
@@ -1061,7 +1287,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_save_results">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Save results...</string>
@@ -1073,7 +1299,7 @@ The number of occurrences of each token matching the query string is counted. Th
   <action name="action_copy_to_clipboard">
    <property name="icon">
     <iconset theme="edit-copy">
-     <normaloff>../../../../../../.designer/backup</normaloff>../../../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>&amp;Copy selection to clipboard</string>
@@ -1084,18 +1310,18 @@ The number of occurrences of each token matching the query string is counted. Th
   </action>
   <action name="action_kde_plot">
    <property name="text">
-    <string>Kernel Density Estimate</string>
+    <string>&amp;Kernel Density Estimate</string>
    </property>
   </action>
   <action name="action_ecd_plot">
    <property name="text">
-    <string>Estimated cumulative distribution</string>
+    <string>&amp;Estimated cumulative distribution</string>
    </property>
   </action>
   <action name="action_save_selection">
    <property name="icon">
     <iconset theme="document-save">
-     <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+     <normaloff>../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../.designer/backup</iconset>
    </property>
    <property name="text">
     <string>Sa&amp;ve selection...</string>
@@ -1104,25 +1330,28 @@ The number of occurrences of each token matching the query string is counted. Th
     <string>Ctrl+Shift+S</string>
    </property>
   </action>
-  <action name="action_toggle_filters">
+  <action name="action_toggle_management">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Use &amp;filters</string>
+    <string>Show &amp;output management</string>
    </property>
   </action>
-  <action name="action_toggle_stopwords">
+  <action name="action_toggle_columns">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Use stop&amp;words</string>
+    <string>Show &amp;column &amp;selection</string>
    </property>
   </action>
   <action name="action_create_textgrid">
    <property name="text">
-    <string>Create te&amp;xtgrid...</string>
+    <string>Create te&amp;xtgrids...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
    </property>
   </action>
   <action name="action_available_modules">
@@ -1130,13 +1359,261 @@ The number of occurrences of each token matching the query string is counted. Th
     <string>Available &amp;modules...</string>
    </property>
   </action>
+  <action name="actionKWIC_Keywords_in_context">
+   <property name="text">
+    <string>KWIC (Keywords in context)</string>
+   </property>
+  </action>
+  <action name="actionSingle_string">
+   <property name="text">
+    <string>Single context string</string>
+   </property>
+  </action>
+  <action name="actionContext_columns">
+   <property name="text">
+    <string>Context columns</string>
+   </property>
+  </action>
+  <action name="actionEdit_stop_word_list">
+   <property name="text">
+    <string>Edit stop word list..</string>
+   </property>
+  </action>
+  <action name="actionAdd_or_remove_grouping_column">
+   <property name="text">
+    <string>Add or remove grouping column...</string>
+   </property>
+  </action>
+  <action name="actionUse_grouping_functions">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Apply group functions</string>
+   </property>
+  </action>
+  <action name="actionUse_group_filters">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Use group filters</string>
+   </property>
+  </action>
+  <action name="actionFrequency_list">
+   <property name="text">
+    <string>Frequency list</string>
+   </property>
+  </action>
+  <action name="actionContingency_table">
+   <property name="text">
+    <string>Contingency table</string>
+   </property>
+  </action>
+  <action name="actionCollocations">
+   <property name="text">
+    <string>Collocations</string>
+   </property>
+  </action>
+  <action name="actionG_test_matrix">
+   <property name="text">
+    <string>G-test matrix</string>
+   </property>
+  </action>
+  <action name="actionUse_summary_functions">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Apply summary functions</string>
+   </property>
+  </action>
+  <action name="actionSelect_summary_functions">
+   <property name="text">
+    <string>Select summary functions...</string>
+   </property>
+  </action>
+  <action name="actionAdd_edit_or_remove_row_filter">
+   <property name="text">
+    <string>Add, edit or remove row filter...</string>
+   </property>
+  </action>
+  <action name="actionApply_row_filters">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Apply row filters</string>
+   </property>
+  </action>
+  <action name="actionDrop_duplicate_rows">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Drop duplicate rows</string>
+   </property>
+  </action>
+  <action name="actionAdd_edit_or_remove_group_filters">
+   <property name="text">
+    <string>Add, edit or remove group filters...</string>
+   </property>
+  </action>
+  <action name="actionSelect_group_functions">
+   <property name="text">
+    <string>Select group functions...</string>
+   </property>
+  </action>
+  <action name="actionContext_options">
+   <property name="text">
+    <string>Context options...</string>
+   </property>
+  </action>
+  <action name="action_reference_corpus">
+   <property name="text">
+    <string>Set &amp;reference corpus:</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="action_save_query">
+   <property name="icon">
+    <iconset theme="document-save">
+     <normaloff>../../../../../.designer/backup</normaloff>../../../../../.designer/backup</iconset>
+   </property>
+   <property name="text">
+    <string>S&amp;ave query...</string>
+   </property>
+  </action>
+  <action name="action_load_query">
+   <property name="icon">
+    <iconset theme="document-open">
+     <normaloff>../../../../../.designer/backup</normaloff>../../../../../.designer/backup</iconset>
+   </property>
+   <property name="text">
+    <string>L&amp;oad query...</string>
+   </property>
+  </action>
+  <action name="action_share_query">
+   <property name="icon">
+    <iconset theme="document-share">
+     <normaloff>../../../../../.designer/backup</normaloff>../../../../../.designer/backup</iconset>
+   </property>
+   <property name="text">
+    <string>S&amp;hare query...</string>
+   </property>
+  </action>
+  <action name="action_column_properties">
+   <property name="text">
+    <string>Column &amp;properties...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="action_show_hidden">
+   <property name="text">
+    <string>Show &amp;hidden columns</string>
+   </property>
+  </action>
+  <action name="action_scatter_plot">
+   <property name="text">
+    <string>&amp;Scatter plot</string>
+   </property>
+  </action>
+  <action name="action_add_column">
+   <property name="text">
+    <string>Add &amp;user data column</string>
+   </property>
+  </action>
+  <action name="action_add_function">
+   <property name="text">
+    <string>Add &amp;function...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+U</string>
+   </property>
+  </action>
+  <action name="action_link_external">
+   <property name="text">
+    <string>Link e&amp;xternal corpus</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="action_find">
+   <property name="text">
+    <string>F&amp;ind...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="action_visualization_designer">
+   <property name="text">
+    <string>&amp;Visualization designer...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="action_how_to_cite">
+   <property name="text">
+    <string>How to &amp;cite</string>
+   </property>
+  </action>
+  <action name="action_regex_tester">
+   <property name="text">
+    <string>Regular &amp;expression tester...</string>
+   </property>
+  </action>
  </widget>
- <tabstops>
-  <tabstop>button_filters</tabstop>
-  <tabstop>button_stopwords</tabstop>
-  <tabstop>button_run_query</tabstop>
-  <tabstop>data_preview</tabstop>
- </tabstops>
+ <customwidgets>
+  <customwidget>
+   <class>CoqClickableLabel</class>
+   <extends>QLabel</extends>
+   <header location="global">..classes</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqTextEdit</class>
+   <extends>QTextEdit</extends>
+   <header location="global">..classes</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqResultsTableView</class>
+   <extends>QTableView</extends>
+   <header location="global">..resultstable</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqHiddenResultsTable</class>
+   <extends>QTableView</extends>
+   <header>..resultstable</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqFindWidget</class>
+   <extends>QWidget</extends>
+   <header>..findwidget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CoqRotatedButton</class>
+   <extends>QPushButton</extends>
+   <header>..classes</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqGroupTree</class>
+   <extends>QTreeWidget</extends>
+   <header>..grouptree</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqButtonList</class>
+   <extends>QWidget</extends>
+   <header>..buttonlist</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

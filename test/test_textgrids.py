@@ -11,29 +11,46 @@ import unittest
 import os.path
 import sys
 import argparse
+import collections
 
-sys.path.append(os.path.normpath(os.path.join(sys.path[0], "../coquery")))
+from .mockmodule import setup_module, MockOptions
 
-# Mock module requirements:
-class mock_module(object):
-    pass
+setup_module("sqlalchemy")
 
-sys.modules["sqlalchemy"] = mock_module
-sys.modules["options"] = mock_module
-from corpus import CorpusClass, LexiconClass, BaseResource
+from coquery.corpus import CorpusClass, LexiconClass, BaseResource
+from coquery import textgrids
+from coquery import options
 
-import textgrids
-import options
+options.cfg = MockOptions()
 
-def _get_source_id(token_id):
-    return [1, 1, 2, 2, 2][token_id-1]
+options.cfg.current_resources = collections.defaultdict(
+    lambda: (None, None, None, None))
 
-def _get_file_data(token_id, features):
+
+class MockSession(object):
+    def __init__(self, resource):
+        self.lexicon = LexiconClass()
+        self.corpus = CorpusClass()
+        self.Resource = resource
+
+        self.corpus.lexicon = self.lexicon
+        self.corpus.resource = resource
+        self.lexicon.corpus = self.corpus
+        self.lexicon.resource = resource
+
+        resource.corpus = self.corpus
+        resource.lexicon = self.lexicon
+
+
+def _get_file_data(_, token_id, features):
     df = pd.DataFrame({
-        "Files.Filename": {0: "File1.txt", 1: "File1.txt", 2: "File2.txt", 3: "File2.txt", 4: "File2.txt"},
-        "Files.Duration": {0: 10, 1: 10, 2: 20, 3: 20, 4:20},
-        "Corpus.ID": {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}})
+        "Filename": {0: "File1.txt", 1: "File1.txt",
+                     2: "File2.txt", 3: "File2.txt", 4: "File2.txt"},
+        "Duration": {0: 10, 1: 10, 2: 20, 3: 20, 4:20},
+        "ID": {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}})
     return df
+
+CorpusClass.get_file_data = _get_file_data
 
 # Mock a corpus module:
 BaseResource.corpus_table = "Corpus"
@@ -60,89 +77,88 @@ BaseResource.file_duration = "Duration"
 BaseResource.db_name = "Test"
 
 
-class TestModuleMethods(unittest.TestCase):
-    
+class TestTextGridModuleMethods(unittest.TestCase):
     def setUp(self):
-        self.resource1 = BaseResource()
-        lexicon = LexiconClass()
-        corpus = CorpusClass()
+        self.resource = BaseResource()
+        self.session = MockSession(self.resource)
 
-        corpus.lexicon = lexicon
+        self.selected_features1 = [
+            "corpus_starttime", "corpus_endtime"]
+        self.selected_features2 = [
+            "corpus_starttime", "corpus_endtime", "word_label"]
 
-        lexicon.corpus = corpus
-        lexicon.resource = self.resource1
-
-        corpus.resource = self.resource1
-        corpus.get_source_id = _get_source_id
-        corpus.get_file_data = _get_file_data
-
-        self.resource1.corpus = corpus
-        self.resource1.lexicon = lexicon
-        
-        options.cfg = argparse.Namespace()
-        self.selected_features1 = ["corpus_starttime", "corpus_endtime"]
-        self.selected_features2 = ["corpus_starttime", "corpus_endtime", "word_label"]
-        
         self.df1 = pd.DataFrame({
             "coquery_invisible_corpus_id": [1, 2, 3, 4, 5],
             "coq_corpus_starttime_1": [4, 5, 4, 5, 8],
-            "coq_corpus_endtime_1": [4.5, 5.5, 4.5, 6, 8.5]})
+            "coq_corpus_endtime_1": [4.5, 5.5, 4.5, 6, 8.5],
+            "coquery_invisible_origin_id": [1, 1, 2, 2, 2]})
 
         self.df2 = pd.DataFrame({
             "coquery_invisible_corpus_id": [1, 2, 3, 4, 5],
             "coq_corpus_starttime_1": [4, 5, 4, 5, 8],
             "coq_corpus_endtime_1": [4.5, 5.5, 4.5, 6, 8.5],
-            "coq_word_label_1": ["this", "tree", "a", "tiny", "boat"]})
+            "coq_word_label_1": ["this", "tree", "a", "tiny", "boat"],
+            "coquery_invisible_origin_id": [1, 1, 2, 2, 2]})
 
     def test_get_file_data(self):
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
-        df = _get_file_data([1, 2, 3, 4, 5], [self.resource1.corpus_id, self.resource1.file_name, self.resource1.file_duration])
+        writer = textgrids.TextgridWriter(self.df1, self.session)
+        df = _get_file_data(None, [1, 2, 3, 4, 5], [self.resource.corpus_id,
+                                              self.resource.file_name,
+                                              self.resource.file_duration])
         assert_frame_equal(writer.get_file_data(), df)
 
     def test_prepare_textgrids_number_of_grids(self):
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
+        writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.prepare_textgrids()
-        self.assertEqual(len(grids), len(writer.get_file_data()["Files.Filename"].unique()))
-            
+        self.assertEqual(
+            len(grids),
+            len(writer.get_file_data()["Filename"].unique()))
+
     def test_prepare_textgrids_feature_timing1(self):
         """
-        Test the textgrid for a query that has only corpus timings, but no 
+        Test the textgrid for a query that has only corpus timings, but no
         additional lexical features.
-        
-        In this case, at one tier should be created that will contain 
+
+        In this case, at one tier should be created that will contain
         the corpus IDs of the tokens.
         """
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
+        writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.prepare_textgrids()
 
         self.assertEqual(list(writer.feature_timing.keys()), ["corpus_id"])
         self.assertEqual(writer.feature_timing["corpus_id"], ("corpus_starttime", "corpus_endtime"))
-        
+
     def test_prepare_textgrids_feature_timing2(self):
         """
-        Test the textgrid for a query that has a lexical feature in addition 
+        Test the textgrid for a query that has a lexical feature in addition
         to the corpus timings (word_label).
-        
-        In this case, at one tier should be created that will contain 
+
+        In this case, at one tier should be created that will contain
         the word_labels of the tokens.
         """
         options.cfg.selected_features = self.selected_features2
-        writer = textgrids.TextgridWriter(self.df2, self.resource1)
+        writer = textgrids.TextgridWriter(self.df2, self.session)
         grids = writer.prepare_textgrids()
 
-        self.assertEqual(list(writer.feature_timing.keys()), ["corpus_id", "word_label"])
-        self.assertEqual(writer.feature_timing["word_label"], ("corpus_starttime", "corpus_endtime"))
-        self.assertEqual(writer.feature_timing["corpus_id"], ("corpus_starttime", "corpus_endtime"))
+        self.assertCountEqual(
+            list(writer.feature_timing.keys()),
+            ["corpus_id", "word_label"])
+        self.assertEqual(
+            writer.feature_timing["word_label"],
+            ("corpus_starttime", "corpus_endtime"))
+        self.assertEqual(
+            writer.feature_timing["corpus_id"],
+            ("corpus_starttime", "corpus_endtime"))
 
-    def test_fill_grids1(self):
+    def test_fill_grids_file1_no_labels(self):
         options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.resource1)
+        writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.fill_grids()
-        
-        grid = grids["File1.txt"]
+
+        grid = grids[("File1.txt",)]
         # only one tier expected:
         self.assertEqual(len(grid.tiers), 1)
         tier = grid.tiers[0]
@@ -159,15 +175,21 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(interval2.end_time, 5.5)
         self.assertEqual(interval2.text, "2")
 
-        grid = grids["File2.txt"]
-        
+    def test_fill_grids_file2_no_labels(self):
+        options.cfg.selected_features = self.selected_features1
+        writer = textgrids.TextgridWriter(self.df1, self.session)
+
+        grids = writer.fill_grids()
+
+        grid = grids[("File2.txt",)]
+
         # only one tier expected:
         self.assertEqual(len(grid.tiers), 1)
         tier = grid.tiers[0]
-        
+
         # expected tiername: word_label
         self.assertEqual(tier.name, "corpus_id")
-        
+
         # three expected intervals:
         self.assertEqual(len(tier.intervals), 3)
         interval1 = tier.intervals[0]
@@ -182,13 +204,13 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(interval3.start_time, 8)
         self.assertEqual(interval3.end_time, 8.5)
         self.assertEqual(interval3.text, "5")
-        
-    def test_fill_grids2(self):
+
+    def test_fill_grids_file1_labels(self):
         options.cfg.selected_features = self.selected_features2
-        writer = textgrids.TextgridWriter(self.df2, self.resource1)
+        writer = textgrids.TextgridWriter(self.df2, self.session)
         grids = writer.fill_grids()
-        
-        grid = grids["File1.txt"]
+
+        grid = grids[("File1.txt", )]
         # only one tier expected:
         self.assertEqual(len(grid.tiers), 1)
         tier = grid.tiers[0]
@@ -205,15 +227,20 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(interval2.end_time, 5.5)
         self.assertEqual(interval2.text, "tree")
 
-        grid = grids["File2.txt"]
-        
+    def test_fill_grids_file2_labels(self):
+        options.cfg.selected_features = self.selected_features2
+        writer = textgrids.TextgridWriter(self.df2, self.session)
+        grids = writer.fill_grids()
+
+        grid = grids[("File2.txt", )]
+
         # only one tier expected:
         self.assertEqual(len(grid.tiers), 1)
         tier = grid.tiers[0]
-        
+
         # expected tiername: word_label
         self.assertEqual(tier.name, "word_label")
-        
+
         # three expected intervals:
         self.assertEqual(len(tier.intervals), 3)
         interval1 = tier.intervals[0]
@@ -228,16 +255,16 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(interval3.start_time, 8)
         self.assertEqual(interval3.end_time, 8.5)
         self.assertEqual(interval3.text, "boat")
-        
-        
-if __name__ == '__main__':
-    import timeit
-    
+
+
+def main():
     suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestModuleMethods),
+        unittest.TestLoader().loadTestsFromTestCase(TestTextGridModuleMethods),
         ])
-    
-    print()
-    print(" ----- START ----- ")
-    print()
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    if not hasattr(TestTextGridModuleMethods, "assertCountEqual"):
+        setattr(TestTextGridModuleMethods, "assertCountEqual",
+                TestTextGridModuleMethods.assertItemsEqual)
+    main()

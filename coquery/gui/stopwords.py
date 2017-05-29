@@ -2,31 +2,34 @@
 """
 settings.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import codecs
 import pandas as pd
+import os
 
 from coquery import options
 from coquery.defines import *
+from coquery.general import is_language_code, language_by_code, code_by_language
+from coquery.unicode import utf8
 from . import classes
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from .ui.stopwordsUi import Ui_Stopwords
 
-class CoqStopWord(QtGui.QListWidgetItem):
+class CoqStopWord(QtWidgets.QListWidgetItem):
     def __init__(self, *args):
         super(CoqStopWord, self).__init__(*args)
-        icon = options.cfg.main_window.get_icon("sign-ban")
+        icon = get_toplevel_window().get_icon("Delete")
         self.setIcon(icon)
         brush = QtGui.QBrush(QtGui.QColor("lightcyan"))
         self.setBackground(brush)
         
-class CoqStopwordDelegate(QtGui.QStyledItemDelegate):
+class CoqStopwordDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None, *args):
         super(CoqStopwordDelegate, self).__init__(parent, *args)
 
@@ -34,10 +37,10 @@ class CoqStopwordDelegate(QtGui.QStyledItemDelegate):
         painter.save()
 
         painter.drawPixmap(0, 0, 
-                QtGui.qApp.style().standardPixmap(QtGui.QStyle.SP_DockWidgetCloseButton))
+                QtWidgets.qApp.style().standardPixmap(QtWidgets.QStyle.SP_DockWidgetCloseButton))
         # set background color
         painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-        if option.state & QtGui.QStyle.State_Selected:
+        if option.state & QtWidgets.QStyle.State_Selected:
             painter.setBrush(QtGui.QBrush(QtCore.Qt.red))
         else:
             painter.setBrush(QtGui.QBrush(QtGui.QColor("lightcyan")))
@@ -58,23 +61,23 @@ class CoqAddWord(CoqStopWord):
     def reset(self):
         self.setText("Add...")
         
-class CoqStopwordList(QtGui.QListWidget):
+class CoqStopwordList(QtWidgets.QListWidget):
     def __init__(self, *args):
         super(CoqStopwordList, self).__init__(*args)
         
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.MinimumExpanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.setSizePolicy(sizePolicy)
-        self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-        self.setFlow(QtGui.QListView.TopToBottom)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.setFlow(QtWidgets.QListView.TopToBottom)
         self.setProperty("isWrapping", True)
-        self.setMovement(QtGui.QListView.Static)
-        self.setResizeMode(QtGui.QListView.Adjust)
+        self.setMovement(QtWidgets.QListView.Static)
+        self.setResizeMode(QtWidgets.QListView.Adjust)
         self.setSpacing(10)
-        self.setFlow(QtGui.QListView.LeftToRight)
-        self.setViewMode(QtGui.QListView.IconMode)
+        self.setFlow(QtWidgets.QListView.LeftToRight)
+        self.setViewMode(QtWidgets.QListView.IconMode)
         self.setWordWrap(True)
         self.setSelectionRectVisible(True)
 
@@ -104,40 +107,51 @@ class CoqStopwordList(QtGui.QListWidget):
         super(CoqStopwordList, self).addItem(item, *args)
         self.add_item = item
 
-class Stopwords(QtGui.QDialog):
+class Stopwords(QtWidgets.QDialog):
     def __init__(self, word_list, default=None, parent=None, icon=None):
         super(Stopwords, self).__init__(parent)
         
         self._word_list= word_list
         self.ui = Ui_Stopwords()
         self.ui.setupUi(self)
-        self.ui.horizontalLayout.removeWidget(self.ui.stopword_list)
-        self.ui.stopword_list.close()
-        #self.ui.stopword_list = CoqStopwordList()
-        self.ui.stopword_list = classes.CoqTagBox(label="Add stop word:")
-        self.ui.horizontalLayout.insertWidget(0, self.ui.stopword_list)
+        
+        lang = []
+        for file in os.listdir(options.cfg.stopword_path):
+            code, ext = os.path.splitext(file)
+            if is_language_code(code) and ext == ".txt":
+                lang.append(language_by_code(code).capitalize())
 
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Reset).clicked.connect(self.reset_list)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Save).clicked.connect(self.save_list)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Open).clicked.connect(self.open_list)
-        self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).clicked.connect(self.close)
+        lang = sorted(lang)
+        self.ui.combo_language.addItems(lang)
+        self.ui.combo_language.setCurrentIndex(lang.index("English"))
+        self.ui.button_add_list.clicked.connect(self.add_stopword_list)
+
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.close)
+        self.ui.buttonbox_io.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.save_list)
+        self.ui.buttonbox_io.button(QtWidgets.QDialogButtonBox.Open).clicked.connect(self.open_list)
+        self.ui.buttonbox_io.button(QtWidgets.QDialogButtonBox.Reset).clicked.connect(self.reset_list)
 
         try:
             self.resize(options.settings.value("stopwords_size"))
         except TypeError:
             pass
+        ix = self.ui.combo_language.findText(utf8(options.settings.value("stopword_language")))
+        if ix >= 0:
+            self.ui.combo_language.setCurrentIndex(ix)
 
     def closeEvent(self, event):
         options.settings.setValue("stopwords_size", self.size())
+        
+        options.settings.setValue("stopword_language", utf8(self.ui.combo_language.currentText()))
         self.close()
  
     def reset_list(self):
-        response = QtGui.QMessageBox.question(self, "Clear stop word list", msg_clear_stopwords, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
-        if response == QtGui.QMessageBox.Yes:
+        response = QtWidgets.QMessageBox.question(self, "Clear stop word list", msg_clear_stopwords, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        if response == QtWidgets.QMessageBox.Yes:
             self.ui.stopword_list.cloud_area.clear()
     
     def save_list(self):
-        name = QtGui.QFileDialog.getSaveFileName(directory=options.cfg.stopwords_file_path)
+        name = QtWidgets.QFileDialog.getSaveFileName(directory=options.cfg.stopwords_file_path)
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -148,12 +162,12 @@ class Stopwords(QtGui.QDialog):
                         index=False, header=False,
                         encoding=options.cfg.output_encoding)
             except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+                QtWidgets.QMessageBox.critical(self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
-                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+                QtWidgets.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
     
     def open_list(self):
-        name = QtGui.QFileDialog.getOpenFileName(directory=options.cfg.stopwords_file_path)
+        name = QtWidgets.QFileDialog.getOpenFileName(directory=options.cfg.stopwords_file_path)
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -163,13 +177,26 @@ class Stopwords(QtGui.QDialog):
                 with codecs.open(name, "r", encoding=options.cfg.output_encoding) as input_file:
                     for word in sorted(set(" ".join(input_file.readlines()).split())):
                         if word and not self.ui.stopword_list.hasTag(word):
-                            self.ui.stopword_list.addTag(str(word))
+                            self.ui.stopword_list.addTag(utf8(word))
             except IOError as e:
-                QtGui.QMessageBox.critical(self, "Disk error", msg_disk_error)
+                QtWidgets.QMessageBox.critical(self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
-                QtGui.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+                QtWidgets.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
             finally:
                 self.ui.buttonBox.setEnabled(True)
+    
+    def add_stopword_list(self):
+        lang = utf8(self.ui.combo_language.currentText())
+        
+        stopwords = []
+        for line in open(os.path.join(options.cfg.stopword_path, 
+                               "{}.txt".format(code_by_language(lang))), "r"):
+            if not line.strip().startswith("#"):
+                stopwords.append(line.strip())
+
+        for word in sorted(set(stopwords)):
+            if not self.ui.stopword_list.hasTag(word):
+                self.ui.stopword_list.addTag(utf8(word))
     
     def exec_(self):
         result = super(Stopwords, self).exec_()

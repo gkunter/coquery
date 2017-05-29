@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Coquery: Download and installation &mdash; Coquery 0.9.3 documentation</title>
+    <title>Coquery: Download and installation &#8212; Coquery 0.10.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,16 +14,17 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.9.3',
+        VERSION:     '0.10.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.3 documentation" href="../index.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="About Coquery" href="../about/index.html" />
     <link rel="prev" title="&lt;no title&gt;" href="../index.html" /> 
   </head>
@@ -34,7 +35,7 @@
             <img class="logo" src="../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../index.html">Coquery 0.9.3 documentation</a></div>
+          href="../index.html">Coquery 0.10.0 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="../index.html" title="&lt;no title&gt;"
              accesskey="P">previous</a> |
@@ -53,7 +54,7 @@
             
   <span class="target" id="download"></span><div class="section" id="id1">
 <h1>Download</h1>
-<p>The current version of Coquery is 0.9.3. This version is fully functional, and
+<p>The current version of Coquery is 0.10.0. This version is fully functional, and
 is sufficiently stable for regular use.</p>
 <p>There are a few bugs, problems, and unexpected behaviors, though. For a list
 of known bugs, see the <a class="reference external" href="https://github.com/gkunter/coquery/issues">Issue tracker</a>
@@ -66,13 +67,13 @@ release.</p>
 <p>The Windows installer will install everything on your computer that is
 needed to run Coquery. After installing, start Coquery from the Windows application
 menu.</p>
-<p>Windows installer: <code>coquery-0.9.3-setup-win32.exe</code> <a href="coquery-0.9.2-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p></div>
+<p>Windows installer: <code>coquery-0.10.0-setup-win32.exe</code> <a href="coquery-0.10.0-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p></div>
 <div class="section" id="mac-os-x">
 <h2>Mac OS X</h2>
 <p>For Mac OS X, the Coquery application is bundled in a disk image. After
 downloading and opening the disk image, move the Coquery application to a
 folder on your computer, e.g. the Applications folder.</p>
-<p>Mac OS X disk image: <code>coquery-0.9.3-osx-el-capitan.dmg</code> <a href="coquery-0.9.2-osx-el-capitan.dmg" class="btn btn-primary btn-sm">Download</a></p><p>If the disk image does not work on your version of Mac OS X, you can follow
+<p>Mac OS X disk image: <code>coquery-0.10.0-macos-sierra.dmg</code> <a href="coquery-0.10.0-macos-sierra.dmg" class="btn btn-primary btn-sm">Download</a></p><p>If the disk image does not work on your version of Mac OS X, you can follow
 the installation instructions given below for Linux on your computer.</p>
 </div>
 <div class="section" id="linux">
@@ -84,7 +85,7 @@ package. This option is also available to Windows and Mac OS X users.</p>
 <li><p class="first">Download and install the free Anaconda Python distribution from <a href="https://www.continuum.io" target="_blank">https://www.continuum.io</a>.</p>
 </li>
 <li><p class="first">Open a terminal, and execute the following command:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>pip install coquery
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">coquery</span>
 </pre></div>
 </div>
 <p>This command will download and install the Coquery program, as well as any
@@ -108,7 +109,7 @@ installations.</p>
 </div>
 <div class="section" id="optional-python-modules">
 <h3>Optional Python modules</h3>
-<p>If you have installed Coquery as a Python package, you may want to install
+<p>If you have installed Coquery as a Python package, you may will have to install
 the following optional Python packages to enable all features in Coquery.</p>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/PyMySQL/PyMySQL/">PyMySQL</a> 0.6.4 or later – A pure-Python MySQL client library (Connect to MySQL database servers)</li>
@@ -131,11 +132,11 @@ new corpora from your own collection of files:</p>
 <li><a class="reference external" href="https://github.com/chardet/chardet">chardet</a> 2.0.0 or later – Automatical detection of character encodings in your text files</li>
 </ul>
 <p>The following command installs these modules using <code class="docutils literal"><span class="pre">pip</span></code> (for Python 2.7):</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>pip install nltk pdfminer python-docx odfpy bs4 chardet
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">nltk</span> <span class="n">pdfminer</span> <span class="n">python</span><span class="o">-</span><span class="n">docx</span> <span class="n">odfpy</span> <span class="n">bs4</span> <span class="n">chardet</span>
 </pre></div>
 </div>
 <p>The following command installs these modules using <code class="docutils literal"><span class="pre">pip</span></code> (for Python 3.x):</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>pip install nltk pdfminer3k python-docx odfpy bs4 chardet
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">nltk</span> <span class="n">pdfminer3k</span> <span class="n">python</span><span class="o">-</span><span class="n">docx</span> <span class="n">odfpy</span> <span class="n">bs4</span> <span class="n">chardet</span>
 </pre></div>
 </div>
 </div>
@@ -157,9 +158,6 @@ new corpora from your own collection of files:</p>
                 <input type="hidden" name="check_keywords" value="yes" />
                 <input type="hidden" name="area" value="default" />
             </form>
-            <p class="searchtip" style="font-size: 90%">
-                Enter search terms or a module, class or function name.
-            </p>
           </div>
         </div>
         <div class="clearer"></div>

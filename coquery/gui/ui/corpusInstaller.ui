@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>480</height>
+    <height>492</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,91 +22,168 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3">
+  <layout class="QVBoxLayout" name="verticalLayout_4">
    <item>
-    <widget class="QFrame" name="frame">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="name_label">
+       <property name="text">
+        <string>&amp;Corpus name:</string>
+       </property>
+       <property name="buddy">
+        <cstring>corpus_name</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="corpus_name">
+       <property name="maxLength">
+        <number>32</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="gridLayout_2">
+     <property name="verticalSpacing">
+      <number>8</number>
      </property>
-     <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="spacing">
-       <number>20</number>
-      </property>
-      <property name="margin">
-       <number>10</number>
-      </property>
-      <item>
-       <widget class="QLabel" name="corpus_description">
-        <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Corpus installer&lt;/span&gt;&lt;/p&gt;&lt;p&gt;You have requested to install '&lt;span style=&quot; font-weight:600;&quot;&gt;{}'&lt;/span&gt; using the database connection '{}'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QGridLayout" name="gridLayout_2">
-        <property name="verticalSpacing">
-         <number>10</number>
-        </property>
-        <item row="1" column="1">
-         <widget class="QGroupBox" name="box_build_options">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+     <item row="1" column="1">
+      <widget class="QLabel" name="label_only_module">
+       <property name="text">
+        <string>Only install corpus &amp;module</string>
+       </property>
+       <property name="buddy">
+        <cstring>radio_only_module</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0" alignment="Qt::AlignTop">
+      <widget class="QRadioButton" name="radio_read_files">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QRadioButton" name="radio_only_module">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QWidget" name="widget_read_files" native="true">
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_read_files">
+          <property name="text">
+           <string>Build corpus from &amp;text files</string>
           </property>
-          <layout class="QGridLayout" name="gridLayout">
-           <property name="margin">
-            <number>10</number>
+          <property name="buddy">
+           <cstring>radio_read_files</cstring>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1,0">
+          <item>
+           <widget class="QLabel" name="label_input_path">
+            <property name="text">
+             <string>Di&amp;rectory containg text files:</string>
+            </property>
+            <property name="buddy">
+             <cstring>input_path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="CoqClickableLabel" name="input_path">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Sunken</enum>
+            </property>
+            <property name="text">
+             <string>(no path or file selected)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="button_input_path">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>&amp;Browse</string>
+            </property>
+            <property name="icon">
+             <iconset theme="folder">
+              <normaloff>.</normaloff>.</iconset>
+            </property>
+            <property name="shortcut">
+             <string>Alt+B</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox">
+          <property name="title">
+           <string>Options</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <property name="rightMargin">
+            <number>0</number>
            </property>
-           <property name="verticalSpacing">
-            <number>-1</number>
-           </property>
-           <item row="1" column="0">
-            <widget class="QLineEdit" name="input_path">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-            </widget>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1,0">
+             <item>
+              <widget class="QCheckBox" name="check_use_metafile">
+               <property name="text">
+                <string>Use &amp;meta data file:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="CoqClickableLabel" name="label_metafile">
+               <property name="frameShape">
+                <enum>QFrame::StyledPanel</enum>
+               </property>
+               <property name="frameShadow">
+                <enum>QFrame::Sunken</enum>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="button_metafile">
+               <property name="text">
+                <string>&amp;Open</string>
+               </property>
+               <property name="icon">
+                <iconset theme="document-open">
+                 <normaloff>.</normaloff>.</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_8">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Path to corpus data files:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-             </property>
-             <property name="wordWrap">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
+           <item>
             <layout class="QHBoxLayout" name="layout_nltk">
              <item>
               <widget class="QCheckBox" name="use_pos_tagging">
@@ -129,54 +206,29 @@
                <property name="wordWrap">
                 <bool>true</bool>
                </property>
-               <property name="buddy">
-                <cstring>use_pos_tagging</cstring>
-               </property>
               </widget>
              </item>
             </layout>
            </item>
-           <item row="1" column="1">
-            <widget class="QPushButton" name="button_input_path">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Browse</string>
-             </property>
-             <property name="icon">
-              <iconset theme="folder">
-               <normaloff/>
-              </iconset>
-             </property>
-             <property name="shortcut">
-              <string>Alt+B</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QWidget" name="widget_ngram" native="true">
-             <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,1,0">
-              <property name="margin">
+           <item>
+            <widget class="QWidget" name="widget_n_gram" native="true">
+             <layout class="QHBoxLayout" name="horizontalLayout_4">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
                <number>0</number>
               </property>
               <item>
-               <widget class="QCheckBox" name="check_ngram">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_2">
+               <widget class="QCheckBox" name="check_n_gram">
                 <property name="text">
                  <string>&amp;Generate lookup table for multi-item query strings,</string>
-                </property>
-                <property name="buddy">
-                 <cstring>check_ngram</cstring>
                 </property>
                </widget>
               </item>
@@ -209,21 +261,11 @@
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
-                  <width>40</width>
-                  <height>20</height>
+                  <width>37</width>
+                  <height>23</height>
                  </size>
                 </property>
                </spacer>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_ngram_info">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A lookup table for multi-item queries is an additional database table. For each token in the corpus, this table also contains information on the &lt;span style=&quot; font-style:italic;&quot;&gt;n&lt;/span&gt; following tokens. Using a lookup table can greatly speed up queries that consist of more than one query item. However, it also greatly increases the disk space required for the corpus database, and it increases the time required to install the corpus.&lt;/p&gt;&lt;p&gt;Lookup tables are recommended for the larger corpora such as the BNC, COCA, or COHA.&lt;/p&gt;&lt;p&gt;Note that even if you do not generate a lookup table for multi-item query strings, you can still use query strings that consist of more than one query item, or that are longer than the lookup table. However, in these cases, the query may be relatively slow.&lt;/p&gt;&lt;p&gt;For a detailed description of multi-token lookup tables, see:&lt;/p&gt;&lt;p&gt;Davies, Mark. Semantically-based queries with a joint &lt;span style=&quot; font-style:italic;&quot;&gt;BNC/WordNet&lt;/span&gt; database. In Facchinetti, Roberta (ed.). &lt;span style=&quot; font-style:italic;&quot;&gt;Corpus linguistics 25 years on.&lt;/span&gt; 149–168. Amsterdam: Rodopi.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="text">
-                 <string>?</string>
-                </property>
-               </widget>
               </item>
              </layout>
             </widget>
@@ -231,52 +273,34 @@
           </layout>
          </widget>
         </item>
-        <item row="3" column="0">
-         <widget class="QRadioButton" name="radio_only_module">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="1">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Only install corpus module (e.g. if you have a network database server)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>Install corpus data and corpus module (if you have a local database server)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QRadioButton" name="radio_complete">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="checked">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
        </layout>
-      </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget_options" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
      </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="issue_label">
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
     </widget>
    </item>
    <item>
@@ -301,7 +325,16 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="margin">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
        <number>10</number>
       </property>
       <item>
@@ -352,6 +385,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CoqClickableLabel</class>
+   <extends>QLabel</extends>
+   <header location="global">..classes</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

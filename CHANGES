@@ -1,17 +1,105 @@
-(development version, still unreleased)
-* add support for encoding detection when reading plain text files
-* allow to build 'corpora' from CSV files
-* show both left and right conditional probabilities in Collocations aggregation
-* add G2 test matrix
-* add test statistics (log-likelihood test, chi-square test) and effects 
-  sizes (phi coefficient, odds ratio)
-* add persistent external links
+0.10.0
 
-0.9.3 20 May 2016
-* fix Windows desktop icon
-* fix issue with building corpora from PDF files
-* add support for really small resolutions
-* add Module information dialog
+This release is a considerable update over earlier versions. These are the
+main fields that have seen large changes:
+
+* the interface has been redesigned and streamlined
+* a completely new data management system, including a revised way of
+  handling functions
+* the new visualization designer allows interactive construction of figures
+  from the query results
+
+Here is an incomplete list of most of the things that have changed or have
+been added:
+
+Interface
+* interface resdesign:
+  - move column selection to the left as 'Data features'
+  - place Query button more prominently in the middle, and rename it
+  - replace Aggregation widget by 'Data management' toolbox
+* add new dialogs to the 'Help' menu:
+  - regular expression tester
+  - 'How to cite' dialog
+  - module information dialog
+* simplify query file widget
+* collect hidden columns in a side bar
+* there is now a search widget
+* change 'Query' button to 'New query'
+* make keyboard shortcuts more consistent
+* add value substitutions
+* improve TextGrid export features
+* use Icons8 icon set
+* add user data columns
+* external links are now persistent when changing the corpus or quitting the
+  program
+* group and summary functions are now saved on quitting the program
+* greatly improve the speed of browsing the results table
+* placeholder for empty cells is now configurable
+
+Data management
+* the displayed context can now be changed after the query
+* add option to restrict contexts to sentence boundaries
+* functions are now added to columns in the results table
+* add completely revised filter dialog
+* add completely revised functions dialog
+* introduce data groups, which can split the results into subsets and allow
+  functions to act only on the subsets
+* introduce Group and Summary functions (the latter replaces the Statistics
+  special table)
+* add new data functions (Subcorpus size, Frequency ptw, Normalized frequency,
+  Number of matches, Number of unique matches, Row number, Type-token ratio)
+* add new string functions (CHAIN, UPPER, LOWER), use regex for COUNT
+* make regular expression function generally more robust
+* add logical functions (ADD, EQUAL, GREATER, GREATEREQUAL, LESS, LESSTHAN,
+  NOTEQUAL, AND, OR, XOR)
+* add G-test matrix (using corrected probabilities for highlighting)
+* add test statistics (log-likelihood test, chi-square test) and effect
+  sizes (phi coefficient, odds ratio)
+* show both left and right conditional probabilities in Collocations
+  aggregation
+* add stopword lists for many languages
+
+Visualization
+* introduce the Visualization designer
+* add new visualizations: heatbar plot, regression plot, scatter plot,
+  violin plot, box-whisker plot
+* allow vertical plots where sensible
+
+Corpora
+* add reference corpus support
+* provide functions that use the reference corpus (Keyness LL, Keyness %DIFF,
+  as well as frequency functions in the reference corpus)
+* big change for corpora that provide audio (currently, only Buckeye is
+  supported):
+    - add spectrogram and waveform contexts
+    - store audio in databases
+    - allow audio playback
+* improve segment lookup in corpora that contain segments
+* allow to build 'corpora' from CSV files
+* add support for encoding detection when reading plain text files
+
+Queries
+* internal: rewrite SQL code generator, which speeds up multi-word queries
+* allow regular expression queries (can be activated in the settings)
+* introduction of _NULL special query item (issue #97)
+* introduction of _PUNCT special query item as a placeholder for any
+  punctuation mark
+* add query cache that can speed up repeated queries (experimental)
+
+Test coverage (only the core modules are reported)
+
+    corpus.py           44%
+    corpusbuilder.py    19%
+    filters.py          78%
+    functionlists.py    62%
+    functions.py        59%
+    links.py            68%
+    managers.py         36%
+    queries.py          28%
+    session.py          26%
+    tables.py           19%
+    textgrids.py        54%
+    tokens.py           89%
 
 0.9.2 1 May 2016
 * fix issue with NLTK module detection
@@ -24,7 +112,7 @@
 
 0.9.1 22 March 2016
 * fix issue in Buckeye and CELEX2 installers
-* add module information to about dialog
+* add module information to About dialog
 
 0.9   21 March 2016
 * initial public release

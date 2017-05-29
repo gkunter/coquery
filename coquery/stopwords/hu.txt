@@ -1,0 +1,37 @@
+# The stopword file 'hu.txt' is used by Coquery (http://www.coquery.org)
+# with permission from Ranks NL (http://www.ranks.nl)
+a
+az
+egy
+be
+ki
+le
+fel
+meg
+el
+át
+rá
+ide 
+oda
+szét
+össze
+vissza
+de
+hát
+és
+vagy
+hogy
+van
+lesz
+volt    
+csak
+nem
+igen
+mint
+én
+te
+õ
+mi
+ti
+õk
+ön

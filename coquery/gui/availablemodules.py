@@ -2,10 +2,10 @@
 """
 availablemodules.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -17,10 +17,10 @@ import sys
 from coquery import options
 from coquery.defines import * 
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.availableModulesUi import Ui_AvailableModules
 
-class AvailableModulesDialog(QtGui.QDialog):
+class AvailableModulesDialog(QtWidgets.QDialog):
     @staticmethod
     def has(module_flag):
         return "yes" if module_flag else "no"
@@ -33,31 +33,36 @@ class AvailableModulesDialog(QtGui.QDialog):
         self.ui.setupUi(self)
         self.ui.table_modules.setHorizontalHeaderLabels(["Module", "Available", "Description"])
 
-        modules = (
-                ("Seaborn", options._use_seaborn),
-                ("PyMySQL", options._use_mysql),
-                ("NLTK", options._use_nltk),
-                ("tgt", options._use_tgt),
-                ("chardet", options._use_chardet),
-                ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options._use_pdfminer),
-                ("python-docx", options._use_docx),
-                ("odfpy", options._use_odfpy),
-                ("BeautifulSoup", options._use_bs4))
+        modules = [
+                ("cachetools", options.use_cachetools),
+                ("PyMySQL", options.use_mysql),
+                ("Seaborn", options.use_seaborn),
+                ("statsmodels", options.use_statsmodels),
+                ("NLTK", options.use_nltk),
+                ("tgt", options.use_tgt),
+                ("chardet", options.use_chardet),
+                ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options.use_pdfminer),
+                ("python-docx", options.use_docx),
+                ("odfpy", options.use_odfpy),
+                ("BeautifulSoup", options.use_bs4),
+                ]
+        if sys.platform.startswith("linux"):
+            modules.insert(0, ("alsaaudio", options.use_alsaaudio))
         
         self.ui.table_modules.setRowCount(len(modules))
         
         for i, (name, flag) in enumerate(modules):
             _, _, description, url = MODULE_INFORMATION[name]
             
-            name_item = QtGui.QTableWidgetItem(name)
-            status_item = QtGui.QTableWidgetItem(self.has(flag))
-            desc_item = QtGui.QTableWidgetItem(re.sub("<[^<]+?>", "", description))
+            name_item = QtWidgets.QTableWidgetItem(name)
+            status_item = QtWidgets.QTableWidgetItem(self.has(flag))
+            desc_item = QtWidgets.QTableWidgetItem(re.sub("<[^<]+?>", "", description))
             self._links[id(name_item)] = url
             
             if flag:
-                status_item.setIcon(options.cfg.main_window.get_icon("sign-check"))
+                status_item.setIcon(get_toplevel_window().get_icon("Checked Checkbox"))
             else:
-                status_item.setIcon(options.cfg.main_window.get_icon("sign-error"))
+                status_item.setIcon(get_toplevel_window().get_icon("Unchecked Checkbox"))
 
             
             self.ui.table_modules.setItem(i, 0, name_item)

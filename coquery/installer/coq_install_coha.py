@@ -19,6 +19,7 @@ import tempfile
 from coquery.corpusbuilder import *
 from coquery.defines import *
 from coquery import options
+from coquery.general import get_chunk
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "????.txt"
@@ -48,7 +49,7 @@ class BuilderClass(BaseCorpusBuilder):
     source_genre = "Genre"
     source_words = "Words"
 
-    expected_files = ["sources_coha.csv", "lexicon.txt",
+    expected_files = ["sources_coha.xlsx", "lexicon.txt",
         "1810.txt", "1820.txt", "1830.txt", "1840.txt", "1850.txt", 
         "1860.txt", "1870.txt", "1880.txt", "1890.txt", "1900.txt", 
         "1910.txt", "1920.txt", "1930.txt", "1940.txt", "1950.txt", 
@@ -147,20 +148,6 @@ class BuilderClass(BaseCorpusBuilder):
             return None
 
     def build_load_files(self):
-        chunk_size = 250000
-        def get_chunk(iterable):
-            """
-            Yield a chunk from the big file given as 'iterable'.
-            
-            This function is based on a rather elegant solution posted on 
-            Stack Overflow: http://stackoverflow.com/a/24862655
-            """
-            iterable = iter(iterable)
-            while True:
-                yield itertools.chain(
-                    [next(iterable)], 
-                    itertools.islice(iterable, chunk_size - 1))
-        
         files = sorted(self.get_file_list(self.arguments.path, self.file_filter))
 
         if self._widget:
@@ -201,26 +188,35 @@ class BuilderClass(BaseCorpusBuilder):
                         temp_file.close()
                         self.DB.load_infile(temp_file.name, self.word_table, arguments)
                         os.remove(temp_file.name)
-            elif base_name == "sources_coha.csv":
-                with codecs.open(file_name, "r", encoding="latin-1") as big_file:
-                    # Iterate the chunks:
-                    for i, lines in enumerate(get_chunk(big_file)):
-                        if self.interrupted:
-                            return
-                        if i == 0:
-                            arguments = "FIELDS TERMINATED BY '\\t' LINES TERMINATED BY '\\n' IGNORE 1 LINES"
-                        else:
-                            arguments = "FIELDS TERMINATED BY '\\t' LINES TERMINATED BY '\\n'"
-                        
-                        # create and fill temporary file:
-                        temp_file = tempfile.NamedTemporaryFile("w", delete=False)
-                        if sys.version_info < (3, 0):
-                            temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
-                        else:
-                            temp_file.write("\n".join([x.strip() for x in lines]))
-                        temp_file.close()
-                        self.DB.load_infile(temp_file.name, self.source_table, arguments)
-                        os.remove(temp_file.name)
+            elif base_name == "sources_coha.xlsx":
+                df = pd.read_excel(file_name)
+                df.columns = [self.source_id,
+                              self.source_words,
+                              self.source_genre,
+                              self.source_year,
+                              self.source_label,
+                              self.source_author,
+                              self.source_publisher]
+                self.DB.load_dataframe(df, self.source_table, self.source_id)
+                #with codecs.open(file_name, "r", encoding="latin-1") as big_file:
+                    ## Iterate the chunks:
+                    #for i, lines in enumerate(get_chunk(big_file)):
+                        #if self.interrupted:
+                            #return
+                        #if i == 0:
+                            #arguments = "FIELDS TERMINATED BY '\\t' LINES TERMINATED BY '\\n' IGNORE 1 LINES"
+                        #else:
+                            #arguments = "FIELDS TERMINATED BY '\\t' LINES TERMINATED BY '\\n'"
+
+                        ## create and fill temporary file:
+                        #temp_file = tempfile.NamedTemporaryFile("w", delete=False)
+                        #if sys.version_info < (3, 0):
+                            #temp_file.write(u"\n".join([x.strip() for x in lines]).encode("utf-8"))
+                        #else:
+                            #temp_file.write("\n".join([x.strip() for x in lines]))
+                        #temp_file.close()
+                        #self.DB.load_infile(temp_file.name, self.source_table, arguments)
+                        #os.remove(temp_file.name)
             else:
                 arguments = "LINES TERMINATED BY '\\n' ({}, {}, {}) ".format(
                     self.corpus_source_id,

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>646</width>
+    <width>640</width>
     <height>480</height>
    </rect>
   </property>
@@ -66,10 +66,13 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Coquery is a free corpus query tool.&lt;/p&gt;&lt;p&gt;Copyright (c) {date} Gero Kunter&lt;/p&gt;&lt;p&gt;Initial development supported by:&lt;br/&gt;Department of English, Heinrich-Heine Universität Düsseldorf&lt;/p&gt;&lt;p&gt;Website: &lt;a href=&quot;http://www.coquery.org&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;http://www.coquery.org&lt;/span&gt;&lt;/a&gt; – Twitter: &lt;a href=&quot;https://twitter.com/hashtag/coquery?f=tweets&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;#Coquery&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Coquery is free software released under the terms of the &lt;a href=&quot;http://coquery.org/license.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;GNU General Public License (version 3)&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Coquery is a free corpus query tool.&lt;/p&gt;&lt;p&gt;Copyright (c) {date} Gero Kunter&lt;/p&gt;&lt;p&gt;Initial development supported by:&lt;br/&gt;Department of English, Heinrich-Heine Universität Düsseldorf&lt;/p&gt;&lt;p&gt;Website: &lt;a href=&quot;http://www.coquery.org&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;http://www.coquery.org&lt;/span&gt;&lt;/a&gt; – Twitter: &lt;a href=&quot;https://twitter.com/hashtag/coquery?f=tweets&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;#Coquery&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Coquery is free software released under the terms of the &lt;a href=&quot;http://coquery.org/license.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;GNU General Public License (version 3)&lt;/span&gt;&lt;/a&gt;.  Icon set by &lt;a href=&quot;http://icons8.com&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;icons8.com&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
      <property name="openExternalLinks">
       <bool>true</bool>
@@ -84,7 +87,7 @@
      <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
-       <height>0</height>
+       <height>40</height>
       </size>
      </property>
     </spacer>

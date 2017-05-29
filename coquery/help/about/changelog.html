@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Change log &#8212; Coquery 0.10.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.10.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="../index.html">
+            <img class="logo" src="../_static/logo_small.png" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="../index.html">Coquery 0.10.0 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="change-log">
+<span id="changelog"></span><h1>Change log</h1>
+<div class="toctree-wrapper compound">
+</div>
+<div class="section" id="icame38-may-23-2017">
+<h2>0.10.0 &#8220;ICAME38&#8221; May 23, 2017</h2>
+<p>This release is a considerable update over earlier versions. These are the
+main fields that have seen large changes:</p>
+<ul class="simple">
+<li>the interface has been redesigned and streamlined</li>
+<li>a completely new data management system, including a revised way of
+handling functions</li>
+<li>the new visualization designer allows interactive construction of figures
+from the query results</li>
+</ul>
+<p>Here is an incomplete list of most of the things that have changed or have
+been added.</p>
+<div class="section" id="interface">
+<h3>Interface</h3>
+<ul class="simple">
+<li>interface resdesign:<ul>
+<li>move column selection to the left as &#8216;Data features&#8217;</li>
+<li>place Query button more prominently in the middle, and rename it</li>
+<li>replace Aggregation widget by &#8216;Data management&#8217; toolbox</li>
+</ul>
+</li>
+<li>add new dialogs to the &#8216;Help&#8217; menu:<ul>
+<li>regular expression tester</li>
+<li>&#8216;How to cite&#8217; dialog</li>
+<li>module information dialog</li>
+</ul>
+</li>
+<li>simplify query file widget</li>
+<li>collect hidden columns in a side bar</li>
+<li>there is now a search widget</li>
+<li>change &#8216;Query&#8217; button to &#8216;New query&#8217;</li>
+<li>make keyboard shortcuts more consistent</li>
+<li>add value substitutions</li>
+<li>improve TextGrid export features</li>
+<li>use Icons8 icon set</li>
+<li>add user data columns</li>
+<li>external links are now persistent when changing the corpus or quitting the
+program</li>
+<li>group and summary functions are now saved on quitting the program</li>
+<li>greatly improve the speed of browsing the results table</li>
+<li>placeholder for empty cells is now configurable</li>
+</ul>
+</div>
+<div class="section" id="data-management">
+<h3>Data management</h3>
+<ul class="simple">
+<li>the displayed context can now be changed after the query</li>
+<li>add option to restrict contexts to sentence boundaries</li>
+<li>functions are now added to columns in the results table</li>
+<li>add completely revised filter dialog</li>
+<li>add completely revised functions dialog</li>
+<li>introduce data groups, which can split the results into subsets and allow
+functions to act only on the subsets</li>
+<li>introduce Group and Summary functions (the latter replaces the Statistics
+special table)</li>
+<li>add new data functions (Subcorpus size, Frequency ptw, Normalized frequency,
+Number of matches, Number of unique matches, Row number, Type-token ratio)</li>
+<li>add new string functions (CHAIN, UPPER, LOWER), use regex for COUNT</li>
+<li>make regular expression function generally more robust</li>
+<li>add logical functions (ADD, EQUAL, GREATER, GREATEREQUAL, LESS, LESSTHAN,
+NOTEQUAL, AND, OR, XOR)</li>
+<li>add G-test matrix (using corrected probabilities for highlighting)</li>
+<li>add test statistics (log-likelihood test, chi-square test) and effect
+sizes (phi coefficient, odds ratio)</li>
+<li>show both left and right conditional probabilities in Collocations
+aggregation</li>
+<li>add stopword lists for many languages</li>
+</ul>
+</div>
+<div class="section" id="visualization">
+<h3>Visualization</h3>
+<ul class="simple">
+<li>introduce the Visualization designer</li>
+<li>add new visualizations: heatbar plot, regression plot, scatter plot,
+violin plot, box-whisker plot</li>
+<li>allow vertical plots where sensible</li>
+</ul>
+</div>
+<div class="section" id="corpora">
+<h3>Corpora</h3>
+<ul class="simple">
+<li>add reference corpus support</li>
+<li>provide functions that use the reference corpus (Keyness LL, Keyness %DIFF,
+as well as frequency functions in the reference corpus)</li>
+<li>big change for corpora that provide audio (currently, only Buckeye is
+supported):<ul>
+<li>add spectrogram and waveform contexts</li>
+<li>store audio in databases</li>
+<li>allow audio playback</li>
+</ul>
+</li>
+<li>improve segment lookup in corpora that contain segments</li>
+<li>allow to build &#8216;corpora&#8217; from CSV files</li>
+<li>add support for encoding detection when reading plain text files</li>
+</ul>
+</div>
+<div class="section" id="queries">
+<h3>Queries</h3>
+<ul class="simple">
+<li>internal change: rewrite SQL code generator, which speeds up multi-word queries</li>
+<li>allow regular expression queries (can be activated in the settings)</li>
+<li>introduction of _NULL special query item (issue #97)</li>
+<li>introduction of _PUNCT special query item as a placeholder for any
+punctuation mark</li>
+<li>add query cache that can speed up repeated queries (experimental)</li>
+</ul>
+</div>
+<div class="section" id="test-coverage">
+<h3>Test coverage</h3>
+<p>(only the core modules are reported)</p>
+<blockquote>
+<div>corpus.py           44%
+corpusbuilder.py    19%
+filters.py          78%
+functionlists.py    62%
+functions.py        59%
+links.py            68%
+managers.py         36%
+queries.py          28%
+session.py          26%
+tables.py           19%
+textgrids.py        54%
+tokens.py           89%</div></blockquote>
+</div>
+</div>
+<div class="section" id="a-september-1-2017">
+<h2>0.9.2a September 1, 2017</h2>
+<ul class="simple">
+<li>fix issue with desktop icon on Windows</li>
+</ul>
+</div>
+<div class="section" id="may-1-2016">
+<h2>0.9.2 May 1, 2016</h2>
+<ul class="simple">
+<li>fix issue with NLTK module detection</li>
+<li>add support for .docx, .odt, and HTML files when building a corpus</li>
+<li>allow query results from speech corpora to be saved as Praat TextGrids</li>
+<li>Brown installer: added</li>
+<li>Buckeye installer: now use lemma transcripts for lemma query items</li>
+<li>COHA installer: fix issue with file names</li>
+<li>Switchboard installer: provide full conversation and speaker information</li>
+</ul>
+</div>
+<div class="section" id="march-22-2016">
+<h2>0.9.1 March 22, 2016</h2>
+<ul class="simple">
+<li>fix issue in Buckeye and CELEX2 installers</li>
+<li>add module information to About dialog</li>
+</ul>
+</div>
+<div class="section" id="march-21-2016">
+<h2>0.9   March 21, 2016</h2>
+<ul class="simple">
+<li>initial public release</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="../search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+            </form>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

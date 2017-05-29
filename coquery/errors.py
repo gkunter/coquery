@@ -2,16 +2,15 @@
 """
 errors.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from __future__ import absolute_import
 
 import sys
 import traceback
@@ -20,12 +19,27 @@ import logging
 import re
 import textwrap
 
+from . import NAME
 from .defines import *
 from .unicode import utf8
+
+_source_paths = [sys.path[0]]
+
+def add_source_path(s):
+    global _source_paths
+    _source_paths.append(s)
+
+def remove_source_path(s):
+    global _source_paths
+    _source_paths.remove(s)
+
+def get_source_paths():
+    return _source_paths
 
 class GenericException(Exception):
     def __init__(self, *par):
         self.par = ", ".join([utf8(x) for x in par])
+        self.error_message = "Error"
 
     def __str__(self):
         if self.par:
@@ -52,14 +66,14 @@ class NoArgumentsError(NoTraceException):
 class VisualizationNoDataError(NoTraceException):
     error_message = """
     <p><b>The 'Query results' view is empty.</b></p>
-    <p>You have either not run a query in this session yet, there are no 
+    <p>You have either not run a query in this session yet, there are no
     tokens in the corpus that match your last query, or you have hidden all
     output columns.</p>
-    <p>Try to run a visualization again once the Query results view is not 
+    <p>Try to run a visualization again once the Query results view is not
     empty anymore.</p>
     """
 
-class VisualizationModuleError:
+class VisualizationModuleError(NoTraceException):
     def __init__(self, module, msg):
         self.error_message = """
         <p><b>Could not load module '{module}'</b></p>
@@ -71,35 +85,35 @@ class VisualizationModuleError:
         <p>Please include this error message:</p>
         <p>{msg}</p>
         """.format(module=module, msg=msg)
-    
+
 class VisualizationInvalidLayout(NoTraceException):
     error_message = """<p><b>The visualization grid layout is too large.</b></p>
-    <p>The visualization could not be plotted because either the row grouping 
+    <p>The visualization could not be plotted because either the row grouping
     factor or the column grouping factor contains more than 16 distinct values.
     The resulting plot would thus contain more than 16 rows or columns, which
     is too small to plot.</p>
-    <p>You may try to rearrange your results table by either hiding or moving 
+    <p>You may try to rearrange your results table by either hiding or moving
     the column that causes this problem, or by selecting other output columns
     with less distinct values.</p>"""
 
 class VisualizationInvalidDataError(NoTraceException):
     error_message = """<p><b>Your results table cannot be plotted by this visualizer.</b></p>
     <p>The visualizer that you selected expects a particular type of data that
-    could not be found in the results table. For example, the 'Time Data' 
+    could not be found in the results table. For example, the 'Time Data'
     visualizers expect a data column that contains temporal data (e.g. Date
     or Age).</p>
     <p>You can either choose a different visualization for your results table,
-    or you can select those output columns which provide the required data. 
+    or you can select those output columns which provide the required data.
     After you have re-run the query with these additional output columns, you
     can try to visualize the results table again.</p>"""
-    
+
 class CollocationNoContextError(NoTraceException):
     error_message = """<p><b>Cannot calculate the collocations</b></p>
     <p>In order to calculate the collocations of a word, a context span
-    has to be defined. Use the "Left context" and "Right context" field to 
+    has to be defined. Use the "Left context" and "Right context" field to
     set the span of words within which Coquery will search for collocates.
     </p>"""
-    
+
 class ContextUnvailableError(NoTraceException):
     error_message = """
     <p>The selected corpus does not provide enough information to show the
@@ -140,14 +154,16 @@ class UnknownArgumentError(NoTraceException):
     error_message = "Unknown argument given to script."
 
 class ConfigurationError(GenericException):
-    error_message = "Configuration file incomplete or with errors."
+    def __init__(self, msg):
+        self.error_message = msg
+        self.par = ""
 
 class NoCorpusError(NoTraceException):
     error_message = "No corpus is available."
 
 class NoCorpusSpecifiedError(NoTraceException):
     error_message = "No corpus name given to script."
-    
+
 class CorpusUnavailableError(NoTraceException):
     error_message = "No corpus available with given name"
 
@@ -191,6 +207,9 @@ class TokenUnsupportedTranscriptError(NoTraceException):
 class InvalidFilterError(NoTraceException):
     error_message = "Invalid query filter specification"
 
+class WordInformationUnavailableError(NoTraceException):
+    error_message = "Word information is not avaiable"
+
 class CorpusUnavailableQueryTypeError(GenericException):
     error_message = "Query type %s not available for corpus %s"
     def __init__(self, Corpus, Type):
@@ -208,6 +227,9 @@ class LexiconUnsupportedFunctionError(GenericException):
 
 class WordNotInLexiconError(NoTraceException):
     error_message = "Word is not in the lexicon"
+
+class FullLexiconRequestedError(NoTraceException):
+    error_message = "The complete lexicon was requested."
 
 class NoLemmaInformationError(NoTraceException):
     error_message = "The current resource does not provide lemma information."
@@ -244,17 +266,17 @@ class SQLNoConfigurationError(NoTraceException):
     error_message = "No MySQL configuration could be detected."
 
 class SQLNoConnectorError(GenericException):
-    error_message = """The MySQL connector module 'pymysql' was not found for 
+    error_message = """The MySQL connector module 'pymysql' was not found for
     your current Python configuration.
-    
+
     Please install this module, and try again. On many systems, you can use
     the Python package installer 'pip' to do this. The command to install
     pymysql using pip is:
-    
+
     pip install pymysql
-    
-    If your receive an error message which states that the command 'pip' 
-    could not be found, you need to install it first. Please refer to 
+
+    If your receive an error message which states that the command 'pip'
+    could not be found, you need to install it first. Please refer to
     https://pip.pypa.io/ for instructions.
     """
 
@@ -264,13 +286,16 @@ def get_error_repr(exc_info):
     trace_string = ""
     Indent = ""
     Text = ""
-    for FileName, LineNo, FunctionName, Text in Trace:
-        ModuleName = os.path.split(FileName) [1]
-        trace_string += "%s %s, line %s: %s\n" % (Indent, ModuleName, LineNo, FunctionName)
-        Indent += "  "
-    file_location = "{}, line {}".format(FileName, LineNo)
-    if Text:
-        trace_string += "%s> %s\n" % (Indent[:-1], Text)
+    for file_name, line_no, func_name, text in Trace:
+        path, module_name = os.path.split(file_name)
+        # only print exceptions from Coquery files:
+        if any([path.startswith(x) for x in get_source_paths()]):
+            trace_string += "{} {}, line {}: {}\n".format(
+                Indent, module_name, line_no, func_name.replace("<", "&lt;"))
+            Indent += "  "
+    file_location = "{}, line {}".format(file_name, line_no)
+    if text:
+        trace_string += "%s> %s\n" % (Indent[:-1], text)
     return (exc_type, exc_obj, trace_string, file_location)
 
 def print_exception(exc):
@@ -290,7 +315,7 @@ def print_exception(exc):
         par = par.replace("\n", " ").strip(" ")
         par = par.replace("  ", " ")
         print("\n".join(
-            textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)), 
+            textwrap.wrap(re.sub('<[^>]*>', '', par), width=70, replace_whitespace=False)),
             file=sys.stderr)
         print(file=sys.stderr)
 

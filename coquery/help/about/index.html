@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>About Coquery &mdash; Coquery 0.9.3 documentation</title>
+    <title>About Coquery &#8212; Coquery 0.10.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,16 +14,17 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.9.3',
+        VERSION:     '0.10.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.3 documentation" href="../index.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Screenshot gallery" href="gallery.html" />
     <link rel="prev" title="Download" href="../download/index.html" /> 
   </head>
@@ -34,7 +35,7 @@
             <img class="logo" src="../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../index.html">Coquery 0.9.3 documentation</a></div>
+          href="../index.html">Coquery 0.10.0 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="../download/index.html" title="Download"
              accesskey="P">previous</a> |
@@ -54,8 +55,6 @@
   <div class="section" id="about-coquery">
 <span id="overview"></span><h1>About Coquery</h1>
 <div class="toctree-wrapper compound">
-<ul class="simple">
-</ul>
 </div>
 <div class="section" id="features">
 <h2>Features</h2>
@@ -81,7 +80,7 @@ translators, and anybody who wishes to search and analyse a text corpus.</p>
                 <li>Use string functions e.g. to test if a token contains a letter sequence</li>
                 <li>Use the same query syntax for all installed corpora</li>
                 <li>Automate queries by reading them from an input file</li>
-                <li>Store your results as CSV files or <a href="http://www.praat.org">Praat</a> TextGrid files (if timing information is available)</li>
+                <li>Store your results as CSV files or <a href="http://www.praat.org">Praat</a> TextGrid files (for time-annotated corpora)</li>
             </ul>
         </div>
     </div>
@@ -90,8 +89,10 @@ translators, and anybody who wishes to search and analyse a text corpus.</p>
         <div class="col-md-6">
             <h2>Analysis</h2>
             <ul>
-                <li>Summarize the query results as frequency tables</li>
-                <li>Calculate entropies and relative frequencies</li>
+                <li>Summarize the query results as frequency or contingency tables</li>
+                <li>Create a G-test matrix for query results to detect statistically significant differences</li>
+                <li>Run statistical tests of independence, and estimate the effect sizes</li>
+                <li>Calculate entropies and relative or normalized frequencies</li>
                 <li>Fetch collocations, and calculate association statistics like mutual information scores or conditional probabilities</li>
             </ul>
         </div>
@@ -126,7 +127,7 @@ translators, and anybody who wishes to search and analyse a text corpus.</p>
 <p>Coquery already has installers for the following linguistic corpora:</p>
 <div class="list-group">
     <a class="list-group-item" href="http://www.natcorp.ox.ac.uk/">British National Corpus (BNC)</a>
-    <a class="list-group-item" href="https://archive.org/download/BrownCorpus">Brown Corpus</a>
+    <a class="list-group-item" href="http://clu.uni.no/icame/manuals/BROWN/INDEX.HTM">Brown Corpus</a>
     <a class="list-group-item" href="http://buckeyecorpus.osu.edu/">Buckeye Corpus</a>
     <a class="list-group-item" href="https://catalog.ldc.upenn.edu/LDC96L14">CELEX Lexical Database (English)</a>
     <a class="list-group-item" href="http://www.speech.cs.cmu.edu/cgi-bin/cmudict">Carnegie Mellon Pronunciation Dictionary (CMUdict)</a>
@@ -141,6 +142,10 @@ data from the linked websites.</p>
 either program a custom installer for your corpus, or you can <a class="reference external" href="../contact.php">contact</a>
 the Coquery developer whether an installer for your corpus may be included
 in a future release of Coquery.</p>
+</div>
+<div class="section" id="development">
+<h2>Development</h2>
+<p>See the <a class="reference internal" href="changelog.html#changelog"><span class="std std-ref">Change log</span></a> for changes.</p>
 </div>
 <div class="section" id="license">
 <h2>License</h2>
@@ -167,9 +172,6 @@ also licensed under the GNU GPL.</p>
                 <input type="hidden" name="check_keywords" value="yes" />
                 <input type="hidden" name="area" value="default" />
             </form>
-            <p class="searchtip" style="font-size: 90%">
-                Enter search terms or a module, class or function name.
-            </p>
           </div>
         </div>
         <div class="clearer"></div>

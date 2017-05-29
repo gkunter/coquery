@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Coquery Documentation: Main interface &mdash; Coquery 0.9.3 documentation</title>
+    <title>Coquery Documentation: Main interface &#8212; Coquery 0.10.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,17 +14,17 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.9.3',
+        VERSION:     '0.10.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.3 documentation" href="../../index.html" />
-    <link rel="up" title="Reference guide" href="index.html" />
+    <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Menu entries" href="menu.html" />
     <link rel="prev" title="Reference guide" href="index.html" /> 
   </head>
@@ -35,7 +35,7 @@
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.9.3 documentation</a></div>
+          href="../../index.html">Coquery 0.10.0 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="index.html" title="Reference guide"
              accesskey="P">previous</a> |
@@ -52,22 +52,23 @@
       <div class="documentwrapper">
           <div class="body" role="main">
             
-  <div class="section" id="main-interface">
-<span id="interface"></span><h1>Main interface</h1>
+  <p id="interface"><strong>This part of the documentation is outdated.</strong></p>
+<div class="section" id="main-interface">
+<h1>Main interface</h1>
 <div class="figure" id="id1">
-<a class="reference internal image-reference" href="../../_images/interface.png"><img alt="../../_images/interface.png" src="../../_images/interface.png" /></a>
+<a class="reference internal image-reference" href="../../_images/interface.png"><img alt="../../_images/interface.png" src="../../_images/interface.png" style="width: 1019.0px; height: 773.0px;" /></a>
 <p class="caption"><span class="caption-text">The main Coquery interface.</span></p>
 </div>
 <div class="section" id="corpus-selector">
 <h2>Corpus selector</h2>
 <div class="figure" id="id2">
-<a class="reference internal image-reference" href="../../_images/corpus_select.png"><img alt="../../_images/corpus_select.png" src="../../_images/corpus_select.png" /></a>
+<a class="reference internal image-reference" href="../../_images/corpus_select.png"><img alt="../../_images/corpus_select.png" src="../../_images/corpus_select.png" style="width: 189.0px; height: 51.0px;" /></a>
 <p class="caption"><span class="caption-text">The corpus selector.</span></p>
 </div>
 <p>The corpus selector is a drop-down menu that can be used to change the
 currently active corpus. If you click on the selector, a list of all corpora
 that have been installed for the current database connection (see
-<a class="reference internal" href="../userguide/connections.html#connections"><span>Database connections</span></a> for details) will be shown. By clicking on an entry in
+<a class="reference internal" href="../userguide/connections.html#connections"><span class="std std-ref">Database connections</span></a> for details) will be shown. By clicking on an entry in
 the list, that corpus becomes now the active corpus.</p>
 <p>Changing the corpus can change the selected output columns in the Output
 column tree. If a currently selected column is internally mapped on the same
@@ -78,7 +79,7 @@ selected also for the new corpus.</p>
 <div class="section" id="context-options">
 <h2>Context options</h2>
 <div class="figure" id="id3">
-<a class="reference internal image-reference" href="../../_images/contexts.png"><img alt="../../_images/contexts.png" src="../../_images/contexts.png" /></a>
+<a class="reference internal image-reference" href="../../_images/contexts.png"><img alt="../../_images/contexts.png" src="../../_images/contexts.png" style="width: 205.0px; height: 123.0px;" /></a>
 <p class="caption"><span class="caption-text">The context options.</span></p>
 </div>
 <p>If you wish to include token contexts in the results table, you can choose
@@ -107,12 +108,12 @@ context tokens</p>
 <div class="section" id="stop-words">
 <h2>Stop words</h2>
 <div class="figure" id="id4">
-<a class="reference internal image-reference" href="../../_images/stopwords_button.png"><img alt="../../_images/stopwords_button.png" src="../../_images/stopwords_button.png" /></a>
+<a class="reference internal image-reference" href="../../_images/stopwords_button.png"><img alt="../../_images/stopwords_button.png" src="../../_images/stopwords_button.png" style="width: 93.0px; height: 37.0px;" /></a>
 <p class="caption"><span class="caption-text">The Stop words button.</span></p>
 </div>
 <p>Clicking on the &#8216;Stop-words&#8217; button opens the Stop words dialog.</p>
 <div class="figure" id="id5">
-<a class="reference internal image-reference" href="../../_images/stopwords.png"><img alt="../../_images/stopwords.png" src="../../_images/stopwords.png" /></a>
+<a class="reference internal image-reference" href="../../_images/stopwords.png"><img alt="../../_images/stopwords.png" src="../../_images/stopwords.png" style="width: 415.0px; height: 336.0px;" /></a>
 <p class="caption"><span class="caption-text">The Stop words dialog.</span></p>
 </div>
 <p>Stop words are words that are ignored in a corpus query, and which do not
@@ -125,7 +126,7 @@ stop word list. In order to enter a new stop word, type the word into the
 entry field, and press return. The new stop word will be listed as active.</p>
 <p>In Coquery, stop words use the same syntax as query string items. Thus, it
 is, for example, possible to specifcy the stop word <code class="docutils literal"><span class="pre">??</span></code>, which treats all
-words as stop words that consist of exactly two letters. See <a class="reference internal" href="../userguide/syntax.html#syntax"><span>Query syntax</span></a>
+words as stop words that consist of exactly two letters. See <a class="reference internal" href="../userguide/syntax.html#syntax"><span class="std std-ref">Query syntax</span></a>
 for details.</p>
 <p>Click the &#8216;Reset&#8217; button to remove all stop words. Click the &#8216;Save&#8217; button to
 store the list of currently active stop words to a text file. Click the
@@ -134,9 +135,9 @@ the active stop words. Click the &#8216;Ok&#8217; button to close the dialog.</p
 </div>
 <div class="section" id="query-strings">
 <h2>Query strings</h2>
-<p>The syntax of query strings in Coquery is described in detail in <a class="reference internal" href="../userguide/syntax.html#syntax"><span>Query syntax</span></a>.</p>
+<p>The syntax of query strings in Coquery is described in detail in <a class="reference internal" href="../userguide/syntax.html#syntax"><span class="std std-ref">Query syntax</span></a>.</p>
 <div class="figure" id="id6">
-<a class="reference internal image-reference" href="../../_images/queries.png"><img alt="../../_images/queries.png" src="../../_images/queries.png" /></a>
+<a class="reference internal image-reference" href="../../_images/queries.png"><img alt="../../_images/queries.png" src="../../_images/queries.png" style="width: 302.0px; height: 219.0px;" /></a>
 <p class="caption"><span class="caption-text">The query string entry field and the query file selector.</span></p>
 </div>
 <p>There are two ways of specifying the query strings for the next query: either
@@ -154,7 +155,7 @@ selected text file will be considered a query string.</p>
 button to specify the format of the text file. The Input file dialog will
 appear:</p>
 <div class="figure" id="id7">
-<a class="reference internal image-reference" href="../../_images/csvoptions.png"><img alt="../../_images/csvoptions.png" src="../../_images/csvoptions.png" /></a>
+<a class="reference internal image-reference" href="../../_images/csvoptions.png"><img alt="../../_images/csvoptions.png" src="../../_images/csvoptions.png" style="width: 407.0px; height: 336.0px;" /></a>
 <p class="caption"><span class="caption-text">The Input file options dialog.</span></p>
 </div>
 <p>The field &#8216;Character that separates columns&#8217; can be used to specify the
@@ -178,7 +179,7 @@ characters, these marks can be selected from the drop-down menu.</p>
 <div class="section" id="output-columns">
 <h2>Output columns</h2>
 <div class="figure" id="id8">
-<a class="reference internal image-reference" href="../../_images/output_options.png"><img alt="../../_images/output_options.png" src="../../_images/output_options.png" /></a>
+<a class="reference internal image-reference" href="../../_images/output_options.png"><img alt="../../_images/output_options.png" src="../../_images/output_options.png" style="width: 151.0px; height: 134.0px;" /></a>
 <p class="caption"><span class="caption-text">The Output columns tree for the corpus <em>ALICE</em>.</span></p>
 </div>
 <p>The Output column tree specifies the columns that will be included in the
@@ -198,7 +199,7 @@ item will still be evaluated correctly. For example, it is possible to
 have the lemma item <code class="docutils literal"><span class="pre">[queen]</span></code> as the query string without selecting
 that column in the results table.</p>
 </div>
-<p>Right-clicking on an output column opens the <a class="reference internal" href="output_menu.html#output-column-submenu"><span>Output column submenu</span></a>,
+<p>Right-clicking on an output column opens the <a class="reference internal" href="output_menu.html#output-column-submenu"><span class="std std-ref">Output column submenu</span></a>,
 from which the Unique value viewer, the Add function dialog, and the
 External link dialog can be opened.</p>
 </div>
@@ -240,9 +241,6 @@ External link dialog can be opened.</p>
                 <input type="hidden" name="check_keywords" value="yes" />
                 <input type="hidden" name="area" value="default" />
             </form>
-            <p class="searchtip" style="font-size: 90%">
-                Enter search terms or a module, class or function name.
-            </p>
           </div>
         </div>
         <div class="clearer"></div>

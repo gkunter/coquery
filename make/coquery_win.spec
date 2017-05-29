@@ -4,38 +4,49 @@ import os
 import sys
 import glob
 
+sys.setrecursionlimit(10000)
+
 block_cipher = None
 
-VERSION = os.getenv("COQ_VERSION")
-
-coq_path = os.path.realpath(os.path.join(os.getenv("HOMEPATH"), "coquery-{}".format(VERSION), "coquery"))
+coq_path = os.path.realpath(
+            os.path.join(os.getenv("HOMEPATH"),
+                         "coquery-release", "coquery"))
 python_path = os.path.split(sys.executable)[0]
 
 binaries = []
 l = []
 data = []
 
+
 if sys.platform == "win32":
     binaries = []
+
+    # This site recommends to include two C++ runtime dlls with the installer
+    # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
+
     dll_path = os.path.join(python_path, "Lib", "site-packages", "numpy", "core", "*.dll")
     for file in glob.glob(dll_path):
         if "mkl_" in file or "libiomp5md.dll" in file:
             binaries.append((file, "."))
 
 for file in glob.glob(os.path.join(coq_path, "icons", "small-n-flat", "PNG")):
-	data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
+    data.append((file, os.path.join("icons", "small-n-flat", "PNG")))
+for file in glob.glob(os.path.join(coq_path, "icons", "Icons8", "PNG")):
+    data.append((file, os.path.join("icons", "Icons8", "PNG")))
 for file in glob.glob(os.path.join(coq_path, "icons", "artwork")):
-	data.append((file, os.path.join("icons", "artwork")))
+    data.append((file, os.path.join("icons", "artwork")))
 
 for file in glob.glob(os.path.join(coq_path, "texts")):
-	data.append((file, os.path.join("texts")))
+    data.append((file, os.path.join("texts")))
 for file in glob.glob(os.path.join(coq_path, "help")):
-	data.append((file, os.path.join("help")))
+    data.append((file, os.path.join("help")))
+for file in glob.glob(os.path.join(coq_path, "stopwords")):
+    data.append((file, os.path.join("stopwords")))
 
 for file in glob.glob(os.path.join(coq_path, "installer", "coq_install_*.py")):
-	l.append((file, "installer"))
+    l.append((file, "installer"))
 for file in glob.glob(os.path.join(coq_path, 'visualizer', '*.py')):
-	l.append((file, "visualizer"))
+    l.append((file, "visualizer"))
 
 
 pslexer = os.path.join(python_path, "Lib", "site-packages", "pdfminer", "pslexer.py")
@@ -49,7 +60,7 @@ a = Analysis([os.path.join('..', 'Coquery.py')],
              binaries=binaries,
              datas=data + l,
              hiddenimports=['transpose'] + [os.path.splitext(os.path.basename(x))[0] for x, _ in l],
-             hookspath=[],
+             hookspath=["."],
              runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
@@ -78,7 +89,7 @@ else:
               upx=True,
               console=False )
 
-              
+
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -92,7 +103,7 @@ if sys.platform == "darwin":
                  name='Coquery.app',
                  icon=os.path.join(coq_path, "icons", "artwork", "coquery.icns"))
 
-               
+
 # a.binaries = [x for x in a.binaries if not x[0].startswith("scipy")]
 
 # a.binaries = [x for x in a.binaries if not x[0].startswith("IPython")]

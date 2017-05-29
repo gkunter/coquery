@@ -78,6 +78,7 @@ lexical databases:
 -  `British National Corpus (BNC)`_
 -  `Brown Corpus`_
 -  `Buckeye Corpus`_
+-  `Brown Corpus`_
 -  `CELEX Lexical Database (English)`_
 -  `Carnegie Mellon Pronunciation Dictionary (CMUdict)`_
 -  `Corpus of Contemporary American English (COCA)`_
@@ -87,7 +88,7 @@ lexical databases:
 -  `Switchboard-1 Telephone Speech Corpus`_
 
 .. _British National Corpus (BNC): http://www.natcorp.ox.ac.uk/
-.. _Brown Corpus: https://archive.org/download/BrownCorpus/
+.. _Brown Corpus: http://clu.uni.no/icame/manuals/BROWN/INDEX.HTM
 .. _Buckeye Corpus: http://buckeyecorpus.osu.edu/
 .. _CELEX Lexical Database (English): https://catalog.ldc.upenn.edu/LDC96L14
 .. _Carnegie Mellon Pronunciation Dictionary (CMUdict): http://www.speech.cs.cmu.edu/cgi-bin/cmudict

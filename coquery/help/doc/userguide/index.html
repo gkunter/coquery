@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Coquery Documentation: Users manual &mdash; Coquery 0.9.3 documentation</title>
+    <title>Coquery Documentation: Users manual &#8212; Coquery 0.10.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,17 +14,17 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.9.3',
+        VERSION:     '0.10.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Coquery 0.9.3 documentation" href="../../index.html" />
-    <link rel="up" title="Coquery documentation" href="../index.html" />
+    <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Query syntax" href="syntax.html" />
     <link rel="prev" title="Tutorial" href="../tutorial/index.html" /> 
   </head>
@@ -35,7 +35,7 @@
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.9.3 documentation</a></div>
+          href="../../index.html">Coquery 0.10.0 documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="../tutorial/index.html" title="Tutorial"
              accesskey="P">previous</a> |
@@ -69,19 +69,12 @@
 <li class="toctree-l2"><a class="reference internal" href="syntax.html#coca-byu-syntax-compatibility">COCA/BYU syntax compatibility</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="columns.html">Output columns</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="columns.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="columns.html#special-tables">Special tables</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="contexts.html">Working with contexts</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="contexts.html#introduction">Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contexts.html#context-queries">Context queries</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contexts.html#context-viewer">Context viewer</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="filters.html">Corpus filters</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="filters.html#overview">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="management.html">Data management</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="management.html#feature-order">Feature order</a></li>
+<li class="toctree-l2"><a class="reference internal" href="management.html#context">Context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="management.html#stopwords">Stopwords</a></li>
+<li class="toctree-l2"><a class="reference internal" href="management.html#data-groups">Data groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="management.html#transformations">Transformations</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="visualizations.html">Visualizations</a><ul>
@@ -92,18 +85,8 @@
 <li class="toctree-l2"><a class="reference internal" href="visualizations.html#figure-settings">Figure settings</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="aggregations.html">Aggregations</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="aggregations.html#introduction">Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="aggregations.html#none">None</a></li>
-<li class="toctree-l2"><a class="reference internal" href="aggregations.html#types">Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="aggregations.html#frequency">Frequency</a></li>
-<li class="toctree-l2"><a class="reference internal" href="aggregations.html#contingency">Contingency</a></li>
-<li class="toctree-l2"><a class="reference internal" href="aggregations.html#collocations">Collocations</a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="connections.html">Database connections</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="connections.html#introduction">Introduction</a></li>
-<li class="toctree-l2"><a class="reference internal" href="connections.html#server-less-connections">Server-less connections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="connections.html#serverless-connections">Serverless connections</a></li>
 <li class="toctree-l2"><a class="reference internal" href="connections.html#mysql-connections">MySQL connections</a></li>
 <li class="toctree-l2"><a class="reference internal" href="connections.html#setting-up-a-mysql-server">Setting up a MySQL server</a></li>
 </ul>
@@ -127,9 +110,6 @@
                 <input type="hidden" name="check_keywords" value="yes" />
                 <input type="hidden" name="area" value="default" />
             </form>
-            <p class="searchtip" style="font-size: 90%">
-                Enter search terms or a module, class or function name.
-            </p>
           </div>
         </div>
         <div class="clearer"></div>

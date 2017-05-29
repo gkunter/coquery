@@ -4,13 +4,10 @@
 from __future__ import unicode_literals
 
 import unittest
-import os.path
-import sys
 
-sys.path.append(os.path.join(sys.path[0], "../coquery"))
-from bibliography import *
+from coquery.bibliography import *
 
-# Create a tuple containing the available string types 
+# Create a tuple containing the available string types
 # (Python 3 has no unicode):
 try:
     string_types = (unicode, str)
@@ -33,13 +30,13 @@ class TestPerson(unittest.TestCase):
         self.assertEqual(name.last, "Münster")
 
         name = Person(first="Jürgen", middle="M.", last="Münster")
-        self.assertTrue(isinstance(name.first, (unicode, str)))
+        self.assertTrue(isinstance(name.first, string_types))
         self.assertTrue(isinstance(name.middle, list))
-        self.assertTrue(isinstance(name.last, (unicode, str)))
+        self.assertTrue(isinstance(name.last, string_types))
 
     def test_repr(self):
         name = Person(first="Jürgen", middle=["Otto", "Emil"], prefix="Dr.", suffix="MA", last="Münster")
-        # The order of the named arguments in __repr__ is not fixed, so we 
+        # The order of the named arguments in __repr__ is not fixed, so we
         # test equality by sorting all the characters in the strings:
         self.assertEqual(sorted(name.__repr__()), sorted("Person(first='Jürgen', middle=['Otto', 'Emil'], prefix='Dr.', suffix='MA', last='Münster')"))
 
@@ -87,12 +84,13 @@ class TestPersonList(unittest.TestCase):
     def test_init(self):
         authors = PersonList()
         authors = PersonList(self.name1, self.name2)
-        
+
     def test_repr(self):
         authors = PersonList()
         self.assertEqual(authors.__repr__(), "PersonList()")
         authors = PersonList(self.name1)
-        self.assertEqual(authors.__repr__(), "PersonList({})".format(self.name1.__repr__()))
+        self.assertEqual(authors.__repr__(),
+                         "PersonList({})".format(self.name1.__repr__()))
         authors = PersonList(self.name1, self.name2)
         self.assertEqual(authors.__repr__(), "PersonList({}, {})".format(
             self.name1.__repr__(), self.name2.__repr__()))
@@ -109,7 +107,7 @@ class TestPersonList(unittest.TestCase):
         authors = PersonList(self.name1, self.name2)
         self.assertEqual(authors.get_names(), "{}, and {}".format(
             self.name1.bibliographic_name(), self.name2.full_name()))
-        
+
         # three-persons list:
         authors = PersonList(self.name1, self.name2, self.name3)
         self.assertEqual(authors.get_names(), "{}, {}, and {}".format(
@@ -153,12 +151,12 @@ class TestEditorList(unittest.TestCase):
     name1 = Person(first="Jürgen", last="Münster")
     name2 = Person(first="John", middle=["William"], last="Doe")
     name3 = Person(first="Juan", last="Pérez")
-    
+
     def test_repr(self):
         namelist = EditorList(self.name1, self.name2)
         self.assertEqual(namelist.__repr__(), "EditorList({}, {})".format(
             self.name1.__repr__(), self.name2.__repr__()))
-    
+
     def test_get_names(self):
         # one editor:
         namelist = EditorList(self.name1)
@@ -215,10 +213,10 @@ class TestReference(unittest.TestCase):
 
     title = "test document"
     year = 1999
-    namelist = PersonList(name1, name2)    
+    namelist = PersonList(name1, name2)
 
     def test_init(self):
-        self.assertRaises(ValueError, Reference)        
+        self.assertRaises(ValueError, Reference)
         # no exceptions if at least a title is provided:
         Reference(title=self.title)
         Reference(title=self.title, authors=self.namelist)
@@ -226,14 +224,14 @@ class TestReference(unittest.TestCase):
         Reference(title=self.title, authors=self.namelist, year=self.year)
         # no exception even if an unused property is provided:
         Reference(title=self.title, authors=self.namelist, year=self.year, journal="Journal")
-        
+
     def test_required(self):
         ref = Reference(title=self.title, authors=self.namelist)
         self.assertEqual(ref.required_properties(), ["title"])
-        
+
     def test_validate(self):
         # expect a ValueError if no title is given:
-        self.assertRaises(ValueError, Reference.validate, 
+        self.assertRaises(ValueError, Reference.validate,
             {"author": self.namelist})
         # no ValueError expected:
         Reference.validate({"title": self.title})
@@ -243,7 +241,7 @@ class TestReference(unittest.TestCase):
         self.assertEqual(ref.__repr__(), "Reference(title={})".format(self.title.__repr__()))
 
         ref = Reference(title=self.title, authors=self.namelist)
-        # The order of the named arguments in __repr__ is not fixed, so we 
+        # The order of the named arguments in __repr__ is not fixed, so we
         # test equality by sorting all the characters in the strings:
         self.assertEqual(sorted(ref.__repr__()), sorted("Reference(title={}, authors={})".format(
             self.title.__repr__(), self.namelist.__repr__())))
@@ -263,18 +261,18 @@ class TestReference(unittest.TestCase):
 
         ref = Reference(title=self.title, authors=self.namelist)
         self.assertEqual(ref.__str__(), "{authors}. <i>{title}</i>.".format(
-            authors=self.namelist.get_names(), 
+            authors=self.namelist.get_names(),
             title=self.title))
 
         ref = Reference(title=self.title, year=self.year)
         self.assertEqual(ref.__str__(), "{year}. <i>{title}</i>.".format(
-            year=self.year, 
+            year=self.year,
             title=self.title))
 
         ref = Reference(title=self.title, year=self.year, authors=self.namelist)
         self.assertEqual(ref.__str__(), "{authors}. {year}. <i>{title}</i>.".format(
-            authors=self.namelist.get_names(), 
-            year=self.year, 
+            authors=self.namelist.get_names(),
+            year=self.year,
             title=self.title))
 
 class TestArticle(unittest.TestCase):
@@ -287,143 +285,143 @@ class TestArticle(unittest.TestCase):
     volume = 123
     number = 1
     pages = "1-42"
-    
+
     def test_init(self):
-        self.assertRaises(ValueError, Article, 
+        self.assertRaises(ValueError, Article,
             kwargs={"title": self.title})
-        self.assertRaises(ValueError, Article, 
+        self.assertRaises(ValueError, Article,
             kwargs={"title": self.title, "authors": self.namelist})
-        self.assertRaises(ValueError, Article, 
+        self.assertRaises(ValueError, Article,
             kwargs={"title": self.title, "year": self.year})
-        self.assertRaises(ValueError, Article, 
+        self.assertRaises(ValueError, Article,
             kwargs={"title": self.title, "journal": self.journal})
-        self.assertRaises(ValueError, Article, 
+        self.assertRaises(ValueError, Article,
             kwargs={"title": self.title, "authors": self.namelist, "year": self.year})
-        self.assertRaises(ValueError, Article, 
+        self.assertRaises(ValueError, Article,
             kwargs={"title": self.title, "authors": self.namelist, "journal": self.journal})
-        self.assertRaises(ValueError, Article, 
+        self.assertRaises(ValueError, Article,
             kwargs={"title": self.title, "year": self.year, "journal": self.journal})
 
         # no exception expected:
-        Article(title=self.title, 
-                year=self.year, 
-                journal=self.journal, 
+        Article(title=self.title,
+                year=self.year,
+                journal=self.journal,
                 authors=self.namelist)
-        Article(title=self.title, 
-                year=self.year, 
-                journal=self.journal, 
+        Article(title=self.title,
+                year=self.year,
+                journal=self.journal,
                 authors=self.namelist,
                 volume=self.volume)
-        Article(title=self.title, 
-                year=self.year, 
-                journal=self.journal, 
+        Article(title=self.title,
+                year=self.year,
+                journal=self.journal,
                 authors=self.namelist,
                 pages=self.pages)
-        Article(title=self.title, 
-                year=self.year, 
-                journal=self.journal, 
+        Article(title=self.title,
+                year=self.year,
+                journal=self.journal,
                 authors=self.namelist,
                 volume=self.volume,
                 pages=self.pages)
-        Article(title=self.title, 
-                year=self.year, 
-                journal=self.journal, 
+        Article(title=self.title,
+                year=self.year,
+                journal=self.journal,
                 authors=self.namelist,
                 volume=self.volume,
                 number=self.number,
                 pages=self.pages)
 
         # exception expected if number, but no volume is given:
-        self.assertRaises(ValueError, Article, 
-            kwargs={"title": self.title, 
-                    "year": self.year, 
+        self.assertRaises(ValueError, Article,
+            kwargs={"title": self.title,
+                    "year": self.year,
                     "journal": self.journal,
                     "authors": self.namelist,
                     "number": self.number})
-            
+
     def test_validate(self):
-        self.assertRaises(ValueError, Article.validate, 
-            kwargs={"title": self.title, 
-                    "year": self.year, 
+        self.assertRaises(ValueError, Article.validate,
+            kwargs={"title": self.title,
+                    "year": self.year,
                     "journal": self.journal,
                     "authors": self.namelist,
                     "number": self.number})
-            
+
     def test_str(self):
-        art = Article(title=self.title, 
-                      year=self.year, 
-                      authors=self.namelist, 
+        art = Article(title=self.title,
+                      year=self.year,
+                      authors=self.namelist,
                       journal=self.journal)
         self.assertEqual(art.__str__(), "{authors}. {year}. {title}. <i>{journal}</i>.".format(
-            authors=self.namelist, 
-            year=self.year, 
-            title=self.title, 
+            authors=self.namelist,
+            year=self.year,
+            title=self.title,
             journal=self.journal))
 
-        art = Article(title=self.title, 
-                      year=self.year, 
-                      authors=self.namelist, 
+        art = Article(title=self.title,
+                      year=self.year,
+                      authors=self.namelist,
                       journal=self.journal,
                       volume=self.volume)
         self.assertEqual(art.__str__(), "{authors}. {year}. {title}. <i>{journal}</i> {volume}.".format(
-            authors=self.namelist, 
-            year=self.year, 
-            title=self.title, 
+            authors=self.namelist,
+            year=self.year,
+            title=self.title,
             journal=self.journal,
             volume=self.volume))
 
-        art = Article(title=self.title, 
-                      year=self.year, 
-                      authors=self.namelist, 
+        art = Article(title=self.title,
+                      year=self.year,
+                      authors=self.namelist,
                       journal=self.journal,
                       volume=self.volume,
                       number=self.number)
         self.assertEqual(art.__str__(), "{authors}. {year}. {title}. <i>{journal}</i> {volume}({number}).".format(
-            authors=self.namelist, 
-            year=self.year, 
-            title=self.title, 
+            authors=self.namelist,
+            year=self.year,
+            title=self.title,
             journal=self.journal,
             volume=self.volume,
             number=self.number))
 
-        art = Article(title=self.title, 
-                      year=self.year, 
-                      authors=self.namelist, 
+        art = Article(title=self.title,
+                      year=self.year,
+                      authors=self.namelist,
                       journal=self.journal,
                       pages=self.pages)
         self.assertEqual(art.__str__(), "{authors}. {year}. {title}. <i>{journal}</i>. {pages}.".format(
-            authors=self.namelist, 
-            year=self.year, 
-            title=self.title, 
+            authors=self.namelist,
+            year=self.year,
+            title=self.title,
             journal=self.journal,
             volume=self.volume,
             pages=self.pages))
 
-        art = Article(title=self.title, 
-                      year=self.year, 
-                      authors=self.namelist, 
+        art = Article(title=self.title,
+                      year=self.year,
+                      authors=self.namelist,
                       journal=self.journal,
                       volume=self.volume,
                       pages=self.pages)
         self.assertEqual(art.__str__(), "{authors}. {year}. {title}. <i>{journal}</i> {volume}. {pages}.".format(
-            authors=self.namelist, 
-            year=self.year, 
-            title=self.title, 
+            authors=self.namelist,
+            year=self.year,
+            title=self.title,
             journal=self.journal,
             volume=self.volume,
             pages=self.pages))
 
-        art = Article(title=self.title, 
-                      year=self.year, 
-                      authors=self.namelist, 
+        art = Article(title=self.title,
+                      year=self.year,
+                      authors=self.namelist,
                       journal=self.journal,
                       volume=self.volume,
                       number=self.number,
                       pages=self.pages)
         self.assertEqual(art.__str__(), "{authors}. {year}. {title}. <i>{journal}</i> {volume}({number}). {pages}.".format(
-            authors=self.namelist, 
-            year=self.year, 
-            title=self.title, 
+            authors=self.namelist,
+            year=self.year,
+            title=self.title,
             journal=self.journal,
             volume=self.volume,
             number=self.number,
@@ -439,46 +437,46 @@ class TestBook(unittest.TestCase):
     publisher = "publishing"
     address = "location"
     series = "series"
-    number = 1   
-    
+    number = 1
+
     def test_init(self):
-        self.assertRaises(ValueError, Book, 
-            kwargs={"title": self.title, 
-                    "authors": self.namelist, 
-                    "year": self.year, 
+        self.assertRaises(ValueError, Book,
+            kwargs={"title": self.title,
+                    "authors": self.namelist,
+                    "year": self.year,
                     "publisher": self.publisher})
-        self.assertRaises(ValueError, Book, 
-            kwargs={"title": self.title, 
-                    "authors": self.namelist, 
-                    "year": self.year, 
+        self.assertRaises(ValueError, Book,
+            kwargs={"title": self.title,
+                    "authors": self.namelist,
+                    "year": self.year,
                     "address": self.address})
-        self.assertRaises(ValueError, Book, 
-            kwargs={"title": self.title, 
-                    "authors": self.namelist, 
-                    "address": self.address, 
+        self.assertRaises(ValueError, Book,
+            kwargs={"title": self.title,
+                    "authors": self.namelist,
+                    "address": self.address,
                     "publisher": self.publisher})
-        self.assertRaises(ValueError, Book, 
-            kwargs={"title": self.title, 
-                    "address": self.address, 
-                    "year": self.year, 
+        self.assertRaises(ValueError, Book,
+            kwargs={"title": self.title,
+                    "address": self.address,
+                    "year": self.year,
                     "publisher": self.publisher})
 
-        self.assertRaises(ValueError, Book, 
-            kwargs={"authors": self.namelist, 
-                    "address": self.address, 
-                    "year": self.year, 
+        self.assertRaises(ValueError, Book,
+            kwargs={"authors": self.namelist,
+                    "address": self.address,
+                    "year": self.year,
                     "publisher": self.publisher})
 
         # no exception expected:
-        Book(title=self.title, 
-            year=self.year, 
+        Book(title=self.title,
+            year=self.year,
             authors=self.namelist,
             publisher=self.publisher,
             address=self.address)
-        
+
         # no exception expected:
-        Book(title=self.title, 
-            year=self.year, 
+        Book(title=self.title,
+            year=self.year,
             editors=self.editorlist,
             publisher=self.publisher,
             address=self.address)
@@ -502,36 +500,36 @@ class TestBook(unittest.TestCase):
 
         # number without series is not allowed:
         self.assertRaises(ValueError, Book,
-            kwargs={"authors": self.namelist, 
-                    "year": self.year, 
+            kwargs={"authors": self.namelist,
+                    "year": self.year,
                     "title": self.title,
                     "number": self.number,
-                    "address": self.address, 
+                    "address": self.address,
                     "publisher": self.publisher})
-        
+
         # editors and authors at the same time are not allowed:
         self.assertRaises(ValueError, Book,
-            kwargs={"authors": self.namelist, 
+            kwargs={"authors": self.namelist,
                     "title": self.title,
                     "editors": self.editorlist,
-                    "address": self.address, 
-                    "year": self.year, 
+                    "address": self.address,
+                    "year": self.year,
                     "publisher": self.publisher})
-            
+
     def test_get_book_title(self):
         # book not in series:
-        book = Book(title=self.title, 
-                    year=self.year, 
-                    authors=self.namelist, 
+        book = Book(title=self.title,
+                    year=self.year,
+                    authors=self.namelist,
                     publisher=self.publisher,
                     address=self.address)
         self.assertEqual(book.get_book_title(), "<i>{title}</i>".format(
             title=self.title))
-        
+
         # book in series:
-        book = Book(title=self.title, 
-                    year=self.year, 
-                    authors=self.namelist, 
+        book = Book(title=self.title,
+                    year=self.year,
+                    authors=self.namelist,
                     series=self.series,
                     publisher=self.publisher,
                     address=self.address)
@@ -540,9 +538,9 @@ class TestBook(unittest.TestCase):
             series=self.series))
 
         # book in series with number:
-        book = Book(title=self.title, 
-                    year=self.year, 
-                    authors=self.namelist, 
+        book = Book(title=self.title,
+                    year=self.year,
+                    authors=self.namelist,
                     series=self.series,
                     number=self.number,
                     publisher=self.publisher,
@@ -551,20 +549,20 @@ class TestBook(unittest.TestCase):
             title=self.title,
             series=self.series,
             number=self.number))
-        
+
     def test_get_publishing_information(self):
         # only publisher:
-        book = Book(title=self.title, 
-                    year=self.year, 
-                    authors=self.namelist, 
+        book = Book(title=self.title,
+                    year=self.year,
+                    authors=self.namelist,
                     publisher=self.publisher)
         self.assertEqual(book.get_publishing_information(), "{publisher}".format(
             publisher=self.publisher))
-        
+
         # publisher with address:
-        book = Book(title=self.title, 
-                    year=self.year, 
-                    authors=self.namelist, 
+        book = Book(title=self.title,
+                    year=self.year,
+                    authors=self.namelist,
                     publisher=self.publisher,
                     address=self.address)
         self.assertEqual(book.get_publishing_information(), "{address}: {publisher}".format(
@@ -572,26 +570,26 @@ class TestBook(unittest.TestCase):
             publisher=self.publisher))
 
     def test_str(self):
-        book = Book(title=self.title, 
-                    year=self.year, 
-                    authors=self.namelist, 
+        book = Book(title=self.title,
+                    year=self.year,
+                    authors=self.namelist,
                     publisher=self.publisher,
                     address=self.address)
         self.assertEqual(book.__str__(), "{authors}. {year}. {tit}. {pub}.".format(
-            authors=self.namelist, 
-            year=self.year, 
+            authors=self.namelist,
+            year=self.year,
             tit=book.get_book_title(),
             pub=book.get_publishing_information()))
 
         # book with editors:
-        book = Book(title=self.title, 
-                    year=self.year, 
-                    editors=self.editorlist, 
+        book = Book(title=self.title,
+                    year=self.year,
+                    editors=self.editorlist,
                     publisher=self.publisher,
                     address=self.address)
         self.assertEqual(book.__str__(), "{editors}. {year}. {tit}. {pub}.".format(
-            editors=self.editorlist, 
-            year=self.year, 
+            editors=self.editorlist,
+            year=self.year,
             tit=book.get_book_title(),
             pub=book.get_publishing_information()))
 
@@ -607,49 +605,49 @@ class TestInCollection(unittest.TestCase):
     publisher = "publishing"
     address = "location"
     series = "series"
-    number = 1   
+    number = 1
     pages = "1-42"
-    
+
     def test_validate(self):
-        self.assertRaises(ValueError, InCollection.validate, 
-            kwargs={"title": self.title, 
+        self.assertRaises(ValueError, InCollection.validate,
+            kwargs={"title": self.title,
                     "contributiontitle": self.contributiontitle,
-                    "year": self.year, 
+                    "year": self.year,
                     "authors": self.namelist,
                     "number": self.number})
-    
+
     def test_init(self):
-        self.assertRaises(ValueError, InCollection, 
-            kwargs={"title": self.title, 
-                    "authors": self.namelist, 
-                    "year": self.year, 
+        self.assertRaises(ValueError, InCollection,
+            kwargs={"title": self.title,
+                    "authors": self.namelist,
+                    "year": self.year,
                     "publisher": self.publisher})
 
         # no exception expected:
-        InCollection(title=self.title, 
+        InCollection(title=self.title,
             contributiontitle=self.contributiontitle,
-            authors=self.namelist, 
-            year=self.year, 
+            authors=self.namelist,
+            year=self.year,
             publisher=self.publisher)
-        
-        InCollection(title=self.title, 
+
+        InCollection(title=self.title,
             contributiontitle=self.contributiontitle,
-            authors=self.namelist, 
-            year=self.year, 
+            authors=self.namelist,
+            year=self.year,
             address=self.address,
             publisher=self.publisher)
-        
-        InCollection(title=self.title, 
+
+        InCollection(title=self.title,
             contributiontitle=self.contributiontitle,
-            authors=self.namelist, 
-            year=self.year, 
+            authors=self.namelist,
+            year=self.year,
             publisher=self.publisher,
             pages=self.pages)
 
-        InCollection(title=self.title, 
+        InCollection(title=self.title,
             contributiontitle=self.contributiontitle,
-            authors=self.namelist, 
-            year=self.year, 
+            authors=self.namelist,
+            year=self.year,
             address=self.address,
             publisher=self.publisher,
             pages=self.pages)
@@ -662,7 +660,7 @@ class TestInCollection(unittest.TestCase):
                             publisher=self.publisher)
         self.assertEqual(coll.get_source_information(), "In {tit}".format(
             tit=coll.get_book_title()))
-        
+
         coll = InCollection(authors=self.namelist,
                             year=self.year,
                             contributiontitle=self.contributiontitle,
@@ -672,8 +670,8 @@ class TestInCollection(unittest.TestCase):
         self.assertEqual(coll.get_source_information(), "In {editors}, {tit}".format(
             editors=self.editorlist.get_names(),
             tit=coll.get_book_title()))
-        
-            
+
+
 
     def test_str(self):
         coll = InCollection(authors=self.namelist,
@@ -687,7 +685,7 @@ class TestInCollection(unittest.TestCase):
             contribution=self.contributiontitle,
             source=coll.get_source_information(),
             pub=coll.get_publishing_information()))
-                        
+
         coll = InCollection(authors=self.namelist,
                             year=self.year,
                             contributiontitle=self.contributiontitle,
@@ -700,7 +698,7 @@ class TestInCollection(unittest.TestCase):
             contribution=self.contributiontitle,
             source=coll.get_source_information(),
             pub=coll.get_publishing_information()))
-                        
+
         coll = InCollection(authors=self.namelist,
                             year=self.year,
                             contributiontitle=self.contributiontitle,
@@ -714,10 +712,9 @@ class TestInCollection(unittest.TestCase):
             source=coll.get_source_information(),
             pages=self.pages,
             pub=coll.get_publishing_information()))
-                        
 
 
-if __name__ == '__main__':
+def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestPerson),
         unittest.TestLoader().loadTestsFromTestCase(TestPersonList),
@@ -728,3 +725,6 @@ if __name__ == '__main__':
         unittest.TestLoader().loadTestsFromTestCase(TestInCollection),
         ])
     unittest.TextTestRunner().run(suite)
+
+if __name__ == '__main__':
+    main()

@@ -2,82 +2,65 @@
 
 # Form implementation generated from reading ui file 'stopwords.ui'
 #
-# Created by: PyQt4 UI code generator 4.11.4
+# Created by: PyQt5 UI code generator 5.7.1
 #
 # WARNING! All changes made in this file will be lost!
 
-from coquery.gui.pyqt_compat import QtCore, QtGui, frameShadow, frameShape
-
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_Stopwords(object):
     def setupUi(self, Stopwords):
-        Stopwords.setObjectName(_fromUtf8("Stopwords"))
-        Stopwords.resize(656, 480)
-        self.verticalLayout_4 = QtGui.QVBoxLayout(Stopwords)
-        self.verticalLayout_4.setContentsMargins(2, 0, 2, 0)
-        self.verticalLayout_4.setSpacing(16)
-        self.verticalLayout_4.setObjectName(_fromUtf8("verticalLayout_4"))
-        self.frame = QtGui.QFrame(Stopwords)
-        self.frame.setFrameShape(frameShape)
-        self.frame.setFrameShadow(frameShadow)
-        self.frame.setObjectName(_fromUtf8("frame"))
-        self.verticalLayout_3 = QtGui.QVBoxLayout(self.frame)
-        self.verticalLayout_3.setContentsMargins(8, 6, 8, 6)
-        self.verticalLayout_3.setSpacing(0)
-        self.verticalLayout_3.setObjectName(_fromUtf8("verticalLayout_3"))
-        self.label = QtGui.QLabel(self.frame)
-        self.label.setObjectName(_fromUtf8("label"))
-        self.verticalLayout_3.addWidget(self.label)
-        self.horizontalLayout = QtGui.QHBoxLayout()
-        self.horizontalLayout.setSpacing(16)
-        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.stopword_list = QtGui.QListWidget(self.frame)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.MinimumExpanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.stopword_list.sizePolicy().hasHeightForWidth())
-        self.stopword_list.setSizePolicy(sizePolicy)
-        self.stopword_list.setAlternatingRowColors(True)
-        self.stopword_list.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-        self.stopword_list.setFlow(QtGui.QListView.TopToBottom)
-        self.stopword_list.setProperty("isWrapping", True)
-        self.stopword_list.setResizeMode(QtGui.QListView.Adjust)
-        self.stopword_list.setViewMode(QtGui.QListView.IconMode)
-        self.stopword_list.setWordWrap(True)
-        self.stopword_list.setSelectionRectVisible(True)
-        self.stopword_list.setObjectName(_fromUtf8("stopword_list"))
-        self.horizontalLayout.addWidget(self.stopword_list)
-        self.horizontalLayout.setStretch(0, 1)
-        self.verticalLayout_3.addLayout(self.horizontalLayout)
-        self.verticalLayout_3.setStretch(1, 1)
-        self.verticalLayout_4.addWidget(self.frame)
-        self.buttonBox = QtGui.QDialogButtonBox(Stopwords)
+        Stopwords.setObjectName("Stopwords")
+        Stopwords.resize(640, 480)
+        self.verticalLayout_4 = QtWidgets.QVBoxLayout(Stopwords)
+        self.verticalLayout_4.setObjectName("verticalLayout_4")
+        self.groupBox = QtWidgets.QGroupBox(Stopwords)
+        self.groupBox.setObjectName("groupBox")
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.groupBox)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.stopword_list = CoqTagBox(self.groupBox)
+        self.stopword_list.setObjectName("stopword_list")
+        self.verticalLayout_3.addWidget(self.stopword_list)
+        self.buttonbox_io = QtWidgets.QDialogButtonBox(self.groupBox)
+        self.buttonbox_io.setStandardButtons(QtWidgets.QDialogButtonBox.Open|QtWidgets.QDialogButtonBox.Reset|QtWidgets.QDialogButtonBox.Save)
+        self.buttonbox_io.setObjectName("buttonbox_io")
+        self.verticalLayout_3.addWidget(self.buttonbox_io)
+        self.verticalLayout_4.addWidget(self.groupBox)
+        self.groupBox1 = QtWidgets.QGroupBox(Stopwords)
+        self.groupBox1.setObjectName("groupBox1")
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.groupBox1)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.label_2 = QtWidgets.QLabel(self.groupBox1)
+        self.label_2.setObjectName("label_2")
+        self.horizontalLayout_3.addWidget(self.label_2)
+        self.combo_language = QtWidgets.QComboBox(self.groupBox1)
+        self.combo_language.setObjectName("combo_language")
+        self.horizontalLayout_3.addWidget(self.combo_language)
+        self.button_add_list = QtWidgets.QPushButton(self.groupBox1)
+        self.button_add_list.setObjectName("button_add_list")
+        self.horizontalLayout_3.addWidget(self.button_add_list)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_3.addItem(spacerItem)
+        self.verticalLayout_4.addWidget(self.groupBox1)
+        self.buttonBox = QtWidgets.QDialogButtonBox(Stopwords)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Open|QtGui.QDialogButtonBox.Reset|QtGui.QDialogButtonBox.Save)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(False)
-        self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
+        self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout_4.addWidget(self.buttonBox)
+        self.label_2.setBuddy(self.combo_language)
 
         self.retranslateUi(Stopwords)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), Stopwords.accept)
-        QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), Stopwords.reject)
+        self.buttonBox.accepted.connect(Stopwords.accept)
+        self.buttonBox.rejected.connect(Stopwords.reject)
         QtCore.QMetaObject.connectSlotsByName(Stopwords)
 
     def retranslateUi(self, Stopwords):
-        Stopwords.setWindowTitle(_translate("Stopwords", " Stop words – Coquery", None))
-        self.label.setText(_translate("Stopwords", "Currently active stop words:", None))
+        _translate = QtCore.QCoreApplication.translate
+        Stopwords.setWindowTitle(_translate("Stopwords", " Stop words – Coquery"))
+        self.groupBox1.setTitle(_translate("Stopwords", "Preset lists"))
+        self.label_2.setText(_translate("Stopwords", "&Language:"))
+        self.button_add_list.setText(_translate("Stopwords", "A&dd preset list"))
 
+from ..classes import CoqTagBox
 

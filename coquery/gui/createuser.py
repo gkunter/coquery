@@ -2,10 +2,10 @@
 """
 createuser.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -15,10 +15,10 @@ from __future__ import unicode_literals
 import sys
 
 from coquery import options
-from .pyqt_compat import QtCore, QtGui
+from .pyqt_compat import QtCore, QtWidgets
 from .ui.createUserUi import Ui_CreateUser
 
-class CreateUser(QtGui.QDialog):
+class CreateUser(QtWidgets.QDialog):
     def __init__(self, name=None, password=None, parent=None):
         
         super(CreateUser, self).__init__(parent)
@@ -51,9 +51,9 @@ class CreateUser(QtGui.QDialog):
 
     def check_okay(self):
         if not self.ui.root_name.text() or not self.ui.root_password.text() or self.ui.new_password.text() != self.ui.new_password_check.text():
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
         else:
-            self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
 
     def check_password(self):
         """
@@ -69,13 +69,13 @@ class CreateUser(QtGui.QDialog):
     
     def toggle_passwords(self):
         if self.ui.check_show_passwords.checkState():
-            self.ui.root_password.setEchoMode(QtGui.QLineEdit.Normal)
-            self.ui.new_password.setEchoMode(QtGui.QLineEdit.Normal)
-            self.ui.new_password_check.setEchoMode(QtGui.QLineEdit.Normal)
+            self.ui.root_password.setEchoMode(QtWidgets.QLineEdit.Normal)
+            self.ui.new_password.setEchoMode(QtWidgets.QLineEdit.Normal)
+            self.ui.new_password_check.setEchoMode(QtWidgets.QLineEdit.Normal)
         else:
-            self.ui.root_password.setEchoMode(QtGui.QLineEdit.PasswordEchoOnEdit)
-            self.ui.new_password.setEchoMode(QtGui.QLineEdit.PasswordEchoOnEdit)
-            self.ui.new_password_check.setEchoMode(QtGui.QLineEdit.PasswordEchoOnEdit)
+            self.ui.root_password.setEchoMode(QtWidgets.QLineEdit.PasswordEchoOnEdit)
+            self.ui.new_password.setEchoMode(QtWidgets.QLineEdit.PasswordEchoOnEdit)
+            self.ui.new_password_check.setEchoMode(QtWidgets.QLineEdit.PasswordEchoOnEdit)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
@@ -95,7 +95,7 @@ class CreateUser(QtGui.QDialog):
             return None
 
 def main():
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     credentials = CreateUser.get("coquery", "fun")
     if credentials:
         print(credentials)
