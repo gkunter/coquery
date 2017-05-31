@@ -16,15 +16,13 @@ import logging
 import sys
 import os
 
-from coquery import options, NAME
-from coquery.defines import ROW_NAMES
+from .. import options
 from coquery.errors import VisualizationModuleError
 from coquery.unicode import utf8
 
 from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
@@ -33,7 +31,6 @@ from matplotlib.backends.backend_qt5 import SubplotToolQt
 
 import seaborn as sns
 
-from . import classes
 from ..visualizer.visualizer import get_grid_layout
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 
@@ -56,8 +53,8 @@ visualizer_mapping = (
     ("Heat map", "Heatmap", "heatmap", "Heatmap"),
     ("Box-Whisker plot", "Boxplot", "boxplot", "BoxPlot"),
     ("Violin plot", "Violinplot", "boxplot", "ViolinPlot"),
-    #("Kernel density", "Normal Distribution Histogram", "densityplot"),
-    #("Cumulative distribution", "Positive Dynamic", "densityplot"),
+    ("Kernel density", "Normal Distribution Histogram", "densityplot", "DensityPlot"),
+    ("Cumulative distribution", "Positive Dynamic", "densityplot", "CumulativePlot"),
     ("Scatterplot", "Scatterplot", "scatterplot", "ScatterPlot"),
     ("Regression plot", "Regressionplot", "scatterplot", "RegressionPlot"),
     )
@@ -116,13 +113,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
     allLoaded = QtCore.Signal()
     visualizers = {}
 
-    def __init__(self, df, session, parent=None):
+    def __init__(self, df, session, alias=None, parent=None):
         super(VisualizationDesigner, self).__init__(parent)
         self.session = session
-
-        # discard special rows such as contingency total:
-        self.df = df.loc[[x for x in df.index
-                          if x not in ROW_NAMES.values()]]
+        self.alias = alias or {}
+        self.df = df
 
         self.vis = None
         for i, x in enumerate(df.columns):
@@ -234,14 +229,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
                           col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
-            label = self.session.translate_header(col)
+            label = self.alias.get(col) or col
             new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             self.ui.table_categorical.addItem(new_item)
 
         for col in self.numerical:
-            label = self.session.translate_header(col)
+            label = self.alias.get(col) or col
             new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
@@ -596,28 +591,28 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         # data x
         if self.data_x:
-            label = self.session.translate_header(self.data_x)
+            label = self.alias.get(self.data_x) or self.data_x
         else:
             label = None
         #self.ui.receive_data_x.setText(label)
 
         # data y
         if self.data_y:
-            label = self.session.translate_header(self.data_y)
+            label = self.alias.get(self.data_y) or self.data_y
         else:
             label = None
         #self.ui.receive_data_y.setText(label)
 
         # layout columns
         if self.layout_columns:
-            label = self.session.translate_header(self.layout_columns)
+            label = self.alias.get(self.layout_columns) or self.layout_columns
         else:
             label = None
         #self.ui.receive_columns.setText(label)
 
         # layout rows
         if self.layout_rows:
-            label = self.session.translate_header(self.layout_rows)
+            label = self.alias.get(self.layout_rows) or self.layout_rows
         else:
             label = None
         #self.ui.receive_rows.setText(label)
@@ -682,11 +677,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
         visualizer_class = VisualizationDesigner.visualizers[figure_type.text()]
 
         df = self.df[df_columns]
-        df.columns = [self.session.translate_header(x) for x in df.columns]
+        df.columns = [self.alias.get(x) or x for x in df.columns]
 
         (data_x, data_y, data_z, columns, rows) = (
-            self.session.translate_header(x) for x
-            in (data_x, data_y, data_z, columns, rows))
+            self.alias.get(x) or x
+            for x in (data_x, data_y, data_z, columns, rows))
 
         self.vis = visualizer_class(df, self.session)
 
@@ -812,10 +807,9 @@ def get_visualizer_module(name):
         print(e)
         msg = "<code style='color: darkred'>{type}: {code}</code>".format(
             type=type(e).__name__, code=sys.exc_info()[1])
-        logger.error(msg)
+        logging.error(msg)
         QtWidgets.QMessageBox.critical(
             None, "Visualization error – Coquery",
             VisualizationModuleError(name, msg).error_message)
         return None
 
-logger = logging.getLogger(NAME)
