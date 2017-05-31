@@ -20,7 +20,7 @@ from coquery.defines import (
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.addFilterUi import Ui_FiltersDialog
-from .classes import CoqTableItem, CoqListItem
+from .classes import CoqTableItem
 from coquery.filters import Filter
 
 FeatureRole = QtCore.Qt.UserRole
@@ -64,7 +64,7 @@ class FilterDialog(QtWidgets.QDialog):
 
     def fill_lists(self):
         for i, x in enumerate(self.columns):
-            item = CoqListItem(self.session.translate_header(x))
+            item = QtWidgets.QListWidgetItem(self.session.translate_header(x))
             item.setData(FeatureRole, x)
             item.setData(DtypeRole, self.dtypes[i])
             self.ui.list_columns.addItem(item)

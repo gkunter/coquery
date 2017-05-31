@@ -19,7 +19,7 @@ from coquery.defines import *
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.addFunctionUi import Ui_FunctionsDialog
-from .classes import CoqListItem
+
 
 class FunctionItem(QtWidgets.QWidget):
     def __init__(self, func, checkable=True, *args, **kwargs):
@@ -161,7 +161,7 @@ class FunctionDialog(QtWidgets.QDialog):
             self.ui.list_functions.setFocus(1)
         else:
             for i, fc in enumerate(function_class):
-                group = CoqListItem(fc.get_description())
+                group = QtWidgets.QListWidgetItem(fc.get_description())
                 self.ui.list_classes.addItem(group)
 
                 l = []
@@ -202,11 +202,10 @@ class FunctionDialog(QtWidgets.QDialog):
         for x in sorted(self.function_list,
                         key=lambda x: x.get_name(), reverse=True):
             desc = FUNCTION_DESC.get(x._name, "no description available")
-            item = CoqListItem()
+            item = QtWidgets.QListWidgetItem()
             item.setData(QtCore.Qt.UserRole, x.get_name())
             item_widget = FunctionItem(x, checkable=False)
             item.setSizeHint(item_widget.sizeHint())
-            item.setObjectName(x)
 
             self.ui.list_functions.addItem(item)
             self.ui.list_functions.setItemWidget(item, item_widget)
@@ -252,7 +251,7 @@ class FunctionDialog(QtWidgets.QDialog):
 
         widget = self.ui.list_functions
         for x in sorted(func_list, key=lambda x: x.get_name(), reverse=True):
-            item = CoqListItem()
+            item = QtWidgets.QListWidgetItem()
             item.setData(QtCore.Qt.UserRole, x)
             item_widget = FunctionItem(x)
             item.setSizeHint(item_widget.sizeHint())

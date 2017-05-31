@@ -234,20 +234,22 @@ class VisualizationDesigner(QtWidgets.QDialog):
                           col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
-            new_item = classes.CoqListItem(self.session.translate_header(col))
+            label = self.session.translate_header(col)
+            new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             self.ui.table_categorical.addItem(new_item)
 
         for col in self.numerical:
-            new_item = classes.CoqListItem(self.session.translate_header(col))
+            label = self.session.translate_header(col)
+            new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             self.ui.table_numerical.addItem(new_item)
 
         ## add functions
         #for func in [Freq]:
-            #new_item = classes.CoqListItem("{} (generated)".format(
+            #new_item = QtWidgets.QListWidgetItem("{} (generated)".format(
                 #func.get_name()))
             #new_item.setData(QtCore.Qt.UserRole,
                                 #"func_{}".format(func._name))
