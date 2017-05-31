@@ -41,6 +41,7 @@ class Session(object):
         self.max_number_of_input_columns = 0
         self.query_list = []
         self.requested_fields = []
+        self.groups = []
         options.cfg.query_label = ""
 
         # load current corpus module depending on the value of options.cfg.corpus,

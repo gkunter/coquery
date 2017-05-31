@@ -1,4 +1,14 @@
-0.10.0
+.. _changelog:
+
+Change log
+##########
+
+.. toctree::
+    :maxdepth: 1
+
+
+0.10.0 "ICAME38" May 23, 2017
+-----------------------------
 
 This release is a considerable update over earlier versions. These are the
 main fields that have seen large changes:
@@ -10,17 +20,23 @@ main fields that have seen large changes:
   from the query results
 
 Here is an incomplete list of most of the things that have changed or have
-been added:
+been added.
 
 Interface
+=========
+
 * interface resdesign:
+
   - move column selection to the left as 'Data features'
   - place Query button more prominently in the middle, and rename it
   - replace Aggregation widget by 'Data management' toolbox
+  
 * add new dialogs to the 'Help' menu:
+
   - regular expression tester
   - 'How to cite' dialog
   - module information dialog
+
 * simplify query file widget
 * collect hidden columns in a side bar
 * there is now a search widget
@@ -37,6 +53,8 @@ Interface
 * placeholder for empty cells is now configurable
 
 Data management
+===============
+
 * the displayed context can now be changed after the query
 * add option to restrict contexts to sentence boundaries
 * functions are now added to columns in the results table
@@ -60,48 +78,63 @@ Data management
 * add stopword lists for many languages
 
 Visualization
+=============
 * introduce the Visualization designer
 * add new visualizations: heatbar plot, regression plot, scatter plot,
   violin plot, box-whisker plot
 * allow vertical plots where sensible
 
 Corpora
+=======
 * add reference corpus support
 * provide functions that use the reference corpus (Keyness LL, Keyness %DIFF,
   as well as frequency functions in the reference corpus)
 * big change for corpora that provide audio (currently, only Buckeye is
   supported):
-    - add spectrogram and waveform contexts
-    - store audio in databases
-    - allow audio playback
+
+  - add spectrogram and waveform contexts
+  - store audio in databases
+  - allow audio playback
+
 * improve segment lookup in corpora that contain segments
 * allow to build 'corpora' from CSV files
 * add support for encoding detection when reading plain text files
 
 Queries
-* internal: rewrite SQL code generator, which speeds up multi-word queries
+=======
+* internal change: rewrite SQL code generator, which speeds up multi-word queries
 * allow regular expression queries (can be activated in the settings)
 * introduction of _NULL special query item (issue #97)
 * introduction of _PUNCT special query item as a placeholder for any
   punctuation mark
 * add query cache that can speed up repeated queries (experimental)
 
-Test coverage (only the core modules are reported)
+Test coverage
+=============
 
-    corpus.py           44%
-    corpusbuilder.py    19%
-    filters.py          78%
-    functionlists.py    62%
-    functions.py        59%
-    links.py            68%
-    managers.py         36%
-    queries.py          28%
-    session.py          26%
-    tables.py           19%
-    textgrids.py        54%
-    tokens.py           89%
+(only the core modules are reported)
 
-0.9.2 1 May 2016
+  corpus.py           44%
+  corpusbuilder.py    19%
+  filters.py          78%
+  functionlists.py    62%
+  functions.py        59%
+  links.py            68%
+  managers.py         36%
+  queries.py          28%
+  session.py          26%
+  tables.py           19%
+  textgrids.py        54%
+  tokens.py           89%
+
+0.9.2a September 1, 2017
+------------------------
+
+* fix issue with desktop icon on Windows
+
+0.9.2 May 1, 2016
+-----------------
+
 * fix issue with NLTK module detection
 * add support for .docx, .odt, and HTML files when building a corpus
 * allow query results from speech corpora to be saved as Praat TextGrids
@@ -110,9 +143,14 @@ Test coverage (only the core modules are reported)
 * COHA installer: fix issue with file names
 * Switchboard installer: provide full conversation and speaker information
 
-0.9.1 22 March 2016
+0.9.1 March 22, 2016
+--------------------
+
 * fix issue in Buckeye and CELEX2 installers
 * add module information to About dialog
 
-0.9   21 March 2016
+0.9   March 21, 2016
+--------------------
+
 * initial public release
+

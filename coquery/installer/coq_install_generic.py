@@ -218,10 +218,6 @@ class BuilderClass(BaseCorpusBuilder):
             logger.info("Read {} file {}, {} characters".format(
                 file_type, file_name, len(raw_text)))
 
-        # NLTK has problems identifying word-initial quotation marks as
-        # punctuation. Fix that:
-        raw_text = re.sub("(?<=\S\s)(')(\w+)", r"\1 \2", raw_text)
-
         return raw_text
 
     def add_token(self, token_string, token_pos=None):

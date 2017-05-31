@@ -12,8 +12,10 @@ import os
 
 from imp import find_module
 
-from coquery.defines import VERSION as version
-with open(os.path.join(os.path.split(os.path.realpath(__file__))[0], "README.rst"), "rb") as f:
+version = "0.10.0.1"
+
+with open(os.path.join(os.path.split(
+        os.path.realpath(__file__))[0], "README.rst"), "rb") as f:
     long_descr = f.read().decode("utf-8")
 
 DESCRIPTION = "Coquery: a free corpus query tool"
@@ -21,21 +23,9 @@ DESCRIPTION = "Coquery: a free corpus query tool"
 if __name__ == "__main__":
     required_modules = ["pandas", "sqlalchemy"]
     use_pyqt = False
-    use_pyside = False
 
-    try:
-        if find_module("PyQt4"):
-            use_pyqt = True
-    except ImportError:
-        pass
-    try:
-        if find_module("PySide"):
-            use_pyside = True
-    except ImportError:
-        pass
-
-    if not use_pyqt and not use_pyside:
-        required_modules.append("PySide")
+    if find_module("PyQt5"):
+        use_pyqt = True
 
     setup(name="coquery",
         author="Gero Kunter",
@@ -46,16 +36,16 @@ if __name__ == "__main__":
         long_description=long_descr,
         license="GPL3",
         url="http://www.coquery.org",
-        version=version,
+        version=version.split(" ")[0],
         install_requires=required_modules,
-        packages=['coquery', 
-                  os.path.join('coquery', 'installer'), 
-                  os.path.join('coquery', 'gui'), 
-                  os.path.join('coquery', 'gui', 'ui'), 
+        packages=['coquery',
+                  os.path.join('coquery', 'installer'),
+                  os.path.join('coquery', 'gui'),
+                  os.path.join('coquery', 'gui', 'ui'),
                   os.path.join('coquery', 'visualizer')],
         package_data={'': [
-                  os.path.join('coquery', 'icons/*'), 
-                  os.path.join('coquery', 'help/*'), 
+                  os.path.join('coquery', 'icons/*'),
+                  os.path.join('coquery', 'help/*'),
                   os.path.join('coquery', 'texts/*')]},
         include_package_data=True,
         entry_points={
@@ -75,6 +65,8 @@ if __name__ == "__main__":
             'Programming Language :: Python :: 3',
             'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',
+            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
             'Topic :: Education',
             'Topic :: Scientific/Engineering',
             'Topic :: Scientific/Engineering :: Information Analysis',

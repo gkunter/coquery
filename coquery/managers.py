@@ -113,7 +113,7 @@ class Manager(CoqObject):
 
         self._groups = []
         self._filters = []
-        self._column_order = None
+        self._column_order = []
         self._last_query_id = None
         self.reset_context_cache()
 
@@ -630,8 +630,8 @@ class Manager(CoqObject):
             print("process()")
 
         df = df.reset_index(drop=True)
-        if self._column_order:
-            columns = (self._column_order +
+        if len(self._column_order):
+            columns = ([x for x in self._column_order] +
                        [x for x in df.columns if x not in self._column_order])
             df = df[columns]
 
