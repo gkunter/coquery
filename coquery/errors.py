@@ -18,8 +18,8 @@ import os
 import logging
 import re
 import textwrap
+import logging
 
-from . import NAME
 from .defines import *
 from .unicode import utf8
 
@@ -50,7 +50,7 @@ class GenericException(Exception):
             S = "<p>{}</p><p>{}</p>".format(
                 S, self.additional)
         try:
-            logger.error(S)
+            logging.error(S)
         except Exception as e:
             print_exception(e)
         return S
@@ -320,4 +320,3 @@ def print_exception(exc):
         print(file=sys.stderr)
 
 
-logger = logging.getLogger(NAME)
