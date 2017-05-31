@@ -2376,8 +2376,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             msg_box.close()
             del msg_box
 
+
+        alias = {col: self.Session.translate_header(col)
+                 for col in df.columns}
+
         dialog = visualizationdesigner.VisualizationDesigner(
-            df, self.Session)
+            df.drop(ROW_NAMES.values(), errors="ignore"),
+            self.Session, alias=alias)
 
         dialog.show()
 
