@@ -28,6 +28,11 @@ def main():
         from test.test_corpora import TestCorpus, TestCorpusWithExternal
         test_list += [TestCorpus, TestCorpusWithExternal]
 
+    if not args or "corpusbuilder" in args:
+        from test.test_corpusbuilder import (
+            TestXMLCorpusBuilder,TestTEICorpusBuilder)
+        test_list += [TestXMLCorpusBuilder, TestTEICorpusBuilder]
+
     if not args or  "filters" in args:
         from test.test_filters import TestFilterString, TestApply
         test_list += [TestFilterString, TestApply]
