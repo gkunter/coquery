@@ -40,12 +40,22 @@ from .unicode import utf8
 
 
 def set_logger(log_file_path):
+    fstr = "%(asctime)s %(levelname)-8s %(message)s"
+    logging.basicConfig(
+        filename=log_file_path,
+        level=logging.INFO,
+        format=fstr)
+
     logger = logging.getLogger(NAME)
-    logger.setLevel(logging.INFO)
-    file_handler = logging.handlers.RotatingFileHandler(log_file_path, maxBytes=1024 * 1024, backupCount=10)
-    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
-    logger.addHandler(file_handler)
+    #logger.setLevel(logging.INFO)
+
+    #file_handler = logging.handlers.RotatingFileHandler(
+        #log_file_path, maxBytes=1024 * 1024, backupCount=10)
+    #file_handler.setFormatter(logging.Formatter(fstr))
+    #logger.addHandler(file_handler)
+
     logging.captureWarnings(True)
+
     return logger
 
 
