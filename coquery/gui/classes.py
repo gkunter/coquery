@@ -1032,18 +1032,6 @@ class CoqSpinner(QtWidgets.QWidget):
         self._anim.stop()
 
 
-class CoqListItem(QtWidgets.QListWidgetItem):
-    def __init__(self, *args, **kwargs):
-        super(CoqListItem, self).__init__(*args, **kwargs)
-        self._objectName = ""
-
-    def setObjectName(self, s):
-        self._objectName = s
-
-    def objectName(self):
-        return self._objectName
-
-
 class CoqTableItem(QtWidgets.QTableWidgetItem):
     def __init__(self, *args, **kwargs):
         super(CoqTableItem, self).__init__(*args, **kwargs)

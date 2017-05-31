@@ -16,8 +16,8 @@ import os
 from coquery import options
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
-from .classes import CoqListItem
 from .ui.textgridExportUi import Ui_TextgridExport
+
 
 class TextgridExportDialog(QtWidgets.QDialog):
     def __init__(self, columns, parent=None):
