@@ -65,12 +65,14 @@ tei_content = """<TEI xmlns="http://www.tei-c.org/ns/1.0">
     </teiHeader>
     <text>
         <body>
-            <s n="1">
-                <w n="1">This</w>
-                <w n="2">This</w>
-                <w n="3">This</w>
-                <w n="4">This</w>
-            </s>
+            <p>
+                <s n="1">
+                    <w n="1">This</w>
+                    <w n="2">This</w>
+                    <w n="3">This</w>
+                    <w n="4">This</w>
+                </s>
+            </p>
         </body>
     </text>
 </TEI>
