@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'visualizationDesigner.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -36,6 +36,9 @@ class Ui_VisualizationDesigner(object):
         self.label_dimensions.setSizePolicy(sizePolicy)
         self.label_dimensions.setObjectName("label_dimensions")
         self.verticalLayout_11.addWidget(self.label_dimensions)
+        self.button_refresh_data = QtWidgets.QPushButton(self.group_variables)
+        self.button_refresh_data.setObjectName("button_refresh_data")
+        self.verticalLayout_11.addWidget(self.button_refresh_data)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
@@ -209,9 +212,14 @@ class Ui_VisualizationDesigner(object):
         self.gridLayout.addWidget(self.check_wrap_layout, 4, 1, 1, 2)
         self.verticalLayout_5.addLayout(self.gridLayout)
         self.verticalLayout_6.addWidget(self.group_layout)
+        self.group_custom = QtWidgets.QGroupBox(self.tab_layout)
+        self.group_custom.setObjectName("group_custom")
+        self.layout_custom = QtWidgets.QVBoxLayout(self.group_custom)
+        self.layout_custom.setObjectName("layout_custom")
+        self.verticalLayout_6.addWidget(self.group_custom)
         spacerItem9 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_6.addItem(spacerItem9)
-        self.verticalLayout_6.setStretch(2, 1)
+        self.verticalLayout_6.setStretch(3, 1)
         self.horizontalLayout.addLayout(self.verticalLayout_6)
         self.group_figures = QtWidgets.QGroupBox(self.tab_layout)
         self.group_figures.setObjectName("group_figures")
@@ -583,6 +591,7 @@ class Ui_VisualizationDesigner(object):
         VisualizationDesigner.setWindowTitle(_translate("VisualizationDesigner", "Visualization designer – Coquery"))
         self.group_variables.setTitle(_translate("VisualizationDesigner", "&Data"))
         self.label_dimensions.setText(_translate("VisualizationDesigner", "{} rows, {} columns"))
+        self.button_refresh_data.setText(_translate("VisualizationDesigner", "&Refresh data"))
         self.label_3.setText(_translate("VisualizationDesigner", "&Categorical:"))
         self.label_5.setText(_translate("VisualizationDesigner", "&Numeric:"))
         self.group_data.setTitle(_translate("VisualizationDesigner", "Figure &axes"))
@@ -593,6 +602,7 @@ class Ui_VisualizationDesigner(object):
         self.label_rows.setText(_translate("VisualizationDesigner", "Rows"))
         self.label_columns.setText(_translate("VisualizationDesigner", "Columns"))
         self.check_wrap_layout.setText(_translate("VisualizationDesigner", "&Wrap columns"))
+        self.group_custom.setTitle(_translate("VisualizationDesigner", "Figure options"))
         self.group_figures.setTitle(_translate("VisualizationDesigner", "&Figure types"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_layout), _translate("VisualizationDesigner", "Design"))
         self.label_16.setText(_translate("VisualizationDesigner", "&Figure font:"))
