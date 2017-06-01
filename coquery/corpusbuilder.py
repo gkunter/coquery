@@ -1931,6 +1931,7 @@ class XMLCorpusBuilder(BaseCorpusBuilder):
         self._namespaces = None
         self._strip_namespace = strip_namespace
         self.indent_depth = 0
+        self._current_file = "(unknown)"
 
     def indent(self):
         return "    " * self.indent_depth
@@ -2115,6 +2116,7 @@ class TEICorpusBuilder(XMLCorpusBuilder):
         See TEI Header examples:
         http://www.tei-c.org/release/doc/tei-p5-doc/en/html/examples-teiHeader.html
         """
+        super(TEICorpusBuilder, self).process_header(tree)
 
     def preprocess_element(self, element):
         tag = element.tag
