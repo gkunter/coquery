@@ -558,6 +558,7 @@ class Visualizer(CoqObject):
         self.session = session
         self.legend_levels = None
         self.legend_title = None
+        self.legend_palette = []
         self._last_legend_pos = None
         self._xlab = "X"
         self._ylab = "Y"
@@ -591,8 +592,11 @@ class Visualizer(CoqObject):
         #else:
         grid.fig.legends = []
         if (title or self.legend_title) and self.legend_levels:
-            col = sns.color_palette(palette,
-                                    n_colors=len(self.legend_levels))
+            if self.legend_palette:
+                col = self.legend_palette
+            else:
+                col = sns.color_palette(palette,
+                                        n_colors=len(self.legend_levels))
 
             legend_bar = [plt.Rectangle((0, 0), 1, 1,
                                         fc=col[i], edgecolor="none")
