@@ -201,9 +201,6 @@ class DensityPlot(vis.Visualizer):
             category = z
             levels = levels_z
 
-        print(num)
-        print(category, levels)
-
         if not category:
             if len(num) == 1:
                 col = sns.color_palette(kwargs["palette"], n_colors=1)
