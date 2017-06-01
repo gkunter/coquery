@@ -544,7 +544,9 @@ class BaseVisualizer(QtCore.QObject):
         return "poster"
 
 
-class Visualizer(CoqObject):
+class Visualizer(QtCore.QObject):
+    updateRequested = QtCore.Signal()
+
     axes_style = None
     plotting_context = "notebook"
 
@@ -558,9 +560,24 @@ class Visualizer(CoqObject):
         self.session = session
         self.legend_levels = None
         self.legend_title = None
+        self.legend_palette = []
         self._last_legend_pos = None
         self._xlab = "X"
         self._ylab = "Y"
+
+    def get_custom_widgets(self):
+        """
+        Return a list of widgets that add additional functionality to this
+        visualizer.
+
+        The visualizer should connect the widget signals to appropriate
+        class methods so that the current values are available to the
+        visualizer.
+        """
+        return []
+
+    def update_figure(self):
+        return
 
     def get_grid(self, **kwargs):
         kwargs["data"] = self.df
@@ -591,8 +608,11 @@ class Visualizer(CoqObject):
         #else:
         grid.fig.legends = []
         if (title or self.legend_title) and self.legend_levels:
-            col = sns.color_palette(palette,
-                                    n_colors=len(self.legend_levels))
+            if self.legend_palette:
+                col = self.legend_palette
+            else:
+                col = sns.color_palette(palette,
+                                        n_colors=len(self.legend_levels))
 
             legend_bar = [plt.Rectangle((0, 0), 1, 1,
                                         fc=col[i], edgecolor="none")

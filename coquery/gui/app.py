@@ -121,6 +121,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     abortRequested = QtCore.Signal()
     useContextConnection = QtCore.Signal(object)
     closeContextConnection = QtCore.Signal(object)
+    dataChanged = QtCore.Signal()
 
     def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -1606,6 +1607,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 ##self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column])
                 ##self.ui.data_preview.setColumnWidth(i, options.cfg.column_width[column.lower().replace(" ", "_").replace(":", "_")])
 
+        self.dataChanged.emit()
+
         if options.cfg.memory_dump:
             memory_dump()
 
@@ -2351,6 +2354,20 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.query_thread.start()
 
     def visualization_designer(self):
+        def set_data(dialog):
+            try:
+                corpus_id = self.table_model.invisible_content[
+                    "coquery_invisible_corpus_id"]
+                df = pd.concat([self.table_model.content, corpus_id], axis=1)
+                df = df.drop(ROW_NAMES.values(), errors="ignore")
+            except (AttributeError, KeyError):
+                df = pd.DataFrame()
+
+            alias = {col: self.Session.translate_header(col)
+                     for col in df.columns}
+
+            dialog.setup_data(df, alias)
+
         if not options.use_seaborn:
             errorbox.alert_missing_module("Seaborn", self)
             return
@@ -2364,25 +2381,16 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             msg_box = None
 
         from . import visualizationdesigner
-        try:
-            df = pd.concat([self.table_model.content,
-                    self.table_model.invisible_content["coquery_invisible_corpus_id"]],
-                    axis=1)
-        except (AttributeError, KeyError):
-            df = pd.DataFrame()
 
         if msg_box:
             msg_box.hide()
             msg_box.close()
             del msg_box
 
-
-        alias = {col: self.Session.translate_header(col)
-                 for col in df.columns}
-
-        dialog = visualizationdesigner.VisualizationDesigner(
-            df.drop(ROW_NAMES.values(), errors="ignore"),
-            self.Session, alias=alias)
+        dialog = visualizationdesigner.VisualizationDesigner(self.Session)
+        dialog.dataRequested.connect(lambda: set_data(dialog))
+        dialog.connectDataAvailableSignal(self.dataChanged)
+        set_data(dialog)
 
         dialog.show()
 

@@ -103,6 +103,7 @@ class CoqStaticBox(QtWidgets.QDialog):
         self.setModal(True)
         self.open()
         self.show()
+        self.adjustSize()
         self.update()
         self.repaint()
         get_toplevel_window().repaint()

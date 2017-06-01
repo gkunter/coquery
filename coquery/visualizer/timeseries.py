@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 timeseries.py is part of Coquery.
 
 Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import logging
 
 from coquery.errors import *
+from coquery.gui.pyqt_compat import QtWidgets
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality = 2
@@ -129,9 +130,9 @@ class Visualizer(vis.BaseVisualizer):
 
             # percentage area plot:
             if self.percentage:
-                # if there is only one grouping variable (the time column), 
-                # the cross table produces a Series, not a data frame. It 
-                # isn't really very informative to plot it, but we provide 
+                # if there is only one grouping variable (the time column),
+                # the cross table produces a Series, not a data frame. It
+                # isn't really very informative to plot it, but we provide
                 # for this special case anyway_
                 if type(ct) == pd.Series:
                     ct = ct.apply(lambda x: 100)
@@ -161,48 +162,133 @@ class Visualizer(vis.BaseVisualizer):
             self.add_legend()
 
 class TimeSeries(vis.Visualizer):
+    axes_style = "whitegrid"
+    _default = "Frequency"
+    bandwidth = 1
+
+    def get_custom_widgets(self):
+        layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QApplication.instance().translate(
+                    "TimeSeries", "Bandwidth", None)
+        unit = QtWidgets.QApplication.instance().translate(
+                    "TimeSeries", " years", None)
+        button = QtWidgets.QApplication.instance().translate(
+                    "TimeSeries", "Apply", None)
+
+        TimeSeries.label_bandwidth = QtWidgets.QLabel(label)
+        TimeSeries.spin_bandwidth = QtWidgets.QSpinBox()
+        TimeSeries.spin_bandwidth.setValue(TimeSeries.bandwidth)
+        TimeSeries.spin_bandwidth.setSuffix(unit)
+        TimeSeries.spin_bandwidth.setMinimum(1)
+        TimeSeries.button_apply = QtWidgets.QPushButton(button)
+        TimeSeries.button_apply.setDisabled(True)
+        TimeSeries.button_apply.clicked.connect(
+            lambda: TimeSeries.update_figure(
+                self, TimeSeries.spin_bandwidth.value()))
+        TimeSeries.spin_bandwidth.valueChanged.connect(
+            lambda x: TimeSeries.button_apply.setEnabled(True))
+        layout.addWidget(TimeSeries.label_bandwidth)
+        layout.addWidget(TimeSeries.spin_bandwidth)
+        layout.addWidget(TimeSeries.button_apply)
+        layout.setStretch(0, 1)
+        layout.setStretch(1, 0)
+        layout.setStretch(2, 0)
+        return [layout]
+
+    @classmethod
+    def update_figure(cls, self, i):
+        cls.bandwidth = i
+        TimeSeries.button_apply.setDisabled(True)
+        self.updateRequested.emit()
 
     def plot_facet(self, data, color, **kwargs):
+
+        def to_num(x):
+            bw = TimeSeries.bandwidth
+            val = pd.to_numeric(x, errors="coerce")
+            val = val.apply(lambda x: x if pd.isnull(x)
+                                      else
+                                      (int(x) // bw) * bw)
+            return val
+
+        def to_year(x):
+            bw = TimeSeries.bandwidth
+            val = pd.to_datetime(x.astype(str), errors="coerce")
+            val = val.apply(lambda x: x if pd.isnull(x)
+                                      else
+                                      (int(x.year) // bw) * bw)
+            return val
+
         x = kwargs.get("x")
         y = kwargs.get("y")
+        z = kwargs.get("z")
         levels_x = kwargs.get("levels_x")
         levels_y = kwargs.get("levels_y")
+        levels_z = kwargs.get("levels_z")
 
-        #num = []
-        #date = []
-        #time = data[self._time_column]
-        #num = data[self._time_column].apply(self.convert_to_datetime)
-        #date = data[self._time_column].apply(self.convert_to_timeseries)
-        #if pd.isnull(num).sum() <= pd.isnull(date).sum():
-            #data[self._time_column] = num
-        #else:
-            #data[self._time_column] = date
+        category = None
+        levels = None
+        value = None
+        numeric = None
 
-        #data.dropna(inplace=True)
-        #if len(self._groupby) == 2:
-            #ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
-            #ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
-            #ct = ct[pd.notnull(ct.index)]
-        #else:
-            #ct = pd.crosstab(
-                #data[self._time_column],
-                #pd.Series([""] * len(self._table[self._time_column]), name=""))
+        self._xlab = self._default
+        self._ylab = self._default
 
-        ## Line plot:
-        #self.vmax = max(self.vmax, ct.values.max())
-        #ct.plot(ax=plt.gca(), color=self.get_palette())
+        if x:
+            as_time = to_year(data[x].head(1000))
+            as_num = to_num(data[x].head(1000))
+            if len(as_time.dropna()) > len(as_num.dropna()):
+                numeric = x
+                fun = to_year
+                self._xlab = x
+            elif len(as_num.dropna()):
+                numeric = x
+                fun = to_num
+                self._xlab = x
+            else:
+                category = x
+                levels = levels_x
+        if y:
+            if Numeric is None:
+                as_time = to_year(data[y].head(1000))
+                as_num = to_num(data[y].head(1000))
+                if len(as_time.dropna()) > len(as_num.dropna()):
+                    numeric = y
+                    fun = to_year
+                    self._ylab = y
+                elif len(as_num.dropna()):
+                    numeric = y
+                    fun = to_num
+                    self._ylab = y
+                else:
+                    category = y
+                    levels = levels_y
+            else:
+                category = y
+                levels = levels_y
 
-    def set_annotations(self, grid):
-        grid.set(ylim=(0, self.vmax))
-        grid.set_axis_labels(
-            self.options["label_x_axis"], self.options["label_y_axis"])
-        if len(self._groupby) == 2:
-            self.add_legend()
+        if z and self.dtype(z, data) == object:
+            category = z
+            levels = levels_z
 
-    def get_grid(self, **kwargs):
-        with sns.axes_style("whitegrid"):
-            grid = super(TimeSeries, self).get_grid(**kwargs)
-        return grid
+        val = fun(data[numeric])
+        if not category:
+            tab = val.value_counts().sort_index()
+            tab.plot(ax=plt.gca())
+        else:
+            index = (val.dropna()
+                        .drop_duplicates()
+                        .sort_values())
+            for i, level in enumerate(levels):
+                df = data[data[category] == level]
+                val = fun(df[numeric])
+                tab = val.value_counts().sort_index()
+                tab = tab.reindex_axis(index).fillna(0)
+                tab.plot()
+
+        if levels:
+            self.legend_title = category
+            self.legend_levels = levels
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
@@ -216,89 +302,22 @@ class TimeSeries(vis.Visualizer):
              in session.Resource.time_features)):
             return False
 
+        return True
+
         # check if either column is a categorical column:
-        if (Visualizer.dtype(data_x, df) != object and
-            Visualizer.dtype(data_y, df) != object):
+        if (TimeSeries.dtype(data_x, df) != object and
+            TimeSeries.dtype(data_y, df) != object):
             return False
 
         return True
 
 class StackedArea(TimeSeries):
-
-    def plot_facet(self, data, color, **kwargs):
-        x = kwargs.get("x")
-        y = kwargs.get("y")
-        levels_x = kwargs.get("levels_x")
-        levels_y = kwargs.get("levels_y")
-
-        #num = []
-        #date = []
-        #time = data[self._time_column]
-        #num = data[self._time_column].apply(self.convert_to_datetime)
-        #date = data[self._time_column].apply(self.convert_to_timeseries)
-        #if pd.isnull(num).sum() <= pd.isnull(date).sum():
-            #data[self._time_column] = num
-        #else:
-            #data[self._time_column] = date
-
-        #data.dropna(inplace=True)
-        #if len(self._groupby) == 2:
-            #ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
-            #ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
-            #ct = ct[pd.notnull(ct.index)]
-        #else:
-            #ct = pd.crosstab(
-                #data[self._time_column],
-                #pd.Series([""] * len(self._table[self._time_column]), name=""))
-
-        ## Stacked area plot:
-        #if len(self._groupby) == 2:
-            #self.vmax = max(self.vmax, ct.apply(sum, axis=1).max())
-        #ct.plot(ax=plt.gca(), kind="area", stacked=True, color=self.get_palette(), **kwargs)
-
+    pass
 
 class PercentageArea(TimeSeries):
-    def plot_facet(self, data, color, **kwargs):
-        x = kwargs.get("x")
-        y = kwargs.get("y")
-        levels_x = kwargs.get("levels_x")
-        levels_y = kwargs.get("levels_y")
-
-        #num = []
-        #date = []
-        #time = data[self._time_column]
-        #num = data[self._time_column].apply(self.convert_to_datetime)
-        #date = data[self._time_column].apply(self.convert_to_timeseries)
-        #if pd.isnull(num).sum() <= pd.isnull(date).sum():
-            #data[self._time_column] = num
-        #else:
-            #data[self._time_column] = date
-
-        #data.dropna(inplace=True)
-        #if len(self._groupby) == 2:
-            #ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
-            #ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
-            #ct = ct[pd.notnull(ct.index)]
-        #else:
-            #ct = pd.crosstab(
-                #data[self._time_column],
-                #pd.Series([""] * len(self._table[self._time_column]), name=""))
-
-        ## percentage area plot:
-        ## if there is only one grouping variable (the time column),
-        ## the cross table produces a Series, not a data frame. It
-        ## isn't really very informative to plot it, but we provide
-        ## for this special case anyway_
-        #if type(ct) == pd.Series:
-            #ct = ct.apply(lambda x: 100)
-        #else:
-            #ct = ct.apply(lambda x: (100 * x) / sum(x), axis=1)
-        #ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
-
     def set_annotations(self, grid):
         super(PercentageArea, self).set_annotations(grid)
         grid.set(ylim=(0, 100))
 
-logger = logging.getLogger(NAME)
 
 

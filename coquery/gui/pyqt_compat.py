@@ -29,8 +29,6 @@ QtCore.QString = str
 
 class CoqSettings(QtCore.QSettings):
     def value(self, key, default=None):
-        if default is None:
-            warnings.warn("Settings key '{}' requested without default value".format(key))
         try:
             val = super(CoqSettings, self).value(key, default)
         except Exception as e:
