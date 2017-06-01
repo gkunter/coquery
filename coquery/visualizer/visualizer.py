@@ -544,7 +544,9 @@ class BaseVisualizer(QtCore.QObject):
         return "poster"
 
 
-class Visualizer(CoqObject):
+class Visualizer(QtCore.QObject):
+    updateRequested = QtCore.Signal()
+
     axes_style = None
     plotting_context = "notebook"
 
@@ -562,6 +564,20 @@ class Visualizer(CoqObject):
         self._last_legend_pos = None
         self._xlab = "X"
         self._ylab = "Y"
+
+    def get_custom_widgets(self):
+        """
+        Return a list of widgets that add additional functionality to this
+        visualizer.
+
+        The visualizer should connect the widget signals to appropriate
+        class methods so that the current values are available to the
+        visualizer.
+        """
+        return []
+
+    def update_figure(self):
+        return
 
     def get_grid(self, **kwargs):
         kwargs["data"] = self.df
