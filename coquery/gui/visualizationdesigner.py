@@ -47,7 +47,7 @@ visualizer_mapping = (
     ("Barplot", "Barchart", "barplot", "BarPlot"),
     ("Stacked bars", "Barchart_stacked", "barplot", "StackedBars"),
     ("Percentage bars", "Barchart_percent", "barplot", "PercentBars"),
-    #("Change over time (lines)", "Lines", "timeseries"),
+    ("Change over time (lines)", "Lines", "timeseries", "TimeSeries"),
     #("Change over time (stacked)", "Areas_stacked", "timeseries"),
     #("Change over time (percent)", "Areas_percent", "timeseries"),
     ("Heat map", "Heatmap", "heatmap", "Heatmap"),
@@ -111,18 +111,13 @@ class NavigationToolbar(NavigationToolbar2QT):
 class VisualizationDesigner(QtWidgets.QDialog):
     moduleLoaded = QtCore.Signal(str, str)
     allLoaded = QtCore.Signal()
+    dataRequested = QtCore.Signal()
     visualizers = {}
 
-    def __init__(self, df, session, alias=None, parent=None):
+    def __init__(self, session, parent=None):
         super(VisualizationDesigner, self).__init__(parent)
         self.session = session
-        self.alias = alias or {}
-        self.df = df
-
         self.vis = None
-        for i, x in enumerate(df.columns):
-            if self.df[x].dtype == bool:
-                self.df[x] = self.df[x].astype(str)
 
         self.ui = Ui_VisualizationDesigner()
         self.ui.setupUi(self)
@@ -137,7 +132,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.label_37.hide()
 
         self.populate_figure_types()
-        self.populate_variable_lists()
 
         self.restore_settings()
         self.display_values()
@@ -147,7 +141,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.check_grid_layout()
         self.check_clear_buttons()
         self.check_orientation()
-        self.finetune_ui()
+        self._finetune_ui()
+        self.change_figure_type()
 
         self.setup_connections()
 
@@ -159,15 +154,53 @@ class VisualizationDesigner(QtWidgets.QDialog):
             "coquerel_icon.png", small_n_flat=False))
         self.dialog.show()
 
-    def finetune_ui(self):
-        """
-        Finetune the UI: set widths, set translators, set icons.
-        """
-        self.ui.label_dimensions.setText(
-            utf8(self.ui.label_dimensions.text()).format(
-                len(self.df),
-                len(self.categorical) + len(self.numerical)))
+    def connectDataAvailableSignal(self, signal):
+        signal.connect(self.data_available)
 
+    def data_available(self):
+        self.ui.button_refresh_data.show()
+        new_label = QtWidgets.QApplication.instance().translate(
+                "VisualizationDesigner", "<b>New data available</b>", None)
+        if len(self.df):
+            new_label = "{}<br>{}".format(self.get_label(), new_label)
+        self.ui.label_dimensions.setText(new_label)
+
+    def get_label(self):
+        if len(self.df):
+            label = QtWidgets.QApplication.instance().translate(
+                "VisualizationDesigner", "{col} columns, {row} rows", None)
+        else:
+            label = QtWidgets.QApplication.instance().translate(
+                "VisualizationDesigner", "No data available", None)
+
+        label = label.format(col=len(self.categorical) + len(self.numerical),
+                             row=len(self.df))
+        return label
+
+    def setup_data(self, df, alias=None):
+        self.blockSignals(True)
+
+        self.ui.table_categorical.clear()
+        self.ui.table_numerical.clear()
+
+        self.df = df
+        self.alias = alias or {}
+        for i, x in enumerate(df.columns):
+            if self.df[x].dtype == bool:
+                self.df[x] = self.df[x].astype(str)
+
+        self.populate_variable_lists()
+        self.ui.label_dimensions.setText(self.get_label())
+        self.check_figure_types()
+
+        self.ui.button_refresh_data.hide()
+
+        self.blockSignals(False)
+
+    def _finetune_ui(self):
+        """
+        Finetune the UI: set widths, set icons.
+        """
         self.ui.list_figures.setDragEnabled(False)
         self.ui.list_figures.setDragDropMode(self.ui.list_figures.NoDragDrop)
         w = app.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent)
@@ -292,6 +325,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         """
         Connects the GUI signals to the appropriate slots.
         """
+
+        self.ui.button_refresh_data.clicked.connect(
+            lambda: self.dataRequested.emit())
+
         # Hook up palette combo boxes:
         self.ui.combo_qualitative.currentIndexChanged.connect(
             lambda x: self.change_palette(utf8(self.ui.combo_qualitative.currentText())))
@@ -321,6 +358,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_clear_z.clicked.connect(lambda: self.ui.tray_data_z.clear())
         self.ui.button_clear_rows.clicked.connect(lambda: self.ui.tray_rows.clear())
         self.ui.button_clear_columns.clicked.connect(lambda: self.ui.tray_columns.clear())
+
+        # Change custom figure widgets if necessary:
+        self.ui.list_figures.currentItemChanged.connect(
+            self.change_figure_type)
 
         # Hook up checks for figure type.
         # The list of available figure types can change if a data tray has
@@ -410,6 +451,50 @@ class VisualizationDesigner(QtWidgets.QDialog):
         # (5) changing the orientation
         self.ui.radio_horizontal.toggled.connect(self.plot_figure)
         self.ui.radio_vertical.toggled.connect(self.plot_figure)
+
+    def change_figure_type(self):
+        self.ui.group_custom.hide()
+
+        figure_type = self.ui.list_figures.currentItem()
+        if figure_type is None:
+            return
+
+        if self.df is None:
+            return
+
+        visualizer_class = VisualizationDesigner.visualizers[
+            figure_type.text()]
+
+        #if self.vis is not None:
+            #self.vis.updateRequested.disconnect()
+
+        self.vis = visualizer_class(self.df, self.session)
+        self.vis.updateRequested.connect(self.plot_figure)
+
+        while self.ui.layout_custom.count():
+            item = self.ui.layout_custom.takeAt(0)
+            if isinstance(item, QtWidgets.QLayout):
+                while item.count():
+                    subitem = item.takeAt(0)
+                    try:
+                        subitem.hide()
+                    except AttributeError:
+                        break
+                    del subitem
+            try:
+                item.hide()
+            except AttributeError:
+                break
+            del item
+
+        widgets = self.vis.get_custom_widgets()
+        if widgets:
+            self.ui.group_custom.show()
+            for item in widgets:
+                if isinstance(item, QtWidgets.QLayout):
+                    self.ui.layout_custom.addLayout(item)
+                else:
+                    self.ui.layout_custom.addWidget(item)
 
     def check_orientation(self):
         data_x = self.ui.tray_data_x.data()
