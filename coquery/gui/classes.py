@@ -1942,13 +1942,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self.formatted = self.format_content(self.content)
 
     def flags(self, index):
+        flags = super(CoqTableModel, self).flags(index)
         try:
             if self.content.columns[index.column()].startswith("coq_userdata"):
-                return super(CoqTableModel, self).flags(index) | QtCore.Qt.ItemIsEditable
-            else:
-                return super(CoqTableModel, self).flags(index)
+                editable= (get_toplevel_window()
+                           .ui.aggregate_radio_list[0].isChecked())
+                if editable:
+                    return flags | QtCore.Qt.ItemIsEditable
         except IndexError:
-            return super(CoqTableModel, self).flags(index)
+            pass
+        return flags
 
     def get_dtype(self, column):
         return self._dtypes[list(self.header).index(column)]

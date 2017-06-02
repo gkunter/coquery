@@ -79,6 +79,7 @@ class CoqResourceMenu(QtWidgets.QMenu):
 class CoqColumnMenu(QtWidgets.QMenu):
     hideColumnRequested = QtCore.Signal(list)
     addFunctionRequested = QtCore.Signal(list)
+    removeUserColumnRequested = QtCore.Signal(list)
     removeFunctionRequested = QtCore.Signal(list)
     editFunctionRequested = QtCore.Signal(str)
     changeSortingRequested = QtCore.Signal(tuple)
@@ -114,6 +115,15 @@ class CoqColumnMenu(QtWidgets.QMenu):
         self.addAction(hide_column)
 
         self.addSeparator()
+
+        check_is_userdata = [x.startswith("coq_userdata") for x in columns]
+        if all(check_is_userdata):
+            label = "&Remove user column{}".format(suffix)
+            remove_userdata = QtWidgets.QAction(label, parent)
+            remove_userdata.triggered.connect(
+                lambda: self.removeUserColumnRequested.emit(columns))
+            self.addAction(remove_userdata)
+            self.addSeparator()
 
         # add additional function actions, but only if all columns really
         # are functions (excluding group functions):

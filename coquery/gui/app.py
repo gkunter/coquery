@@ -415,7 +415,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.action_column_properties.triggered.connect(self.column_properties)
         self.ui.action_show_hidden.triggered.connect(self.show_hidden_columns)
-        #self.ui.action_add_column.triggered.connect(self.add_column)
+        self.ui.action_add_column.triggered.connect(self.add_column)
         self.ui.action_add_function.triggered.connect(self.menu_add_function)
         self.ui.action_find.triggered.connect(lambda: self.ui.widget_find.show())
 
@@ -656,7 +656,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def show_results_menu(self):
         enable = hasattr(self, "table_model")
-        #self.ui.action_add_column.setEnabled(enable)
+        self.ui.action_add_column.setEnabled(enable)
         self.ui.action_add_function.setEnabled(enable)
         self.ui.action_column_properties.setEnabled(enable)
         self.ui.action_show_hidden.setEnabled(enable)
@@ -1116,6 +1116,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def add_column(self):
         if not self.Session or len(self.Session.data_table.columns) == 0:
             return
+
+        if not self.ui.aggregate_radio_list[0].isChecked():
+            QtWidgets.QMessageBox.critical(self,
+                                            "User data unavailable",
+                                            msg_userdata_unavailable)
+            return
+
         max_user_column = 0
         for col in self.Session.data_table.columns:
             if col.startswith("coq_userdata"):
@@ -1123,10 +1130,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                       int(col.rpartition("_")[-1]))
         N = max_user_column + 1
         label = "coq_userdata_{}".format(N)
-        self.Session.data_table[label] = [None] * len(self.Session.data_table)
-        self.reaggregate(recalculate=False, start=False)
+        val = [""] * len(self.Session.data_table)
+        self.Session.data_table[label] = val
         self.update_columns()
         self._target_label = label
+        self.user_columns = True
+
+    def remove_column(self, columns):
+        self.Session.data_table = self.Session.data_table.drop(
+            columns, axis="columns")
+        self.update_columns()
+        self.user_column = any([x.startswith("coq_userdata")
+                                for x in self.Session.data_table])
 
     def jump_to_column(self, col):
         if not col or col.startswith("coquery_invisible"):
@@ -1510,7 +1525,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.hidden_model = classes.CoqHiddenTableModel(
             to_hide, session=self.Session)
         self.set_columns_widget()
-        self.table_model.dataChanged.connect(self.change_userdata)
 
     def set_columns_widget(self):
         def hide():
@@ -1534,14 +1548,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 show()
             if self._hidden == None:
                 self.collapse_hidden_columns()
-
-    def change_userdata(self):
-        self.user_columns = True
-        if AUTO_USERDATA in options.settings.value(
-                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
-            self.reaggregate()
-        else:
-            self.enable_apply_button()
 
     def display_results(self, drop=True):
         if len(self.Session.output_object.dropna(how="all")) == 0:
@@ -1951,6 +1957,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         menu.hideColumnRequested.connect(self.hide_columns)
         menu.addFunctionRequested.connect(self.add_function)
         menu.removeFunctionRequested.connect(self.remove_functions)
+        menu.removeUserColumnRequested.connect(self.remove_column)
         menu.editFunctionRequested.connect(self.edit_function)
         menu.changeSortingRequested.connect(self.change_sorting_order)
         menu.propertiesRequested.connect(self.column_properties)
