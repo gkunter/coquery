@@ -391,6 +391,13 @@ Missing a part-of-speech specification after
 <code style='color: #aa0000'>{}</code>.
 """)
 
+msg_userdata_unavailable = """
+<p><b>User data columns are unavailable.</b></p>
+<p>User data columns can only be added to the untransformed results table.
+Select the 'Transform' toolbox and switch to '{}' to show the untransformed
+table. Then, call 'Add user column' again.
+""".format(QUERY_MODE_TOKENS)
+
 msg_userdata_warning = """
 <p><b>Your results table contains user data.</b></p>
 <p>If you start a new query, the user data that you have entered manually
