@@ -206,6 +206,7 @@ class GroupDialog(QtWidgets.QDialog):
         selected_columns = [x for x in group.columns
                             if not re.match("func_.*_group_", x)]
         self.ui.edit_label.setText(group.name)
+        self.ui.radio_remove_duplicates.setChecked(group.show_distinct)
         self.ui.widget_selection.setSelectedList(
             selected_columns,
             get_toplevel_window().Session.translate_header)
@@ -237,6 +238,9 @@ class GroupDialog(QtWidgets.QDialog):
             if x in function_columns:
                 function_widget.setCheckState(QtCore.Qt.Checked)
 
+    def setup_values(self, group):
+        self.ui.edit_label.setText(group.name)
+
     def exec_(self, *args, **kwargs):
         result = super(GroupDialog, self).exec_(*args, **kwargs)
         if result == QtWidgets.QDialog.Accepted:
@@ -248,7 +252,9 @@ class GroupDialog(QtWidgets.QDialog):
                 item = self.ui.scroll_layout.itemAt(i).widget()
                 if item.isChecked():
                     functions.append((item.functionClass(), item.columns()))
-            group = Group(name, columns, functions)
+            show_distinct = bool(self.ui.radio_remove_duplicates.isChecked())
+
+            group = Group(name, columns, functions, show_distinct)
             return group
         else:
             return None
@@ -291,9 +297,12 @@ class SummaryDialog(GroupDialog):
         super(SummaryDialog, self).__init__(group, all_columns, parent)
         self.ui.label.hide()
         self.ui.label_2.hide()
+        self.ui.label_duplicates.hide()
+        self.ui.radio_remove_duplicates.hide()
+        self.ui.radio_keep_duplicates.hide()
         self.ui.widget_selection.hide()
         self.ui.edit_label.hide()
-        self.ui.verticalLayout.setRowStretch(2, 0)
+        self.ui.verticalLayout.setRowStretch(1, 0)
 
     @staticmethod
     def edit(group, all_columns, parent=None):
@@ -302,5 +311,6 @@ class SummaryDialog(GroupDialog):
         dialog.setWindowTitle("Edit summary functions – Coquery")
         group = dialog.exec_()
         if group:
-            return Summary(name=group.name, functions=group.functions)
+            return Summary(name=group.name, functions=group.functions,
+                           columns=all_columns, distinct=group.show_distinct)
 
