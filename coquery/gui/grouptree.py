@@ -41,6 +41,13 @@ class CoqGroupTreeItem(QtWidgets.QTreeWidgetItem):
             func.setText(0, name)
             functions.addChild(func)
         self.addChild(functions)
+        if group.show_distinct:
+            distinct = QtWidgets.QTreeWidgetItem()
+            distinct.setText(0, "Removes duplicates")
+            distinct.setToolTip(0, distinct.text(0))
+            icon_getter = get_toplevel_window().get_icon
+            #distinct.setIcon(0, icon_getter("Ok"))
+            self.addChild(distinct)
 
     def change_group(self, group):
         self.setText(0, group.name)
