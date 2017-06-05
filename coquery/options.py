@@ -332,6 +332,7 @@ class Options(object):
         self.args.row_color = {}
 
         self.args.managers = {}
+        self.args.summary_group = []
         self.args.current_resources = get_available_resources(self.args.current_server)
 
     @property
@@ -727,7 +728,7 @@ class Options(object):
 
         import inspect
         from . import functions
-        from .managers import Group
+        from .managers import Group, Summary
 
         func_types = {}
         for _, cls in inspect.getmembers(functions):
@@ -1011,6 +1012,7 @@ class Options(object):
             grp_columns = {}
             grp_function_types = defaultdict(dict)
             grp_function_columns = defaultdict(dict)
+            grp_distinct = {}
 
             for var, value in config_file.items("groups"):
                 parsed = var.split("_", 2)
@@ -1030,10 +1032,13 @@ class Options(object):
                         grp_names[num] = value
                     elif attr == "columns":
                         grp_columns[num] = value
+                    elif attr == "distinct":
+                        grp_distinct[num] = bool(value)
 
             self.args.groups = []
             for num in grp_names:
                 name = grp_names.get(num)
+                distinct = grp_distinct.get(num, False)
                 columns = grp_columns.get(num, None)
                 function_list = []
                 for f_num in grp_function_types.get(num, {}):
@@ -1043,8 +1048,51 @@ class Options(object):
                         function_list.append((func_types[f_type],
                                               f_columns.split(",")))
                 if columns is not None:
-                    group = Group(name, columns.split(","), function_list)
+                    group = Group(name, columns.split(","),
+                                  function_list, distinct)
                     self.args.groups.append(group)
+
+            # process [summary]
+            self.args.show_distinct = False
+            sum_names = {}
+            sum_columns = {}
+            sum_function_types = defaultdict(dict)
+            sum_function_columns = defaultdict(dict)
+
+            for var, value in config_file.items("summary"):
+                parsed = var.split("_", 2)
+                if (len(parsed) == 3 and parsed[0] == "summary"):
+                    num = parsed[1]
+                    attr = parsed[2]
+                    if attr.startswith("fnc"):
+                        # summary functions
+                        f_parsed = attr.split("_")
+                        if len(f_parsed) == 3:
+                            _, f_num, f_attr = f_parsed
+                            if f_attr == "type":
+                                sum_function_types[num][f_num] = value
+                            elif f_attr == "columns":
+                                sum_function_columns[num][f_num] = value
+                    elif attr == "name":
+                        sum_names[num] = value
+                    elif attr == "columns":
+                        sum_columns[num] = value
+                elif (len(parsed) == 2 and parsed[-1] == "distinct"):
+                    self.args.show_distinct = value == "True"
+
+            self.args.summary = []
+            for num in sum_names:
+                name = sum_names.get(num)
+                columns = sum_columns.get(num, None)
+                function_list = []
+                for f_num in sum_function_types.get(num, {}):
+                    f_type = sum_function_types[num][f_num]
+                    f_columns = sum_function_columns[num].get(f_num, None)
+                    if f_columns is not None:
+                        function_list.append((func_types[f_type],
+                                              f_columns.split(",")))
+                summary = Summary(name, columns.split(","), function_list)
+                self.args.summary_group.append(summary)
 
         # Use QSettings?
         if settings:
@@ -1159,12 +1207,28 @@ def save_configuration():
 
     for i, grp in enumerate(cfg.groups):
         config.set("groups", "group_{}_name".format(i), grp.name)
+        config.set("groups", "group_{}_distinct".format(i), str(grp.show_distinct))
         config.set("groups", "group_{}_columns".format(i),
                    ",".join(grp.columns))
         for j, (fnc, columns) in enumerate(grp.functions):
             config.set("groups", "group_{}_fnc_{}_type".format(i, j),
                        fnc._name)
             config.set("groups", "group_{}_fnc_{}_columns".format(i, j),
+                       ",".join(columns))
+
+    if "summary" not in config.sections():
+        config.add_section("summary")
+
+    config.set("summary", "summary_distinct", cfg.show_distinct)
+
+    for i, grp in enumerate(cfg.summary_group):
+        config.set("summary", "summary_{}_name".format(i), grp.name)
+        config.set("summary", "summary_{}_columns".format(i),
+                   ",".join(grp.columns))
+        for j, (fnc, columns) in enumerate(grp.functions):
+            config.set("summary", "summary_{}_fnc_{}_type".format(i, j),
+                       fnc._name)
+            config.set("summary", "summary_{}_fnc_{}_columns".format(i, j),
                        ",".join(columns))
 
     if cfg.table_links:
