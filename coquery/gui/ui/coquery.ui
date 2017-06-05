@@ -866,8 +866,8 @@ background-color: rgb(244, 165, 130);</string>
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans'; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="textInteractionFlags">
            <set>Qt::NoTextInteraction</set>
@@ -889,7 +889,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>720</width>
-     <height>24</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1614,6 +1614,33 @@ p, li { white-space: pre-wrap; }
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>combo_corpus</tabstop>
+  <tabstop>radio_query_string</tabstop>
+  <tabstop>edit_query_string</tabstop>
+  <tabstop>radio_query_file</tabstop>
+  <tabstop>button_change_file</tabstop>
+  <tabstop>list_toolbox</tabstop>
+  <tabstop>radio_context_mode_columns</tabstop>
+  <tabstop>radio_context_mode_kwic</tabstop>
+  <tabstop>radio_context_mode_string</tabstop>
+  <tabstop>context_left_span</tabstop>
+  <tabstop>context_right_span</tabstop>
+  <tabstop>check_restrict</tabstop>
+  <tabstop>button_stopwords</tabstop>
+  <tabstop>tree_groups</tabstop>
+  <tabstop>button_add_summary_function</tabstop>
+  <tabstop>button_filters</tabstop>
+  <tabstop>button_apply_management</tabstop>
+  <tabstop>button_cancel_management</tabstop>
+  <tabstop>button_run_query</tabstop>
+  <tabstop>button_stop_query</tabstop>
+  <tabstop>radio_context_mode_none</tabstop>
+  <tabstop>data_preview</tabstop>
+  <tabstop>button_toggle_hidden</tabstop>
+  <tabstop>hidden_columns</tabstop>
+  <tabstop>text_no_match</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
