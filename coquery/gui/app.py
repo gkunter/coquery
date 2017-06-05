@@ -338,7 +338,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.statusBar().layout().addWidget(self.ui.multi_query_progress, 1)
         self.statusBar().layout().addWidget(self.ui.status_progress, 1)
         self.statusBar().layout().addItem(QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
-        self.statusBar().layout().addWidget(QtWidgets.QLabel(_translate("MainWindow", "Connection: ", None)))
+        label = _translate("MainWindow", "Connection: ", None)
+        self.statusBar().layout().addWidget(QtWidgets.QLabel(label))
         self.statusBar().layout().addWidget(self.ui.combo_config)
         self.statusBar().layout().setStretchFactor(self.ui.status_message, 0)
         self.statusBar().layout().setStretchFactor(self.ui.status_progress, 1)
@@ -917,9 +918,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 _set_icon(2, active_icon)
 
         elif row == TOOLBOX_SUMMARY:
-            l = self.Session.summary_group.get_functions()
-            _set_icon(1, filter_icon if options.cfg.filter_list else None)
-            _set_icon(2, active_icon if l else None)
+            active = (self.Session.summary_group.get_functions())
+            filtered = (options.cfg.filter_list)
+            _set_icon(1, filter_icon if filtered else None)
+            _set_icon(2, active_icon if active else None)
 
     ###
     ### interface status and interface interaction methods
@@ -2649,8 +2651,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             x = self.ui.splitter.saveState()
             options.settings.setValue("splitter", x)
 
-
-
             for widget in QtWidgets.qApp.topLevelWidgets():
                 widget.close()
                 del widget
@@ -2821,6 +2821,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
         if options.cfg:
+            options.cfg.summary_group = [self.Session.summary_group]
             options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
             options.cfg.MODE = self.get_aggregate()
             options.cfg.context_restrict = (
@@ -2984,13 +2985,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         try:
             session = self.Session
-            manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+            manager = managers.get_manager(
+                options.cfg.MODE, session.Resource.name)
         except:
-            manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
+            manager = managers.get_manager(
+                options.cfg.MODE,
+                utf8(self.ui.combo_corpus.currentText()))
 
-        label_summary_functions = _translate("MainWindow", "Summary &functions{}...", None)
-        label_summary_filters = _translate("MainWindow", "Result fi&lters{}...", None)
-        label_stopwords = _translate("MainWindow", "Active stop words: {}", None)
+        label_summary_functions = _translate(
+            "MainWindow", "Summary &functions{}...", None)
+        label_summary_filters = _translate(
+            "MainWindow", "Result fi&lters{}...", None)
+        label_stopwords = _translate(
+            "MainWindow", "Active stop words: {}", None)
 
         # summary button labels:
         l = self.Session.summary_group.get_functions()
