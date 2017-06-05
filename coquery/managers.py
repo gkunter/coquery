@@ -45,9 +45,10 @@ class Sorter(CoqObject):
 
 
 class Group(CoqObject):
-    def __init__(self, name="", columns=None, functions=None):
+    def __init__(self, name="", columns=None, functions=None, distinct=False):
         self.columns = []
         self.functions = []
+        self.show_distinct = distinct
 
         if columns is not None:
             self.columns = columns
@@ -57,10 +58,12 @@ class Group(CoqObject):
         self.name = name
 
     def __repr__(self):
-        S = ("Group(name='{}', columns=[{}], functions=[{}])")
-        return S.format(self.name,
-                        ", ".join(["'{}'".format(x) for x in self.columns]),
-                        ", ".join(["'{}'".format(x) for x in self.functions]))
+        S = ("Group(name='{}', columns=[{}], functions=[{}], distinct={})")
+        return S.format(
+            self.name,
+            ", ".join(["'{}'".format(x) for x in self.columns]),
+            ", ".join(["'{}'".format(x) for x in self.functions]),
+            self.show_distinct)
 
     def process(self, df, session, manager):
         if self.columns:
@@ -68,6 +71,8 @@ class Group(CoqObject):
             df = (df.groupby(self.columns, as_index=False)
                     .apply(function_list.lapply,
                            session=session, manager=manager))
+            if self.show_distinct:
+                df = df.drop_duplicates(self.columns)
         return df
 
     def get_functions(self):
@@ -76,17 +81,30 @@ class Group(CoqObject):
 
 
 class Summary(Group):
+    def __init__(self, *args, **kwargs):
+        super(Summary, self).__init__(*args, **kwargs)
+        self.total_rows = None
+
     def process(self, df, session, manager):
         function_list = FunctionList(self.get_functions())
         df = function_list.lapply(
             df, session=session, manager=manager)
 
+        if self.show_distinct:
+            self.total_rows = len(df)
+            df = df.drop_duplicates()
+            columns = [x for x in df.columns if
+                       not x.startswith(("coquery_invisible"))]
+            df = df.drop_duplicates(columns)
+
         return df
 
     def __repr__(self):
-        S = ("Summary(name='{}', functions=[{}])")
-        return S.format(self.name,
-                        ", ".join(["'{}'".format(x) for x in self.functions]))
+        S = ("Summary(name='{}', functions=[{}], distinct={})")
+        return S.format(
+            self.name,
+            ", ".join(["'{}'".format(x) for x in self.functions]),
+            self.show_distinct)
 
 
 class Manager(CoqObject):
@@ -284,7 +302,7 @@ class Manager(CoqObject):
             try:
                 values = column.dropna().unique()
             except AttributeError:
-                print(column.head())
+                print("substitute():", column.head())
             to_bool = values.astype(bool)
             if (to_bool == values).all():
                 return to_bool
@@ -1141,19 +1159,15 @@ class ContrastMatrix(FrequencyList):
 
 
 def manager_factory(manager):
-    if manager == QUERY_MODE_TYPES:
-        return Types()
-    elif manager == QUERY_MODE_FREQUENCIES:
-        return FrequencyList()
-    elif manager == QUERY_MODE_CONTINGENCY:
-        return ContingencyTable()
-    elif manager == QUERY_MODE_COLLOCATIONS:
-        return Collocations()
-    elif manager == QUERY_MODE_CONTRASTS:
-        return ContrastMatrix()
-    else:
-        return Manager()
-
+    for mode, cls in (
+        (QUERY_MODE_TYPES, Types),
+        (QUERY_MODE_FREQUENCIES, FrequencyList),
+        (QUERY_MODE_COLLOCATIONS, Collocations),
+        (QUERY_MODE_CONTRASTS, ContrastMatrix),
+        (QUERY_MODE_CONTINGENCY, ContingencyTable)):
+        if manager == mode:
+            return cls()
+    return Manager()
 
 def get_manager(manager, resource):
     """
