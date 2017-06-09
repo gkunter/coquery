@@ -654,6 +654,41 @@ class TestCorpus(unittest.TestCase):
         self.assertEqual(self.simple(query_string),
                          self.simple(target_string))
 
+    def test_query_string_to_file(self):
+        query = TokenQuery("*", self.Session)
+        query_string = self.resource.get_query_string(
+            query.query_list[0], ["word_label", "source_label"], to_file=True)
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   COQ_SOURCE_1.Title AS coq_source_label_1
+
+            FROM Corpus AS COQ_CORPUS_1
+
+            INNER JOIN Files AS COQ_SOURCE_1
+                    ON COQ_SOURCE_1.FileId = COQ_CORPUS_1.FileId
+
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = COQ_CORPUS_1.WordId"""
+
+        self.assertEqual(self.simple(query_string),
+                         self.simple(target_string))
+
+    def test_query_string_to_file_no_column(self):
+        query = TokenQuery("*", self.Session)
+        query_string = self.resource.get_query_string(
+            query.query_list[0], [], to_file=True)
+        target_string = """
+            SELECT COQ_CORPUS_1.ID AS coquery_invisible_corpus_id
+            FROM Corpus AS COQ_CORPUS_1"""
+
+        print(query_string)
+        print(target_string)
+
+        self.assertEqual(self.simple(query_string),
+                         self.simple(target_string))
+
+
+
 
     ### WHERE get_token_conditions
 
