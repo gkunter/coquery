@@ -124,9 +124,10 @@ class TokenQuery(object):
                             self._current_subquery_string)
                 logger.info(s)
 
-            query_string = self.Resource.get_query_string(self._sub_query,
-                                                          options.cfg.selected_features,
-                                                          to_file)
+            query_string = self.Resource.get_query_string(
+                query_items=self._sub_query,
+                selected=options.cfg.selected_features,
+                to_file=to_file)
 
             df = None
             if options.cfg.use_cache and query_string:
