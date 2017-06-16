@@ -1,4 +1,8 @@
-0.10.0
+(0.10.1dev, unreleased)
+* bring time series visualization to the visualization designer
+* add button to refresh the data frame used by the visualization designer
+
+0.10.0 May 23, 2017
 
 This release is a considerable update over earlier versions. These are the
 main fields that have seen large changes:
