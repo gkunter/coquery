@@ -133,7 +133,7 @@ class MethodNotImplementedError(Exception):
 # the Python corpus module."""
 module_code = """# -*- coding: utf-8 -*-
 #
-# FILENAME: {name}.py -- a corpus module for the Coquery corpus query tool
+# FILENAME: {file_name} -- a corpus module for the Coquery corpus query tool
 #
 # This module was automatically created by corpusbuilder.py.
 #
@@ -181,6 +181,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
     parser = None
     DB = None
     additional_stages = []
+    auto_create = []
     start_time = None
     file_filter = None
     encoding = "utf-8"
@@ -242,6 +243,35 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("--lookup_ngram", help="create an ngram lookup table (can be very big)", action="store_true")
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.additional_arguments()
+
+
+        # auto-create tables for which the variables TAB_table and
+        # TAB_columns exists (with TAB being the name of the table):
+        for x in self.auto_create:
+            table = getattr(self, "{}_table".format(x), None)
+            columns = getattr(self, "{}_columns".format(x), None)
+            if table and columns:
+                self.create_table_description(table, columns)
+
+    def get_table_names(self):
+        """
+        Return a list of tables that are specified in this corpus builder.
+
+        The returned list represents the internal resource name, not the
+        table name that is visible to the user. For example, for the SQL table
+        that is specified by the following line to be named 'Lexicon', the
+        list returned by this method will contain the string 'word', not
+        'Lexicon':
+
+        word_table = "Lexicon"
+        """
+        l = []
+        for x in dir(self):
+            name, _, field = x.partition("_")
+            if field == "table" and not inspect.ismethod(getattr(self, x)):
+                l.append(name)
+        return l
+
 
     def add_tag_table(self, features_only=False):
         """
@@ -1527,12 +1557,24 @@ class BaseCorpusBuilder(corpus.BaseResource):
         # - do not start with an underscore '_'
         # - are not class methods
         # are considered to be part of the database specification and will
-        # be included with their value in the Python code:
+        # be included with their value in the Python code.
 
         variable_names = [x for x in dir(self)
                           if x not in base_variables and
                           not x.startswith("_") and
                           not inspect.ismethod(getattr(self, x))]
+
+        # remove column lists, i.e. variables of the form 'TABLE_columns',
+        # where TABLE is the name of the table, and which store the column
+        # objects for the table:
+        for var in list(variable_names):
+            name, _, field = var.partition("_")
+            if field == "table":
+                try:
+                    variable_names.remove("{}_columns".format(name))
+                except ValueError:
+                    pass
+
         variable_strings = []
         for variable_name in sorted(variable_names):
             value = getattr(self, variable_name)
@@ -1543,8 +1585,12 @@ class BaseCorpusBuilder(corpus.BaseResource):
             variable_strings.append(format_str.format(variable_name, value))
         variable_code = "\n".join(variable_strings)
 
+        path = self.get_module_path(self.arguments.db_name)
+        file_name = os.path.split(path)[-1]
+
         self.module_content = self.module_code.format(
                 name=self.name,
+                file_name=file_name,
                 display_name=utf8(self.get_name()),
                 db_name=utf8(self.arguments.db_name),
                 url=utf8(self.get_url()),
@@ -1553,7 +1599,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 lexicon_code=utf8(self.get_lexicon_code()),
                 resource_code=utf8(self.get_resource_code()))
         self.module_content = self.module_content.replace("\\", "\\\\")
-        path = self.get_module_path(self.arguments.db_name)
         # write module code:
         with codecs.open(path, "w", encoding="utf-8") as output_file:
             output_file.write(self.module_content)
@@ -1581,6 +1626,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
             local_infile=1)
 
         self.DB.use_database(self.arguments.db_name)
+
+    def add_metadata(self, file_name):
+        pass
 
     def add_building_stage(self, stage):
         """ The parameter stage is a function that will be executed
