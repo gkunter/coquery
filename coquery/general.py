@@ -177,7 +177,7 @@ class CoqObject(object):
     instance attributes.
     """
     def get_hash(self):
-        l = []
+        l = [str(type(self))]
         dir_super = dir(super(CoqObject, self))
         for x in sorted([x for x in dir(self) if x not in dir_super]):
             if (not x.startswith("_") and
