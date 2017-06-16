@@ -19,6 +19,7 @@ from coquery.managers import Group, Summary
 from coquery.functions import (
                     #FilteredRows, PassingRows,
                     Entropy,
+                    SuperCondProb, ExternalCondProb,
                     Freq, FreqNorm,
                     FreqPTW, FreqPMW,
                     ReferenceCorpusSize,
@@ -272,6 +273,7 @@ class SummaryDialog(GroupDialog):
     function_list = (
                     #FilteredRows, PassingRows,
                     Entropy,
+                    SuperCondProb, ExternalCondProb,
                     Freq, FreqNorm,
                     FreqPTW, FreqPMW,
                     ReferenceCorpusSize,
