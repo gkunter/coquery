@@ -266,6 +266,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
             new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
+            if label in self.session.Resource.time_features:
+                new_item.setIcon(app.get_icon("Clock"))
             self.ui.table_categorical.addItem(new_item)
 
         for col in self.numerical:
@@ -273,6 +275,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
             new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
+            if label in self.session.Resource.time_features:
+                new_item.setIcon(app.get_icon("Clock"))
             self.ui.table_numerical.addItem(new_item)
 
         ## add functions
