@@ -959,18 +959,18 @@ class SQLResource(BaseResource):
                 elif options.get_configuration_type() == SQL_SQLITE:
                     return "{} COLLATE NOCASE".format(s)
 
-        def get_operator(S):
+        def get_operator(S, negated):
             if options.cfg.regexp:
                 operator = "REGEXP"
             else:
                 token = tokens.COCAToken(S)
                 if token.has_wildcards(S):
-                    if token.negated:
+                    if negated:
                         operator = "NOT LIKE"
                     else:
                         operator = "LIKE"
                 else:
-                    if token.negated:
+                    if negated:
                         operator = "<>"
                     else:
                         operator = "="
@@ -1001,7 +1001,9 @@ class SQLResource(BaseResource):
             if (len(spec_list) == 1):
                 x = spec_list[0]
                 format_str = handle_case("{}.{} {} '{}'")
-                s = format_str.format(alias, col, get_operator(x), x)
+                s = format_str.format(alias, col,
+                                      get_operator(x, token.negated),
+                                      x)
             else:
                 wildcards = []
                 explicit = []
@@ -1753,18 +1755,19 @@ class CorpusClass(object):
         s = s.replace("'", "''")
         s = s.replace("%", "%%")
 
-        if s in self._frequency_cache:
-            return self._frequency_cache[s]
+        if (engine.url, s) in self._frequency_cache:
+            return self._frequency_cache[(engine.url, s)]
 
         query_list = tokens.preprocess_query(s)
         freq = 0
 
         for sub in query_list:
             S = self.resource.get_query_string(sub, [], columns=["COUNT(*)"])
+            print(S)
             df = pd.read_sql(S, engine)
             freq += df.values.ravel()[0]
 
-        self._frequency_cache[s] = freq
+        self._frequency_cache[(engine.url, s)] = freq
         return freq
 
     def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):
