@@ -335,6 +335,25 @@ class TestCorpus(unittest.TestCase):
         self.assertDictEqual(d,
              {"word": ["COQ_WORD_1.Word LIKE '%''ll'"]})
 
+    def test_get_token_conditions_negated_1(self):
+        token = COCAToken("~a*")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word NOT LIKE 'a%'"]})
+
+    def test_get_token_conditions_negated_2(self):
+        token = COCAToken("~*.[n*]")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.POS NOT LIKE 'n%'"]})
+
+    def test_get_token_conditions_negated_3(self):
+        token = COCAToken("~a*.[n*]")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(d,
+             {"word": ["COQ_WORD_1.Word NOT LIKE 'a%'",
+                       "COQ_WORD_1.POS NOT LIKE 'n%'"]})
+
     def test_get_token_conditions_quote_char_1(self):
         token = COCAToken("'ll")
         d = self.resource.get_token_conditions(0, token)
