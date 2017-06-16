@@ -223,6 +223,26 @@ class Function(CoqObject):
         """
         return pd.Series(data=[value] * len(df), index=df.index)
 
+    def get_reference(self, **kwargs):
+        """
+        Return an instance of the currently active reference corpus.
+        """
+        ref_corpus = options.cfg.reference_corpus.get(
+                         options.cfg.current_server, None)
+        res = options.cfg.current_resources[ref_corpus]
+        ResourceClass, CorpusClass, LexiconClass, _ = res
+        lexicon = LexiconClass()
+        corpus = CorpusClass()
+        resource = ResourceClass(lexicon, corpus)
+        corpus.resource = resource
+        corpus.lexicon = lexicon
+        lexicon.resource = resource
+        lexicon.corpus = corpus
+
+        return resource
+
+
+
 
 #############################################################################
 ## String functions
@@ -823,17 +843,11 @@ class BaseReferenceCorpus(Function):
     _name = "virtual"
 
     def _get_current_corpus(self):
-        ref_corpus = options.cfg.reference_corpus.get(
-                         options.cfg.current_server, None)
-        res = options.cfg.current_resources[ref_corpus]
-        ResourceClass, CorpusClass, LexiconClass, _ = res
-        self._current_lexicon = LexiconClass()
-        self._current_corpus = CorpusClass()
-        self._current_resource = ResourceClass(self._current_lexicon,
-                                              self._current_corpus)
+        self._current_resource = self.get_reference()
         self._current_corpus.resource = self._current_resource
         self._current_corpus.lexicon = self._current_lexicon
         self._current_lexicon.resource = self._current_resource
+        self._current_lexicon.corpus = self._current_corpus
 
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
@@ -1074,6 +1088,7 @@ class Entropy(Proportion):
         val = self.constant(df, entropy)
         return val
 
+
 class Tokens(Function):
     _name = "statistics_tokens"
     no_column_labels = True
@@ -1105,6 +1120,80 @@ class TypeTokenRatio(Types):
                           index=df.index)
         val = df.apply(lambda row: row.types / row.tokens, axis="columns")
         return val
+
+
+class SuperCondProb(Proportion):
+    _name = "Conditional Probability deluxe"
+
+    def get_resource(self, **kwargs):
+        session = kwargs["session"]
+        return session.Resource
+
+    def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+        fun = ContextColumns(left=1, right=0)
+        if self.find_function(df, fun):
+            if options.cfg.verbose:
+                print(self._name, "using df.ContextColumns()")
+            left = df[fun.get_id()]
+        else:
+            if options.cfg.verbose:
+                print(self._name, "calculating df.ContextColumns()")
+            left = fun.evaluate(df, *args, **kwargs)
+        max_col = df["coquery_invisible_number_of_tokens"].max()
+        columns = ["coq_{}_{}".format(
+            getattr(session.Resource, QUERY_ITEM_WORD),
+            x+1) for x in range(max_col)]
+        span = pd.concat([left, df[columns]], axis="columns")
+
+        resource = self.get_resource(**kwargs)
+        url = sqlhelper.sql_url(options.cfg.current_server, resource.db_name)
+        engine = sqlalchemy.create_engine(url)
+        columns = span.columns
+        for i, col in enumerate(columns[:-1]):
+            if i == 0:
+                val = span[columns[0]]
+            val = pd.Series(val.values + [" "] + span[columns[i+1]].values,
+                            index=span.index)
+
+        val = (val.replace("{", "#", regex=True)
+                  .replace("\[", "\\[", regex=True)
+                  .replace("\*", "\\*", regex=True)
+                  .replace("\?", "\\?", regex=True))
+        freq_full = val.apply(lambda x:
+                              resource.corpus.get_frequency(x, engine))
+        columns = left.columns
+        if len(columns) == 1:
+            val = left[columns[0]]
+        else:
+            for i, col in enumerate(columns[:-1]):
+                if i == 0:
+                    val = left[columns[0]]
+                val = pd.Series(val.values + [" "] + left[columns[i+1]].values,
+                                index=left.index)
+        val = (val.replace("{", "#", regex=True)
+                  .replace("\[", "\\[", regex=True)
+                  .replace("\*", "\\*", regex=True)
+                  .replace("\?", "\\?", regex=True))
+        freq_part = val.apply(lambda x:
+                              resource.corpus.get_frequency(x, engine))
+        engine.dispose()
+        return freq_full / freq_part
+
+
+class ExternalCondProb(SuperCondProb):
+    _name = "External Conditional Probability"
+
+    def get_resource(self, **kwargs):
+        resource = self.get_reference()
+        resource.corpus.lexicon = resource.lexicon
+        resource.corpus.resource = resource
+        resource.lexicon.corpus = resource.corpus
+        resource.lexicon.resource = resource
+        return resource
+
+    def evaluate(self, *args, **kwargs):
+        return super(ExternalCondProb, self).evaluate(*args, **kwargs)
 
 
 class ConditionalProbability(Proportion):
@@ -1258,10 +1347,16 @@ class ContextColumns(Function):
     def get_description():
         return "Context functions"
 
-    def __init__(self, *args):
+    def __init__(self, left=None, right=None, *args):
         super(ContextColumns, self).__init__(*args)
-        self.left_cols = ["coq_context_lc{}".format(options.cfg.context_left - i) for i in range(options.cfg.context_left)]
-        self.right_cols = ["coq_context_rc{}".format(i+1) for i in range(options.cfg.context_right)]
+        if left is None:
+            left = options.cfg.context_left
+        if right is None:
+            right = options.cfg.context_right
+        self.left_cols = ["coq_context_lc{}".format(left - i)
+                          for i in range(left)]
+        self.right_cols = ["coq_context_rc{}".format(i + 1)
+                           for i in range(right)]
 
     def get_id(self):
         if self.alias:
