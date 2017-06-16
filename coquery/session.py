@@ -23,7 +23,6 @@ import sqlalchemy
 import pandas as pd
 
 from . import options
-from . import NAME
 from .errors import *
 from .defines import *
 from .general import *
@@ -71,7 +70,7 @@ class Session(object):
             except ImportError as e:
                 self.db_engine = None
 
-            logger.info("Corpus '{}' on connection '{}'".format(
+            logging.info("Corpus '{}' on connection '{}'".format(
                 self.Resource.name, options.cfg.current_server))
 
         else:
@@ -79,7 +78,7 @@ class Session(object):
             self.Resource = None
             self.Lexicon = None
             self.db_engine = None
-            logger.warn("No corpus available on connection '{}'".format(
+            logging.warn("No corpus available on connection '{}'".format(
                 options.cfg.current_server))
 
         self.query_type = queries.get_query_type(options.cfg.MODE)
@@ -222,8 +221,8 @@ class Session(object):
 
         try:
             for i, current_query in enumerate(self.query_list):
-                if current_query.query_string in _queried:
-                    logger.warn("Duplicate query string detected: {}".format(
+                if current_query.query_string in _queried and not to_file:
+                    logging.warn("Duplicate query string detected: {}".format(
                         current_query.query_string))
                     continue
                 _queried.append(current_query.query_string)
@@ -237,13 +236,14 @@ class Session(object):
                         for i in range(self.get_max_token_count())]
                 start_time = time.time()
                 if number_of_queries > 1:
-                    logger.info("Start query ({} of {}): '{}'".format(
+                    logging.info("Start query ({} of {}): '{}'".format(
                         i+1, number_of_queries, current_query.query_string))
                 else:
-                    logger.info("Start query: '{}'".format(
+                    logging.info("Start query: '{}'".format(
                         current_query.query_string))
                 df = current_query.run(connection=self.db_connection,
                                        to_file=to_file, **kwargs)
+                raw_length = len(df)
 
                 # apply clumsy hack that tries to make sure that the dtypes of
                 # data frames containing NaNs or empty strings does not change
@@ -287,9 +287,17 @@ class Session(object):
                     df = manager.process(df, session=self)
                     self.save_dataframe(df, append=True)
 
-                logger.info("Query executed ({:.3f} seconds, {} match{})".format(
-                    time.time() - start_time, len(df), "es" if len(df) != 1 else ""))
-
+                s_list = []
+                s_list.append(
+                    "{:.3f} seconds".format(time.time() - start_time))
+                s_list.append(
+                    "{} match{}".format(raw_length,
+                                        "es" if raw_length != 1 else ""))
+                if len(df) != raw_length:
+                    s_list.append(
+                        "{} output_row{}".format(len(df),
+                                            "s" if len(df) != 1 else ""))
+                logging.info("Query executed ({})".format(", ".join(s_list)))
         finally:
             self.disconnect_from_db()
 
@@ -297,14 +305,16 @@ class Session(object):
             list(self.data_table.columns),
             self)]
 
-        for col in self.data_table.columns:
-            if self.data_table.dtypes[col] == object:
-                if sys.version_info < (3, 0):
+        if sys.version_info < (3, 0):
+            for col in self.data_table.columns:
+                if self.data_table.dtypes[col] == object:
                     try:
-                        self.data_table[col] = self.data_table[col].apply(lambda x: x.encode("utf-8"))
+                        self.data_table[col] = (
+                            self.data_table[col].str
+                                                .encode("utf-8"))
                     except Exception as e:
                         print(e)
-                        logger.warn(e)
+                        logging.warn(e)
 
         ## FIXME: reimplement row visibility
         #self.reset_row_visibility(queries.TokenQuery, self.data_table)
@@ -586,7 +596,7 @@ class SessionCommandLine(Session):
     def __init__(self):
         super(SessionCommandLine, self).__init__()
         if len(options.cfg.query_list) > 1:
-            logger.info("{} queries".format(len(options.cfg.query_list)))
+            logging.info("{} queries".format(len(options.cfg.query_list)))
         self.max_number_of_input_columns = 0
 
 class SessionInputFile(Session):
@@ -637,9 +647,9 @@ class SessionInputFile(Session):
                 read_lines += 1
             self.input_columns = ["coq_{}".format(x) for x in self.header]
 
-        logger.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
+        logging.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
-            logger.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
+            logging.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
 
 class SessionStdIn(Session):
     def __init__(self):
@@ -658,8 +668,6 @@ class SessionStdIn(Session):
                         self.query_list.append(new_query)
                 self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
             read_lines += 1
-        logger.info("Reading standard input ({} {})".format(len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
+        logging.info("Reading standard input ({} {})".format(len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
-            logger.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
-
-logger = logging.getLogger(NAME)
+            logging.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
