@@ -350,7 +350,7 @@ class BarPlot(vis.Visualizer):
                     self._levels_x = None
                 else:
                     self._y = None
-                    self._levels_x = None
+                    self._levels_y = None
             else:
                 if self._x == numeric:
                     self._x = self._z
@@ -362,30 +362,18 @@ class BarPlot(vis.Visualizer):
                     self._levels_y = self._hue_order
                     self._z = None
                     self._hue_order = None
-
         else:
-        ## check if one of the columns is a numeric column:
-        #if self._x and self.dtype(self._x, df) != object:
-            #numeric = self._x
-            #self._x = None
-            #self._levels_x = None
-        #elif self._y and self.dtype(self._y, df) != object:
-            #numeric = self._y
-            #self._y = None
-            #self._levels_y = None
-        #else:
-            #if self._z and self.dtype(self._z, df) != object:
-                #numeric = self._z
-            #else:
-                # if there is no numeric column, use the provided function,
-                #  or Freq() as the default function:
-                numeric = self._default
-                data_columns = [col for col in (self._x, self._y) if col]
-                func = kwargs.get("func", Freq)
-                fun = func(columns=data_columns, session=session)
-                df[numeric] = fun.evaluate(df, session)
-                df = (df.drop("coquery_invisible_corpus_id", axis=1)
-                        .drop_duplicates().fillna(0).reset_index(drop=True))
+            # if there is no numeric column, use the provided function,
+            #  or Freq() as the default function:
+            numeric = self._default
+            data_columns = [col for col in (self._x, self._y) if col]
+            func = kwargs.get("func", Freq)
+            fun = func(columns=data_columns, session=session)
+            df[numeric] = fun.evaluate(df, session)
+            df = (df.drop("coquery_invisible_corpus_id", axis=1)
+                    .drop_duplicates().fillna(0).reset_index(drop=True))
+            if len(cat) == 2:
+                params["orient"] = "h"
 
         params.update({"data": df,
                        "x": self._x, "y": self._y, "order": None,
@@ -403,12 +391,13 @@ class BarPlot(vis.Visualizer):
             self._ylab = self._y
         else:
             # show horizontal, hued bars
-            params.update({"x": numeric, "y": self._y,
-                           "order": self._levels_y,
-                           "hue": self._x, "hue_order": self._levels_x})
+            params.update(
+                {"x": numeric, "y": self._y,
+                 "order": [str(x) for x in self._levels_y],
+                 "hue": self._x,
+                 "hue_order": [str(x) for x in self._levels_x]})
             self._xlab = numeric
             self._ylab = self._y
-
         return params
 
     def plot_facet(self, **kwargs):
@@ -506,8 +495,14 @@ class StackedBars(BarPlot):
                         .reset_index(drop=True))
             else:
                 df = data[data[split] == val]
-            sns.barplot(data=df,
-                        color=col[n], ax=params["ax"], **kwargs)
+            try:
+                sns.barplot(data=df,
+                            color=col[n], ax=params["ax"], **kwargs)
+            except TypeError as e:
+                print(e)
+                print(df)
+                print(df.dtypes)
+                print(kwargs)
 
         if split == axis:
             self.legend_title = split

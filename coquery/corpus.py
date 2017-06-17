@@ -584,9 +584,9 @@ class SQLResource(BaseResource):
         stats = []
         # determine table size for all columns
         table_sizes = {}
-        for rc_table in [x for x in dir(self) 
-                         if not x.startswith("_") and 
-                         x.endswith("_table") and 
+        for rc_table in [x for x in dir(self)
+                         if not x.startswith("_") and
+                         x.endswith("_table") and
                          not x.startswith("tag_")]:
             table = getattr(self, rc_table)
             if type(table) != str:
@@ -959,18 +959,18 @@ class SQLResource(BaseResource):
                 elif options.get_configuration_type() == SQL_SQLITE:
                     return "{} COLLATE NOCASE".format(s)
 
-        def get_operator(S):
+        def get_operator(S, negated):
             if options.cfg.regexp:
                 operator = "REGEXP"
             else:
                 token = tokens.COCAToken(S)
                 if token.has_wildcards(S):
-                    if token.negated:
+                    if negated:
                         operator = "NOT LIKE"
                     else:
                         operator = "LIKE"
                 else:
-                    if token.negated:
+                    if negated:
                         operator = "<>"
                     else:
                         operator = "="
@@ -1001,7 +1001,9 @@ class SQLResource(BaseResource):
             if (len(spec_list) == 1):
                 x = spec_list[0]
                 format_str = handle_case("{}.{} {} '{}'")
-                s = format_str.format(alias, col, get_operator(x), x)
+                s = format_str.format(alias, col,
+                                      get_operator(x, token.negated),
+                                      x)
             else:
                 wildcards = []
                 explicit = []
@@ -1148,7 +1150,12 @@ class SQLResource(BaseResource):
                 if s not in columns:
                     columns.append(s)
 
-        if not to_file:
+        if to_file:
+            if not columns:
+                s = "COQ_CORPUS_{}.{} AS coquery_invisible_corpus_id".format(
+                        _first_item, cls.corpus_id)
+                columns.append(s)
+        else:
             s = "COQ_CORPUS_{}.{} AS coquery_invisible_corpus_id".format(
                 _first_item, cls.corpus_id)
             if s not in columns:
@@ -1197,11 +1204,11 @@ class SQLResource(BaseResource):
         return condition_list
 
     @classmethod
-    def get_query_string(cls, query_items, selected, columns=[], to_file=False):
+    def get_query_string(cls, query_items, selected, columns=None, to_file=False):
         """
         Return an SQL string for the specified query.
         """
-        if not columns:
+        if columns is None or columns == []:
             columns = cls.get_required_columns(query_items, selected, to_file)
 
         # get list of self-joints for the corpus:
@@ -1748,18 +1755,19 @@ class CorpusClass(object):
         s = s.replace("'", "''")
         s = s.replace("%", "%%")
 
-        if s in self._frequency_cache:
-            return self._frequency_cache[s]
+        if (engine.url, s) in self._frequency_cache:
+            return self._frequency_cache[(engine.url, s)]
 
         query_list = tokens.preprocess_query(s)
         freq = 0
 
         for sub in query_list:
             S = self.resource.get_query_string(sub, [], columns=["COUNT(*)"])
+            print(S)
             df = pd.read_sql(S, engine)
             freq += df.values.ravel()[0]
 
-        self._frequency_cache[s] = freq
+        self._frequency_cache[(engine.url, s)] = freq
         return freq
 
     def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):

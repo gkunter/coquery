@@ -18,7 +18,7 @@ import string
 
 from .defines import (
     msg_token_dangling_open, msg_unexpected_quantifier,
-    msg_unexpected_bracket)
+    msg_unexpected_bracket, msg_unexpected_quantifier_start)
 from .errors import TokenParseError
 from .unicode import utf8
 

@@ -10,6 +10,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from coquery.visualizer import visualizer as vis
+import math
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -233,7 +234,6 @@ class TimeSeries(vis.Visualizer):
 
         self._xlab = self._default
         self._ylab = self._default
-
         if x:
             as_time = to_year(data[x].head(1000))
             as_num = to_num(data[x].head(1000))
@@ -249,7 +249,7 @@ class TimeSeries(vis.Visualizer):
                 category = x
                 levels = levels_x
         if y:
-            if Numeric is None:
+            if numeric is None:
                 as_time = to_year(data[y].head(1000))
                 as_num = to_num(data[y].head(1000))
                 if len(as_time.dropna()) > len(as_num.dropna()):
@@ -270,11 +270,22 @@ class TimeSeries(vis.Visualizer):
         if z and self.dtype(z, data) == object:
             category = z
             levels = levels_z
-
         val = fun(data[numeric])
         if not category:
             tab = val.value_counts().sort_index()
+
             tab.plot(ax=plt.gca())
+            min_x = val.min()
+            max_x = val.max()
+
+            x_range = list(range(math.floor(min_x),
+                                 math.ceil(max_x + 1), TimeSeries.bandwidth))
+            if TimeSeries.bandwidth > 1:
+                labels = ["{}–{}".format(x, x + TimeSeries.bandwidth - 1)
+                          for x in x_range]
+            else:
+                labels = x_range
+            plt.xticks(x_range, labels)
         else:
             index = (val.dropna()
                         .drop_duplicates()
@@ -285,7 +296,6 @@ class TimeSeries(vis.Visualizer):
                 tab = val.value_counts().sort_index()
                 tab = tab.reindex_axis(index).fillna(0)
                 tab.plot()
-
         if levels:
             self.legend_title = category
             self.legend_levels = levels

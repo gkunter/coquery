@@ -15,10 +15,14 @@ import os
 import logging
 import warnings
 import sqlalchemy
+import codecs
+import tempfile
+import sys
 import pandas as pd
 
 from .errors import DependencyError, SQLProgrammingError
 from .defines import SQL_MYSQL, SQL_SQLITE
+from .general import get_chunk
 from . import options
 from . import NAME
 from . import sqlhelper
@@ -294,7 +298,66 @@ class SqlDB(object):
                   index=bool(index_label),
                   index_label=index_label)
 
-    def load_infile(self, file_name, table_name, fillna=None, drop_duplicate=None, engine="c", **kwargs):
+    def load_file(self, file_name, encoding, table, index,
+                  if_exists="append", skip=None, **kwargs):
+        """
+        Load the file content into the SQL table.
+
+        Parameters
+        ----------
+        table_name : string
+            The name of the table
+        index : string
+            The name of the index column. If empty, no additional index column
+            is created.
+        if_exists : string, either "fail", "replace", or "append"
+            If "append" (the default), the rows from the dataframe are
+            appended to the table; the table is created if it does not
+            exist. If "replace", any existing table is replaced by the
+            rows from the dataframe. If "fail", the dataframe is NOT
+            loaded into the table.
+
+        Returns
+        -------
+        lines : int
+            The number of lines that have been loaded into the table.
+        """
+        count = 0
+
+        with codecs.open(file_name, "r", encoding=encoding) as big_file:
+
+            # Iterate the chunks:
+            for i, lines in enumerate(get_chunk(big_file)):
+                content = list(lines)
+                count += len(content)
+
+                # create and fill temporary file:
+                temp_file = tempfile.NamedTemporaryFile("w", delete=False)
+                if sys.version_info < (3, 0):
+                    buffer = (u"\n".join([x.strip() for x in content])
+                                   .replace("\x00", "")
+                                   .encode("utf-8"))
+                else:
+                    buffer = ("\n".join([x.strip() for x in content])
+                                  .replace("\x00", ""))
+                temp_file.write(buffer)
+                temp_file.close()
+
+                self.load_infile(temp_file.name,
+                                 table_name=table,
+                                 if_exists=if_exists,
+                                 index=index,
+                                 **kwargs)
+                kwargs["header"] = None
+                kwargs["skiprows"] = None
+
+                # load the temporary file containing a chunk from the big
+                # file into the matching table name:
+                os.remove(temp_file.name)
+
+        return count
+
+    def load_infile(self, file_name, table_name, if_exists="append", index=None, fillna=None, drop_duplicate=None, engine="c", **kwargs):
         """
         Bulk-load a text file into a table.
 
@@ -315,7 +378,7 @@ class SqlDB(object):
             df = df.fillna(fillna)
         if drop_duplicate:
             df = df[~df.duplicated(drop_duplicate)]
-        self.load_dataframe(df, table_name, None)
+        self.load_dataframe(df, table_name, index_label=index, if_exists=if_exists)
 
     def get_field_type(self, table_name, column_name):
         """

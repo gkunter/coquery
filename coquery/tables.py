@@ -384,7 +384,7 @@ class Table(object):
                 col.name, self.name, func_length)
             with self._DB.engine.connect() as connection:
                 max_len = connection.execute(S).fetchone()[0]
-            dt_type = "VARCHAR({})".format(max_len)
+            dt_type = "VARCHAR({})".format(max_len + 1)
 
         # fixed-point types:
         elif col.base_type in ["DECIMAL", "NUMERIC"]:
@@ -405,14 +405,14 @@ class Table(object):
             with self._DB.engine.connect() as connection:
                 v_min, _ = connection.execute(S).fetchone()
 
-            if v_min >= 0:
+            if v_min >= 0 and "UNSIGNED" not in dt_type:
                 dt_type = "{} UNSIGNED".format(dt_type)
 
         # all other data types:
         else:
             dt_type = col.data_type
 
-        if has_null == 0:
+        if has_null == 0 and "NOT NULL" not in dt_type:
             dt_type = "{} NOT NULL".format(dt_type)
 
         return dt_type
