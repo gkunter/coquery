@@ -1,6 +1,8 @@
 (0.10.1dev, unreleased)
 * bring time series visualization to the visualization designer
 * add button to refresh the data frame used by the visualization designer
+* user data columns are now available again (and can also be removed)
+* data groups now provide an option to drop duplicate rows
 
 0.10.0 May 23, 2017
 
