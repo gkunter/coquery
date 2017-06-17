@@ -89,10 +89,13 @@ class FunctionItem(QtWidgets.QWidget):
         return size_hint
 
 class FunctionDialog(QtWidgets.QDialog):
-    def __init__(self, columns=None, available_columns=None,
+    def __init__(self,
+                 columns=None, available_columns=None,
                  function_class=None,
                  function_types=None,
-                 func=None, max_parameters=1, checkable=False, checked=None,
+                 value=None,
+                 func=None, max_parameters=1,
+                 checkable=False, checked=None,
                  edit_label=True, parent=None):
 
         if columns is None:
@@ -128,15 +131,18 @@ class FunctionDialog(QtWidgets.QDialog):
         self.checked = checked
         self.columns = columns
         self._auto_label = True
-        self.ui.edit_function_value.textChanged.connect(lambda: self.check_gui())
-        self.ui.edit_label.textEdited.connect(self.check_label)
 
         self.function_types = function_types
         self._func = []
 
-        self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
+        if value:
+            self.ui.edit_function_value.setText(utf8(value))
 
+        self.ui.edit_function_value.textChanged.connect(lambda: self.check_gui())
+        self.ui.edit_label.textEdited.connect(self.check_label)
+        self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
         self.ui.widget_selection.itemSelectionChanged.connect(self.change_columns)
+
         self.ui.widget_selection.setMinimumItems(1)
 
         if max_parameters == 0:
@@ -216,7 +222,8 @@ class FunctionDialog(QtWidgets.QDialog):
         self.ui.list_functions.setCurrentRow(0)
 
     def select_function(self, func):
-        self.columns = func.columns()
+        self.ui.edit_function_value.setText(func.value)
+        self.columns = func.columns
         try:
             row = self.function_list.index(type(func))
             self.ui.list_functions.setCurrentRow(row)
@@ -369,7 +376,10 @@ class FunctionDialog(QtWidgets.QDialog):
 
     @staticmethod
     def edit_function(func, parent=None, **kwargs):
-        dialog = FunctionDialog(func=func, parent=parent, **kwargs)
-        dialog.setVisible(True)
+        return FunctionDialog.set_function(
+            columns=func.columns,
+            value=func.value)
 
-        return dialog.exec_()
+        #dialog = FunctionDialog(func=func, parent=parent, **kwargs)
+        #dialog.setVisible(True)
+        #return dialog.exec_()

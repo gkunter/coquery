@@ -3038,32 +3038,17 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.Session.summary_group = result
             self.enable_apply_button()
 
-    def add_function(self, columns=None, summary=False, group=False, **kwargs):
-        from . import addfunction
-        session = self.Session
-        if session is not None:
-            manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+    def _get_function_classes(self, columns):
+        dtypes = pd.Series([self.table_model.get_dtype(x) for x
+                            in columns])
+        if all(dtypes == object):
+            return (functions.StringFunction,
+                    functions.Comparison)
         else:
-            manager = managers.get_manager(options.cfg.MODE, utf8(self.ui.combo_corpus.currentText()))
+            return (functions.MathFunction,
+                    functions.LogicFunction)
 
-        if summary:
-            pass
-        else:
-            dtypes = pd.Series([self.table_model.get_dtype(x) for x
-                                in columns])
-            try:
-                if all(dtypes != object):
-                    kwargs.update(
-                        {"function_class": (functions.MathFunction,
-                                            #functions.Comparison,
-                                            functions.LogicFunction)})
-                else:
-                    kwargs.update(
-                        {"function_class": (functions.StringFunction,
-                                            functions.Comparison)})
-            except Exception as e:
-                print(e)
-                kwargs.update({"function_class": tuple()})
+    def _get_available_columns(self, columns):
         available = []
         if hasattr(self, "table_model"):
             if not columns:
@@ -3072,7 +3057,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             else:
                 available = [x for x in self.table_model.content.columns
                             if x not in columns]
-        kwargs["available_columns"] = available
+        return available
+
+    def add_function(self, columns=None, summary=False, group=False, **kwargs):
+        from . import addfunction
+        manager = managers.get_manager(options.cfg.MODE,
+                                       self.Session.Resource.name)
+
+        if not summary:
+            dtypes = pd.Series([self.table_model.get_dtype(x) for x
+                                in columns])
+            kwargs["function_class"] = self._get_function_classes(columns)
+
+        kwargs["available_columns"] = self._get_available_columns(columns)
 
         # run the dialog:
         response = addfunction.FunctionDialog.set_function(parent=self,
@@ -3108,24 +3105,66 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import addfunction
         func = self.Session.column_functions.find_function(column)
 
-        dtypes = pd.Series([self.table_model.get_dtype(x) for x in func.columns(self.table_model.content)])
+        available_columns = self._get_available_columns(func.columns)
         try:
-            if all(dtypes != object):
-                d = {"function_class": (functions.MathFunction, functions.LogicFunction)}
-            else:
-                d = {"function_class": (functions.StringFunction, functions.LogicFunction)}
-        except Exception as e:
+            available_columns.remove(func.get_id())
+        except ValueError as e:
             print(e)
-            d = {"function_class": tuple()}
+        diag = addfunction.FunctionDialog(
+                func=func,
+                value=func.value,
+                columns=func.columns,
+                available_columns=available_columns,
+                function_class=self._get_function_classes(func.columns),
+                parent=self)
+        result = diag.exec_()
+        print(result)
+        return
 
-        print("----")
-        print(func, func.columns(self.table_model.content), d)
-        response = addfunction.FunctionDialog.edit_function(func, parent=self, **d)
+
+        response = addfunction.FunctionDialog.edit_function(
+            func=func,
+            columns=func.columns,
+            value=func.value,
+            function_class=self._get_function_classes(func.columns),
+            parent=self)
         if response:
+            self.Session.column_functions.remove_function(func)
             fun_type, value, aggr, label = response
-            new_func = fun_type(columns=func.columns(self.table_model.content), value=value, aggr=aggr, label=label)
-            self.Session.column_functions.replace_function(func, new_func)
+            new_func = fun_type(
+                columns=func.columns(self.table_model.content),
+                value=value, aggr=aggr, label=label)
+            self.Session.column_functions.add_function(new_fun)
             self.update_columns()
+
+        return
+
+
+        fun_type, columns, value, aggr, label = response
+        fun = fun_type(columns=columns, value=value, aggr=aggr)
+        self.Session.column_functions.add_function(fun)
+
+
+
+
+        #dtypes = pd.Series([self.table_model.get_dtype(x) for x in func.columns(self.table_model.content)])
+        #try:
+            #if all(dtypes != object):
+                #d = {"function_class": (functions.MathFunction, functions.LogicFunction)}
+            #else:
+                #d = {"function_class": (functions.StringFunction, functions.LogicFunction)}
+        #except Exception as e:
+            #print(e)
+            #d = {"function_class": tuple()}
+
+        #print("----")
+        #print(func, func.columns(self.table_model.content), d)
+        #response = addfunction.FunctionDialog.edit_function(func, parent=self, **d)
+        #if response:
+            #fun_type, value, aggr, label = response
+            #new_func = fun_type(columns=func.columns(self.table_model.content), value=value, aggr=aggr, label=label)
+            #self.Session.column_functions.replace_function(func, new_func)
+            #self.update_columns()
 
     def remove_functions(self, columns):
         manager = self.Session.get_manager()

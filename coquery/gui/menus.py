@@ -135,10 +135,10 @@ class CoqColumnMenu(QtWidgets.QMenu):
                                      for x in columns]
         if (all(check_is_func) and not any(check_is_group_function) and
             not any(check_is_manager_function)):
-            #if len(columns) == 1:
-                #edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
-                #self.addAction(edit_function)
-            #edit_function = QtWidgets.QAction("&Edit function...", parent)
+            if len(columns) == 1:
+                edit_function = QtWidgets.QAction("&Edit function...", parent)
+                edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
+                self.addAction(edit_function)
             remove_function = QtWidgets.QAction("&Remove function{}".format(suffix), parent)
             remove_function.triggered.connect(lambda: self.removeFunctionRequested.emit(columns))
             self.addAction(remove_function)
