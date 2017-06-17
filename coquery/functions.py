@@ -134,9 +134,9 @@ class Function(CoqObject):
         self.select = combine_map[self.aggr]
 
     def __repr__(self):
-        return "{}(columns=[{}], value={}, group={}".format(
-            self._name, ", ".format(self.columns),
-            self.value, self.group)
+        return "{}(columns=[{}], value='{}', group={})".format(
+            self._name, ", ".join(["'{}'".format(x) for x in self.columns]),
+            str(self.value), self.group)
 
     @classmethod
     def get_name(cls):
