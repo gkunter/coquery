@@ -14,8 +14,9 @@ from __future__ import unicode_literals
 import string
 import re
 import pandas as pd
+import logging
 
-from coquery.corpusbuilder import BaseCorpusBuilder, logger
+from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.corpusbuilder import (Column, Link, Identifier)
 from coquery.capturer import Capturer
 
@@ -150,12 +151,12 @@ class BuilderClass(BaseCorpusBuilder):
             try:
                 df = pd.read_csv(self.arguments.path, **kwargs)
             except Exception as e:
-                logger.error(e)
+                logging.error(e)
                 print(e)
                 raise e
         for x in capt:
             s = "File {} – {}".format(self.arguments.path, x)
-            logger.warn(s)
+            logging.warn(s)
             print(s)
 
         if not self._table_options.header:
