@@ -322,7 +322,10 @@ class Settings(QtWidgets.QDialog):
             bool([0, int(QtCore.Qt.TextWordWrap)]
                  [bool(self.ui.check_word_wrap.isChecked())]))
         self._options.float_format = "{:.%if}" % self._options.digits
-        remove_source_path(self._options.custom_installer_path)
+        try:
+            remove_source_path(self._options.custom_installer_path)
+        except ValueError:
+            pass
         self._options.custom_installer_path = (
             utf8(self.ui.edit_installer_path.text()))
         self._options.binary_path = utf8(self.ui.edit_binary_path.text())
