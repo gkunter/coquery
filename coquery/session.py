@@ -16,7 +16,7 @@ import sys
 import time, datetime
 import fileinput
 import codecs
-import logging
+import warnings
 import collections
 import sqlalchemy
 
@@ -78,7 +78,7 @@ class Session(object):
             self.Resource = None
             self.Lexicon = None
             self.db_engine = None
-            logging.warn("No corpus available on connection '{}'".format(
+            warnings.warn("No corpus available on connection '{}'".format(
                 options.cfg.current_server))
 
         self.query_type = queries.get_query_type(options.cfg.MODE)
