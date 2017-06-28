@@ -25,8 +25,11 @@ def main():
         test_list += [TestCELEX]
 
     if not args or  "corpus" in args:
-        from test.test_corpora import TestCorpus, TestCorpusWithExternal
-        test_list += [TestCorpus, TestCorpusWithExternal]
+        from test.test_corpora import (
+            TestCorpus, TestSuperFlat,
+            TestCorpusWithExternal, TestNGramCorpus)
+        test_list += [TestCorpus, TestSuperFlat,
+                      TestCorpusWithExternal, TestNGramCorpus]
 
     if not args or "corpusbuilder" in args:
         from test.test_corpusbuilder import (
@@ -55,6 +58,10 @@ def main():
     if not args or  "sessions" in args:
         from test.test_sessions import TestSessionInputFile
         test_list += [TestSessionInputFile]
+
+    if not args or "switchboard" in args:
+        from test.test_switchboard import TestSwitchboard
+        test_list += [TestSwitchboard]
 
     if not args or "textgrids" in args:
         from test.test_textgrids import TestTextGridModuleMethods
