@@ -14,13 +14,13 @@ from __future__ import unicode_literals
 
 import itertools
 import re
-import string
 
 from .defines import (
-    msg_token_dangling_open, msg_unexpected_quantifier,
-    msg_unexpected_bracket, msg_unexpected_quantifier_start)
+    msg_token_dangling_open, msg_unexpected_quantifier_start,
+    msg_missing_pos_spec)
 from .errors import TokenParseError
 from .unicode import utf8
+
 
 class QueryToken(object):
     """
@@ -52,26 +52,26 @@ class QueryToken(object):
     transcript_close = "/"
     or_character = "|"
 
+    wildcard_characters = ["*", "?"]
+
     @classmethod
     def _check_pos_list(cls, l):
         return [False] * len(l)
 
-    def __init__(self, S, replace=True, parse=True):
-        if S is not None:
-            S = utf8(S)
-            self.S = S.strip()
-            if replace:
-                self.S = self.replace_wildcards(self.S)
-        else:
-            self.S = S
+    def __init__(self, S=None):
         self.word_specifiers = []
         self.class_specifiers = []
         self.lemma_specifiers = []
         self.transcript_specifiers = []
         self.gloss_specifiers = []
         self.negated = None
-        if parse:
+        self.wildcards = None
+        self.lemmatize = None
+        if S is not None:
+            self.S = utf8(S).strip()
             self.parse()
+        else:
+            self.S = S
 
     def __eq__(self, S):
         return self.S == S
@@ -80,17 +80,14 @@ class QueryToken(object):
         return self.S != S
 
     def __repr__(self):
-        if self.negated:
-            return "QueryToken(S='~{}')".format(self.S)
-        else:
-            return "QueryToken(S='{}')".format(self.S)
+        return "{}(S='{}')".format(self.__class__.__name__, self.S)
 
     @classmethod
     def set_pos_check_function(cls, fnc):
         cls._check_pos_list = fnc
 
-    @staticmethod
-    def has_wildcards(s, replace=False):
+    @classmethod
+    def has_wildcards(cls, s):
         """
         Check if there are MySQL wildcards in the given string.
 
@@ -109,7 +106,7 @@ class QueryToken(object):
         """
         skip_next = False
 
-        if s in set(["%", "_"]):
+        if s in set(cls.wildcard_characters):
             return True
         for x in s:
             if skip_next:
@@ -118,7 +115,7 @@ class QueryToken(object):
                 if x == "\\":
                     skip_next = True
                 else:
-                    if x in ["%", "_"]:
+                    if x in set(cls.wildcard_characters):
                         return True
         return False
 
@@ -162,17 +159,63 @@ class QueryToken(object):
                         rep.append(x)
         return "".join(rep)
 
-    def get_parse(self):
-        if self.word_specifiers:
-            assert not self.lemma_specifiers
-        return self.word_specifiers, self.lemma_specifiers, self.class_specifiers, self.negated
+    def parse(self):
+        """
+        Parse the token string.
 
-    def parse (self):
-        """ parse() is the function that derives word, lemma, and class
-        specificiations from the token string. The syntax is
-        corpus-specific. """
-        self.lemma_specifiers = []
-        self.class_specifiers = []
+        This function sets the values of a range of object attributes
+        according to the query syntax realized by the QueryToken class.
+
+        The attributes are evaluated by the ``get_query_string()`` method of
+        the SQLResource class.
+
+        Used object attributes
+        ----------------------
+
+        word_specifiers : list
+            A list of strings that are matched against the word query item
+            mapping of the current resource. If the list contains more than
+            one element, the match will combine them using the OR relation.
+
+        lemma_specifiers : list
+            A list of strings that are matched against the lemma query item
+            mapping of the current resource. If the list contains more than
+            one element, the match will combine them using the OR relation.
+
+        pos_specifiers : list
+            A list of strings that are matched against the POS query item
+            mapping of the current resource. If the list contains more than
+            one element, the match will combine them using the OR relation.
+
+        transcript_specifiers : list
+            A list of strings that are matched against the transcript query
+            item mapping of the current resource. If the list contains more
+            than one element, the match will combine them using the OR
+            relation.
+
+        gloss_specifiers : list
+            A list of strings that are matched against the gloss query item
+            mapping of the current resource. If the list contains more than
+            one element, the match will combine them using the OR relation.
+
+        negated : bool
+            True if the current query item is negated, and False otherwise.
+
+        lemmatize : bool
+            True if the current query item will be lemmatized, or False
+            otherwise. 'Lemmatization' in this context means that the query
+            will first find all word forms that match the query item, and will
+            then look up all lemmas that these word forms are associated with.
+
+        wildcards : bool
+            True if the current query item contains wildcards, or False
+            otherwise.
+
+        Returns
+        -------
+        None
+            The result of the parsing is stored in the object attributes
+        """
         self.word_specifiers = [self.S]
 
 
@@ -194,6 +237,12 @@ class COCAToken(QueryToken):
     quote_close = '"'
 
     def parse(self):
+        def split_spec(s, or_char=self.or_character):
+            if not s:
+                return []
+            else:
+                return [x.strip() for x in s.split(or_char) if x.strip()]
+
         self.word_specifiers = []
         self.class_specifiers = []
         self.lemma_specifiers = []
@@ -219,18 +268,25 @@ class COCAToken(QueryToken):
 
         self.lemmatize = bool(match.groupdict()["lemmatize"])
         work = (match.groupdict()["item"]
-                     .replace("\\#", "#")
-                     .replace("\\~", "~")
-                     .replace("'", "''"))
+                     .replace(r"\#", "#")
+                     .replace(r"\~", "~")
+                     .replace("'", "''")
+                     .replace(r"\{", "{"))
 
         if work == "//" or work == "[]":
             word_specification = work
         else:
             # try to match WORD|LEMMA|TRANS.[POS]:
-            match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}", work)
+            regex = ("(\[(?P<lemma>.*)\]|"
+                     "/(?P<trans>.*)/|"
+                     "(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}")
+            match = re.match(regex, work)
             if not match:
                 # try to match WORD|LEMMA|TRANS:
-                match = re.match("(\[(?P<lemma>.*)\]|/(?P<trans>.*)/|(?P<word>.*)){1}", work)
+                regex = ("(\[(?P<lemma>.*)\]|"
+                         "/(?P<trans>.*)/|"
+                         "(?P<word>.*)){1}")
+                match = re.match(regex, work)
 
             word_specification = match.groupdict()["word"]
             # word specification that begin and end with quotation marks '"'
@@ -247,16 +303,11 @@ class COCAToken(QueryToken):
             except KeyError:
                 class_specification = None
 
-        if word_specification:
-            self.word_specifiers = [x.strip() for x in word_specification.split("|") if x.strip()]
-        if transcript_specification:
-            self.transcript_specifiers = [x.strip() for x in transcript_specification.split("|") if x.strip()]
-        if lemma_specification:
-            self.lemma_specifiers = [x.strip() for x in lemma_specification.split("|") if x.strip()]
-        if class_specification:
-            self.class_specifiers = [x.strip() for x in class_specification.split("|") if x.strip()]
-        if gloss_specification:
-            self.gloss_specifiers = [x.strip() for x in gloss_specification.split("|") if x.strip()]
+        self.word_specifiers = split_spec(word_specification)
+        self.transcript_specifiers = split_spec(transcript_specification)
+        self.lemma_specifiers = split_spec(lemma_specification)
+        self.class_specifiers = split_spec(class_specification)
+        self.gloss_specifiers = split_spec(gloss_specification)
 
         if lemma_specification and not class_specification:
             # check if all elements pass as part-of-speech-tags:
@@ -265,37 +316,17 @@ class COCAToken(QueryToken):
                 self.class_specifiers = self.lemma_specifiers
                 self.lemma_specifiers = []
         # special case: allow *.[POS]
-        if all([x in set(["%", "_"]) for x in self.word_specifiers]) and self.class_specifiers:
+        if all([x in set(self.wildcard_characters) for
+                x in self.word_specifiers]) and self.class_specifiers:
             self.word_specifiers = []
 
-class COCATextToken(COCAToken):
-    # do not use the corpus to determine whether a token string like
-    # [xx] contains a part-of-speech tag:
+        self.wildcards = any([self.has_wildcards(x)
+                              for x in (self.word_specifiers +
+                                        self.transcript_specifiers +
+                                        self.lemma_specifiers +
+                                        self.class_specifiers +
+                                        self.gloss_specifiers)])
 
-    def get_parse(self):
-        return self.word_specifiers, self.class_specifiers, self.negated
-
-    def parse(self):
-        """
-        Syntax:     GENRE.[YEAR], with alternatives separated by '|'.
-                    Negation is possible by preceding the filter with '-'
-        Examples:   FIC (equivalent to FIC.[*])
-                    -FIC (equivalent to ACAD|NEWS|MAG)
-                    FIC|ACAD
-                    FIC.[2003]
-                    FIC|ACAD.[2003|2004]
-                    FIC|ACAD.[2003-2007]
-                    [2003-2007] (equivalent to *.[2003-2007])
-            """
-        super(COCATextToken, self).parse()
-        # Special case that allows '.[*]' as a year specifier:
-        if len(self.class_specifiers) == 1 and self.class_specifiers[0] in ["*", "?"]:
-            self.class_specifiers = []
-        # Special case that allows the use of '[2003]' format (i.e.
-        # specification of year, but not of genre:
-        if self.lemma_specifiers:
-            self.class_specifiers = self.lemma_specifiers
-            self.lemma_specifiers = []
 
 def parse_query_string(S, token_type):
     """
@@ -308,7 +339,6 @@ def parse_query_string(S, token_type):
 
     def add(S, ch):
         return "{}{}".format(S, ch)
-
 
     try:
         S = S.decode("utf-8")
@@ -328,7 +358,6 @@ def parse_query_string(S, token_type):
 
     tokens = []
     current_word = ""
-    negated = False
 
     escaping = False
     token_closed = False
@@ -375,17 +404,22 @@ def parse_query_string(S, token_type):
                                         token_type.pos_separator]:
                     # Raise exception if another character follows other than
                     # the character opening a quantification:
-                    raise TokenParseError("{}: expected a quantifier starting with <code style='color: #aa0000'>{}</code> or a part-of-speech specifier of the form <code style='color: #aa0000'>{}{}POS{}</code>".format(
-                        S,
-                        token_type.quantification_open,
-                        token_type.pos_separator,
-                        token_type.bracket_open,
-                        token_type.bracket_close))
+                    S = ("{}: expected a quantifier starting with <code "
+                         "style='color: #aa0000'>{}</code> or a "
+                         "part-of-speech specifier of the form <code "
+                         "style='color: #aa0000'>{}{}POS{}</code>").format(
+                            S,
+                            token_type.quantification_open,
+                            token_type.pos_separator,
+                            token_type.bracket_open,
+                            token_type.bracket_close)
+                    raise TokenParseError()
                 if current_char == token_type.pos_separator:
                     state = ST_POS_SEPARATOR
                     token_closed = False
 
-            if current_char in set([token_type.negation_flag, token_type.lemmatize_flag]):
+            if current_char in set([token_type.negation_flag,
+                                    token_type.lemmatize_flag]):
                 current_word = add(current_word, current_char)
                 continue
 
@@ -426,8 +460,10 @@ def parse_query_string(S, token_type):
                 state = ST_IN_BRACKET
                 token_closed = False
             else:
-                raise TokenParseError("{}: illegal character after full stop, expected <code style='color: #aa0000'>{}</code>".format(
-                    S, token_type.bracket_open))
+                S = ("{}: illegal character after full stop, expected <code "
+                     "style='color: #aa0000'>{}</code>").format(
+                    S, token_type.bracket_open)
+                raise TokenParseError(S)
 
         # bracket state?
         elif state == ST_IN_BRACKET:
@@ -453,7 +489,8 @@ def parse_query_string(S, token_type):
         # quantification state?
         elif state == ST_IN_QUANTIFICATION:
             # only add valid quantification characters to the current word:
-            if current_char in "0123456789, " + token_type.quantification_close:
+            if (current_char
+                    in "0123456789, " + token_type.quantification_close):
                 # ignore spaces:
                 if current_char.strip():
 
@@ -461,23 +498,33 @@ def parse_query_string(S, token_type):
                         # raise an exception if a comma immediately follows
                         # an opening bracket:
                         if current_word[-1] == token_type.quantification_open:
-                            raise TokenParseError("{}: no lower range in the quantification".format(S))
+                            S = "{}: {}".format(
+                                S, "no lower range in the quantification")
+                            raise TokenParseError(S)
                         # raise exception if a comma has already been added:
                         if comma_added:
-                            raise TokenParseError("{}: only one comma is allowed within a quantification".format(S))
+                            S = "{}: {}".format(
+                                S, ("only one comma is allowed within a "
+                                    "quantification"))
                         else:
                             comma_added = True
                     if current_char == token_type.quantification_close:
                         # raise an exception if the closing bracket follows
                         # immediately after a comma or the opening bracket:
-                        if current_word[-1] in [",", token_type.quantification_open]:
-                            raise TokenParseError("{}: no upper range in quantification".format(S))
+                        if (current_word[-1]
+                                in [",", token_type.quantification_open]):
+                            S = "{}: {}".format(
+                                S, "no upper range in quantification")
+                            raise TokenParseError(S)
                         state = ST_NORMAL
                         token_closed = True
 
                     current_word = add(current_word, current_char)
             else:
-                raise TokenParseError("{}: Illegal character <code style='color: #aa0000'>{}</code> within the quantification".format(S, current_char))
+                S = ("{}: Illegal character <code style='color: #aa0000'>{}"
+                     "</code> within the quantification").format(
+                         S, current_char)
+                raise TokenParseError(S)
 
     if state != ST_NORMAL:
         if state == ST_POS_SEPARATOR:
