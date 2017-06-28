@@ -3,10 +3,10 @@
 """
 test_celex.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License.
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -14,11 +14,8 @@ from __future__ import unicode_literals
 
 import unittest
 
-from .mockmodule import setup_module
+from coquery.installer.coq_install_celex import dia_to_unicode
 
-setup_module("sqlalchemy")
-
-from coquery.installer.coq_install_celex import *
 
 class TestCELEX(unittest.TestCase):
     def test_dia_to_unicode(self):
@@ -29,7 +26,8 @@ class TestCELEX(unittest.TestCase):
         self.assertEqual(dia_to_unicode('d#eb^acle'), "débâcle")
         self.assertEqual(dia_to_unicode('fa,cade'), "façade")
         self.assertEqual(dia_to_unicode('sm@aland'), "småland")
-        
+
+
 def main():
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(TestCELEX),
