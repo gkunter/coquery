@@ -55,7 +55,7 @@ class LexiconClass(object):
 
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
-            current_token = tokens.COCAToken(pos, replace=False)
+            current_token = tokens.COCAToken(pos)
             rc_feature = getattr(self.resource, QUERY_ITEM_POS)
             _, table, _ = self.resource.split_resource_feature(rc_feature)
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
@@ -1065,7 +1065,7 @@ class SQLResource(BaseResource):
             if not spec_list:
                 continue
 
-            if spec_list == ["%"]:
+            if spec_list == ["*"]:
                 continue
 
             try:
@@ -1084,10 +1084,11 @@ class SQLResource(BaseResource):
                                     N=i+1)
             if (len(spec_list) == 1):
                 x = spec_list[0]
+                val = tokens.COCAToken.replace_wildcards(x)
                 format_str = handle_case("{alias} {op} '{val}'")
                 s = format_str.format(alias=alias,
                                       op=get_operator(x, token.negated),
-                                      val=x)
+                                      val=val)
             else:
                 wildcards = []
                 explicit = []
@@ -1109,9 +1110,10 @@ class SQLResource(BaseResource):
                 else:
                     operator = "LIKE" if not token.negated else "NOT LIKE"
                 format_str = handle_case("{alias} {op} '{val}'")
-                s_list = [format_str.format(alias=alias,
-                                            op=operator,
-                                            val=x)
+                s_list = [format_str.format(
+                            alias=alias,
+                            op=operator,
+                            val=tokens.COCAToken.replace_wildcards(x))
                           for x in wildcards]
                 s = " OR ".join(s_list + s_exp)
 
