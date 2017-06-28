@@ -23,8 +23,8 @@ import operator
 import logging
 
 from . import options, sqlhelper, NAME
-from .defines import *
-from .general import CoqObject, collapse_words, get_visible_columns
+from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
+from .general import CoqObject, collapse_words
 from .gui.pyqt_compat import get_toplevel_window
 
 try:
@@ -837,8 +837,6 @@ class Rank(Freq):
 ## Reference corpus functions
 #############################################################################
 
-import hashlib
-
 class BaseReferenceCorpus(Function):
     _name = "virtual"
 
@@ -973,7 +971,6 @@ class ReferenceCorpusSize(BaseReferenceCorpus):
     _name = "reference_corpus_size"
 
     def evaluate(self, df, *args, **kwargs):
-        session = kwargs["session"]
         self._get_current_corpus()
         ext_size = self._current_corpus.get_corpus_size()
         return self.constant(df, ext_size)
@@ -1129,56 +1126,69 @@ class SuperCondProb(Proportion):
         session = kwargs["session"]
         return session.Resource
 
+    @staticmethod
+    def get_freq_str(span):
+        columns = span.columns
+        for i, col in enumerate(columns):
+            if i == 0:
+                val = span.iloc[:, 0]
+            else:
+                val = val.str.cat(span.iloc[:, i], sep=" ")
+
+        val = (val.replace("{", "\\{", regex=True)
+                  .replace("\[", "\\[", regex=True)
+                  .replace("\*", "\\*", regex=True)
+                  .replace("\?", "\\?", regex=True))
+        return val
+
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
-        fun = ContextColumns(left=1, right=0)
-        if self.find_function(df, fun):
+
+        left = 1
+        context_columns = ["coq_context_lc{}".format(i+1)
+                           for i in range(left)]
+
+        if all([col in df.columns for col in context_columns]):
+            left = df[context_columns]
             if options.cfg.verbose:
                 print(self._name, "using df.ContextColumns()")
-            left = df[fun.get_id()]
         else:
+            fun = ContextColumns(left=1, right=0)
             if options.cfg.verbose:
                 print(self._name, "calculating df.ContextColumns()")
             left = fun.evaluate(df, *args, **kwargs)
-        max_col = df["coquery_invisible_number_of_tokens"].max()
-        columns = ["coq_{}_{}".format(
-            getattr(session.Resource, QUERY_ITEM_WORD),
-            x+1) for x in range(max_col)]
-        span = pd.concat([left, df[columns]], axis="columns")
 
-        resource = self.get_resource(**kwargs)
-        url = sqlhelper.sql_url(options.cfg.current_server, resource.db_name)
-        engine = sqlalchemy.create_engine(url)
-        columns = span.columns
-        for i, col in enumerate(columns[:-1]):
-            if i == 0:
-                val = span[columns[0]]
-            val = pd.Series(val.values + [" "] + span[columns[i+1]].values,
-                            index=span.index)
-
-        val = (val.replace("{", "#", regex=True)
-                  .replace("\[", "\\[", regex=True)
-                  .replace("\*", "\\*", regex=True)
-                  .replace("\?", "\\?", regex=True))
-        freq_full = val.apply(lambda x:
-                              resource.corpus.get_frequency(x, engine))
-        columns = left.columns
-        if len(columns) == 1:
-            val = left[columns[0]]
+        # no left context specified:
+        if len(left.columns) == 0:
+            val = self.constant(df, None)
         else:
-            for i, col in enumerate(columns[:-1]):
-                if i == 0:
-                    val = left[columns[0]]
-                val = pd.Series(val.values + [" "] + left[columns[i+1]].values,
-                                index=left.index)
-        val = (val.replace("{", "#", regex=True)
-                  .replace("\[", "\\[", regex=True)
-                  .replace("\*", "\\*", regex=True)
-                  .replace("\?", "\\?", regex=True))
-        freq_part = val.apply(lambda x:
-                              resource.corpus.get_frequency(x, engine))
-        engine.dispose()
-        return freq_full / freq_part
+            max_col = df["coquery_invisible_number_of_tokens"].max()
+            columns = ["coq_{}_{}".format(
+                getattr(session.Resource, QUERY_ITEM_WORD),
+                x+1) for x in range(max_col)]
+            span = pd.concat([left, df[columns]], axis="columns")
+
+            resource = self.get_resource(**kwargs)
+            url = sqlhelper.sql_url(options.cfg.current_server,
+                                    resource.db_name)
+            engine = sqlalchemy.create_engine(url)
+            try:
+                val = self.get_freq_str(span)
+                freq_full = val.apply(
+                    lambda x: resource.corpus.get_frequency(x, engine))
+
+                val = self.get_freq_str(left)
+                freq_part = val.apply(
+                    lambda x: resource.corpus.get_frequency(x, engine))
+            except Exception as e:
+                logging.error(str(e))
+                val = self.constant(df, None)
+            else:
+                val = freq_full / freq_part
+            finally:
+                engine.dispose()
+
+        return val
 
 
 class ExternalCondProb(SuperCondProb):
@@ -1384,12 +1394,12 @@ class ContextColumns(Function):
         session = kwargs["session"]
         with session.db_engine.connect() as db_connection:
             if ("coquery_invisible_corpus_id" not in df.columns or
-                "coquery_invisible_origin_id" not in df.columns or
-                "coquery_invisible_number_of_tokens" not in df.columns or
-                df["coquery_invisible_number_of_tokens"].isnull().any()):
-                    val = self.constant(df, None)
-                    val.name = "coquery_invisible_dummy"
-                    return val
+                    "coquery_invisible_origin_id" not in df.columns or
+                    "coquery_invisible_number_of_tokens" not in df.columns or
+                    df["coquery_invisible_number_of_tokens"].isnull().any()):
+                val = self.constant(df, None)
+                val.name = "coquery_invisible_dummy"
+                return val
             else:
                 self._sentence_column = None
                 if options.cfg.context_restrict:
@@ -1442,11 +1452,12 @@ class ContextString(ContextColumns):
             row["coquery_invisible_origin_id"],
             row["coquery_invisible_number_of_tokens"], connection,
             sentence_id=sentence_id)
+        # FIXME: check if this is really the way to build the return value!
         return pd.Series(
             data=[collapse_words(list(pd.Series(
                                         left +
                                         [x.upper() for x in target if x] +
-                                        right)))],
+                                         right)))],
                                         index=[self._name])
 
 
@@ -1470,7 +1481,9 @@ class ContextString(ContextColumns):
 
     #def evaluate(self, df, *args, **kwargs):
         #session = kwargs["session"]
-        #val = df.apply(lambda row: session.queries[row["coquery_invisible_query_number"]].query_string, axis="columns")
+        #val = df.apply(lambda row: session.queries[
+            #row["coquery_invisible_query_number"]].query_string,
+            #axis="columns")
         #print(val)
         #val.index = df.index
         #return val
