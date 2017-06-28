@@ -902,10 +902,11 @@ class SQLResource(BaseResource):
             table_string = "{ext_name} AS {ext_alias}".format(
                 ext_name=ext_name, ext_alias=ext_alias)
 
-            s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}"
+            s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}{N}"
             where_string = s.format(
                         ext_alias=ext_alias, ext_column=ext_column,
-                        int_alias=int_alias, int_column=int_column)
+                        int_alias=int_alias, int_column=int_column,
+                        N=n+1)
 
             table_string = "{} {} ON {}".format(
                 link.join_type, table_string, where_string)
