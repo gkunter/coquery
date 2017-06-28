@@ -12,15 +12,11 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import unittest
-import os.path
-import sys
 import pandas as pd
 from numpy import testing as npt
-import re
 
 from .mockmodule import MockOptions, MockSettings
 
-from coquery.defines import *
 from coquery.functions import *
 from coquery.functionlist import FunctionList
 from coquery import options
@@ -650,11 +646,49 @@ class TestLogicalFunctions(unittest.TestCase):
         func = Or
         self.assert_result(func, self.df, columns, expected)
 
-    def test_or(self):
+    def test_xor(self):
         columns = ["column_4", "column_5"]
         expected = [True, False, True, False, False, True]
         func = Xor
         self.assert_result(func, self.df, columns, expected)
+
+
+class TestDistributionalFunctions(unittest.TestCase):
+    def setUp(self):
+        options.cfg = MockOptions()
+        options.settings = MockSettings()
+
+        options.cfg.verbose = False
+        options.cfg.drop_on_na = False
+        options.cfg.column_properties = {}
+        options.cfg.corpus = "Test"
+        options.cfg.benchmark = False
+
+    def test_cond_prob_1(self):
+        df = pd.DataFrame(
+            {"left1": list("abcd"),
+             "word": list("XXYY")})
+
+        val = SuperCondProb().get_freq_str(df)
+        self.assertListEqual(
+            val.values.tolist(),
+            ["a X", "b X", "c Y", "d Y"])
+
+    def test_cond_prob_2(self):
+        df = pd.DataFrame(
+            {"left1": list("abcd"),
+             "word": ["{vocnoise}", "?funny", "[comment]", "*illegal"]})
+
+        val = SuperCondProb().get_freq_str(df)
+        self.assertListEqual(
+            val.values.tolist(),
+            ["a \\{vocnoise}", "b \\?funny", "c \\[comment]", "d \\*illegal"])
+
+        val = SuperCondProb().get_freq_str(df[["left1"]])
+        self.assertListEqual(
+            val.values.tolist(),
+            ["a", "b", "c", "d"])
+
 
 def main():
     suite = unittest.TestSuite([
@@ -662,6 +696,7 @@ def main():
         unittest.TestLoader().loadTestsFromTestCase(TestStringFunctions),
         unittest.TestLoader().loadTestsFromTestCase(TestMathFunctions),
         unittest.TestLoader().loadTestsFromTestCase(TestLogicalFunctions),
+        unittest.TestLoader().loadTestsFromTestCase(TestDistributionalFunctions),
         ])
     unittest.TextTestRunner().run(suite)
 

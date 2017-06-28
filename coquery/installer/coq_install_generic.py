@@ -163,10 +163,10 @@ class BuilderClass(BaseCorpusBuilder):
                 try:
                     raw_text = pdf_to_str(file_name)
                 except Exception as e:
-                    logger.error("Error in PDF file {}: {}".format(file_name, e))
+                    logging.error("Error in PDF file {}: {}".format(file_name, e))
                     return ""
             else:
-                logger.warn("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
+                logging.warn("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
                     file_name))
                 return ""
 
@@ -175,10 +175,10 @@ class BuilderClass(BaseCorpusBuilder):
                 try:
                     raw_text = docx_to_str(file_name)
                 except (Exception) as e:
-                    logger.error("Error in MS Word file {}: {}".format(file_name, e))
+                    logging.error("Error in MS Word file {}: {}".format(file_name, e))
                     return ""
             else:
-                logger.warn("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
+                logging.warn("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
                     file_name))
                 return ""
 
@@ -187,10 +187,10 @@ class BuilderClass(BaseCorpusBuilder):
                 try:
                     raw_text = odt_to_str(file_name)
                 except (Exception) as e:
-                    logger.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
+                    logging.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
                     return ""
             else:
-                logger.warn("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
+                logging.warn("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
                     file_name))
                 return ""
 
@@ -199,23 +199,23 @@ class BuilderClass(BaseCorpusBuilder):
                 try:
                     raw_text = html_to_str(file_name)
                 except (Exception) as e:
-                    logger.error("Error in HTML file {}: {}".format(file_name, e))
+                    logging.error("Error in HTML file {}: {}".format(file_name, e))
                     return ""
             else:
-                logger.warn("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
+                logging.warn("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
                     file_name))
                 return ""
         elif file_type == FT_PLAIN:
             raw_text = plain_to_str(file_name)
         else:
             # Unsupported format, e.g. BINARY.
-            logger.warn("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
+            logging.warn("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
             return ""
 
         if raw_text == "":
-            logger.warn("No text could be retrieved from {} file {}".format(file_type, file_name))
+            logging.warn("No text could be retrieved from {} file {}".format(file_type, file_name))
         else:
-            logger.info("Read {} file {}, {} characters".format(
+            logging.info("Read {} file {}, {} characters".format(
                 file_type, file_name, len(raw_text)))
 
         return raw_text
@@ -354,7 +354,7 @@ class BuilderClass(BaseCorpusBuilder):
         if not self.has_metadata(basename) and self.arguments.use_meta:
             s = "{} not in meta data.".format(basename)
             print(s)
-            logger.warn(s)
+            logging.warn(s)
             return
 
         raw_text = self._read_text(file_name)
@@ -460,4 +460,3 @@ class BuilderClass(BaseCorpusBuilder):
                     self.add_token(p, "PUNCT")
 
 
-logger = logging.getLogger(NAME)

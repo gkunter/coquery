@@ -55,7 +55,7 @@ class LexiconClass(object):
 
     def is_part_of_speech(self, pos):
         if hasattr(self.resource, QUERY_ITEM_POS):
-            current_token = tokens.COCAToken(pos, replace=False)
+            current_token = tokens.COCAToken(pos)
             rc_feature = getattr(self.resource, QUERY_ITEM_POS)
             _, table, _ = self.resource.split_resource_feature(rc_feature)
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
@@ -445,6 +445,18 @@ class BaseResource(CoqObject):
         return corpus_variables
 
     @classmethod
+    def get_corpus_table_features(cls):
+        """
+        Return a list of tuples.
+
+        The first element of each tuple is the resource feature name, and the
+        second element is the display name.
+        """
+        return [(x, getattr(cls, x)) for x in dir(cls)
+                if x.startswith("corpus_") and not
+                x.endswith(("_table", "_columns"))]
+
+    @classmethod
     def get_lexicon_features(cls):
         """
         Return a list of tuples. Each tuple consists of a resource variable
@@ -646,7 +658,44 @@ class SQLResource(BaseResource):
         return df
 
     @classmethod
-    def get_corpus_joins(cls, query_items):
+    def get_subselect_corpus(cls, N, ref_N):
+        """
+        Returns a string that contains the subselect for the self-joined
+        corpus N.
+
+        ref_N is the number of the reference corpus (i.e. the self-joined
+        corpus that contains the links to the origin ID, and which provides
+        the token ID).
+        """
+
+        template = "(SELECT {fields} FROM {corpus})"
+
+        fields = []
+        for x in dir(cls):
+            if (x.startswith("corpus_") and
+                    not x.endswith(("_table", "_columns"))):
+                fields.append(
+                    "{field} AS {field}{N}".format(field=getattr(cls, x),
+                                                   N=N))
+
+        return template.format(fields=", ".join(sorted(fields)),
+                               corpus=cls.corpus_table)
+
+
+    @classmethod
+    def get_token_order(cls, token_list):
+        def key_fnc(x, i):
+            if x[1] == "*":
+                return 0
+            else:
+                return (len(x[1]) - 2 * x[1].count("["))
+
+        return sorted(token_list,
+                      key=lambda x: key_fnc(x[1], x[0]),
+                      reverse=True)
+
+    @classmethod
+    def get_corpus_joins(cls, query_items, ignore_ngram=False):
         """
         Returns a list of corpus joins for the sub query
         """
@@ -661,12 +710,38 @@ class SQLResource(BaseResource):
                 token_list.append((offset, (i+1, item_string)))
                 offset += 1
 
-        token_list = sorted(token_list,
-                            key=lambda x: (len(x[1][1]) -
-                                           2 * x[1][1].count("[")),
-                            reverse=True)
+        token_list = cls.get_token_order(token_list)
 
+        width = getattr(cls, "corpusngram_width", 0)
+        joined = False
         for i, (offset, (N, _)) in enumerate(token_list):
+            if (hasattr(cls, "corpusngram_table") and
+                offset < width and
+                not ignore_ngram):
+                if not joined:
+                    if i == 0:
+                        joins.append("FROM {corpus}".format(
+                            corpus=cls.corpusngram_table))
+                        ref_N = 1
+                        ref_offs = 0
+                    else:
+                        if N > ref_N:
+                            comp = "{id}{ref_N} + {offs}"
+                            offs = offset - ref_offs
+                        else:
+                            comp = "{id}{ref_N} - {offs}"
+                            offs = abs(offset - ref_offs)
+
+                        s = """
+                        INNER JOIN {{corpus}}
+                        ON {{id}}1 = {comp}""".format(comp=comp)
+                        joins.append(s.format(corpus=cls.corpusngram_table,
+                                              id=cls.corpus_id,
+                                              ref_N=ref_N,
+                                              offs=offs))
+                    joined = True
+                continue
+
             if i == 0:
                 s = "FROM       {corpus} AS COQ_CORPUS_{N}"
                 comp = ""
@@ -674,16 +749,16 @@ class SQLResource(BaseResource):
                 ref_offs = offset
             else:
                 if N > ref_N:
-                    comp = "COQ_CORPUS_{{ref_N}}.{{id}} + {offs}"
+                    comp = "{{id}}{{ref_N}} + {offs}"
                     offs = offset - ref_offs
                 else:
-                    comp = "COQ_CORPUS_{{ref_N}}.{{id}} - {offs}"
+                    comp = "{{id}}{{ref_N}} - {offs}"
                     offs = abs(offset - ref_offs)
                 s = ("INNER JOIN {{corpus}} AS COQ_CORPUS_{{N}} "
-                     "ON COQ_CORPUS_{{N}}.{{id}} = {comp}").format(
+                     "ON {{id}}{{N}} = {comp}").format(
                          comp=comp.format(offs=offs))
             s = s.format(
-                    corpus=cls.corpus_table,
+                    corpus=cls.get_subselect_corpus(N, ref_N),
                     id=cls.corpus_id,
                     N=N, ref_N=ref_N,
                     comp=comp)
@@ -784,7 +859,10 @@ class SQLResource(BaseResource):
             table_str = sql_template.format(
                 table_name=table_name, table_alias=table_alias)
 
-            sql_template = "{table_alias}.{table_id} = COQ_{parent}_{N}.{parent_id}"
+            if parent == "corpus":
+                sql_template = "{table_alias}.{table_id} = {parent_id}{N}"
+            else:
+                sql_template = "{table_alias}.{table_id} = COQ_{parent}_{N}.{parent_id}"
             where_str = sql_template.format(
                 table_alias=table_alias, table_id=table_id,
                 parent=parent.upper(), parent_id=parent_id, N=n+1)
@@ -815,7 +893,6 @@ class SQLResource(BaseResource):
             _, int_tab, int_feat = cls.split_resource_feature(link.rc_from)
             int_alias = "COQ_{}_{}".format(int_tab.upper(), n+1)
             int_column = getattr(cls, link.rc_from)
-
 
             ext_table = getattr(res, "{}_table".format(table))
             ext_alias = cls.alias_external_table(n, link, res)
@@ -988,7 +1065,7 @@ class SQLResource(BaseResource):
             if not spec_list:
                 continue
 
-            if spec_list == ["%"]:
+            if spec_list == ["*"]:
                 continue
 
             try:
@@ -997,13 +1074,21 @@ class SQLResource(BaseResource):
                 raise UnsupportedQueryItemError(item_type)
             _, tab, _ = cls.split_resource_feature(getattr(cls, label))
 
-            alias = "COQ_{}_{}".format(tab.upper(), i+1)
+            if tab == "corpus":
+                template = "{name}{N}"
+            else:
+                template = "COQ_{table}_{N}.{name}"
+
+            alias = template.format(table=tab.upper(),
+                                    name=col,
+                                    N=i+1)
             if (len(spec_list) == 1):
                 x = spec_list[0]
-                format_str = handle_case("{}.{} {} '{}'")
-                s = format_str.format(alias, col,
-                                      get_operator(x, token.negated),
-                                      x)
+                val = tokens.COCAToken.replace_wildcards(x)
+                format_str = handle_case("{alias} {op} '{val}'")
+                s = format_str.format(alias=alias,
+                                      op=get_operator(x, token.negated),
+                                      val=val)
             else:
                 wildcards = []
                 explicit = []
@@ -1014,9 +1099,9 @@ class SQLResource(BaseResource):
                         explicit.append(x)
 
                 if explicit:
-                    format_str = handle_case("{}.{} IN ({})")
+                    format_str = handle_case("{alias} IN ({val_list})")
                     s_list = ", ".join(["'{}'".format(x) for x in explicit])
-                    s_exp = [format_str.format(alias, col, s_list)]
+                    s_exp = [format_str.format(alias=alias, val_list=s_list)]
                 else:
                     s_exp = []
 
@@ -1024,8 +1109,11 @@ class SQLResource(BaseResource):
                     operator = "REGEXP"
                 else:
                     operator = "LIKE" if not token.negated else "NOT LIKE"
-                format_str = handle_case("{}.{} {} '{}'")
-                s_list = [format_str.format(alias, col, operator, x)
+                format_str = handle_case("{alias} {op} '{val}'")
+                s_list = [format_str.format(
+                            alias=alias,
+                            op=operator,
+                            val=tokens.COCAToken.replace_wildcards(x))
                           for x in wildcards]
                 s = " OR ".join(s_list + s_exp)
 
@@ -1117,7 +1205,11 @@ class SQLResource(BaseResource):
 
                 if rc_feature in lexicon_features:
                     if token is not None:
-                        column = "COQ_{table}_{pos}.{name}".format(
+                        if tab != "corpus":
+                            template = "COQ_{table}_{pos}.{name}"
+                        else:
+                            template = "{name}{pos}"
+                        column = template.format(
                             table=tab.upper(), pos=i+1,
                             name=getattr(cls, rc_feature))
                         current_pos += 1
@@ -1134,7 +1226,12 @@ class SQLResource(BaseResource):
         for rc_feature in selected:
             if rc_feature in corpus_features:
                 _, tab, feat = cls.split_resource_feature(rc_feature)
-                s = "COQ_{table}_{N}.{name} AS coq_{rc_feature}_1".format(
+                if tab != "corpus":
+                    template = "COQ_{table}_{N}.{name}"
+                else:
+                    template = "{name}{N}"
+                template = "{} AS coq_{{rc_feature}}_1".format(template)
+                s =  template.format(
                     N=_first_item,
                     table=tab.upper(),
                     name=getattr(cls, rc_feature),
@@ -1152,20 +1249,20 @@ class SQLResource(BaseResource):
 
         if to_file:
             if not columns:
-                s = "COQ_CORPUS_{}.{} AS coquery_invisible_corpus_id".format(
-                        _first_item, cls.corpus_id)
+                s = "{name}{N} AS coquery_invisible_corpus_id".format(
+                    N=_first_item, name=cls.corpus_id)
                 columns.append(s)
         else:
-            s = "COQ_CORPUS_{}.{} AS coquery_invisible_corpus_id".format(
-                _first_item, cls.corpus_id)
+            s = "{name}{N} AS coquery_invisible_corpus_id".format(
+                N=_first_item, name=cls.corpus_id)
             if s not in columns:
                 columns.append(s)
 
             origin_id = (getattr(cls, "corpus_source_id", "") or
                          getattr(cls, "corpus_file_id", ""))
             if origin_id:
-                s = "COQ_CORPUS_{}.{} AS coquery_invisible_origin_id".format(
-                    _first_item, origin_id)
+                s = "{name}{N} AS coquery_invisible_origin_id".format(
+                    N=_first_item, name=origin_id)
                 columns.append(s)
         return columns
 

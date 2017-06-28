@@ -93,14 +93,6 @@ class InstallerGui(QtWidgets.QDialog):
 
             self.ui.notes_box.replaceBox(self.ui.notes_scroll)
 
-        if not options.cfg.experimental:
-            try:
-                self.ui.widget_n_gram.hide()
-                self.ui.check_n_gram.setChecked(False)
-            except AttributeError:
-                # ignore exceptions raised if widgets do not exist
-                pass
-
         self.restore_settings()
         self.ui.issue_label.setText("")
         self.ui.corpus_name.setStyleSheet("")
