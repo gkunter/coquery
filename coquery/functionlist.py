@@ -13,9 +13,8 @@ from __future__ import unicode_literals
 
 import pandas as pd
 import datetime
-import logging
 
-from . import options, NAME
+from . import options
 from .general import CoqObject
 from .defines import msg_runtime_error_function
 
@@ -120,6 +119,11 @@ class FunctionList(CoqObject):
         ix = self._list.index(old)
         self._list[ix] = new
 
+        # update references to the replaced function:
+        for i, func in enumerate(self._list[ix:]):
+            func.columns = [new.get_id() if col == old.get_id() else col
+                            for col in func.columns]
+
     def __iter__(self, *args, **kwargs):
         return self._list.__iter__(*args, **kwargs)
 
@@ -128,4 +132,3 @@ class FunctionList(CoqObject):
         return "{}({})".format(
             s, self._list.__repr__(*args, **kwargs))
 
-logger = logging.getLogger(NAME)
