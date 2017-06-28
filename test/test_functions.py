@@ -11,6 +11,7 @@ coquery$ python -m test.test_functions
 from __future__ import unicode_literals
 from __future__ import division
 
+import warnings
 import unittest
 import pandas as pd
 from numpy import testing as npt
@@ -379,7 +380,9 @@ class TestMathFunctions(unittest.TestCase):
         columns = ["column_1", "column_3"]
         expected = [1, pd.np.nan, pd.np.nan, pd.np.inf]
         func = Div
-        self.assert_result(func, self.df, columns, expected)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.assert_result(func, self.df, columns, expected)
 
     def test_max(self):
         columns = ["column_1", "column_2"]
