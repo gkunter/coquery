@@ -13,23 +13,28 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import sys
-import time, datetime
+import time
+import datetime
 import fileinput
 import codecs
 import warnings
-import collections
 import sqlalchemy
+import re
+import logging
 
 import pandas as pd
 
 from . import options
-from .errors import *
-from .defines import *
-from .general import *
+from .errors import (
+    TokenParseError, IllegalArgumentError, SQLNoConnectorError,
+    EmptyInputFileError, CorpusUnavailableQueryTypeError)
+from .defines import SQL_SQLITE, COLUMN_NAMES
+from .general import set_preferred_order
 from . import sqlhelper
 from . import queries
 from . import managers
 from . import functionlist
+
 
 class Session(object):
     _is_statistics = False
@@ -59,7 +64,7 @@ class Session(object):
 
             self.Lexicon = current_lexicon
             self.Lexicon.corpus = current_corpus
-            self.Lexicon.resource= current_resource
+            self.Lexicon.resource = current_resource
 
             self.Resource = current_resource
 
@@ -106,7 +111,6 @@ class Session(object):
         ## FIXME: reimplement row visibility
         #self.row_visibility = {}
 
-
     def get_max_token_count(self):
         """
         Return the maximal number of tokens that may be produced by the
@@ -151,7 +155,7 @@ class Session(object):
             header=header,
             sep=options.cfg.output_separator,
             encoding="utf-8",
-            float_format = "%.{}f".format(options.cfg.digits),
+            float_format="%.{}f".format(options.cfg.digits),
             index=False)
         output_file.flush()
         self._first_saved_dataframe = False
@@ -201,7 +205,7 @@ class Session(object):
         """
         self.start_timer()
 
-        if self.db_engine == None:
+        if self.db_engine is None:
             raise SQLNoConnectorError
 
         self.connect_to_db()
@@ -262,7 +266,7 @@ class Session(object):
                         # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
 
                         try:
-                            dtype_changed = df.dtypes[x] != dtype_list[x]
+                            df.dtypes[x] != dtype_list[x]
                         except (IndexError, KeyError):
                             continue
 
@@ -295,8 +299,9 @@ class Session(object):
                                         "es" if raw_length != 1 else ""))
                 if len(df) != raw_length:
                     s_list.append(
-                        "{} output_row{}".format(len(df),
-                                            "s" if len(df) != 1 else ""))
+                        "{} output_row{}".format(
+                            len(df),
+                            "s" if len(df) != 1 else ""))
                 logging.info("Query executed ({})".format(", ".join(s_list)))
         finally:
             self.disconnect_from_db()
@@ -338,10 +343,10 @@ class Session(object):
 
             self.output_object[columns].to_csv(
                 output_file,
-                header = [self.translate_header(x) for x in columns],
+                header=[self.translate_header(x) for x in columns],
                 sep=options.cfg.output_separator,
                 encoding="utf-8",
-                float_format = "%.{}f".format(options.cfg.digits),
+                float_format="%.{}f".format(options.cfg.digits),
                 index=False)
             output_file.flush()
 
@@ -426,7 +431,7 @@ class Session(object):
             The display name of the resource string
         """
 
-        if header == None:
+        if header is None:
             return header
 
         # If the column has been renamed by the user, that name has top
@@ -469,8 +474,8 @@ class Session(object):
                 s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_right)
             elif header == "coq_context_string":
                 s = "{}({}L, {}R)".format(COLUMN_NAMES[header],
-                                            options.cfg.context_left,
-                                            options.cfg.context_right)
+                                          options.cfg.context_left,
+                                          options.cfg.context_right)
             elif header.startswith("coq_context_lc"):
                 s = "L{}".format(header.split("coq_context_lc")[-1])
             elif header.startswith("coq_context_rc"):
@@ -509,7 +514,7 @@ class Session(object):
                     num = ""
 
                 fun = manager.get_function(header)
-                if fun == None:
+                if fun is None:
                     # if options.cfg.verbose: print(11)
                     return header
                 else:
@@ -550,8 +555,8 @@ class Session(object):
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
         # special treatment of lexicon features:
-        if (rc_feature in [x for x, _ in resource.get_lexicon_features()]
-            or resource.is_tokenized(rc_feature)):
+        if (rc_feature in [x for x, _ in resource.get_lexicon_features()] or
+                resource.is_tokenized(rc_feature)):
             try:
                 number = self.quantified_number_labels[int(number) - 1]
             except (ValueError, AttributeError):
@@ -581,8 +586,10 @@ class Session(object):
         # if options.cfg.verbose: print(18)
         return header
 
+
 class StatisticsSession(Session):
     _is_statistics = True
+
     def __init__(self):
         super(StatisticsSession, self).__init__()
         self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
@@ -592,12 +599,14 @@ class StatisticsSession(Session):
     def aggregate_data(self, recalculate=True):
         self.output_object = self.data_table
 
+
 class SessionCommandLine(Session):
     def __init__(self):
         super(SessionCommandLine, self).__init__()
         if len(options.cfg.query_list) > 1:
             logging.info("{} queries".format(len(options.cfg.query_list)))
         self.max_number_of_input_columns = 0
+
 
 class SessionInputFile(Session):
     def prepare_queries(self):
@@ -650,6 +659,7 @@ class SessionInputFile(Session):
         logging.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
             logging.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
+
 
 class SessionStdIn(Session):
     def __init__(self):
