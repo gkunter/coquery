@@ -31,7 +31,7 @@ from .functions import (Freq,
                         SubcorpusSize)
 from .functionlist import FunctionList
 from .general import CoqObject, get_visible_columns
-from . import options, NAME
+from . import options
 from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
 
 
@@ -154,7 +154,7 @@ class Manager(CoqObject):
     def get_function(self, id):
         for fun in self._functions:
             if type(fun) == type:
-                logger.warning("Function {} not found in manager".format(fun))
+                logging.warning("Function {} not found in manager".format(fun))
                 return None
             if fun.get_id() == id:
                 return fun
@@ -204,10 +204,13 @@ class Manager(CoqObject):
     def _apply_function(df, fun, session):
         try:
             if fun.single_column:
-                df = df.assign(COQ_FUNCTION=lambda d: fun.evaluate(d, session=session))
+                df = df.assign(
+                    COQ_FUNCTION=lambda d: fun.evaluate(d, session=session))
                 return df.rename(columns={"COQ_FUNCTION": fun.get_id()})
             else:
-                new_df = df.apply(lambda x: fun.evaluate(x, session=session), axis="columns")
+                new_df = df.apply(
+                    lambda x: fun.evaluate(x, session=session),
+                    axis="columns")
                 return pd.concat([df, new_df], axis=1)
         except Exception as e:
             print(e)
@@ -263,7 +266,7 @@ class Manager(CoqObject):
                 df = context_functions.lapply(df,
                                               session=session, manager=self)
                 context_columns = [x for x in df.columns
-                                if x.startswith(("coq_context"))]
+                                   if x.startswith(("coq_context"))]
                 # and store context in cache
                 self._context_cache[context_key] = df[context_columns]
 
@@ -343,7 +346,8 @@ class Manager(CoqObject):
     def add_sorter(self, column, ascending=True, reverse=False):
         if self.get_sorter(column):
             self.remove_sorter(column)
-        self.sorters.append(Sorter(column, ascending, reverse, len(self.sorters)))
+        self.sorters.append(
+            Sorter(column, ascending, reverse, len(self.sorters)))
 
     def get_sorter(self, column):
         for x in self.sorters:
@@ -535,8 +539,6 @@ class Manager(CoqObject):
         if options.cfg.verbose:
             print("\tselect()")
 
-        resource = session.Resource
-
         columns = list(df.columns)
 
         # align context columns around word columns:
@@ -667,8 +669,9 @@ class Manager(CoqObject):
         if id_cols and options.cfg.drop_duplicates:
             # get index of duplicates, sorted so that those rows with the
             # highest number of query tokens are used:
-            tmp = (df.sort_values(by=id_cols + ["coquery_invisible_number_of_tokens"],
-                                ascending=[True] * len(id_cols) + [False])
+            sort_cols = id_cols + ["coquery_invisible_number_of_tokens"]
+            tmp = (df.sort_values(by=sort_cols,
+                                  ascending=[True] * len(id_cols) + [False])
                      .drop_duplicates(id_cols))
             ix = tmp.index
             self.removed_duplicates = len(df) - len(ix)
@@ -688,7 +691,8 @@ class Manager(CoqObject):
         _columns = df.columns
         df = df[[x for x in df.columns if not x.startswith("func_")]]
         if len(_columns) != len(df.columns):
-            print("Unexpectedly discarded functions:", "\n\t".join(list(_columns)))
+            print("Unexpectedly discarded functions:",
+                  "\n\t".join(list(_columns)))
 
         df = self.mutate(df, session)
         df = self.filter_groups(df, session)
@@ -744,7 +748,8 @@ class ContingencyTable(FrequencyList):
 
     def select(self, df, session):
         l = list(super(ContingencyTable, self).select(df, session).columns)
-        for col in [x for x in df.columns if x != "coquery_invisible_dummy"]:
+        for col in [x for x in df.columns
+                    if x != "coquery_invisible_dummy"]:
             if col not in l:
                 l.append(col)
 
@@ -768,9 +773,10 @@ class ContingencyTable(FrequencyList):
                     s = "{}({}=ANY)"
                 return s.format(row[0], row.index[1])
             elif row[1]:
-                return "{}({}='{}')".format(row[0],
-                                            session.translate_header(row.index[1]),
-                                            row[1].replace("'", "''"))
+                return "{}({}='{}')".format(
+                    row[0],
+                    session.translate_header(row.index[1]),
+                    row[1].replace("'", "''"))
             else:
                 return row[0]
 
@@ -781,7 +787,8 @@ class ContingencyTable(FrequencyList):
         cat_col = list(df[vis_cols]
                        .select_dtypes(include=[object]).columns.values)
         num_col = (list(df[vis_cols]
-                        .select_dtypes(include=[pd.np.number]).columns.values) +
+                        .select_dtypes(include=[pd.np.number])
+                        .columns.values) +
                    ["coquery_invisible_number_of_tokens",
                     "coquery_invisible_corpus_id",
                     "coquery_invisible_origin_id"])
@@ -804,17 +811,18 @@ class ContingencyTable(FrequencyList):
         if len(cat_col) > 1:
             # Create pivot table:
             piv = df.pivot_table(index=cat_col[:-1],
-                                columns=[cat_col[-1]],
-                                values=num_col,
-                                aggfunc=agg_fnc,
-                                fill_value=0)
+                                 columns=[cat_col[-1]],
+                                 values=num_col,
+                                 aggfunc=agg_fnc,
+                                 fill_value=0)
             piv = piv.reset_index()
 
             # handle the multi-index that pivot_table() creates:
             l1 = pd.Series(piv.columns.levels[-2][piv.columns.labels[-2]])
             l2 = pd.Series(piv.columns.levels[-1][piv.columns.labels[-1]])
 
-            piv.columns = pd.concat([l1, l2], axis=1).apply(_get_column_label, axis="columns")
+            piv.columns = pd.concat([l1, l2], axis=1).apply(
+                _get_column_label, axis="columns")
         else:
             piv = df
 
@@ -855,8 +863,8 @@ class ContingencyTable(FrequencyList):
                 fnc = agg_fnc[rc_feature]
                 d[x] = fnc(piv[x])
         row_total = pd.DataFrame([pd.Series(d)],
-                                columns=piv.columns,
-                                index=[ROW_NAMES["row_total"]]).fillna("")
+                                 columns=piv.columns,
+                                 index=[ROW_NAMES["row_total"]]).fillna("")
         piv = piv.append(row_total)
         return piv
 
@@ -903,8 +911,10 @@ class Collocations(Manager):
         # used.
         corpus_size = session.Resource.corpus.get_corpus_size()
 
-        left_cols = ["coq_context_lc{}".format(x + 1) for x in range(options.cfg.context_left)]
-        right_cols = ["coq_context_rc{}".format(x + 1) for x in range(options.cfg.context_right)]
+        left_cols = ["coq_context_lc{}".format(x + 1)
+                     for x in range(options.cfg.context_left)]
+        right_cols = ["coq_context_rc{}".format(x + 1)
+                      for x in range(options.cfg.context_right)]
 
         try:
             left_context_span = df[left_cols]
@@ -941,15 +951,20 @@ class Collocations(Manager):
 
         collocates = pd.concat([left, right], axis=1)
         collocates = collocates.reset_index()
-        collocates.columns = ["coq_collocate_label", "coq_collocate_frequency_left", "coq_collocate_frequency_right"]
+        collocates.columns = ["coq_collocate_label",
+                              "coq_collocate_frequency_left",
+                              "coq_collocate_frequency_right"]
 
         # calculate collocate frequency (i.e. occurrences of the collocate
         # in the context
-        collocates["coq_collocate_frequency"] = collocates[["coq_collocate_frequency_left", "coq_collocate_frequency_right"]].sum(axis=1)
+        collocates["coq_collocate_frequency"] = (
+            collocates[["coq_collocate_frequency_left",
+                        "coq_collocate_frequency_right"]].sum(axis=1))
         # calculate total frequency of collocate
-        collocates["statistics_frequency"] = collocates["coq_collocate_label"].apply(
-            session.Resource.corpus.get_frequency, engine=session.db_engine,
-            literal=True)
+        collocates["statistics_frequency"] = (
+            collocates["coq_collocate_label"].apply(
+                session.Resource.corpus.get_frequency,
+                engine=session.db_engine, literal=True))
         # calculate conditional probabilities:
         func = ConditionalProbability()
         collocates["coq_conditional_probability"] = func.evaluate(
@@ -966,12 +981,13 @@ class Collocations(Manager):
             freq_total="statistics_frequency")
 
         func = MutualInformation()
-        collocates["coq_mutual_information"] = func.evaluate(collocates,
-                            f_1=len(df),
-                            f_2="statistics_frequency",
-                            f_coll="coq_collocate_frequency",
-                            size=corpus_size,
-                            span=len(left_cols) + len(right_cols))
+        collocates["coq_mutual_information"] = func.evaluate(
+            collocates,
+            f_1=len(df),
+            f_2="statistics_frequency",
+            f_coll="coq_collocate_frequency",
+            size=corpus_size,
+            span=len(left_cols) + len(right_cols))
 
         aggregate = collocates.drop_duplicates(subset="coq_collocate_label")
 
@@ -1126,9 +1142,8 @@ class ContrastMatrix(FrequencyList):
 
         obs = [[freq_1, freq_2], [total_1 - freq_1, total_2 - freq_2]]
         try:
-            g2, p_g2, _, _ = scipy.stats.chi2_contingency(obs,
-                                                          correction=False,
-                                                          lambda_="log-likelihood")
+            g2, p_g2, _, _ = scipy.stats.chi2_contingency(
+                obs, correction=False, lambda_="log-likelihood")
             if (freq_1 / total_1) < (freq_2 / total_2):
                 df = pd.Series([-g2, p_g2])
             else:
@@ -1160,14 +1175,15 @@ class ContrastMatrix(FrequencyList):
 
 def manager_factory(manager):
     for mode, cls in (
-        (QUERY_MODE_TYPES, Types),
-        (QUERY_MODE_FREQUENCIES, FrequencyList),
-        (QUERY_MODE_COLLOCATIONS, Collocations),
-        (QUERY_MODE_CONTRASTS, ContrastMatrix),
-        (QUERY_MODE_CONTINGENCY, ContingencyTable)):
+            (QUERY_MODE_TYPES, Types),
+            (QUERY_MODE_FREQUENCIES, FrequencyList),
+            (QUERY_MODE_COLLOCATIONS, Collocations),
+            (QUERY_MODE_CONTRASTS, ContrastMatrix),
+            (QUERY_MODE_CONTINGENCY, ContingencyTable)):
         if manager == mode:
             return cls()
     return Manager()
+
 
 def get_manager(manager, resource):
     """
@@ -1184,5 +1200,3 @@ def get_manager(manager, resource):
         options.cfg.managers[resource][manager] = new_manager
     finally:
         return options.cfg.managers[resource][manager]
-
-logger = logging.getLogger(NAME)
