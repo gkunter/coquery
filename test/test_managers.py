@@ -3,6 +3,7 @@
 from __future__ import print_function
 import unittest
 import argparse
+import warnings
 
 import pandas as pd
 
@@ -10,18 +11,20 @@ from coquery.coquery import options
 from coquery.session import Session
 from coquery.defines import QUERY_MODE_TOKENS, CONTEXT_NONE
 from coquery.corpus import BaseResource
-from coquery.managers import Manager, Group
-from coquery.functions import Freq, Tokens, Entropy
+from coquery.managers import Manager, Group, Summary
+from coquery.functions import Freq, Tokens
 
-# mock corpus module:
-BaseResource.corpus_table = "Corpus"
-BaseResource.corpus_id = "ID"
-BaseResource.corpus_word_id = "WordId"
-BaseResource.word_table = "Lexicon"
-BaseResource.word_id = "WordId"
-BaseResource.word_label = "Word"
-BaseResource.db_name = "MockCorpus"
-BaseResource.query_item_word = "word_label"
+
+class ManagerResource(BaseResource):
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_label = "Word"
+    db_name = "MockCorpus"
+    query_item_word = "word_label"
+
 
 class TestManager(unittest.TestCase):
     df = pd.DataFrame(
@@ -31,7 +34,7 @@ class TestManager(unittest.TestCase):
          "coquery_invisible_corpus_id": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
          "coquery_invisible_number_of_tokens": [1] * 10})
 
-    resource = BaseResource()
+    resource = ManagerResource()
 
     def setUp(self):
         options.cfg = argparse.Namespace()
@@ -44,9 +47,13 @@ class TestManager(unittest.TestCase):
         options.cfg.drop_duplicates = True
         options.cfg.benchmark = False
         options.cfg.verbose = False
+        options.cfg.summary_group = [Summary("summary")]
 
-        self.Session = Session()
-        self.Session.Resource = BaseResource()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.Session = Session()
+
+        self.Session.Resource = ManagerResource()
 
         self.manager = Manager()
 
