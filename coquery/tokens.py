@@ -367,7 +367,6 @@ def parse_query_string(S, token_type):
 
     # main loop
     for char_pos, current_char in enumerate(S):
-
         # this string is used to mark the position of syntax errors
         pos_string = ("." * (char_pos) +
                       "↥" +
@@ -413,7 +412,7 @@ def parse_query_string(S, token_type):
                             token_type.pos_separator,
                             token_type.bracket_open,
                             token_type.bracket_close)
-                    raise TokenParseError()
+                    raise TokenParseError(S)
                 if current_char == token_type.pos_separator:
                     state = ST_POS_SEPARATOR
                     token_closed = False
@@ -506,6 +505,7 @@ def parse_query_string(S, token_type):
                             S = "{}: {}".format(
                                 S, ("only one comma is allowed within a "
                                     "quantification"))
+                            raise TokenParseError(S)
                         else:
                             comma_added = True
                     if current_char == token_type.quantification_close:
@@ -542,8 +542,9 @@ def parse_query_string(S, token_type):
         elif state == ST_IN_QUANTIFICATION:
             op = token_type.quantification_open
             cl = token_type.quantification_close
-        raise TokenParseError(
-            msg_token_dangling_open.format(S, pos_string, cl, op))
+        S = msg_token_dangling_open.format(S, pos_string, cl, op)
+        raise TokenParseError(S)
+
     if current_word:
         tokens.append(current_word)
     return tokens

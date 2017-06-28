@@ -134,7 +134,8 @@ class TestTokensModuleMethods(unittest.TestCase):
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
     def test_parse_query_string_bad1(self):
-        L = ['"this is a query',
+        L = [
+             '"this is a query',
              '/this is a query',
              '[this is a query',
              '/th/is is a query',
@@ -155,9 +156,10 @@ class TestTokensModuleMethods(unittest.TestCase):
         for x in L:
             try:
                 self.assertRaises(tokens.TokenParseError,
-                                  tokens.parse_query_string,
-                                  x, tokens.COCAToken)
+                              tokens.parse_query_string,
+                              x, tokens.COCAToken)
             except AssertionError as e:
+                print("Exception not raised: '{}'".format(x))
                 raise e
 
     def test_word_internal_slashes(self):
@@ -786,7 +788,6 @@ class TestQueryTokenCOCA(unittest.TestCase):
 
     def test_negation3(self):
         token = self.token_type("~~~abc")
-        print(token)
         self.assertTrue(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertFalse(token.wildcards)
