@@ -52,34 +52,34 @@ def _get_file_data(_, token_id, features):
 
 CorpusClass.get_file_data = _get_file_data
 
-# Mock a corpus module:
-BaseResource.corpus_table = "Corpus"
-BaseResource.corpus_id = "ID"
-BaseResource.corpus_word_id = "WordId"
-BaseResource.corpus_source_id = "SourceId"
-BaseResource.corpus_file_id = "FileId"
-BaseResource.corpus_starttime = "Start"
-BaseResource.corpus_endtime = "End"
+class TextgridResource(BaseResource):
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    corpus_source_id = "SourceId"
+    corpus_file_id = "FileId"
+    corpus_starttime = "Start"
+    corpus_endtime = "End"
 
-BaseResource.word_table = "Lexicon"
-BaseResource.word_id = "WordId"
-BaseResource.word_label = "Word"
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_label = "Word"
 
-BaseResource.source_table = "Source"
-BaseResource.source_id = "SourceId"
-BaseResource.source_title = "Title"
+    source_table = "Source"
+    source_id = "SourceId"
+    source_title = "Title"
 
-BaseResource.file_table = "Files"
-BaseResource.file_id = "FileId"
-BaseResource.file_name = "Filename"
-BaseResource.file_duration = "Duration"
+    file_table = "Files"
+    file_id = "FileId"
+    file_name = "Filename"
+    file_duration = "Duration"
 
-BaseResource.db_name = "Test"
+    db_name = "Test"
 
 
 class TestTextGridModuleMethods(unittest.TestCase):
     def setUp(self):
-        self.resource = BaseResource()
+        self.resource = TextgridResource()
         self.session = MockSession(self.resource)
 
         self.selected_features1 = [
