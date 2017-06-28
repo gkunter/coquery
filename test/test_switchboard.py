@@ -134,7 +134,6 @@ class TestSwitchboard(unittest.TestCase):
     def test_binary_files(self):
         installer = BuilderClass()
         installer.get_file_list(self._temp_path, None)
-        print(BuilderClass.binary_files)
 
         self.assertListEqual(
             sorted(BuilderClass.binary_files.keys()),
