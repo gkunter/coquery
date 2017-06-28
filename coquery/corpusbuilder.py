@@ -54,7 +54,6 @@ any collection of text files in a directiory into a query-able corpus, and
 XML version of the British National Corpus.
 """
 
-
 import getpass
 import codecs
 import logging
@@ -87,7 +86,6 @@ from . import sqlhelper
 from . import sqlwrap
 from . import options
 from . import corpus
-from . import NAME
 from .tables import Column, Identifier, Link, Table
 
 from .errors import DependencyError, get_error_repr
@@ -130,7 +128,7 @@ class MethodNotImplementedError(Exception):
     msg = "Function not implemented."
 
 # module_code contains the Python skeleton code that will be used to write
-# the Python corpus module."""
+# the Python corpus module.
 module_code = """# -*- coding: utf-8 -*-
 #
 # FILENAME: {file_name} -- a corpus module for the Coquery corpus query tool
@@ -165,13 +163,12 @@ class Corpus(CorpusClass):
 """
 
 
-class BaseCorpusBuilder(corpus.BaseResource):
+class BaseCorpusBuilder(corpus.SQLResource):
     """
     This class is the base class used to build and install a corpus for
     Coquery. For corpora currently not supported by Coquery, new builders
     can be developed by subclassing this class.
     """
-    logger = None
     module_code = None
     name = None
     table_description = None
@@ -244,7 +241,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
         self.parser.add_argument("--encoding", help="select a character encoding for the input files (e.g. latin1, default: {})".format(self.encoding), type=str, default=self.encoding)
         self.additional_arguments()
 
-
         # auto-create tables for which the variables TAB_table and
         # TAB_columns exists (with TAB being the name of the table):
         for x in self.auto_create:
@@ -272,7 +268,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 l.append(name)
         return l
 
-
     def add_tag_table(self, features_only=False):
         """
         Create the table description for a tag table.
@@ -293,10 +288,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
             self.create_table_description(
                     self.tag_table,
                     [Identifier(self.tag_id, "MEDIUMINT UNSIGNED NOT NULL"),
-                    Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
-                    Column(self.tag_label, "VARCHAR(1024) NOT NULL"),
-                    Link(self.tag_corpus_id, self.corpus_table),
-                    Column(self.tag_attribute, "VARCHAR(4048) NOT NULL")])
+                     Column(self.tag_type, "ENUM('open', 'close', 'empty')"),
+                     Column(self.tag_label, "VARCHAR(1024) NOT NULL"),
+                     Link(self.tag_corpus_id, self.corpus_table),
+                     Column(self.tag_attribute, "VARCHAR(4048) NOT NULL")])
 
     def interrupt(self):
         """
@@ -407,29 +402,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
             return self._new_tables[table_name]
         except KeyError:
             return None
-
-    def setup_logger(self):
-        """
-        Initialize the logger.
-        """
-        class TextwrapFormatter(logging.Formatter):
-            def __init__(self, fmt):
-                super(TextwrapFormatter, self).__init__(fmt=fmt)
-                self.wrap = textwrap.TextWrapper(width=79, subsequent_indent="        ").fill
-
-            def format(self, entry):
-                return "\n%s\n" % self.wrap(super(TextwrapFormatter, self).format(entry))
-
-        self.logger = logging.getLogger(self.name)
-        self.logger.setLevel(logging.INFO)
-        log_file_name = "%s.log" % self.name
-        file_handler = logging.FileHandler(log_file_name)
-        file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(message)s"))
-        self.logger.addHandler(file_handler)
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(TextwrapFormatter("%(levelname)s %(message)s"))
-        stream_handler.setLevel(logging.WARNING)
-        self.logger.addHandler(stream_handler)
 
     def build_create_tables(self):
         """
@@ -856,7 +828,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 end_line = 999999
             #S = S.splitlines()
             S = []
-            self.logger.error(e)
+            logging.error(e)
             for i, x in enumerate(S):
                 if i > start_line:
                     warnings.warn("{:<3}: {}".format(i, x.decode("utf8")))
@@ -1058,7 +1030,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         on each file name. File names are added to the file table."""
         self._file_list = self.get_file_list(self.arguments.path, self.file_filter)
         if not self._file_list:
-            self.logger.warning("No files found at %s" % self.arguments.path)
+            logging.warning("No files found at %s" % self.arguments.path)
             return
 
         if self._widget:
@@ -1072,7 +1044,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
             if self.interrupted:
                 return
             if not self.db_has(self.file_table, {self.file_path: file_name}):
-                self.logger.info("Loading file %s" % (file_name))
+                logging.info("Loading file %s" % (file_name))
                 self.store_filename(file_name)
                 self.process_file(file_name)
             if self._widget:
@@ -1156,133 +1128,212 @@ class BaseCorpusBuilder(corpus.BaseResource):
         ##resource = module.Resource
         ##print(resource)
 
+    def build_lookup_get_ngram_table(self):
+        """
+        Return the Table object that can be used to create the N-gram lookup
+        table.
+        """
+        table = Table(self.corpusngram_table)
+        corpus_tab = self._new_tables.get(self.corpus_table,
+                                          Table(self.corpus_table))
+
+        corpus_columns = []
+        word_columns = []
+
+        # determine the column of the corpus table in which word information
+        # is stored:
+
+        word_id = (getattr(self, "corpus_word_id", None) or
+                   getattr(self, "corpus_word"))
+
+        for col in corpus_tab.columns:
+            name = "{}1".format(col.name)
+            if col.name != word_id:
+                if col.is_identifier:
+                    new_col = Identifier(name,
+                                         col.data_type, unique=col.unique)
+                else:
+                    new_col = Column(name, col.data_type)
+                corpus_columns.append(new_col)
+            else:
+                for i in range(self.corpusngram_width):
+                    name = "{}{}".format(col.name, i+1)
+                    word_columns.append(Column(name, col.data_type))
+
+        for col in corpus_columns:
+            table.add_column(col)
+        for col in word_columns:
+            table.add_column(col)
+
+        return table
+
+    def build_lookup_get_ngram_columns(self):
+        # determine the column of the corpus table in which word information
+        # is stored:
+
+        word_id = (getattr(self, "corpus_word_id", None) or
+                   getattr(self, "corpus_word"))
+
+        features = self.get_corpus_table_features()
+
+        corpus_columns = ["{}1".format(self.corpus_id)]
+
+        corpus_columns += ["{}1".format(y)
+                           for _, y in features
+                           if not y == word_id and
+                           not "{}1".format(y) in corpus_columns]
+
+        word_columns = ["{}{}".format(word_id, i+1)
+                        for i in range(self.corpusngram_width)]
+
+        return corpus_columns + word_columns
+
+    def build_lookup_get_insert_string(self):
+        template = """
+            INSERT INTO {corpus_ngram} ({columns})
+            SELECT {columns}
+            {join}"""
+
+        columns = self.build_lookup_get_ngram_columns()
+        joins = self.get_corpus_joins(
+            [(i+1, "*") for i in range(self.corpusngram_width)],
+            ignore_ngram=True)
+
+        s = template.format(
+            corpus_ngram=self.corpusngram_table,
+            columns=", ".join(columns),
+            join="\n".join(joins))
+
+        return s
+
+    def build_lookup_get_padding_string(self):
+        """
+        Returns a string that can be used to pad the last rows of an N-gram
+        lookup table.
+        """
+        template = """
+            INSERT INTO {corpus_ngram} ({columns})
+            VALUES {values}"""
+        columns = self.build_lookup_get_ngram_columns()
+
+        word_id = (getattr(self, "corpus_word_id", None) or
+                   getattr(self, "corpus_word"))
+
+        values = []
+        for pad in range(1, self.corpusngram_width):
+            pos = self.corpusngram_width - pad
+            row = ["{{last_row}} + {}".format(pos)]
+            row += ["{{{}}}".format(x)
+                    for x in columns[1:-self.corpusngram_width]]
+
+            word_columns = (["{{{word}{n}}}".format(
+                                word=word_id,
+                                n=self.corpusngram_width - i)
+                             for i in reversed(range(pad))] +
+                            ["{na_value}"] * (pos))
+
+            values.insert(0, ", ".join(row + word_columns))
+
+        return template.format(
+            corpus_ngram=self.corpusngram_table,
+            columns=", ".join(columns),
+            values=""",
+                   """.join(["({})".format(x) for x in values]))
+
     def build_lookup_ngram(self):
         """
         Create a lookup table for multi-item query strings.
         """
+
+        # create N-gram class attributes:
+        setattr(type(self),
+                "corpusngram_table", "{}Ngram".format(self.corpus_table))
+        setattr(type(self),
+                "corpusngram_width", int(self.arguments.ngram_width))
+
+        # determine highest ID in the corpus table
         S = "SELECT MAX({}) FROM {}".format(self.corpus_id, self.corpus_table)
         with self.DB.engine.connect() as connection:
             result = connection.execute(S).fetchone()
+        print(S)
+        print(result)
         max_id = result[0]
-        logger.info("Creating lookup table, max_id is {}".format(max_id))
+        logging.info("Creating lookup table, max_id is {}".format(max_id))
 
-        self.corpusngram_table = "{}Ngram".format(self.corpus_table)
-        self.corpusngram_width = int(self.arguments.ngram_width)
+        # determine suitable NA value
         if hasattr(self, "corpus_word_id"):
-            word_id = self.corpus_word_id
-            max_word = self._new_tables[self.word_table]._current_id + 1
+            na_value = self._new_tables[self.word_table]._current_id + 1
         elif hasattr(self, "corpus_word"):
-            word_id = self.corpus_word
-            max_word = DEFAULT_MISSING_VALUE
-
-        corpus_columns = [x.name for x in self._new_tables[self.corpus_table].columns if x.name != word_id]
-        word_columns = ["{}{}".format(word_id, i+1) for i in range(self.arguments.ngram_width)]
-        base_fields = ["coq_corpus_1.{}".format(x) for x in corpus_columns]
-        additional_words = ["coq_corpus_{}.{}".format(i+1, word_id) for i in range(self.arguments.ngram_width)]
-        table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i+1) for i in range(self.arguments.ngram_width)]
-        join_conditions = ["coq_corpus_1.{id} + {n} = {join_corpus}.{id}".format(
-            corpus=self.corpus_table,
-            id=self.corpus_id,
-            join_corpus="coq_corpus_{}".format(i+1),
-            n=i) for i in range(1, self.arguments.ngram_width)]
+            na_value = DEFAULT_MISSING_VALUE
 
         step = 50000
         current_id = 0
 
-        corpus_tab = self._new_tables[self.corpus_table]
+        word_id = (getattr(self, "corpus_word_id", None) or
+                   getattr(self, "corpus_word"))
 
-        new_tab_desc = []
-        d = {}
-        for x in corpus_tab.columns:
-            d[x.name] = x
+        ngram_table = self.build_lookup_get_ngram_table()
+        self.create_table_description(self.corpusngram_table,
+                                      ngram_table.columns)
+        self.DB.create_table(
+            self.corpusngram_table,
+            ngram_table.get_create_string(self.arguments.db_type))
 
-        for col in corpus_tab.columns:
-            if col.name != word_id:
-                if col.is_identifier:
-                    new_col = Identifier(col.name,
-                                         col.data_type,
-                                         unique=col.unique)
-                else:
-                    new_col = Column(col.name, col.data_type)
-                new_tab_desc.append(new_col)
-
-        word_col = d[word_id]
-        for x in word_columns:
-            new_tab_desc.append(Column(x, word_col.data_type))
-
-        self.create_table_description(self.corpusngram_table, new_tab_desc)
-        create_str = self._new_tables[self.corpusngram_table].get_create_string(self.arguments.db_type)
-        self.DB.create_table(self.corpusngram_table, create_str)
+        self._widget.progressSet.emit(1 + ((max_id-1) // step),
+                                      "Creating ngram lookup table... (chunk %v of %m)")
+        self._widget.progressUpdate.emit(1)
 
         sql_template = """
-            INSERT {corpus_ngram} ({columns})
-            SELECT {fields}
-            FROM {join}
-            WHERE {token_range} {join_str}"""
-
-        if self._widget:
-            self._widget.progressSet.emit(1 + ((max_id-1) // step),
-                                          "Creating ngram lookup table... (chunk %v of %m)")
-            self._widget.progressUpdate.emit(1)
+            {insert_str}
+            WHERE {token_range}"""
 
         _chunk = 1
         with self.DB.engine.connect() as connection:
             while current_id <= max_id and not self.interrupted:
-                token_range = "coq_corpus_1.{token} >= {lower} AND coq_corpus_1.{token} < {upper}".format(
-                    token=self.corpus_id,
-                    lower=current_id, upper=current_id + step)
-
-                if join_conditions:
-                    join_str = " AND {}".format(" AND ".join(join_conditions))
-                else:
-                    join_str = ""
+                token_range = (
+                    "{token}1 >= {lower} AND {token}1 < {upper}".format(
+                        token=self.corpus_id,
+                        lower=current_id,
+                        upper=current_id + step))
 
                 S = sql_template.format(
-                    corpus_ngram=self.corpusngram_table,
-                    columns=", ".join(corpus_columns + word_columns),
-                    fields=", ".join(base_fields + additional_words),
-                    join=", ".join(table_join),
-                    token_range=token_range,
-                    join_str=join_str)
+                    insert_str=self.build_lookup_get_insert_string(),
+                    token_range=token_range)
 
                 connection.execute(S.strip().replace("\n", " "))
                 current_id = current_id + step
+
                 _chunk += 1
-                if self._widget:
-                    self._widget.progressUpdate.emit(_chunk)
+                self._widget.progressUpdate.emit(_chunk)
 
-            # insert missing rows so that the whole corpus is searchable:
-            for n in range(1, self.arguments.ngram_width):
-                token_range = "coq_corpus_1.{token} = {current}".format(
-                    token=self.corpus_id, current=max_id - self.arguments.ngram_width + n + 1)
-                base_fields = [("coq_corpus_1.{}".format(x)
-                                if x != self.corpus_id
-                                else max_id - self.arguments.ngram_width + n + 1)
-                               for x in corpus_columns]
+            padding_str = self.build_lookup_get_padding_string()
 
-                table_join = ["{} AS coq_corpus_{}".format(self.corpus_table, i+1) for i in range(self.arguments.ngram_width - n)]
-                join_conditions = ["coq_corpus_1.{id} + {i} = {join_corpus}.{id}".format(
+            # get the last (width - 1) tokens from the corpus:
+            query_max_row = """
+                SELECT *
+                FROM {corpus}
+                WHERE {corpus_id} > {max_id} - {width}
+                ORDER BY {corpus_id}""".format(
                     corpus=self.corpus_table,
-                    id=self.corpus_id,
-                    join_corpus="coq_corpus_{}".format(i+1),
-                    i=i) for i in range(1, self.arguments.ngram_width - n)]
-                additional_words = ["coq_corpus_{}.{}".format(i+1, word_id) for i in range(self.arguments.ngram_width - n)]
+                    corpus_id=self.corpus_id,
+                    max_id=max_id,
+                    width=self.corpusngram_width - 1)
+            print(query_max_row)
+            df = pd.read_sql(query_max_row, connection)
+            print(df)
 
-                if join_conditions:
-                    join_str = " AND {}".format(" AND ".join(join_conditions))
-                else:
-                    join_str = ""
-
-                S = sql_template.format(
-                    corpus_ngram=self.corpusngram_table,
-                    columns=", ".join(corpus_columns + word_columns),
-                    fields=", ".join(base_fields +
-                                     additional_words +
-                                     [str(max_word)] * n),
-                    join=", ".join(table_join),
-                    token_range=token_range,
-                    join_str=join_str)
-                connection.execute(S.strip().replace("\n", " "))
+            data_dict = {"{}1".format(x): df.iloc[-1][x]
+                         for x in df.iloc[-1].index if x != word_id}
+            word_dict = {"{}{}".format(word_id, i+2): x
+                         for i, x in enumerate(df[word_id].values)}
+            kwargs = {"na_value": na_value,
+                      "last_row": (df.iloc[-1][self.corpus_id] -
+                                   self.corpusngram_width + 1)}
+            kwargs.update(data_dict)
+            kwargs.update(word_dict)
+            S = padding_str.format(**kwargs)
+            print(S)
+            connection.execute(S.replace("\n", " ").strip())
 
     def build_optimize(self):
         """
@@ -1325,7 +1376,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     current = self.DB.get_field_type(table.name, column.name).strip().upper()
                 except Exception as e:
                     print(e)
-                    self.logger.error(str(e))
+                    logging.error(str(e))
                     continue
 
                 # length values are only used with VARCHAR types, otherwise,
@@ -1334,13 +1385,13 @@ class BaseCorpusBuilder(corpus.BaseResource):
                     current = re.sub("\(\d+\)", "", current)
 
                 if current.lower() != optimal.lower():
-                    self.logger.info("Optimizing column {}.{} from {} to {}".format(
+                    logging.info("Optimizing column {}.{} from {} to {}".format(
                         table.name, column.name, current, optimal))
                     try:
                         self.DB.modify_field_type(table.name, column.name, optimal)
                     except Exception as e:
                         print(e)
-                        self.logger.warning(e)
+                        logging.warning(e)
                     else:
                         column.data_type = optimal
                 column_count += 1
@@ -1395,7 +1446,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
 
                 # indices for TEXT columns require a key length:
                 if this_column.base_type.endswith("TEXT"):
-                    self.logger.warning("TEXT data type is deprecated")
+                    logging.warning("TEXT data type is deprecated")
                     if this_column.index_length:
                         length = this_column.index_length
                     else:
@@ -1406,7 +1457,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 self.DB.create_index(table, column, [column], index_length=length)
             except Exception as e:
                 print(e)
-                self.logger.warning(e)
+                logging.warning(e)
 
             i += 1
             if self._widget:
@@ -1517,10 +1568,10 @@ class BaseCorpusBuilder(corpus.BaseResource):
         no_fail = True
         if not sqlhelper.has_database(options.cfg.current_server, self.arguments.db_name):
             no_fail = False
-            self.logger.warning("Database {} not found.".format(self.arguments.db_name))
+            logging.warning("Database {} not found.".format(self.arguments.db_name))
         for x in self.table_description:
             if not sqlhelper.has_table(self.DB.engine, x):
-                self.logger.warning("Table {} not found.".format(x))
+                logging.warning("Table {} not found.".format(x))
                 no_fail = False
         return no_fail
 
@@ -1602,7 +1653,7 @@ class BaseCorpusBuilder(corpus.BaseResource):
         # write module code:
         with codecs.open(path, "w", encoding="utf-8") as output_file:
             output_file.write(self.module_content)
-            self.logger.info("Corpus module %s written." % path)
+            logging.info("Corpus module %s written." % path)
 
     def setup_db(self):
         """
@@ -1702,9 +1753,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """
 
         self.start_time = time.time()
-        self.logger.info("--- Starting ---")
-        self.logger.info("Building corpus %s" % self.name)
-        self.logger.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
+        logging.info("--- Starting ---")
+        logging.info("Building corpus %s" % self.name)
+        logging.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
         if not self._widget:
             print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
 
@@ -1763,9 +1814,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
         """ Wrap up everything after the corpus installation is complete. """
         if self.interrupted:
             self.remove_build()
-            self.logger.info("--- Interrupted building {} (after {:.3f} seconds) ---".format(self.name, time.time() - self.start_time))
+            logging.info("--- Interrupted building {} (after {:.3f} seconds) ---".format(self.name, time.time() - self.start_time))
         else:
-            self.logger.info("--- Done building {} (after {:.3f} seconds) ---".format(self.name, time.time() - self.start_time))
+            logging.info("--- Done building {} (after {:.3f} seconds) ---".format(self.name, time.time() - self.start_time))
 
     def build(self):
         """
@@ -1802,8 +1853,6 @@ class BaseCorpusBuilder(corpus.BaseResource):
                 self._widget.progressUpdate.emit(0)
 
         self.check_arguments()
-        if not self._widget:
-            self.setup_logger()
 
         if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
             raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
@@ -1861,8 +1910,9 @@ class BaseCorpusBuilder(corpus.BaseResource):
                         self.build_lookup_ngram()
                         progress_done()
                 except Exception as e:
-                    logger.error("Error building ngram lookup: {}".format(e))
+                    logging.error("Error building ngram lookup: {}".format(e))
                     print(e)
+                    raise e
 
                 if self.arguments.i and not self.interrupted:
                     current = progress_next(current)
@@ -2194,5 +2244,3 @@ def print_error_context(s, content):
                 print("      {}^ ERROR: {}".format(" " * column, s))
     else:
         print(s)
-
-logger = logging.getLogger(NAME)

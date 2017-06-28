@@ -6,7 +6,12 @@ import sys
 import tempfile
 import os
 
-from coquery.corpusbuilder import XMLCorpusBuilder, TEICorpusBuilder
+from coquery.defines import SQL_SQLITE
+from coquery.corpusbuilder import (
+    BaseCorpusBuilder, XMLCorpusBuilder, TEICorpusBuilder)
+from coquery.tables import Table, Column, Identifier, Link
+
+from .test_corpora import simple
 
 try:
     from lxml import etree as ET
@@ -76,6 +81,7 @@ tei_content = """<TEI xmlns="http://www.tei-c.org/ns/1.0">
 </TEI>
 """
 
+
 class TestingXML(XMLCorpusBuilder):
     def __init__(self):
         super(TestingXML, self).__init__()
@@ -119,6 +125,92 @@ class TestingTEI(TEICorpusBuilder):
 
     def postprocess_element(self, element):
         self._last_close = element.tag
+
+
+class NgramBuilder(BaseCorpusBuilder):
+    corpusngram_table = "CorpusNgram"
+    corpusngram_width = 3
+
+    word_table = "Lexicon"
+    word_id = "WordId"
+    word_label = "Word"
+    word_columns = [
+        Identifier(word_id, "INT"),
+        Column(word_label, "VARCHAR")]
+
+    source_table = "Files"
+    source_id = "FileId"
+    source_label = "Title"
+    source_columns = [
+        Identifier(source_id, "INT"),
+        Column(source_label, "VARCHAR")]
+
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word_id = "WordId"
+    corpus_source_id = "FileId"
+    corpus_columns = [
+        Identifier(corpus_id, "INT"),
+        Link(corpus_word_id, word_table),
+        Link(corpus_source_id, source_table)]
+
+    auto_create = ["word", "source", "corpus"]
+    query_item_word = "word_label"
+
+
+class TestCorpusNgram(unittest.TestCase):
+    def setUp(self):
+        self.builder = NgramBuilder()
+        self.maxDiff = None
+
+    def test_get_ngram_columns(self):
+        l = self.builder.build_lookup_get_ngram_columns()
+        self.assertEqual(
+            l, ["ID1", "FileId1", "WordId1", "WordId2", "WordId3"])
+
+    def test_get_ngram_padding(self):
+        s = self.builder.build_lookup_get_padding_string()
+        self.assertEqual(simple(s),
+                         simple("""
+        INSERT INTO CorpusNgram (ID1, FileId1, WordId1, WordId2, WordId3)
+        VALUES ({last_row} + 1, {FileId1}, {WordId2}, {WordId3}, {na_value}),
+               ({last_row} + 2, {FileId1}, {WordId3}, {na_value}, {na_value})
+               """))
+
+    def test_get_ngram_table(self):
+        corpus_table = Table(self.builder.corpus_table)
+        for col in [Identifier(self.builder.corpus_id, "INT(3)"),
+                    Column(self.builder.corpus_word_id, "INT(7)"),
+                    Column(self.builder.corpus_source_id, "INT(5)")]:
+            corpus_table.add_column(col)
+        self.builder._new_tables[self.builder.corpus_table] = corpus_table
+
+        table = self.builder.build_lookup_get_ngram_table()
+
+        self.assertEqual(simple(table.get_create_string(SQL_SQLITE)),
+                         simple("""
+                         ID1 INT(3) PRIMARY KEY,
+                         FileId1 INT(5),
+                         WordId1 INT(7),
+                         WordId2 INT(7),
+                         WordId3 INT(7)
+                         """))
+
+    def test_get_insert_string(self):
+        s1 = self.builder.build_lookup_get_insert_string()
+        s2 = """
+            INSERT INTO CorpusNgram (ID1, FileId1, WordId1, WordId2, WordId3)
+            SELECT ID1, FileId1, WordId1, WordId2, WordId3
+            FROM    (SELECT FileId AS FileId1, ID AS ID1, WordId AS WordId1
+                     FROM   Corpus) AS COQ_CORPUS_1
+            INNER JOIN
+                    (SELECT FileId AS FileId2, ID AS ID2, WordId AS WordId2
+                     FROM   Corpus) AS COQ_CORPUS_2 ON ID2 = ID1 + 1
+            INNER JOIN
+                    (SELECT FileId AS FileId3, ID AS ID3, WordId AS WordId3
+                     FROM   Corpus) AS COQ_CORPUS_3 ON ID3 = ID1 + 2"""
+
+        self.assertEqual(simple(s1), simple(s2))
 
 
 class TestXMLCorpusBuilder(unittest.TestCase):
@@ -254,6 +346,7 @@ class TestTEICorpusBuilder(TestXMLCorpusBuilder):
 
 def main():
     suite = unittest.TestSuite([
+        unittest.TestLoader().loadTestsFromTestCase(TestCorpusNgram),
         unittest.TestLoader().loadTestsFromTestCase(TestXMLCorpusBuilder),
         unittest.TestLoader().loadTestsFromTestCase(TestTEICorpusBuilder)
         ])
