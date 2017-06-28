@@ -7,6 +7,7 @@ import unittest
 import argparse
 import tempfile
 import os
+import warnings
 
 import pandas as pd
 
@@ -17,7 +18,8 @@ from coquery.errors import TokenParseError
 from coquery.functions import StringExtract
 from coquery.functionlist import FunctionList
 from coquery.corpus import SQLResource, LexiconClass, CorpusClass
-from coquery.managers import Manager
+from coquery.managers import Manager, Summary
+
 
 class TestSessionInputFile(unittest.TestCase):
     def setUp(self):
@@ -25,9 +27,11 @@ class TestSessionInputFile(unittest.TestCase):
         options.cfg.corpus = None
         options.cfg.MODE = QUERY_MODE_TOKENS
         options.cfg.current_server = "MockConnection"
+        options.cfg.current_resources = {"MockConnection": "MockCorpus"}
         options.cfg.input_separator = ","
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
+        options.cfg.summary_group = [Summary("summary")]
 
         self.temp_file = tempfile.NamedTemporaryFile("w")
         options.cfg.input_path = self.temp_file.name
@@ -56,7 +60,10 @@ class TestSessionInputFile(unittest.TestCase):
 
         self.write_to_temp_file(d)
 
-        session = SessionInputFile()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            session = SessionInputFile()
+
         session.prepare_queries()
 
         self.assertListEqual(session.header, [])
@@ -74,7 +81,10 @@ class TestSessionInputFile(unittest.TestCase):
 
         self.write_to_temp_file(d)
 
-        session = SessionInputFile()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            session = SessionInputFile()
+
         session.prepare_queries()
 
         self.assertListEqual(session.header, [])
@@ -93,11 +103,14 @@ class TestSessionInputFile(unittest.TestCase):
         options.cfg.skip_lines = 0
 
         d = {"header": ["HEADER"],
-             "queries": ["QUERY ","QUERY"]}
+             "queries": ["QUERY ", "QUERY"]}
 
         self.write_to_temp_file(d)
 
-        session = SessionInputFile()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            session = SessionInputFile()
+
         session.prepare_queries()
 
         self.assertListEqual(session.header, [])
@@ -110,7 +123,7 @@ class TestSessionInputFile(unittest.TestCase):
             [x.query_string for x in session.query_list],
             d.get("queries", []))
 
-    def test_input_file_session_init_simple_file(self):
+    def test_input_file_session_init_header_and_content(self):
         options.cfg.file_has_headers = True
         options.cfg.query_column_number = 1
         options.cfg.skip_lines = 0
@@ -122,7 +135,10 @@ class TestSessionInputFile(unittest.TestCase):
 
         self.write_to_temp_file(d)
 
-        session = SessionInputFile()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            session = SessionInputFile()
+
         session.prepare_queries()
 
         self.assertListEqual(session.header, [])
@@ -143,7 +159,10 @@ class TestSessionInputFile(unittest.TestCase):
 
         self.write_to_temp_file(d)
 
-        session = SessionInputFile()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            session = SessionInputFile()
+
         session.prepare_queries()
 
         self.assertListEqual(session.header, ["DATA1", "DATA2"])
@@ -158,13 +177,15 @@ class TestSessionInputFile(unittest.TestCase):
         options.cfg.query_column_number = 2
         options.cfg.skip_lines = 0
 
-        queries = ["QUERY1", "QUERY2"]
         d = {"header": ["DATA1", "QUERY", "DATA2"],
              "queries": ['tmp,\"#constitute .[v*]\",tmp']}
 
         self.write_to_temp_file(d)
 
-        session = SessionInputFile()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            session = SessionInputFile()
+
         session.prepare_queries()
         with self.assertRaises(TokenParseError):
             session.prepare_queries()
@@ -189,8 +210,12 @@ class TestSessionMethods(unittest.TestCase):
         options.cfg.context_mode = CONTEXT_NONE
         options.cfg.context_left = 3
         options.cfg.context_right = 5
+        options.cfg.summary_group = [Summary("summary")]
 
-        self.session = SessionCommandLine()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.session = SessionCommandLine()
+
         self.corpus = CorpusClass()
         self.lexicon = LexiconClass()
         self.session.Resource = SQLResource(self.lexicon, self.corpus)
@@ -204,8 +229,8 @@ class TestSessionMethods(unittest.TestCase):
         options.cfg.managers["MockResource"][QUERY_MODE_TOKENS] = self.manager
 
     def test_translate_header_multicolumn_functions(self):
-        df = pd.DataFrame({"coq_word_label_1":
-                               ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5})
+        val = ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5
+        df = pd.DataFrame({"coq_word_label_1": val})
         func = StringExtract(columns=["coq_word_label_1"], value="(a).*(x)")
         self.session.column_functions = FunctionList([func])
         self.manager.set_column_order(df.columns)
@@ -214,8 +239,10 @@ class TestSessionMethods(unittest.TestCase):
         self.assertListEqual(
             [self.session.translate_header(x) for x in df.columns],
             ["Word",
-             "{} (match 1)".format(func.get_label(self.session, self.manager)),
-             "{} (match 2)".format(func.get_label(self.session, self.manager))])
+             "{} (match 1)".format(
+                 func.get_label(self.session, self.manager)),
+             "{} (match 2)".format(
+                 func.get_label(self.session, self.manager))])
 
     def test_translate_header_context_labels(self):
         df = pd.DataFrame({"coq_context_left": ["A A A"] * 5,
@@ -223,6 +250,7 @@ class TestSessionMethods(unittest.TestCase):
         self.assertListEqual(
             [self.session.translate_header(x) for x in df.columns],
             ["Left context(3)", "Right context(5)"])
+
 
 def main():
     suite = unittest.TestSuite([
