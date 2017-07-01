@@ -32,6 +32,14 @@ try:
 except AttributeError:
     max_int = sys.maxsize
 
+# make sure reduce() is available
+try:
+    from functools import reduce
+except (ImportError):
+    # in python 2.7, reduce() is still a built-in method
+    pass
+assert reduce
+
 # use stats.iqr() and stats.mode() if possible, otherwise use
 # replacement methods:
 try:
@@ -104,7 +112,9 @@ class Function(CoqObject):
     default_aggr = "first"
     allow_null = False
     combine_modes = ALL_COMBINE
-    no_column_labels = False # True if the columns appear in the function name
+
+    # set no_column_lables to True if the columns appear in the function name
+    no_column_labels = False
     single_column = True
     drop_on_na = True
 
@@ -241,12 +251,10 @@ class Function(CoqObject):
 
         return resource
 
-
-
-
 #############################################################################
 ## String functions
 #############################################################################
+
 
 class StringFunction(Function):
     combine_modes = STR_COMBINE
@@ -362,7 +370,7 @@ class StringSeriesFunction(StringFunction):
 class StringMatch(StringSeriesFunction):
     _name = "MATCH"
     parameters = 1
-    toggle_parameters = { "case": ("Case-sensitive", False) }
+    toggle_parameters = {"case": ("Case-sensitive", False)}
     str_func = "contains"
     validate_input = StringFunction.validate_regex
 
@@ -431,6 +439,11 @@ class MathFunction(Function):
         return "Mathematical functions"
 
     def coerce_value(self, df, **kwargs):
+        """
+        Coerce the function argument to the appropriate type depending on the
+        values of the supplied data frame.
+        """
+
         column_dtypes = df[self.columns].dtypes
 
         if all([dt in (int, float) for dt in column_dtypes]):
@@ -455,12 +468,15 @@ class CalcFunction(MathFunction):
     _name = "virtual"
 
     def evaluate(self, df, *args, **kwargs):
-        val = df[self.columns[0]].values
-        for x in self.columns[1:]:
-            val = self._func(val, df[x].values)
-        if self.value:
-            const = self.coerce_value(df, **kwargs)
-            val = self._func(val, const)
+        if len(self.columns) == 1 and not self.value:
+            val = reduce(self._func, df[self.columns[0]].values)
+        else:
+            val = df[self.columns[0]].values
+            for x in self.columns[1:]:
+                val = self._func(val, df[x].values)
+            if self.value:
+                const = self.coerce_value(df, **kwargs)
+                val = self._func(val, const)
         return pd.Series(data=val, index=df.index)
 
 
@@ -494,50 +510,55 @@ class NumpyFunction(CalcFunction):
 
     def evaluate(self, df, *args, **kwargs):
         _df = df[self.columns]
-        val = self._func(_df.values)
+        if len(self.columns) == 1:
+            val = self._func(_df.values, axis=None)
+        else:
+            val = self._func(_df.values)
+
         return pd.Series(data=val, index=df.index)
 
 
 class Min(NumpyFunction):
     _name = "MIN"
 
-    def _func(self, values):
-        return pd.np.nanmin(values, axis=1)
+    def _func(self, values, axis=1):
+        return pd.np.nanmin(values, axis=axis)
 
 
 class Max(NumpyFunction):
     _name = "MAX"
 
-    def _func(self, values):
-        return pd.np.nanmax(values, axis=1)
+    def _func(self, values, axis=1):
+        return pd.np.nanmax(values, axis=axis)
 
 
 class Mean(NumpyFunction):
     _name = "MEAN"
 
-    def _func(self, values):
-        return pd.np.mean(values, axis=1)
+    def _func(self, values, axis=1):
+        return pd.np.mean(values, axis=axis)
 
 
 class Median(NumpyFunction):
     _name = "MEDIAN"
 
-    def _func(self, values):
-        return pd.np.median(values, axis=1)
+    def _func(self, values, axis=1):
+        return pd.np.median(values, axis=axis)
 
 
 class StandardDeviation(NumpyFunction):
     _name = "SD"
 
-    def _func(self, values):
-        return pd.np.std(values, axis=1)
+    def _func(self, values, axis=1):
+        return pd.np.std(values, axis=axis)
 
 
 class InterquartileRange(NumpyFunction):
     _name = "IQR"
 
-    def _func(self, values):
-        return pd.np.subtract(*pd.np.percentile(values, [75, 25], axis=1))
+    def _func(self, values, axis=1):
+        return pd.np.subtract(
+            *pd.np.percentile(values, [75, 25], axis=axis))
 
 
 #############################################################################
@@ -1297,15 +1318,16 @@ class SubcorpusSize(CorpusSize):
                            if "coq_{}_1".format(x) in self.columns]
             if df.iloc[0].coquery_invisible_dummy is not pd.np.nan:
                 val = df.apply(session.Corpus.get_subcorpus_size,
-                            columns=column_list,
-                            axis=1,
-                            subst=manager.get_column_substitutions)
+                               columns=column_list,
+                               axis=1,
+                               subst=manager.get_column_substitutions)
             else:
                 val = df.Series(name=self.get_id())
             return val
         except Exception as e:
             print(e)
             raise e
+
 
 class SubcorpusRangeMin(CorpusSize):
     _name = "statistics_subcorpus_range_min"
@@ -1343,8 +1365,8 @@ class SentenceId(Function):
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
         _df = pd.merge(df,
-                        session.Resource.get_sentence_ids(
-                       df["coquery_invisible_corpus_id"]),
+                       session.Resource.get_sentence_ids(
+                           df["coquery_invisible_corpus_id"]),
                        how="left", on="coquery_invisible_corpus_id")
         return _df["coquery_invisible_sentence_id"]
 
@@ -1452,13 +1474,8 @@ class ContextString(ContextColumns):
             row["coquery_invisible_origin_id"],
             row["coquery_invisible_number_of_tokens"], connection,
             sentence_id=sentence_id)
-        # FIXME: check if this is really the way to build the return value!
-        return pd.Series(
-            data=[collapse_words(list(pd.Series(
-                                        left +
-                                        [x.upper() for x in target if x] +
-                                         right)))],
-                                        index=[self._name])
+        words = left + [x.upper() for x in target if x] + right
+        return pd.Series(data=[collapse_words(words)], index=[self._name])
 
 
 ##############################################################################
