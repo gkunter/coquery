@@ -861,13 +861,6 @@ class Rank(Freq):
 class BaseReferenceCorpus(Function):
     _name = "virtual"
 
-    def _get_current_corpus(self):
-        self._current_resource = self.get_reference()
-        self._current_corpus.resource = self._current_resource
-        self._current_corpus.lexicon = self._current_lexicon
-        self._current_lexicon.resource = self._current_resource
-        self._current_lexicon.corpus = self._current_corpus
-
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
     _name = "reference_frequency"
@@ -878,26 +871,24 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
     def evaluate(self, df, *args, **kwargs):
         session = kwargs["session"]
-        ref_corpus = options.cfg.reference_corpus.get(
-                         options.cfg.current_server, None)
-        if (not ref_corpus or
-                ref_corpus not in options.cfg.current_resources):
-            return self.constant(df, None)
 
-        self._get_current_corpus()
+        self._res = self.get_reference()
+
         url = sqlhelper.sql_url(options.cfg.current_server,
-                                self._current_resource.db_name)
+                                self._res.db_name)
         engine = sqlalchemy.create_engine(url)
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         # concatenate the word columns, separated by space
-        self._s = (df[word_columns].astype(str)
-                                  .apply(lambda x: x + " ").sum(axis=1))
+        l = []
+        sep = self.constant(df, " ")
+        for col in word_columns:
+            l += [df[col], sep]
+        _s = pd.concat(l, axis=1).astype(str).sum(axis=1)
 
         # get the frequency from the reference corpus for the concatenated
         # columns:
-        val = self._s.apply(lambda x:
-                                self._current_corpus.get_frequency(x, engine))
+        val = _s.apply(lambda x: self._res.corpus.get_frequency(x, engine))
         val.index = df.index
         engine.dispose()
         return val
@@ -910,14 +901,9 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
     def evaluate(self, df, *args, **kwargs):
         val = super(ReferenceCorpusFrequencyPMW, self).evaluate(
             df, *args, **kwargs)
-        ref_corpus = options.cfg.reference_corpus.get(
-                            options.cfg.current_server, None)
-        if (not ref_corpus or
-                ref_corpus not in options.cfg.current_resources):
-            return self.constant(df, None)
 
         if len(val) > 0:
-            corpus_size = self._current_corpus.get_corpus_size()
+            corpus_size = self._res.corpus.get_corpus_size()
         val = val.apply(lambda x: x / (corpus_size / self.words))
         val.index = df.index
         return val
@@ -926,6 +912,15 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
 class ReferenceCorpusFrequencyPTW(ReferenceCorpusFrequencyPMW):
     words = 1000
     _name = "reference_frequency_ptw"
+
+
+class ReferenceCorpusSize(BaseReferenceCorpus):
+    _name = "reference_corpus_size"
+
+    def evaluate(self, df, *args, **kwargs):
+        self._res = self.get_reference()
+        ext_size = self._res.corpus.get_corpus_size()
+        return self.constant(df, ext_size)
 
 
 class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
@@ -945,8 +940,9 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
         return tmp[0]
 
     def evaluate(self, df, *args, **kwargs):
-
         session = kwargs["session"]
+
+        self._res = self.get_reference()
 
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
@@ -968,33 +964,24 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
             fun = SubcorpusSize(session=session,
                                 columns=self.columns,
                                 group=self.group)
-            size = fun.evaluate(df, *args, **kwargs).unique()
         else:
             fun = CorpusSize(session=session)
-            size = fun.evaluate(df, *args, **kwargs).unique()
+        size = fun.evaluate(df, *args, **kwargs)
 
         ext_freq = super(ReferenceCorpusLLKeyness, self).evaluate(
             df, *args, **kwargs)
         if len(ext_freq) > 0:
-            ext_size = self._current_corpus.get_corpus_size()
+            ext_size = self._res.corpus.get_corpus_size()
 
-        _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq})
+        _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq, "size": size})
         if len(word_columns) > 1:
             logger.warning("LL calculation for more than one column is experimental!")
-        val = _df.apply(lambda x: self._func(x,
-                                             size=size, ext_size=ext_size,
+        val = _df.apply(lambda x: self._func(x[["freq1", "freq2"]],
+                                             size=x["size"],
+                                             ext_size=ext_size,
                                              width=len(word_columns)),
                         axis="columns")
         return val
-
-
-class ReferenceCorpusSize(BaseReferenceCorpus):
-    _name = "reference_corpus_size"
-
-    def evaluate(self, df, *args, **kwargs):
-        self._get_current_corpus()
-        ext_size = self._current_corpus.get_corpus_size()
-        return self.constant(df, ext_size)
 
 
 class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
@@ -1141,7 +1128,7 @@ class TypeTokenRatio(Types):
 
 
 class SuperCondProb(Proportion):
-    _name = "Conditional Probability deluxe"
+    _name = "Conditional Probability"
 
     def get_resource(self, **kwargs):
         session = kwargs["session"]
@@ -1208,23 +1195,15 @@ class SuperCondProb(Proportion):
                 val = freq_full / freq_part
             finally:
                 engine.dispose()
-
         return val
 
 
 class ExternalCondProb(SuperCondProb):
-    _name = "External Conditional Probability"
+    _name = "Reference Conditional Probability"
 
     def get_resource(self, **kwargs):
-        resource = self.get_reference()
-        resource.corpus.lexicon = resource.lexicon
-        resource.corpus.resource = resource
-        resource.lexicon.corpus = resource.corpus
-        resource.lexicon.resource = resource
-        return resource
-
-    def evaluate(self, *args, **kwargs):
-        return super(ExternalCondProb, self).evaluate(*args, **kwargs)
+        res = self.get_reference()
+        return res
 
 
 class ConditionalProbability(Proportion):
@@ -1382,13 +1361,18 @@ class ContextColumns(Function):
     def __init__(self, left=None, right=None, *args):
         super(ContextColumns, self).__init__(*args)
         if left is None:
-            left = options.cfg.context_left
+            self.left = options.cfg.context_left
+        else:
+            self.left = left
         if right is None:
-            right = options.cfg.context_right
-        self.left_cols = ["coq_context_lc{}".format(left - i)
-                          for i in range(left)]
+            self.right = options.cfg.context_right
+        else:
+            self.right = right
+
+        self.left_cols = ["coq_context_lc{}".format(self.left - i)
+                          for i in range(self.left)]
         self.right_cols = ["coq_context_rc{}".format(i + 1)
-                           for i in range(right)]
+                           for i in range(self.right)]
 
     def get_id(self):
         if self.alias:
@@ -1405,8 +1389,8 @@ class ContextColumns(Function):
             row["coquery_invisible_origin_id"],
             row["coquery_invisible_number_of_tokens"],
             connection,
+            left=self.left, right=self.right,
             sentence_id=sentence_id)
-
         val = pd.Series(
             data=left + right,
             index=self.left_cols + self.right_cols)
