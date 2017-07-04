@@ -1,4 +1,5 @@
 (0.10.1dev, unreleased)
+* mathematical functions can now be applied column-wise
 * support N-gram lookup tables
 * bring time series visualization to the visualization designer
 * add button to refresh the data frame used by the visualization designer
