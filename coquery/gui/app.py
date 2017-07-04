@@ -19,16 +19,37 @@ import os
 import logging
 import pandas as pd
 import datetime
+import re
+import warnings
 
 from coquery import managers
 from coquery import functions
-from coquery import functionlist
 from coquery import sqlhelper
 from coquery import NAME, __version__
-from coquery.general import memory_dump, get_visible_columns
+from coquery.general import memory_dump
 from coquery import options
-from coquery.defines import *
-from coquery.errors import *
+from coquery.defines import (
+    AUTO_APPLY_DEFAULT, AUTO_FILTER, AUTO_FUNCTION, AUTO_STOPWORDS,
+    AUTO_SUBSTITUTE, AUTO_VISIBILITY,
+    QUERY_ITEM_GLOSS, QUERY_ITEM_LEMMA, QUERY_ITEM_POS, QUERY_ITEM_WORD,
+    QUERY_ITEM_TRANSCRIPT,
+    QUERY_MODE_CONTINGENCY, QUERY_MODE_TOKENS,
+    CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_NONE, CONTEXT_SENTENCE,
+    CONTEXT_STRING,
+    TOOLBOX_AGGREGATE, TOOLBOX_CONTEXT, TOOLBOX_GROUPING, TOOLBOX_ORDER,
+    TOOLBOX_STOPWORDS, TOOLBOX_SUMMARY,
+    ROW_NAMES,
+    SUMMARY_MODES,
+    msg_corpus_no_documentation, msg_disk_error, msg_encoding_error,
+    msg_filename_error, msg_initialization_error, msg_no_context_available,
+    msg_no_word_information, msg_query_running, msg_remove_corpus_disk_error,
+    msg_remove_corpus_error, msg_unsaved_data,
+    msg_userdata_unavailable, msg_userdata_warning, msg_warning_statistics)
+from coquery.errors import (
+    CollocationNoContextError, SQLInitializationError,
+    SQLNoConfigurationError, TokenParseError, UnsupportedQueryItemError,
+    VisualizationInvalidDataError, VisualizationInvalidLayout,
+    VisualizationModuleError, VisualizationNoDataError)
 from coquery.unicode import utf8
 from coquery.links import get_by_hash
 
@@ -159,7 +180,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if options.cfg.first_run and not options.cfg.current_resources:
             self._first_corpus = True
 
-        size = QtWidgets.QApplication.desktop().screenGeometry()
         # Retrieve font and metrics for the CoqItemDelegates
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
@@ -202,7 +222,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if sys.platform == "win32":
             import ctypes
             CoqId = 'Coquery.Coquery.{}'.format(__version__)
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(CoqId)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                CoqId)
 
         try:
             self.resize(options.settings.value("window_size"))
@@ -235,7 +256,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for label in SUMMARY_MODES:
             radio = QtWidgets.QRadioButton(label)
             radio.toggled.connect(self.enable_apply_button)
-            ix = SUMMARY_MODES.index(label)
             self.ui.layout_aggregate.addWidget(radio)
             if label == QUERY_MODE_TOKENS:
                 self.ui.layout_aggregate.addWidget(separator)
@@ -287,7 +307,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.dirModel = QtWidgets.QFileSystemModel(parent=self)
         # make sure that the model is updated on changes to the file system:
         self.dirModel.setRootPath(QtCore.QDir.currentPath())
-        self.dirModel.setFilter(QtCore.QDir.AllEntries | QtCore.QDir.NoDotAndDotDot)
+        self.dirModel.setFilter(QtCore.QDir.AllEntries |
+                                QtCore.QDir.NoDotAndDotDot)
 
         self.disable_apply_button()
         self.ui.button_cancel_management.hide()
@@ -315,9 +336,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.set_columns_widget()
 
-        self.ui.status_message = QtWidgets.QLabel("{} {}".format(NAME, __version__))
+        self.ui.status_message = QtWidgets.QLabel(
+            "{} {}".format(NAME, __version__))
         self.ui.status_message.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
-                                       QtWidgets.QSizePolicy.Ignored)
+                                             QtWidgets.QSizePolicy.Ignored)
         self.ui.status_progress = QtWidgets.QProgressBar()
         self.ui.status_progress.hide()
 
@@ -325,25 +347,33 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.combo_config = QtWidgets.QComboBox()
         self.ui.multi_query_progress.setFormat("Running query... (%v of %m)")
         self.ui.multi_query_progress.hide()
-        self.updateMultiProgress.connect(self.ui.multi_query_progress.setValue)
-        self.updateMultiProgress.connect(lambda n: self.ui.status_progress.setValue(0))
-        self.updateStatusMessage.connect(lambda s: self.ui.status_message.setText(s))
+        self.updateMultiProgress.connect(
+            self.ui.multi_query_progress.setValue)
+        self.updateMultiProgress.connect(
+            lambda n: self.ui.status_progress.setValue(0))
+        self.updateStatusMessage.connect(
+            lambda s: self.ui.status_message.setText(s))
 
-        self.statusBar().layout().setContentsMargins(0, 0, 4, 0)
-        self.statusBar().setMinimumHeight(QtWidgets.QProgressBar().sizeHint().height())
-        self.statusBar().setMaximumHeight(QtWidgets.QProgressBar().sizeHint().height())
-        self.statusBar().setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                       QtWidgets.QSizePolicy.Minimum)
-        self.statusBar().layout().addWidget(self.ui.status_message, 1)
-        self.statusBar().layout().addWidget(self.ui.multi_query_progress, 1)
-        self.statusBar().layout().addWidget(self.ui.status_progress, 1)
-        self.statusBar().layout().addItem(QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
+        statusbar = self.statusBar()
+        statusbar.layout().setContentsMargins(0, 0, 4, 0)
+        pb_height = QtWidgets.QProgressBar().sizeHint().height()
+        statusbar.setMinimumHeight(pb_height)
+        statusbar.setMaximumHeight(pb_height)
+        statusbar.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                QtWidgets.QSizePolicy.Minimum)
+        statusbar.layout().addWidget(self.ui.status_message, 1)
+        statusbar.layout().addWidget(self.ui.multi_query_progress, 1)
+        statusbar.layout().addWidget(self.ui.status_progress, 1)
+        statusbar.layout().addItem(
+            QtWidgets.QSpacerItem(20, 0,
+                                  QtWidgets.QSizePolicy.Expanding,
+                                  QtWidgets.QSizePolicy.Expanding))
         label = _translate("MainWindow", "Connection: ", None)
-        self.statusBar().layout().addWidget(QtWidgets.QLabel(label))
-        self.statusBar().layout().addWidget(self.ui.combo_config)
-        self.statusBar().layout().setStretchFactor(self.ui.status_message, 0)
-        self.statusBar().layout().setStretchFactor(self.ui.status_progress, 1)
-        self.statusBar().layout().setStretchFactor(self.ui.multi_query_progress, 1)
+        statusbar.layout().addWidget(QtWidgets.QLabel(label))
+        statusbar.layout().addWidget(self.ui.combo_config)
+        statusbar.layout().setStretchFactor(self.ui.status_message, 0)
+        statusbar.layout().setStretchFactor(self.ui.status_progress, 1)
+        statusbar.layout().setStretchFactor(self.ui.multi_query_progress, 1)
 
         self.change_mysql_configuration(options.cfg.current_server)
         self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
@@ -861,7 +891,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         active_icon = "Active State"
         filter_icon = "Filter"
         error_icon = "Error"
-        problem_icon = "Attention"
         try:
             manager = self.Session.get_manager()
         except:
@@ -970,14 +999,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._old_sizes = self.ui.splitter_columns.sizes()
 
     def toggle_hidden(self):
-        sizes = self.ui.splitter_columns.sizes()
         w = self.ui.splitter_columns.sizes()[1]
         button_width = self.ui.button_toggle_hidden.size().width()
         if self._hidden or w <= button_width:
             self.expand_hidden_columns()
         else:
             self.collapse_hidden_columns()
-        sizes = self.ui.splitter_columns.sizes()
 
     def get_aggregate(self):
         for radio in self.ui.aggregate_radio_list:
@@ -1176,7 +1203,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def set_reference_corpus(self):
         from . import linkselect
-        current_corpus = utf8(self.ui.combo_corpus.currentText())
         #title = _translate("MainWindow", "Select reference corpus – Coquery", None)
         title = "Select reference corpus"
         subtitle = "&Available corpora"
@@ -2091,12 +2117,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         selection : list
             A list of column names.
         """
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Session.Resource.name)
         for column in selection:
             self.hidden_features.add(column)
         if AUTO_VISIBILITY in options.settings.value(
-                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
+                "settings_auto_apply", AUTO_APPLY_DEFAULT):
             self.update_table_models()
             self.update_columns()
         else:
@@ -2111,12 +2135,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         selection : list
             A list of column names.
         """
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Session.Resource.name)
         for column in selection:
             self.hidden_features.remove(column)
         if AUTO_VISIBILITY in options.settings.value(
-                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
+                "settings_auto_apply", AUTO_APPLY_DEFAULT):
             self.update_table_models()
             self.update_columns()
         else:
@@ -2305,14 +2327,23 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.critical(self,
                 "Query string parsing error – Coquery",
                 e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
-        except SQLNoConfigurationError:
-            QtWidgets.QMessageBox.critical(self, "Database configuration error – Coquery", msg_sql_no_configuration, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+        except SQLNoConfigurationError as e:
+            QtWidgets.QMessageBox.critical(
+                self, "Database configuration error – Coquery", str(e),
+                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLInitializationError as e:
-            QtWidgets.QMessageBox.critical(self, "Database initialization error – Coquery", msg_initialization_error.format(code=e), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(
+                self, "Database initialization error – Coquery",
+                msg_initialization_error.format(code=e),
+                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except CollocationNoContextError as e:
-            QtWidgets.QMessageBox.critical(self, "Collocation error – Coquery", str(e), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(
+                self, "Collocation error – Coquery", str(e),
+                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except RuntimeError as e:
-            QtWidgets.QMessageBox.critical(self, "Runtime error – Coquery", str(e), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(
+                self, "Runtime error – Coquery", str(e),
+                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
@@ -2496,13 +2527,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             if rm_database and database and sqlhelper.has_database(options.cfg.current_server, database):
                 try:
-                    connected = True
                     self.Session.db_connection.close()
                 except AttributeError:
-                    connected = False
+                    pass
                 except Exception as e:
                     print(e)
-                    warning.warn(e)
+                    warnings.warn(e)
                 try:
                     sqlhelper.drop_database(options.cfg.current_server, database)
                 except Exception as e:
@@ -2591,7 +2621,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             connected = False
         except Exception as e:
             print(e)
-            warning.warn(e)
+            warnings.warn(e)
 
         builder = InstallerGui(builder_class, self)
         try:
@@ -2984,15 +3014,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         def get_str(l):
             return (" ({})".format(len(l)) if l else "")
 
-        try:
-            session = self.Session
-            manager = managers.get_manager(
-                options.cfg.MODE, session.Resource.name)
-        except:
-            manager = managers.get_manager(
-                options.cfg.MODE,
-                utf8(self.ui.combo_corpus.currentText()))
-
         label_summary_functions = _translate(
             "MainWindow", "Summary &functions{}...", None)
         label_summary_filters = _translate(
@@ -3014,7 +3035,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             label_stopwords.format(len(l)))
 
     def menu_add_function(self):
-        header = self.ui.data_preview.horizontalHeader()
         columns = []
         for x in self.ui.data_preview.selectionModel().selectedColumns():
             columns.append(self.table_model.header[x.column()])
@@ -3059,7 +3079,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                             if x not in columns]
         return available
 
-    def _add_to_functionlist(func_list, func_spec):
+    def _add_to_functionlist(self, func_list, func_spec):
         """
         Add a function with the given specification to the function list.
 
@@ -3078,7 +3098,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         func : Function
             The function that is added
         """
-        fun_type, columns, value, aggr, label = response
+        fun_type, columns, value, aggr, label = func_spec
         fun = fun_type(columns=columns, value=value, aggr=aggr)
         self.Session.column_functions.add_function(fun)
 
@@ -3094,9 +3114,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def add_function(self, columns=None, summary=False, group=False, **kwargs):
         from . import addfunction
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Session.Resource.name)
-
         if not summary:
             dtypes = pd.Series([self.table_model.get_dtype(x) for x
                                 in columns])
@@ -3125,7 +3142,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def edit_function(self, column):
         from . import addfunction
         func = self.Session.column_functions.find_function(column)
-        pos = self.Session.column_functions.index_function(func)
 
         available_columns = self._get_available_columns(func.columns)
         try:
@@ -3141,8 +3157,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 parent=self)
         response = diag.exec_()
         if response:
-            self._add_to_functionlist(
-                self.Session.column_functions, response, index=pos)
+            fun_type, columns, value, aggr, label = response
+            new_func = fun_type(columns=columns, value=value, aggr=aggr)
+            self.Session.column_functions.replace_function(func, new_func)
 
             if AUTO_FUNCTION in options.settings.value(
                         "settings_auto_apply", AUTO_APPLY_DEFAULT):
@@ -3151,7 +3168,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.enable_apply_button()
 
     def remove_functions(self, columns):
-        manager = self.Session.get_manager()
         for col in columns:
             # is this a multicolumn function?
             match = re.search("(func_[^_]*_[^_]*)_\d+_\d+", col)
