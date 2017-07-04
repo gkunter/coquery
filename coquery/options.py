@@ -39,6 +39,7 @@ from . import general, NAME
 from . import filters
 from .errors import (
     IllegalImportInModuleError, IllegalCodeInModuleError,
+    ConfigurationError, ModuleIncompleteError,
     add_source_path)
 from .defines import (
     SQL_SQLITE, SQL_MYSQL,
@@ -1013,8 +1014,10 @@ class Options(object):
                     f_type = grp_function_types[num][f_num]
                     f_columns = grp_function_columns[num].get(f_num, None)
                     if f_columns is not None:
-                        function_list.append((func_types[f_type],
-                                              f_columns.split(",")))
+                        fnc = func_types.get(f_type, None)
+                        if fnc:
+                            function_list.append(
+                                (fnc, f_columns.strip().split(",")))
                 if columns is not None:
                     group = Group(name, columns.split(","),
                                   function_list, distinct)
@@ -1057,8 +1060,10 @@ class Options(object):
                     f_type = sum_function_types[num][f_num]
                     f_columns = sum_function_columns[num].get(f_num, None)
                     if f_columns is not None:
-                        function_list.append((func_types[f_type],
-                                              f_columns.split(",")))
+                        fnc = func_types.get(f_type, None)
+                        if fnc:
+                            function_list.append(
+                                (fnc, f_columns.strip().split(",")))
                 summary = Summary(name, columns.split(","), function_list)
                 self.args.summary_group.append(summary)
 
