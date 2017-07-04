@@ -1346,7 +1346,7 @@ class SQLResource(BaseResource):
             """.format(S, options.cfg.number_of_tokens)
         return S
 
-    def get_context(self, token_id, origin_id, number_of_tokens, db_connection, sentence_id=None):
+    def get_context(self, token_id, origin_id, number_of_tokens, db_connection, sentence_id=None, left=None, right=None):
         def get_orth(word_id):
             """
             Return the orthographic forms of the word_ids.
@@ -1394,8 +1394,14 @@ class SQLResource(BaseResource):
                 L.append(self._word_cache[i])
             return L
 
-        left_span = options.cfg.context_left
-        right_span = options.cfg.context_right
+        if left is not None:
+            left_span = left
+        else:
+            left_span = options.cfg.context_left
+        if right is not None:
+            right_span = right
+        else:
+            right_span = options.cfg.context_right
 
         try:
             token_id = int(token_id)
@@ -1433,14 +1439,14 @@ class SQLResource(BaseResource):
         # Get words in right context:
         S = self.corpus.sql_string_get_wordid_in_range(
                 token_id + number_of_tokens,
-                token_id + number_of_tokens + options.cfg.context_right - 1,
+                token_id + number_of_tokens + right_span - 1,
                 origin_id, sentence_id)
         results = db_connection.execute(S)
         if not hasattr(self, "corpus_word_id"):
             right_context_words = [x for (x, ) in results]
         else:
             right_context_words = get_orth([x for (x, ) in results])
-        right_context_words = right_context_words + [''] * (options.cfg.context_right - len(right_context_words))
+        right_context_words = right_context_words + [''] * (right_span - len(right_context_words))
 
         return (left_context_words, string_context_words, right_context_words)
 
@@ -1861,7 +1867,6 @@ class CorpusClass(object):
 
         for sub in query_list:
             S = self.resource.get_query_string(sub, [], columns=["COUNT(*)"])
-            print(S)
             df = pd.read_sql(S, engine)
             freq += df.values.ravel()[0]
 
