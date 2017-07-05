@@ -1051,7 +1051,6 @@ class Options(object):
                 elif (len(parsed) == 2 and parsed[-1] == "distinct"):
                     self.args.show_distinct = value == "True"
 
-            self.args.summary = []
             for num in sum_names:
                 name = sum_names.get(num)
                 columns = sum_columns.get(num, None)
@@ -1065,7 +1064,9 @@ class Options(object):
                             function_list.append(
                                 (fnc, f_columns.strip().split(",")))
                 summary = Summary(name, columns.split(","), function_list)
-                self.args.summary_group.append(summary)
+            if not sum_names:
+                summary = Summary("summary", [], [])
+            self.args.summary_group.append(summary)
 
         # Use QSettings?
         if settings:
