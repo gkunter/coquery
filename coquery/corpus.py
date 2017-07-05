@@ -465,13 +465,15 @@ class BaseResource(CoqObject):
         table 'word'.
         """
         table_dict = cls.get_table_dict()
-        lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
+        lexicon_tables = cls.get_table_tree(
+            getattr(cls, "lexicon_root_table", "word"))
         lexicon_variables = []
         l = []
         for x in table_dict:
             if x in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
-                    if not y.endswith("_id") and not y.startswith("{}_table".format(x)):
+                    if (not y.endswith("_id") and
+                            not y.startswith("{}_table".format(x))):
                         lexicon_variables.append((y, getattr(cls, y)))
                         l.append(y)
 
@@ -498,44 +500,96 @@ class BaseResource(CoqObject):
         return "{}.{}".format(
             getattr(cls, "{}_table".format(table)), getattr(cls, rc_feature))
 
-    #@classmethod
-    #def get_referent_feature(cls, rc_feature):
-        #"""
-        #Get the referent feature name of a rc_feature.
+    @classmethod
+    def get_referent_feature(cls, rc_feature):
+        """
+        Get the referent feature name of a rc_feature.
 
-        #For normal output columns, the referent feautre name is identical
-        #to the rc_feature string.
+        For normal output columns, the referent feautre name is identical
+        to the rc_feature string.
 
-        #For columns from an external table, it is the feature name of the
-        #column that the label is linked to.
+        For columns from an external table, it is the feature name of the
+        column that the label is linked to.
 
-        #Parameters
-        #----------
-        #rc_feature : string
+        Parameters
+        ----------
+        rc_feature : string
 
-        #Returns
-        #-------
-        #resource : string
-        #"""
+        Returns
+        -------
+        resource : string
+        """
 
-        #hashed, table, feature = cls.split_resource_feature(rc_feature)
+        hashed, table, feature = cls.split_resource_feature(rc_feature)
 
-        ## Check if the feature has the same database as the current
-        ## resource, i.e. check if the feature is NOT from a linked table:
-        #if hashed is None:
-            #return "{}_{}".format(table, feature)
-        #else:
-            #link, res = get_by_hash(hashed)
-            #_, tab, feat = res.split_resource_feature(link.rc_from)
-            #return "{}_{}".format(tab, feat)
+        # Check if the feature has the same database as the current
+        # resource, i.e. check if the feature is NOT from a linked table:
+        if hashed is None:
+            return "{}_{}".format(table, feature)
+        else:
+            link, res = get_by_hash(hashed)
+            _, tab, feat = res.split_resource_feature(link.rc_from)
+            return "{}_{}".format(tab, feat)
 
-    #@classmethod
-    #def is_lexical(cls, rc_feature):
-        #if rc_feature not in dir(cls):
-            #return False
-        #lexicon_features = [x for x, _ in cls.get_lexicon_features()]
-        #resource = cls.get_referent_feature(rc_feature)
-        #return resource in lexicon_features or cls.is_tokenized(resource)
+    @classmethod
+    def is_lexical(cls, rc_feature):
+        """
+        Return True if the given resource feature is a lexical feature.
+
+        A lexical feature is any feature that depends on the one of the query
+        item types.
+
+        More specifically, a resource feature is a lexical feature if the
+        table path to the resource feature traverses the table that contains
+        the resource feature that is mapped to a query item type , i.e. Word,
+        Lemma, POS, Gloss, Transcript.
+
+        Resources that represent links (i.e. that contain an identifier that
+        is used as the key to another table, and which therefore have the
+        shape xxx_yyy_id), the corresponding id field from the other table is
+        considered.
+
+        For external features, the linking resource is considered.
+
+        Columns in the Corpus table receive special treatment. These resources
+        are only considered lexical if they are mapped to one the query item
+        types.
+
+        """
+
+        # special treatment for features (excluding links) from the corpus
+        # table -- they are treated as lexical only if they are directly
+        # mapped onto a query item type (this happens in flat corpora such as
+        # the Buckeye corpus).
+        if (rc_feature.startswith("corpus_") and
+                not rc_feature.endswith("_id")):
+            for item_type in (
+                    QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+                if rc_feature == getattr(cls, item_type, None):
+                    return True
+            return False
+
+        resource = cls.get_referent_feature(rc_feature)
+
+        if resource not in dir(cls):
+            return False
+
+        _, table, feature = cls.split_resource_feature(resource)
+        if feature.endswith("_id"):
+            _, table, feature = cls.split_resource_feature(feature)
+
+        item_tab_list = set([])
+        for item_type in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                          QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+            query_feature = getattr(cls, item_type, None)
+            if query_feature and not query_feature.startswith("corpus_"):
+                _, tab, _ = cls.split_resource_feature(query_feature)
+                item_tab_list.add(tab)
+
+        path = cls.get_table_path("corpus", table)
+
+        return any([tab in path for tab in item_tab_list])
 
     @classmethod
     def is_tokenized(cls, rc_feature):
@@ -547,8 +601,9 @@ class BaseResource(CoqObject):
         Unlike lexical features, they are not descendants of word_table,
         but are directly stored in the corpus table.
         """
-        return (rc_feature == "corpus_id") or (
-                rc_feature.startswith("corpus_") and not rc_feature.endswith("_id"))
+        return (rc_feature == "corpus_id" or
+                (rc_feature.startswith("corpus_") and
+                 not rc_feature.endswith("_id")))
 
 
 class SQLResource(BaseResource):
@@ -680,7 +735,6 @@ class SQLResource(BaseResource):
 
         return template.format(fields=", ".join(sorted(fields)),
                                corpus=cls.corpus_table)
-
 
     @classmethod
     def get_token_order(cls, token_list):
