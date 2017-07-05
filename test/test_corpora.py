@@ -219,7 +219,29 @@ class TestCorpus(unittest.TestCase):
             self.resource.get_token_order([i1, i2]),
             [i2, i1])
 
-    # TEST CORPUS JOINS
+    # TEST LEXICAL
+
+    def test_is_lexical(self):
+        self.assertTrue(self.resource.is_lexical("word_label"))
+        self.assertTrue(self.resource.is_lexical("lemma_label"))
+        self.assertTrue(self.resource.is_lexical("word_id"))
+        self.assertTrue(self.resource.is_lexical("segment_label"))
+        self.assertTrue(self.resource.is_lexical("corpus_word_id"))
+        self.assertFalse(self.resource.is_lexical("source_label"))
+        self.assertFalse(self.resource.is_lexical("corpus_source_id"))
+
+    # TEST get_subselect_corpus():
+
+    #def test_get_subselect_corpus_1(self):
+        #query = TokenQuery("*", self.Session)
+        #l = [simple(s) for s
+             #in self.resource.get_subselect_corpus(query.query_list[0])]
+
+        #self.assertListEqual(
+            #l,
+            #[simple(
+
+    ## TEST CORPUS JOINS
 
     def test_corpus_joins_one_item(self):
         query = TokenQuery("*", self.Session)
@@ -239,6 +261,8 @@ class TestCorpus(unittest.TestCase):
         l = [simple(s) for s
              in self.resource.get_corpus_joins(query.query_list[0])]
 
+
+        print("\n", "\n".join(l))
         self.assertListEqual(
             l,
             [simple("""FROM  (SELECT End AS End1,
@@ -388,552 +412,551 @@ class TestCorpus(unittest.TestCase):
                                    FROM   Corpus) AS COQ_CORPUS_4
                        ON ID4 = ID2 + 2""")])
 
-    def test_lemmatized_corpus_joins_1(self):
-        S = "#abc.[n*]"
-        query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
-        self.assertListEqual(
-            l, [simple("""
-                FROM  (SELECT End AS End1,
-                              FileId AS FileId1,
-                              ID AS ID1,
-                              Start AS Start1,
-                              WordId AS WordId1
-                       FROM   Corpus) AS COQ_CORPUS_1""")])
-
-    ### FEATURE JOINS
-
-    def test_feature_joins_1(self):
-        l1, l2 = self.resource.get_feature_joins(0, ["word_label"])
-        self.assertListEqual(l1, [simple("""
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1""")])
-
-    def test_feature_joins_2(self):
-        l1, l2 = self.resource.get_feature_joins(1, ["word_label"])
-        self.assertListEqual(l1, [simple("""
-            INNER JOIN Lexicon AS COQ_WORD_2
-                    ON COQ_WORD_2.WordId = WordId2""")])
-
-    def test_feature_joins_3(self):
-        l1, l2 = self.resource.get_feature_joins(0, ["word_label", "word_pos"])
-        self.assertListEqual(l1, [simple("""
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1""")])
-        self.assertListEqual(l2, [])
-
-    def test_feature_joins_4(self):
-        # direct and dependent selection
-        l1, l2 = self.resource.get_feature_joins(
-            0, ["word_label", "lemma_label"])
-        self.assertListEqual(
-            l1,
-            [("INNER JOIN Lexicon AS COQ_WORD_1 "
-              "ON COQ_WORD_1.WordId = WordId1"),
-             ("INNER JOIN Lemmas AS COQ_LEMMA_1 "
-              "ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId")])
-        self.assertListEqual(l2, [])
-
-    def test_feature_joins_4a(self):
-        # direct and dependent selection, inverse order
-        l1a, l2a = self.resource.get_feature_joins(
-            0, ["lemma_label", "word_label"])
-        l1b, l2b = self.resource.get_feature_joins(
-            0, ["word_label", "lemma_label"])
-        self.assertListEqual(l1a, l1b)
-        self.assertListEqual(l2a, l2b)
-
-    def test_feature_joins_5(self):
-        # dependent selection only; feature joins should be like
-        # a join where all in-between tables are directly selected:
-        l1a, l2a = self.resource.get_feature_joins(0, ["lemma_label"])
-        l1b, l2b = self.resource.get_feature_joins(
-            0, ["word_label", "lemma_label"])
-        self.assertListEqual(l1a, l1b)
-        self.assertListEqual(l2a, l2b)
-
-    def test_feature_joins_6(self):
-        # dependent selection, second order
-        l1, l2 = self.resource.get_feature_joins(0, ["deep_label"])
-        self.assertListEqual(
-            l1,
-            [("INNER JOIN Lexicon AS COQ_WORD_1 "
-              "ON COQ_WORD_1.WordId = WordId1"),
-             ("INNER JOIN Lemmas AS COQ_LEMMA_1 "
-              "ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId"),
-             ("INNER JOIN Deep AS COQ_DEEP_1 ON "
-              "COQ_DEEP_1.DeepId = COQ_LEMMA_1.DeepId")])
-        self.assertListEqual(l2, [])
-
-    def test_feature_joins_7a(self):
-        # get a source feature (first query item)
-        l1, l2 = self.resource.get_feature_joins(0, ["source_label"])
-        self.assertListEqual(
-            l1,
-            ["INNER JOIN Files AS COQ_SOURCE_1 "
-             "ON COQ_SOURCE_1.FileId = FileId1"])
-        self.assertListEqual(l2, [])
-
-    def test_feature_joins_7b(self):
-        # get a source feature (second query item)
-        l1, l2 = self.resource.get_feature_joins(1, ["source_label"])
-        self.assertListEqual(l1, [])
-        self.assertListEqual(l2, [])
-
-    #def test_feature_joins_8(self):
-        ## words and segments
-        ## this test is still not operational
-        #l1, l2 = self.resource.get_feature_joins(0, ["word_label", "segment_label"])
-        #print(l1, l2)
-
-    def test_get_token_conditions_1(self):
-        token = COCAToken("a*")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(d, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
-
-    def test_get_token_conditions_2(self):
-        token = COCAToken("a*|b*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"word": [("COQ_WORD_1.Word LIKE 'a%' OR "
-                       "COQ_WORD_1.Word LIKE 'b%'"),
-                      "COQ_WORD_1.POS LIKE 'n%'"]})
-
-    def test_get_token_conditions_3(self):
-        token = COCAToken("[a*|b*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR "
-                       "COQ_LEMMA_1.Lemma LIKE 'b%'"]})
-
-    def test_get_token_conditions_4(self):
-        token = COCAToken("a*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"word": ["COQ_WORD_1.Word LIKE 'a%'",
-                      "COQ_WORD_1.POS LIKE 'n%'"]})
-
-    def test_get_token_conditions_5(self):
-        token = COCAToken("*'ll")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word LIKE '%''ll'"]})
-
-    def test_get_token_conditions_negated_1(self):
-        token = COCAToken("~a*")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word NOT LIKE 'a%'"]})
-
-    def test_get_token_conditions_negated_2(self):
-        token = COCAToken("~*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.POS NOT LIKE 'n%'"]})
-
-    def test_get_token_conditions_negated_3(self):
-        token = COCAToken("~a*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"word": ["COQ_WORD_1.Word NOT LIKE 'a%'",
-                      "COQ_WORD_1.POS NOT LIKE 'n%'"]})
-
-    def test_get_token_conditions_quote_char_1(self):
-        token = COCAToken("'ll")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word = '''ll'"]})
-
-    def test_get_token_conditions_quote_char_2(self):
-        token = COCAToken("'ll|ll")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
-
-    def test_token_condition_empty_1(self):
-        token = COCAToken("*")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(d, {})
-
-    def test_token_condition_empty_2(self):
-        token = COCAToken("*.[*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(d, {})
-
-    def test_token_condition_empty_3(self):
-        token = COCAToken("*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
-
-    def test_token_condition_empty_4(self):
-        token = COCAToken("a*.[*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
-
-    def test_token_conditions_lemmatized_flat_1(self):
-        self.Session.Resource = self.flat_resource
-        S = "#abc"
-        token = COCAToken(S)
-        d = self.flat_resource.get_token_conditions(0, token)
-        self.assertEqual(
-            simple(d["word"][0]),
-            simple("""
-                COQ_WORD_1.Lemma IN
-                    (SELECT DISTINCT Lemma
-                     FROM       Lexicon AS COQ_WORD_1
-                     WHERE (COQ_WORD_1.Word = 'abc'))"""))
-        self.Session.Resource = self.resource
-
-    def test_token_conditions_lemmatized_flat_pos(self):
-        self.Session.Resource = self.flat_resource
-        S = "#a*.[n*]"
-        token = COCAToken(S)
-        d = self.flat_resource.get_token_conditions(0, token)
-        self.assertEqual(
-            simple(d["word"][0]),
-            simple("""
-                COQ_WORD_1.Lemma IN
-                    (SELECT DISTINCT Lemma
-                     FROM       Lexicon AS COQ_WORD_1
-                     WHERE (COQ_WORD_1.Word LIKE 'a%') AND
-                           (COQ_WORD_1.POS LIKE 'n%'))"""))
-        self.Session.Resource = self.resource
-
-    def test_token_conditions_lemmatized_deep_1(self):
-        S = "#abc"
-        token = COCAToken(S)
-        d = self.resource.get_token_conditions(0, token)
-        self.assertEqual(
-            simple(d["word"][0]),
-            simple("""
-                COQ_LEMMA_1.Lemma IN
-                    (SELECT DISTINCT Lemma
-                     FROM       Lexicon AS COQ_WORD_1
-                     INNER JOIN Lemmas AS COQ_LEMMA_1
-                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
-                     WHERE (COQ_WORD_1.Word = 'abc'))"""))
-
-    def test_token_conditions_lemmatized_deep_2(self):
-        S = "#/a*/"
-        token = COCAToken(S)
-        d = self.resource.get_token_conditions(0, token)
-        self.assertEqual(
-            simple(d["word"][0]),
-            simple("""
-                COQ_LEMMA_1.Lemma IN
-                    (SELECT DISTINCT Lemma
-                     FROM       Lexicon AS COQ_WORD_1
-                     INNER JOIN Lemmas AS COQ_LEMMA_1
-                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
-                     WHERE (COQ_WORD_1.Transcript LIKE 'a%'))"""))
-
-    ### SELECT COLUMNS
-
-    def test_get_required_columns_1(self):
-        query = TokenQuery("*", self.Session)
-        s = self.resource.get_required_columns(query.query_list[0],
-                                               ["word_label"])
-        self.assertListEqual(s, ["COQ_WORD_1.Word AS coq_word_label_1",
-                                 "ID1 AS coquery_invisible_corpus_id",
-                                 "FileId1 AS coquery_invisible_origin_id"])
-
-    def test_get_required_columns_2(self):
-        query = TokenQuery("* *", self.Session)
-        s = self.resource.get_required_columns(query.query_list[0],
-                                               ["word_label"])
-        self.assertListEqual(s, ["COQ_WORD_1.Word AS coq_word_label_1",
-                                 "COQ_WORD_2.Word AS coq_word_label_2",
-                                 "ID1 AS coquery_invisible_corpus_id",
-                                 "FileId1 AS coquery_invisible_origin_id"])
-
-    def test_get_required_columns_3(self):
-        query = TokenQuery("* *", self.Session)
-        l = self.resource.get_required_columns(
-            query.query_list[0],
-            ["source_label", "word_label", "word_pos"])
-        self.assertListEqual(l, ["COQ_WORD_1.Word AS coq_word_label_1",
-                                 "COQ_WORD_2.Word AS coq_word_label_2",
-                                 "COQ_WORD_1.POS AS coq_word_pos_1",
-                                 "COQ_WORD_2.POS AS coq_word_pos_2",
-                                 "COQ_SOURCE_1.Title AS coq_source_label_1",
-                                 "ID1 AS coquery_invisible_corpus_id",
-                                 "FileId1 AS coquery_invisible_origin_id"])
-
-    def test_get_required_columns_4(self):
-        query = TokenQuery("*", self.Session)
-        l = self.resource.get_required_columns(
-            query.query_list[0], ["lemma_label"])
-        self.assertListEqual(l, ["COQ_LEMMA_1.Lemma AS coq_lemma_label_1",
-                                 "ID1 AS coquery_invisible_corpus_id",
-                                 "FileId1 AS coquery_invisible_origin_id"])
-
-    def test_get_required_columns_quantified(self):
-        s = "more * than [dt]{0,1} [jj]{0,3} [nn*]{1,2}"
-        query = TokenQuery(s, self.Session)
-
-        self.assertTrue(len(query.query_list) == 16)
-        l = self.resource.get_corpus_joins(query.query_list[0])
-        # 1    2 3     4      5    6    7      8     9
-        # more * than {NONE} {NONE NONE NONE} {[nn*] NONE}
-
-        l = self.resource.get_required_columns(
-            query.query_list[0], ["word_label"])
-        self.assertListEqual(
-            l,
-            ["COQ_WORD_1.Word AS coq_word_label_1",
-             "COQ_WORD_2.Word AS coq_word_label_2",
-             "COQ_WORD_3.Word AS coq_word_label_3",
-             "NULL AS coq_word_label_4",
-             "NULL AS coq_word_label_5",
-             "NULL AS coq_word_label_6",
-             "NULL AS coq_word_label_7",
-             "COQ_WORD_8.Word AS coq_word_label_8",
-             "NULL AS coq_word_label_9",
-             "ID1 AS coquery_invisible_corpus_id",
-             "FileId1 AS coquery_invisible_origin_id"])
-
-    def test_get_required_columns_NULL_1(self):
-        # tests issue #256
-        query = TokenQuery("_NULL *", self.Session)
-        l = self.resource.get_required_columns(
-            query.query_list[0], ["word_label"])
-        self.assertListEqual(
-            l,
-            ["NULL AS coq_word_label_1",
-             "COQ_WORD_2.Word AS coq_word_label_2",
-             "ID2 AS coquery_invisible_corpus_id",
-             "FileId2 AS coquery_invisible_origin_id"])
-
-    def test_get_required_columns_NULL_2(self):
-        # tests issue #256
-        query = TokenQuery("_NULL *", self.Session)
-        l = self.resource.get_required_columns(
-            query.query_list[0], ["word_label", "source_label"])
-        self.assertListEqual(
-            l,
-            ["NULL AS coq_word_label_1",
-             "COQ_WORD_2.Word AS coq_word_label_2",
-             "COQ_SOURCE_2.Title AS coq_source_label_1",
-             "ID2 AS coquery_invisible_corpus_id",
-             "FileId2 AS coquery_invisible_origin_id"])
-
-    def test_feature_joins_NULL_1(self):
-        # tests issue #256
-        l1, l2 = self.resource.get_feature_joins(
-            0, ["source_label"], first_item=2)
-        self.assertListEqual(
-            l1,
-            [simple("""
-             INNER JOIN Files AS COQ_SOURCE_2
-             ON COQ_SOURCE_2.FileId = FileId2""")])
-        self.assertListEqual(l2, [])
-
-    ### QUERY STRINGS
-
-    def test_query_string_blank(self):
-        query = TokenQuery("*", self.Session)
-        query_string = self.resource.get_query_string(query.query_list[0],
-                                                      ["word_label"])
-        target_string = """
-            SELECT COQ_WORD_1.Word AS coq_word_label_1,
-                   ID1 AS coquery_invisible_corpus_id,
-                   FileId1 AS coquery_invisible_origin_id
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_ortho(self):
-        query = TokenQuery("a*", self.Session)
-        query_string = self.resource.get_query_string(query.query_list[0],
-                                                      ["word_label"])
-        target_string = """
-            SELECT COQ_WORD_1.Word AS coq_word_label_1,
-                   ID1 AS coquery_invisible_corpus_id,
-                   FileId1 AS coquery_invisible_origin_id
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1
-            WHERE (COQ_WORD_1.Word LIKE 'a%')"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_ortho_or(self):
-        query = TokenQuery("a*|b*", self.Session)
-        query_string = self.resource.get_query_string(query.query_list[0],
-                                                      ["word_label"])
-        target_string = """
-            SELECT COQ_WORD_1.Word AS coq_word_label_1,
-                   ID1 AS coquery_invisible_corpus_id,
-                   FileId1 AS coquery_invisible_origin_id
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1
-            WHERE (COQ_WORD_1.Word LIKE 'a%' OR COQ_WORD_1.Word LIKE 'b%')"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_ortho_or_with_pos(self):
-        query = TokenQuery("a*|b*.[n*]", self.Session)
-        query_string = self.resource.get_query_string(query.query_list[0],
-                                                      ["word_label"])
-        target_string = """
-            SELECT COQ_WORD_1.Word AS coq_word_label_1,
-                   ID1 AS coquery_invisible_corpus_id,
-                   FileId1 AS coquery_invisible_origin_id
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1
-            WHERE (COQ_WORD_1.Word LIKE 'a%' OR
-                   COQ_WORD_1.Word LIKE 'b%') AND
-                  (COQ_WORD_1.POS LIKE 'n%')"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_two_items(self):
-        query = TokenQuery("a* b*", self.Session)
-        query_string = self.resource.get_query_string(query.query_list[0],
-                                                      ["word_label"])
-        target_string = """
-            SELECT COQ_WORD_1.Word AS coq_word_label_1,
-                   COQ_WORD_2.Word AS coq_word_label_2,
-                   ID1 AS coquery_invisible_corpus_id,
-                   FileId1 AS coquery_invisible_origin_id
-
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
-            INNER JOIN (SELECT End AS End2,
-                         FileId AS FileId2,
-                         ID AS ID2,
-                         Start AS Start2,
-                         WordId AS WordId2 FROM Corpus) AS COQ_CORPUS_2
-                    ON ID2 = ID1 + 1
-
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1
-            INNER JOIN Lexicon AS COQ_WORD_2
-                    ON COQ_WORD_2.WordId = WordId2
-
-            WHERE (COQ_WORD_1.Word LIKE 'a%') AND
-                  (COQ_WORD_2.Word LIKE 'b%')"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_apostrophe(self):
-        query = TokenQuery("*'ll", self.Session)
-        query_string = self.resource.get_query_string(
-            query.query_list[0], ["word_label"])
-        target_string = """
-            SELECT COQ_WORD_1.Word AS coq_word_label_1,
-                   ID1 AS coquery_invisible_corpus_id,
-                   FileId1 AS coquery_invisible_origin_id
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1
-            WHERE (COQ_WORD_1.Word LIKE '%''ll')"""
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_NULL_1(self):
-        # tests issue #256
-        query = TokenQuery("_NULL *", self.Session)
-        query_string = self.resource.get_query_string(
-            query.query_list[0], ["word_label", "source_label"])
-        target_string = """
-            SELECT NULL AS coq_word_label_1,
-                   COQ_WORD_2.Word AS coq_word_label_2,
-                   COQ_SOURCE_2.Title AS coq_source_label_1,
-                   ID2 AS coquery_invisible_corpus_id,
-                   FileId2 AS coquery_invisible_origin_id
-
-            FROM (SELECT End AS End2,
-                         FileId AS FileId2,
-                         ID AS ID2,
-                         Start AS Start2,
-                         WordId AS WordId2 FROM Corpus) AS COQ_CORPUS_2
-
-            INNER JOIN Files AS COQ_SOURCE_2
-                    ON COQ_SOURCE_2.FileId = FileId2
-
-            INNER JOIN Lexicon AS COQ_WORD_2
-                    ON COQ_WORD_2.WordId = WordId2"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_to_file(self):
-        query = TokenQuery("*", self.Session)
-        query_string = self.resource.get_query_string(
-            query.query_list[0], ["word_label", "source_label"], to_file=True)
-        target_string = """
-            SELECT COQ_WORD_1.Word AS coq_word_label_1,
-                   COQ_SOURCE_1.Title AS coq_source_label_1
-
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
-
-            INNER JOIN Files AS COQ_SOURCE_1
-                    ON COQ_SOURCE_1.FileId = FileId1
-
-            INNER JOIN Lexicon AS COQ_WORD_1
-                    ON COQ_WORD_1.WordId = WordId1"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
-
-    def test_query_string_to_file_no_column(self):
-        query = TokenQuery("*", self.Session)
-        query_string = self.resource.get_query_string(
-            query.query_list[0], [], to_file=True)
-        target_string = """
-            SELECT ID1 AS coquery_invisible_corpus_id
-            FROM (SELECT End AS End1,
-                         FileId AS FileId1,
-                         ID AS ID1,
-                         Start AS Start1,
-                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1"""
-
-        self.assertEqual(simple(query_string),
-                         simple(target_string))
+    #def test_lemmatized_corpus_joins_1(self):
+        #S = "#abc.[n*]"
+        #query = TokenQuery(S, self.Session)
+        #l = [simple(s) for s
+             #in self.resource.get_corpus_joins(query.query_list[0])]
+        #self.assertListEqual(
+            #l, [simple("""
+                #FROM  (SELECT End AS End1,
+                              #FileId AS FileId1,
+                              #ID AS ID1,
+                              #Start AS Start1,
+                              #WordId AS WordId1
+                       #FROM   Corpus) AS COQ_CORPUS_1""")])
+
+    #### FEATURE JOINS
+
+    #def test_feature_joins_1(self):
+        #l1, l2 = self.resource.get_feature_joins(0, ["word_label"])
+        #self.assertListEqual(l1, [simple("""
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1""")])
+
+    #def test_feature_joins_2(self):
+        #l1, l2 = self.resource.get_feature_joins(1, ["word_label"])
+        #self.assertListEqual(l1, [simple("""
+            #INNER JOIN Lexicon AS COQ_WORD_2
+                    #ON COQ_WORD_2.WordId = WordId2""")])
+
+    #def test_feature_joins_3(self):
+        #l1, l2 = self.resource.get_feature_joins(0, ["word_label", "word_pos"])
+        #self.assertListEqual(l1, [simple("""
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1""")])
+        #self.assertListEqual(l2, [])
+
+    #def test_feature_joins_4(self):
+        ## direct and dependent selection
+        #l1, l2 = self.resource.get_feature_joins(
+            #0, ["word_label", "lemma_label"])
+        #self.assertListEqual(
+            #l1,
+            #[("INNER JOIN Lexicon AS COQ_WORD_1 "
+              #"ON COQ_WORD_1.WordId = WordId1"),
+             #("INNER JOIN Lemmas AS COQ_LEMMA_1 "
+              #"ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId")])
+        #self.assertListEqual(l2, [])
+
+    #def test_feature_joins_4a(self):
+        ## direct and dependent selection, inverse order
+        #l1a, l2a = self.resource.get_feature_joins(
+            #0, ["lemma_label", "word_label"])
+        #l1b, l2b = self.resource.get_feature_joins(
+            #0, ["word_label", "lemma_label"])
+        #self.assertListEqual(l1a, l1b)
+        #self.assertListEqual(l2a, l2b)
+
+    #def test_feature_joins_5(self):
+        ## dependent selection only; feature joins should be like
+        ## a join where all in-between tables are directly selected:
+        #l1a, l2a = self.resource.get_feature_joins(0, ["lemma_label"])
+        #l1b, l2b = self.resource.get_feature_joins(
+            #0, ["word_label", "lemma_label"])
+        #self.assertListEqual(l1a, l1b)
+        #self.assertListEqual(l2a, l2b)
+
+    #def test_feature_joins_6(self):
+        ## dependent selection, second order
+        #l1, l2 = self.resource.get_feature_joins(0, ["deep_label"])
+        #self.assertListEqual(
+            #l1,
+            #[("INNER JOIN Lexicon AS COQ_WORD_1 "
+              #"ON COQ_WORD_1.WordId = WordId1"),
+             #("INNER JOIN Lemmas AS COQ_LEMMA_1 "
+              #"ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId"),
+             #("INNER JOIN Deep AS COQ_DEEP_1 ON "
+              #"COQ_DEEP_1.DeepId = COQ_LEMMA_1.DeepId")])
+        #self.assertListEqual(l2, [])
+
+    #def test_feature_joins_7a(self):
+        ## get a source feature (first query item)
+        #l1, l2 = self.resource.get_feature_joins(0, ["source_label"])
+        #self.assertListEqual(
+            #l1,
+            #["INNER JOIN Files AS COQ_SOURCE_1 "
+             #"ON COQ_SOURCE_1.FileId = FileId1"])
+        #self.assertListEqual(l2, [])
+
+    #def test_feature_joins_7b(self):
+        ## get a source feature (second query item)
+        #l1, l2 = self.resource.get_feature_joins(1, ["source_label"])
+        #self.assertListEqual(l1, [])
+        #self.assertListEqual(l2, [])
+
+    ##def test_feature_joins_8(self):
+        ### words and segments
+        ### this test is still not operational
+        ##l1, l2 = self.resource.get_feature_joins(0, ["word_label", "segment_label"])
+        ##print(l1, l2)
+
+    #def test_get_token_conditions_1(self):
+        #token = COCAToken("a*")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(d, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
+
+    #def test_get_token_conditions_2(self):
+        #token = COCAToken("a*|b*.[n*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d,
+            #{"word": [("COQ_WORD_1.Word LIKE 'a%' OR "
+                       #"COQ_WORD_1.Word LIKE 'b%'"),
+                      #"COQ_WORD_1.POS LIKE 'n%'"]})
+
+    #def test_get_token_conditions_3(self):
+        #token = COCAToken("[a*|b*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d,
+            #{"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR "
+                       #"COQ_LEMMA_1.Lemma LIKE 'b%'"]})
+
+    #def test_get_token_conditions_4(self):
+        #token = COCAToken("a*.[n*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d,
+            #{"word": ["COQ_WORD_1.Word LIKE 'a%'",
+                      #"COQ_WORD_1.POS LIKE 'n%'"]})
+
+    #def test_get_token_conditions_5(self):
+        #token = COCAToken("*'ll")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.Word LIKE '%''ll'"]})
+
+    #def test_get_token_conditions_negated_1(self):
+        #token = COCAToken("~a*")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.Word NOT LIKE 'a%'"]})
+
+    #def test_get_token_conditions_negated_2(self):
+        #token = COCAToken("~*.[n*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.POS NOT LIKE 'n%'"]})
+
+    #def test_get_token_conditions_negated_3(self):
+        #token = COCAToken("~a*.[n*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d,
+            #{"word": ["COQ_WORD_1.Word NOT LIKE 'a%'",
+                      #"COQ_WORD_1.POS NOT LIKE 'n%'"]})
+
+    #def test_get_token_conditions_quote_char_1(self):
+        #token = COCAToken("'ll")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.Word = '''ll'"]})
+
+    #def test_get_token_conditions_quote_char_2(self):
+        #token = COCAToken("'ll|ll")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
+
+    #def test_token_condition_empty_1(self):
+        #token = COCAToken("*")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(d, {})
+
+    #def test_token_condition_empty_2(self):
+        #token = COCAToken("*.[*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(d, {})
+
+    #def test_token_condition_empty_3(self):
+        #token = COCAToken("*.[n*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
+
+    #def test_token_condition_empty_4(self):
+        #token = COCAToken("a*.[*]")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
+
+    #def test_token_conditions_lemmatized_flat_1(self):
+        #self.Session.Resource = self.flat_resource
+        #S = "#abc"
+        #token = COCAToken(S)
+        #d = self.flat_resource.get_token_conditions(0, token)
+        #self.assertEqual(
+            #simple(d["word"][0]),
+            #simple("""
+                #COQ_WORD_1.Lemma IN
+                    #(SELECT DISTINCT Lemma
+                     #FROM       Lexicon AS COQ_WORD_1
+                     #WHERE (COQ_WORD_1.Word = 'abc'))"""))
+        #self.Session.Resource = self.resource
+
+    #def test_token_conditions_lemmatized_flat_pos(self):
+        #self.Session.Resource = self.flat_resource
+        #S = "#a*.[n*]"
+        #token = COCAToken(S)
+        #d = self.flat_resource.get_token_conditions(0, token)
+        #self.assertEqual(
+            #simple(d["word"][0]),
+            #simple("""
+                #COQ_WORD_1.Lemma IN
+                    #(SELECT DISTINCT Lemma
+                     #FROM       Lexicon AS COQ_WORD_1
+                     #WHERE (COQ_WORD_1.Word LIKE 'a%') AND
+                           #(COQ_WORD_1.POS LIKE 'n%'))"""))
+        #self.Session.Resource = self.resource
+
+    #def test_token_conditions_lemmatized_deep_1(self):
+        #S = "#abc"
+        #token = COCAToken(S)
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertEqual(
+            #simple(d["word"][0]),
+            #simple("""
+                #COQ_LEMMA_1.Lemma IN
+                    #(SELECT DISTINCT Lemma
+                     #FROM       Lexicon AS COQ_WORD_1
+                     #INNER JOIN Lemmas AS COQ_LEMMA_1
+                             #ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
+                     #WHERE (COQ_WORD_1.Word = 'abc'))"""))
+
+    #def test_token_conditions_lemmatized_deep_2(self):
+        #S = "#/a*/"
+        #token = COCAToken(S)
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertEqual(
+            #simple(d["word"][0]),
+            #simple("""
+                #COQ_LEMMA_1.Lemma IN
+                    #(SELECT DISTINCT Lemma
+                     #FROM       Lexicon AS COQ_WORD_1
+                     #INNER JOIN Lemmas AS COQ_LEMMA_1
+                             #ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
+                     #WHERE (COQ_WORD_1.Transcript LIKE 'a%'))"""))
+
+    #### SELECT COLUMNS
+
+    #def test_get_required_columns_1(self):
+        #query = TokenQuery("*", self.Session)
+        #s = self.resource.get_required_columns(query.query_list[0],
+                                               #["word_label"])
+        #self.assertListEqual(s, ["COQ_WORD_1.Word AS coq_word_label_1",
+                                 #"ID1 AS coquery_invisible_corpus_id",
+                                 #"FileId1 AS coquery_invisible_origin_id"])
+
+    #def test_get_required_columns_2(self):
+        #query = TokenQuery("* *", self.Session)
+        #s = self.resource.get_required_columns(query.query_list[0],
+                                               #["word_label"])
+        #self.assertListEqual(s, ["COQ_WORD_1.Word AS coq_word_label_1",
+                                 #"COQ_WORD_2.Word AS coq_word_label_2",
+                                 #"ID1 AS coquery_invisible_corpus_id",
+                                 #"FileId1 AS coquery_invisible_origin_id"])
+
+    #def test_get_required_columns_3(self):
+        #query = TokenQuery("* *", self.Session)
+        #l = self.resource.get_required_columns(
+            #query.query_list[0],
+            #["source_label", "word_label", "word_pos"])
+        #self.assertListEqual(l, ["COQ_WORD_1.Word AS coq_word_label_1",
+                                 #"COQ_WORD_2.Word AS coq_word_label_2",
+                                 #"COQ_WORD_1.POS AS coq_word_pos_1",
+                                 #"COQ_WORD_2.POS AS coq_word_pos_2",
+                                 #"COQ_SOURCE_1.Title AS coq_source_label_1",
+                                 #"ID1 AS coquery_invisible_corpus_id",
+                                 #"FileId1 AS coquery_invisible_origin_id"])
+
+    #def test_get_required_columns_4(self):
+        #query = TokenQuery("*", self.Session)
+        #l = self.resource.get_required_columns(
+            #query.query_list[0], ["lemma_label"])
+        #self.assertListEqual(l, ["COQ_LEMMA_1.Lemma AS coq_lemma_label_1",
+                                 #"ID1 AS coquery_invisible_corpus_id",
+                                 #"FileId1 AS coquery_invisible_origin_id"])
+
+    #def test_get_required_columns_quantified(self):
+        #s = "more * than [dt]{0,1} [jj]{0,3} [nn*]{1,2}"
+        #query = TokenQuery(s, self.Session)
+
+        #self.assertTrue(len(query.query_list) == 16)
+        #l = self.resource.get_corpus_joins(query.query_list[0])
+        ## 1    2 3     4      5    6    7      8     9
+        ## more * than {NONE} {NONE NONE NONE} {[nn*] NONE}
+
+        #l = self.resource.get_required_columns(
+            #query.query_list[0], ["word_label"])
+        #self.assertListEqual(
+            #l,
+            #["COQ_WORD_1.Word AS coq_word_label_1",
+             #"COQ_WORD_2.Word AS coq_word_label_2",
+             #"COQ_WORD_3.Word AS coq_word_label_3",
+             #"NULL AS coq_word_label_4",
+             #"NULL AS coq_word_label_5",
+             #"NULL AS coq_word_label_6",
+             #"NULL AS coq_word_label_7",
+             #"COQ_WORD_8.Word AS coq_word_label_8",
+             #"NULL AS coq_word_label_9",
+             #"ID1 AS coquery_invisible_corpus_id",
+             #"FileId1 AS coquery_invisible_origin_id"])
+
+    #def test_get_required_columns_NULL_1(self):
+        ## tests issue #256
+        #query = TokenQuery("_NULL *", self.Session)
+        #l = self.resource.get_required_columns(
+            #query.query_list[0], ["word_label"])
+        #self.assertListEqual(
+            #l,
+            #["NULL AS coq_word_label_1",
+             #"COQ_WORD_2.Word AS coq_word_label_2",
+             #"ID2 AS coquery_invisible_corpus_id",
+             #"FileId2 AS coquery_invisible_origin_id"])
+
+    #def test_get_required_columns_NULL_2(self):
+        ## tests issue #256
+        #query = TokenQuery("_NULL *", self.Session)
+        #l = self.resource.get_required_columns(
+            #query.query_list[0], ["word_label", "source_label"])
+        #self.assertListEqual(
+            #l,
+            #["NULL AS coq_word_label_1",
+             #"COQ_WORD_2.Word AS coq_word_label_2",
+             #"COQ_SOURCE_2.Title AS coq_source_label_1",
+             #"ID2 AS coquery_invisible_corpus_id",
+             #"FileId2 AS coquery_invisible_origin_id"])
+
+    #def test_feature_joins_NULL_1(self):
+        ## tests issue #256
+        #l1, l2 = self.resource.get_feature_joins(
+            #0, ["source_label"], first_item=2)
+        #self.assertListEqual(
+            #l1,
+            #[simple("""
+             #INNER JOIN Files AS COQ_SOURCE_2
+             #ON COQ_SOURCE_2.FileId = FileId2""")])
+        #self.assertListEqual(l2, [])
+
+    #### QUERY STRINGS
+
+    #def test_query_string_blank(self):
+        #query = TokenQuery("*", self.Session)
+        #query_string = self.resource.get_query_string(query.query_list[0],
+                                                      #["word_label"])
+        #target_string = """
+            #SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   #ID1 AS coquery_invisible_corpus_id,
+                   #FileId1 AS coquery_invisible_origin_id
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_ortho(self):
+        #query = TokenQuery("a*", self.Session)
+        #query_string = self.resource.get_query_string(query.query_list[0],
+                                                      #["word_label"])
+        #target_string = """
+            #SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   #ID1 AS coquery_invisible_corpus_id,
+                   #FileId1 AS coquery_invisible_origin_id
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1
+            #WHERE (COQ_WORD_1.Word LIKE 'a%')"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_ortho_or(self):
+        #query = TokenQuery("a*|b*", self.Session)
+        #query_string = self.resource.get_query_string(query.query_list[0],
+                                                      #["word_label"])
+        #target_string = """
+            #SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   #ID1 AS coquery_invisible_corpus_id,
+                   #FileId1 AS coquery_invisible_origin_id
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1
+            #WHERE (COQ_WORD_1.Word LIKE 'a%' OR COQ_WORD_1.Word LIKE 'b%')"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_ortho_or_with_pos(self):
+        #query = TokenQuery("a*|b*.[n*]", self.Session)
+        #query_string = self.resource.get_query_string(query.query_list[0],
+                                                      #["word_label"])
+        #target_string = """
+            #SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   #ID1 AS coquery_invisible_corpus_id,
+                   #FileId1 AS coquery_invisible_origin_id
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1
+            #WHERE (COQ_WORD_1.Word LIKE 'a%' OR
+                   #COQ_WORD_1.Word LIKE 'b%') AND
+                  #(COQ_WORD_1.POS LIKE 'n%')"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_two_items(self):
+        #query = TokenQuery("a* b*", self.Session)
+        #query_string = self.resource.get_query_string(query.query_list[0],
+                                                      #["word_label"])
+        #target_string = """
+            #SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   #COQ_WORD_2.Word AS coq_word_label_2,
+                   #ID1 AS coquery_invisible_corpus_id,
+                   #FileId1 AS coquery_invisible_origin_id
+
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            #INNER JOIN (SELECT End AS End2,
+                         #ID AS ID2,
+                         #Start AS Start2,
+                         #WordId AS WordId2 FROM Corpus) AS COQ_CORPUS_2
+                    #ON ID2 = ID1 + 1
+
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1
+            #INNER JOIN Lexicon AS COQ_WORD_2
+                    #ON COQ_WORD_2.WordId = WordId2
+
+            #WHERE (COQ_WORD_1.Word LIKE 'a%') AND
+                  #(COQ_WORD_2.Word LIKE 'b%')"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_apostrophe(self):
+        #query = TokenQuery("*'ll", self.Session)
+        #query_string = self.resource.get_query_string(
+            #query.query_list[0], ["word_label"])
+        #target_string = """
+            #SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   #ID1 AS coquery_invisible_corpus_id,
+                   #FileId1 AS coquery_invisible_origin_id
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1
+            #WHERE (COQ_WORD_1.Word LIKE '%''ll')"""
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_NULL_1(self):
+        ## tests issue #256
+        #query = TokenQuery("_NULL *", self.Session)
+        #query_string = self.resource.get_query_string(
+            #query.query_list[0], ["word_label", "source_label"])
+        #target_string = """
+            #SELECT NULL AS coq_word_label_1,
+                   #COQ_WORD_2.Word AS coq_word_label_2,
+                   #COQ_SOURCE_2.Title AS coq_source_label_1,
+                   #ID2 AS coquery_invisible_corpus_id,
+                   #FileId2 AS coquery_invisible_origin_id
+
+            #FROM (SELECT End AS End2,
+                         #FileId AS FileId2,
+                         #ID AS ID2,
+                         #Start AS Start2,
+                         #WordId AS WordId2 FROM Corpus) AS COQ_CORPUS_2
+
+            #INNER JOIN Files AS COQ_SOURCE_2
+                    #ON COQ_SOURCE_2.FileId = FileId2
+
+            #INNER JOIN Lexicon AS COQ_WORD_2
+                    #ON COQ_WORD_2.WordId = WordId2"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_to_file(self):
+        #query = TokenQuery("*", self.Session)
+        #query_string = self.resource.get_query_string(
+            #query.query_list[0], ["word_label", "source_label"], to_file=True)
+        #target_string = """
+            #SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   #COQ_SOURCE_1.Title AS coq_source_label_1
+
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+
+            #INNER JOIN Files AS COQ_SOURCE_1
+                    #ON COQ_SOURCE_1.FileId = FileId1
+
+            #INNER JOIN Lexicon AS COQ_WORD_1
+                    #ON COQ_WORD_1.WordId = WordId1"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
+
+    #def test_query_string_to_file_no_column(self):
+        #query = TokenQuery("*", self.Session)
+        #query_string = self.resource.get_query_string(
+            #query.query_list[0], [], to_file=True)
+        #target_string = """
+            #SELECT ID1 AS coquery_invisible_corpus_id
+            #FROM (SELECT End AS End1,
+                         #FileId AS FileId1,
+                         #ID AS ID1,
+                         #Start AS Start1,
+                         #WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1"""
+
+        #self.assertEqual(simple(query_string),
+                         #simple(target_string))
 
 
 def _monkeypatch_get_resource(name):
@@ -973,6 +996,11 @@ class TestSuperFlat(unittest.TestCase):
         options.cfg.current_server = "Default"
         options.cfg.table_links = {}
         options.cfg.table_links[options.cfg.current_server] = [self.link]
+
+    def test_is_lexical(self):
+        self.assertTrue(self.resource.is_lexical("corpus_word"))
+        self.assertTrue(self.resource.is_lexical("corpus_lemma"))
+        self.assertFalse(self.resource.is_lexical("file_path"))
 
     def test_linked_feature_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
@@ -1049,6 +1077,12 @@ class TestCorpusWithExternal(unittest.TestCase):
         options.cfg.current_server = "Default"
         options.cfg.table_links = {}
         options.cfg.table_links[options.cfg.current_server] = [self.link]
+
+    def test_is_lexical(self):
+        self.assertTrue(self.resource.is_lexical("word_label"))
+        col = "{}.word_data".format(self.link.get_hash())
+        print(col)
+        self.assertTrue(self.resource.is_lexical(col))
 
     def test_linked_feature_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
@@ -1231,11 +1265,11 @@ class TestNGramCorpus(unittest.TestCase):
                     "              WordId AS WordId5"
                     "       FROM   Corpus) AS COQ_CORPUS_5"),
              simple("INNER JOIN (SELECT "
-                    "               End AS End4, "
-                    "               FileId AS FileId4, "
-                    "               ID AS ID4, "
-                    "               Start AS Start4, "
-                    "               WordId AS WordId4 "
+                    "              End AS End4, "
+                    "              FileId AS FileId4, "
+                    "              ID AS ID4, "
+                    "              Start AS Start4, "
+                    "              WordId AS WordId4 "
                     "       FROM Corpus) AS COQ_CORPUS_4 "
                     "       ON ID4 = ID5 - 1"),
              simple("INNER JOIN CorpusNgram ON ID1 = ID5 - 4")])
