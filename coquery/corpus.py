@@ -628,18 +628,24 @@ class SQLResource(BaseResource):
         self.db_type = options.get_configuration_type()
         self.attach_list = []
 
-        # FIXME: in order to make this not depend on a fixed database layout
-        # (here: 'source' and 'file' tables), we should check for any table
-        # that corpus_table is linked to except for word_table (and all
-        # child tables).
-        # FIXME: some mechanism is probably necessary to handle self-joined
-        # tables
+    @classmethod
+    def get_origin_rc(cls):
+        """
+        Return the resource feature that identifies the origin of any given
+        token in the corpus. The origin resource feature is used to look up
+        contexts when clicking on an entry, and when retrieving surrounding
+        words in get_context().
+        """
 
+        # FIXME: in order to make this not depend on a fixed database layout
+        # (here: 'source' and 'file' tables), we might want to check for any
+        # table that corpus_table is linked to except for word_table (and all
+        # child tables).
         for x in ["corpus_source_id", "corpus_file_id",
                   "corpus_sentence_id", "corpus_id"]:
-            if hasattr(self, x):
-                options.cfg.token_origin_id = x
-                break
+            if hasattr(cls, x):
+                return x
+        return None
 
     @classmethod
     def get_engine(cls, *args, **kwargs):
@@ -1286,11 +1292,10 @@ class SQLResource(BaseResource):
                 else:
                     template = "{name}{N}"
                 template = "{} AS coq_{{rc_feature}}_1".format(template)
-                s =  template.format(
-                    N=_first_item,
-                    table=tab.upper(),
-                    name=getattr(cls, rc_feature),
-                    rc_feature=rc_feature)
+                s = template.format(N=_first_item,
+                                    table=tab.upper(),
+                                    name=getattr(cls, rc_feature),
+                                    rc_feature=rc_feature)
                 if s not in columns:
                     columns.append(s)
 
@@ -1530,7 +1535,6 @@ class SQLResource(BaseResource):
             sentence=sentence,
             id_list=", ".join([str(x) for x in id_list]))
 
-
         engine = self.get_engine()
         df = pd.read_sql(S, engine)
         engine.dispose()
@@ -1538,12 +1542,15 @@ class SQLResource(BaseResource):
         return df
 
     def get_origin_id(self, token_id):
-        if not options.cfg.token_origin_id:
+        origin_rc = self.get_origin_rc()
+        if not origin_rc:
             return None
-        S = "SELECT {} FROM {} WHERE {} = {}".format(
-            getattr(self, options.cfg.token_origin_id),
-            self.corpus_table, self.corpus_id,
-            token_id)
+
+        S = "SELECT {origin} FROM {corpus} WHERE {id} = {token_id} LIMIT 1"
+        S = S.format(origin=getattr(self, origin_rc),
+                     corpus=self.corpus_table,
+                     id=self.corpus_id,
+                     token_id=token_id)
         engine = self.get_engine()
         df = pd.read_sql(S, engine)
         engine.dispose()
@@ -1608,8 +1615,8 @@ class CorpusClass(object):
         the given token.
 
         This method traverses the table tree for the origin table as
-        determined by options.cfg.token_origin_id. For each table, all
-        matching fields are added.
+        determined by get_origin_rc(). For each table, all matching fields are
+        added.
 
         Parameters
         ----------
@@ -1623,8 +1630,6 @@ class CorpusClass(object):
             source table, and a dictionary with resource features as keys and
             the matching field content as values.
         """
-        if not options.cfg.token_origin_id:
-            return []
         l = []
 
         # get the complete row from the corpus table for the current token:
@@ -1664,7 +1669,9 @@ class CorpusClass(object):
             # get the resource feature name from the corpus table that belongs
             # to the current column display name:
             try:
-                rc_feature = [x for x in self.resource.get_feature_from_name(column) if x.startswith("corpus_")][0]
+                rc_feature = [x for x
+                              in self.resource.get_feature_from_name(column)
+                              if x.startswith("corpus_")][0]
             except IndexError:
                 continue
 
@@ -1690,7 +1697,8 @@ class CorpusClass(object):
                 engine.dispose()
 
                 if len(row.index) > 0:
-                    D = dict([(x, row.at[0,x]) for x in row.columns if x != id_column])
+                    D = dict([(x, row.at[0, x]) for x in row.columns
+                              if x != id_column])
                     # append the row data to the list:
                     l.append((table_name, D))
         return l
@@ -1875,7 +1883,7 @@ class CorpusClass(object):
         self._corpus_range_cache[cache_key] = val
         return self._corpus_range_cache[cache_key]
 
-    def get_frequency(self, s, engine, literal=False):
+    def get_frequency(self, s, engine):
         """
         Return the frequency for a token specified by s.
 
@@ -1884,25 +1892,20 @@ class CorpusClass(object):
         list.
 
         Frequencies are cached so that recurrent calls of the method with the
-        same values for ``s`` and ``filters`` are not queried from the SQL
+        same values for ``s`` are not queried from the SQL
         database but from the working memory.
 
         Parameters
         ----------
         s : str
             A query item specification
-        literal : bool
-            True if the string should be parsed as a query token, or False
-            if it should be looked up as it is. Default is False.
-        engine : An SQLAlchemy engine
-            If provided, use this SQL engine. Otherwise, initialize a new
-            engine, and use that.
+        engine : SQLAlchemy Engine
+            The DB engine to be used for the frequency query
 
         Returns
         -------
-        freq : longint
-            The number of tokens that match the query item specification after
-            the filter list is applied.
+        freq : int
+            The number of tokens that match the query item specification
         """
 
         if isinstance(s, (int, float)):
@@ -1921,6 +1924,7 @@ class CorpusClass(object):
 
         for sub in query_list:
             S = self.resource.get_query_string(sub, [], columns=["COUNT(*)"])
+            print(S)
             df = pd.read_sql(S, engine)
             freq += df.values.ravel()[0]
 
@@ -1933,7 +1937,9 @@ class CorpusClass(object):
         elif hasattr(self.resource, "corpus_word"):
             word_id_column = self.resource.corpus_word
 
-        if options.cfg.token_origin_id and origin_id:
+        origin_rc = self.resource.get_origin_rc()
+
+        if origin_rc and origin_id:
             S = """
                 SELECT {corpus_wordid}
                 FROM {corpus}
@@ -1944,7 +1950,7 @@ class CorpusClass(object):
                         corpus=self.resource.corpus_table,
                         token_id=self.resource.corpus_id,
                         start=start, end=end,
-                        corpus_source=getattr(self.resource, options.cfg.token_origin_id),
+                        corpus_source=getattr(self.resource, origin_rc),
                         this_source=origin_id)
             if sentence_id:
                 if hasattr(self.resource, "corpus_sentence"):
@@ -2043,10 +2049,10 @@ class CorpusClass(object):
             return []
 
     def _read_context_for_renderer(self, token_id, source_id, token_width):
-        origin_id = getattr(self.resource, "corpus_source_id",
-                        getattr(self.resource, "corpus_file_id",
-                            getattr(self.resource, "corpus_sentence_id",
-                                self.resource.corpus_id)))
+        origin_id = (getattr(self.resource, "corpus_source_id", None) or
+                     getattr(self.resource, "corpus_file_id", None) or
+                     getattr(self.resource, "corpus_sentence_id", None) or
+                     self.resource.corpus_id)
         if hasattr(self.resource, "surface_feature"):
             word_feature = self.resource.surface_feature
         else:
@@ -2273,12 +2279,13 @@ class CorpusClass(object):
 
         # create a list of all token ids that are also listed in the results
         # table:
-        tab = options.cfg.main_window.Session.data_table
-        tab = tab[(tab.coquery_invisible_corpus_id > token_id - 1000) &
-                  (tab.coquery_invisible_corpus_id < token_id + 1000 + token_width)]
+        template = "{lower} < coquery_invisible_corpus_id < {upper}"
+        tab = options.cfg.main_window.Session.data_table.query(
+                template.format(lower=token_id - 1000,
+                                upper=token_id + 1000 + token_width))
+
         tab["end"] = (tab[["coquery_invisible_corpus_id",
-                          "coquery_invisible_number_of_tokens"]]
-                         .sum(axis=1))
+                           "coquery_invisible_number_of_tokens"]].sum(axis=1))
         # the method expand_row has the side effect that it adds the
         # token id range for each row to the list self.id_list
         self.id_list = list(pd.np.hstack(tab.apply(expand_row, axis=1)))
