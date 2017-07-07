@@ -883,7 +883,11 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         l = []
         sep = self.constant(df, " ")
         for col in word_columns:
-            l += [df[col], sep]
+            val = (df[col].replace("{", "\\{", regex=True)
+                          .replace("\[", "\\[", regex=True)
+                          .replace("\*", "\\*", regex=True)
+                          .replace("\?", "\\?", regex=True))
+            l += [val, sep]
         _s = pd.concat(l, axis=1).astype(str).sum(axis=1)
 
         # get the frequency from the reference corpus for the concatenated
