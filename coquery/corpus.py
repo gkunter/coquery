@@ -732,13 +732,16 @@ class SQLResource(BaseResource):
         template = "(SELECT {fields} FROM {corpus})"
 
         fields = []
+        aliases = []
         for x in dir(cls):
             if (x.startswith("corpus_") and
                     not x.endswith(("_table", "_columns"))):
-                fields.append(
-                    "{field} AS {field}{N}".format(field=getattr(cls, x),
-                                                   N=N))
-
+                field_name = getattr(cls, x)
+                alias = "{field}{N}".format(field=field_name, N=N)
+                S = "{field} AS {alias}".format(field=field_name, alias=alias)
+                if not alias in aliases:
+                    fields.append(S)
+                    aliases.append(alias)
         return template.format(fields=", ".join(sorted(fields)),
                                corpus=cls.corpus_table)
 
