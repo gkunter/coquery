@@ -404,17 +404,11 @@ class StringUpper(StringSeriesFunction):
     parameters = 0
     str_func = "upper"
 
-    def evaluate(self, df, *args, **kwargs):
-        return super(StringUpper, self).evaluate(df)
-
 
 class StringLower(StringSeriesFunction):
     _name = "LOWER"
     parameters = 0
     str_func = "lower"
-
-    def evaluate(self, df, *args, **kwargs):
-        return super(StringLower, self).evaluate(df)
 
 
 class StringLength(StringSeriesFunction):
@@ -422,8 +416,11 @@ class StringLength(StringSeriesFunction):
     parameters = 0
     str_func = "len"
 
-    def evaluate(self, df, *args, **kwargs):
-        return super(StringLength, self).evaluate(df)
+
+class StringReplace(StringSeriesFunction):
+    _name = "REPLACE"
+    parameters = 2
+    str_func = "replace"
 
 
 ####################
