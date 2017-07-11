@@ -136,14 +136,20 @@ class FunctionDialog(QtWidgets.QDialog):
         self._func = []
 
         if value:
-            self.ui.edit_function_value.setText(utf8(value))
+            self.ui.edit_value_1.setText(utf8(value))
 
-        self.ui.edit_function_value.textChanged.connect(lambda: self.check_gui())
+        self.ui.edit_value_1.textChanged.connect(lambda: self.check_gui())
         self.ui.edit_label.textEdited.connect(self.check_label)
         self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
         self.ui.widget_selection.itemSelectionChanged.connect(self.change_columns)
 
         self.ui.widget_selection.setMinimumItems(1)
+
+        spacer = self.ui.layout_arguments.itemAt(1).widget()
+        spacer.setSizePolicy(QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed))
+        spacer.setMinimumHeight(self.ui.edit_value_1.sizeHint().height())
+        spacer.setMaximumHeight(self.ui.edit_value_1.sizeHint().height())
 
         if max_parameters == 0:
             self.ui.parameter_box.hide()
@@ -222,14 +228,14 @@ class FunctionDialog(QtWidgets.QDialog):
         self.ui.list_functions.setCurrentRow(0)
 
     def select_function(self, func):
-        self.ui.edit_function_value.setText(func.value)
+        self.ui.edit_value_1.setText(func.value)
         self.columns = func.columns
         try:
             row = self.function_list.index(type(func))
             self.ui.list_functions.setCurrentRow(row)
         except ValueError:
             pass
-        self.ui.edit_function_value.setText(func.value)
+        self.ui.edit_value_1.setText(func.value)
         try:
             ix = func.combine_modes.index(func.aggr)
             self.ui.combo_combine.setCurrentIndex(ix)
@@ -298,15 +304,26 @@ class FunctionDialog(QtWidgets.QDialog):
             else:
                 self.ui.combo_combine.setCurrentIndex(0)
 
+
+            self.ui.parameter_box.setEnabled(True)
+            self.ui.edit_value_2.show()
+            self.ui.label_argument_2.show()
+
+            if func.parameters < 2:
+                self.ui.edit_value_2.hide()
+                self.ui.label_argument_2.hide()
+            if func.parameters < 1:
+                self.ui.parameter_box.setEnabled(False)
+
             if func.parameters == 0 or self.max_parameters == 0:
                 self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
-                self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
+                self.ui.edit_value_1.setStyleSheet('QLineEdit { background-color: white; }')
             else:
-                if not func.validate_input(utf8(self.ui.edit_function_value.text())):
-                    self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
+                if not func.validate_input(utf8(self.ui.edit_value_1.text())):
+                    self.ui.edit_value_1.setStyleSheet('QLineEdit { background-color: rgb(255, 255, 192) }')
                     self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
                 else:
-                    self.ui.edit_function_value.setStyleSheet('QLineEdit { background-color: white; }')
+                    self.ui.edit_value_1.setStyleSheet('QLineEdit { background-color: white; }')
                     self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
 
             self.ui.list_functions.item(self.ui.list_functions.currentRow()).setSelected(True)
@@ -318,7 +335,7 @@ class FunctionDialog(QtWidgets.QDialog):
         session = get_toplevel_window().Session
         tmp_func = func(
             columns=self.columns,
-            value=utf8(self.ui.edit_function_value.text()),
+            value=utf8(self.ui.edit_value_1.text()),
             aggr=aggr,
             session=session)
 
@@ -349,7 +366,7 @@ class FunctionDialog(QtWidgets.QDialog):
                         l.append(item.data(QtCore.Qt.UserRole))
                 return l
             else:
-                value = utf8(self.ui.edit_function_value.text())
+                value = utf8(self.ui.edit_value_1.text())
                 escaped_value = value.replace("'", "\'")
                 columns = [x.data(QtCore.Qt.UserRole) for x
                            in self.ui.widget_selection.selectedItems()]
