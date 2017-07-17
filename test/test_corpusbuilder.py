@@ -160,7 +160,24 @@ class NgramBuilder(BaseCorpusBuilder):
     query_item_word = "word_label"
 
 
+class NGramBuilderFlat(BaseCorpusBuilder):
+    corpusngram_table = "CorpusNgram"
+    corpusngram_width = 3
+
+    corpus_table = "Corpus"
+    corpus_id = "ID"
+    corpus_word = "Word"
+    corpus_pos = "POS"
+    corpus_columns = [
+        Identifier(corpus_id, "INT"),
+        Column(corpus_word, "VARCHAR"),
+        Column(corpus_pos, "VARCHAR")]
+
+    auto_create = ["corpus"]
+
+
 class TestCorpusNgram(unittest.TestCase):
+
     def setUp(self):
         self.builder = NgramBuilder()
         self.maxDiff = None
@@ -170,7 +187,7 @@ class TestCorpusNgram(unittest.TestCase):
         self.assertEqual(
             l, ["ID1", "FileId1", "WordId1", "WordId2", "WordId3"])
 
-    def test_get_ngram_padding(self):
+    def test_get_ngram_padding_1(self):
         s = self.builder.build_lookup_get_padding_string()
         self.assertEqual(simple(s),
                          simple("""
@@ -213,6 +230,18 @@ class TestCorpusNgram(unittest.TestCase):
                      FROM   Corpus) AS COQ_CORPUS_3 ON ID3 = ID1 + 2"""
 
         self.assertEqual(simple(s1), simple(s2))
+
+
+class TestFlatCorpusBuilder(unittest.TestCase):
+    def test_get_ngram_padding_1(self):
+        self.builder = NGramBuilderFlat()
+        s = self.builder.build_lookup_get_padding_string()
+        self.assertEqual(simple(s),
+                         simple("""
+        INSERT INTO CorpusNgram (ID1, FileId1, Word1, Word2, Word3, POS1, POS2, POS3)
+        VALUES ({last_row} + 1, {FileId1}, {WordId2}, {WordId3}, {na_value}, {POS2}, {POS3}, {na_value}),
+               ({last_row} + 2, {FileId1}, {WordId3}, {na_value}, {na_value}, {POS3}, {na_value}, {na_value})
+               """))
 
 
 class TestXMLCorpusBuilder(unittest.TestCase):
@@ -346,13 +375,17 @@ class TestTEICorpusBuilder(TestXMLCorpusBuilder):
         self.assertEqual(len(builder.header), 1)
         self.assertEqual(len(builder.content), 139)
 
+
+provided_tests = [TestCorpusNgram, TestFlatCorpusBuilder,
+                  TestXMLCorpusBuilder, TestTEICorpusBuilder]
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestCorpusNgram),
-        unittest.TestLoader().loadTestsFromTestCase(TestXMLCorpusBuilder),
-        unittest.TestLoader().loadTestsFromTestCase(TestTEICorpusBuilder)
-        ])
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(x)
+         for x in provided_tests])
     unittest.TextTestRunner().run(suite)
+
 
 if __name__ == '__main__':
     main()
