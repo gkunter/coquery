@@ -410,9 +410,6 @@ class Table(object):
             with self._DB.engine.connect() as connection:
                 v_min, _ = connection.execute(S).fetchone()
 
-            #if v_min >= 0 and "UNSIGNED" not in dt_type:
-                #dt_type = "{} UNSIGNED".format(dt_type)
-
         # all other data types:
         else:
             dt_type = col.data_type
