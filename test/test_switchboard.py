@@ -19,6 +19,7 @@ import pandas as pd
 sys.path.append(os.path.join(sys.path[0], "../coquery/installer"))
 sys.path.append(os.path.join(sys.path[0], "../coquery"))
 
+from coquery.defines import SQL_MYSQL
 from coquery.coquery import options
 from coquery.installer.coq_install_switchboard import BuilderClass
 from coquery.tables import Table
@@ -26,7 +27,7 @@ from coquery.tables import Table
 # Dummy data to mock the file call_con_tab.csv:
 mock_call_con_tab = """1001, "A", 1, "555-2368", 5, 100, "", "Y"
 1001, "B", 2, "555-5555", 5, 100, "", "Y"
-1337, "A", 3, "555-7896", 8, 101, "", "Y"
+1337, "A", 3, "555-7896", 8, UNK, "", "Y"
 1337, "B", 1, "555-1793", 8, 101, "", "Y"
 """
 
@@ -53,7 +54,7 @@ df_call_con_tab = pd.DataFrame({
     "Side": ["A", "B"] * 2,
     "SpeakerId": [1, 2, 3, 1],
     "Length": [5, 5, 8, 8],
-    "ivi_no": [100, 100, 101, 101],
+    "ivi_no": [100, 100, None, 101],
     })
 
 df_topic_tab = pd.DataFrame({
@@ -115,13 +116,32 @@ class TestSwitchboard(unittest.TestCase):
         self.assertListEqual(sorted(df1.columns), sorted(df2.columns))
         self.assertEqual(len(df1), len(df2))
         for col in df1.columns:
+            l1 = df1[col].dropna().reset_index(drop=True).values.tolist()
+            l2 = df2[col].dropna().reset_index(drop=True).values.tolist()
+            check = (df1[col].reset_index(drop=True).isnull() ==
+                     df2[col].reset_index(drop=True).isnull())
+
             try:
-                self.assertListEqual(df1[col].values.tolist(),
-                                     df2[col].values.tolist())
+                self.assertTrue(check.all())
+                self.assertListEqual(l1, l2)
             except Exception as e:
                 e.args = tuple([x.replace("Lists", "Columns '{}'".format(col))
                                 for x in e.args])
                 raise e
+
+    def test_check_index_on_id_columns(self):
+        installer = BuilderClass()
+        conv = installer._new_tables["Conversations"]
+        self.assertTrue("PRIMARY KEY (`ConversationId`)" in
+                        conv.get_create_string(db_type=SQL_MYSQL))
+
+        spkr = installer._new_tables["Speakers"]
+        self.assertTrue("PRIMARY KEY (`SpeakerId`)" in
+                        spkr.get_create_string(db_type=SQL_MYSQL))
+
+        raise AssertionError(("The primary keys are in the table creation "
+                              "strings, but they don't seem to be created by "
+                              "MySQL."))
 
     def test_get_file_list(self):
         installer = BuilderClass()
@@ -136,7 +156,7 @@ class TestSwitchboard(unittest.TestCase):
         installer.get_file_list(self._temp_path, None)
 
         self.assertListEqual(
-            sorted(BuilderClass.binary_files.keys()),
+            sorted(BuilderClass._binary_files.keys()),
             ["sw01001.sph", "sw01337.sph"])
 
     def test_read_call_con(self):
