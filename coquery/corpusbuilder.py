@@ -637,14 +637,20 @@ class BaseCorpusBuilder(corpus.SQLResource):
         self._image_features.append(rc_feature)
 
     @classmethod
-    def add_exposed_id(cls, rc_feature):
+    def add_exposed_id(cls, table_name):
         """
-        Add the resource feature to the list of exposed IDs.
+        Add the identifier from the table name to the list of exposed IDs.
 
         Exposed IDs are selectable in the resource tree, i.e. they are added
         to the list of queryable corpus features.
+
+        Parameters
+        ----------
+        table_name : str
+            The resource table name that contains the ID to be exposed, e.g.
+            "word" if the resource feature to be exposed is "word_id".
         """
-        cls.exposed_ids.append(rc_feature)
+        cls.exposed_ids.append("{}_id".format(table_name))
 
     def get_lexicon_code(self):
         """ return a text string containing the Python source code from
@@ -1220,10 +1226,15 @@ class BaseCorpusBuilder(corpus.SQLResource):
                    getattr(self, "corpus_word"))
 
         values = []
+        corpus_table = self._new_tables[self.corpus_table]
+        numerics = {col: corpus_table.get_column(col.rstrip("1234567890")).is_numeric()
+                  for col in columns}
+
         for pad in range(1, self.corpusngram_width):
             pos = self.corpusngram_width - pad
             row = ["{{last_row}} + {}".format(pos)]
-            row += ["{{{}}}".format(x)
+            row += ["{{{}}}".format(x) if numerics[x] else
+                    "'{{{}}}'".format(x)
                     for x in columns[1:-self.corpusngram_width]]
 
             word_columns = (["{{{word}{n}}}".format(
@@ -2206,7 +2217,6 @@ class TEICorpusBuilder(XMLCorpusBuilder):
                 self.process_tree(tei_file)
         elif root.tag == "TEI":
             # assume that this is just one TEI document
-            print("tei")
             super(TEICorpusBuilder, self).process_tree(tree)
 
     def process_header(self, tree):
