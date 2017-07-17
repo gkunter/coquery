@@ -119,7 +119,6 @@ class ExternalCorpus(SQLResource):
 
 
 class TestCorpus(unittest.TestCase):
-    resource = CorpusResource
     flat_resource = FlatResource
 
     @staticmethod
@@ -127,6 +126,7 @@ class TestCorpus(unittest.TestCase):
         return [x.lower().startswith(("n", "v")) for x in l]
 
     def setUp(self):
+        self.resource = CorpusResource
         self.maxDiff = None
         options.cfg = argparse.Namespace()
         options.cfg.number_of_tokens = 0
@@ -578,6 +578,12 @@ class TestCorpus(unittest.TestCase):
         self.assertDictEqual(
             d, {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
 
+    #def test_get_token_conditions_initial_wildcard_rev(self):
+        #token = COCAToken("*ing")
+        #d = self.resource.get_token_conditions(0, token)
+        #self.assertDictEqual(
+            #d, {"word": ["COQ_WORD_1.Word_rev"]})
+
     def test_token_condition_empty_1(self):
         token = COCAToken("*")
         d = self.resource.get_token_conditions(0, token)
@@ -758,6 +764,14 @@ class TestCorpus(unittest.TestCase):
              ON COQ_SOURCE_2.FileId = FileId2""")])
         self.assertListEqual(l2, [])
 
+    def test_get_annotations(self):
+        s = self.resource.test_get_annotations(1, "segments")
+        print(s)
+        #self.assertEqual(s,
+                         #simple("""
+
+                             #""")
+
     ### QUERY STRINGS
 
     def test_query_string_blank(self):
@@ -795,6 +809,26 @@ class TestCorpus(unittest.TestCase):
             INNER JOIN Lexicon AS COQ_WORD_1
                     ON COQ_WORD_1.WordId = WordId1
             WHERE (COQ_WORD_1.Word LIKE 'a%')"""
+
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
+
+    def test_query_string_initial_wildcard(self):
+        query = TokenQuery("*ing", self.Session)
+        query_string = self.resource.get_query_string(query.query_list[0],
+                                                      ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Start AS Start1,
+                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            WHERE (COQ_WORD_1.Word LIKE '%ing')"""
 
         self.assertEqual(simple(query_string),
                          simple(target_string))
@@ -1005,6 +1039,14 @@ class TestSuperFlat(unittest.TestCase):
     def test_get_origin_rc(self):
         self.assertEqual(self.resource.get_origin_rc(), "corpus_file_id")
 
+    def test_get_required_columns(self):
+        query = TokenQuery("*", self.Session)
+        l = self.resource.get_required_columns(query.query_list[0],
+                                               ["corpus_word"])
+        self.assertListEqual(l, ["Word1 AS coq_corpus_word_1",
+                                 "ID1 AS coquery_invisible_corpus_id",
+                                 "FileId1 AS coquery_invisible_origin_id"])
+
     def test_linked_feature_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
         l1, l2 = self.resource.get_feature_joins(0, [ext_feature])
@@ -1053,6 +1095,15 @@ class TestSuperFlat(unittest.TestCase):
         self.assertListEqual(
             l, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'b%')"])
 
+    def test_get_external_join(self):
+        ext_feature = "{}.word_data".format(self.link.get_hash())
+        s = self.resource.get_external_join(0, ext_feature)
+        self.assertEqual(
+            s,
+            simple("""
+                   LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1
+                   ON EXTCORP_LEXICON_1.Word = COQ_CORPUS_1.Word1"""))
+
 
 class TestCorpusWithExternal(unittest.TestCase):
     external = ExternalCorpus
@@ -1086,6 +1137,14 @@ class TestCorpusWithExternal(unittest.TestCase):
         col = "{}.word_data".format(self.link.get_hash())
         self.assertTrue(self.resource.is_lexical(col))
 
+    def test_get_external_join(self):
+        ext_feature = "{}.word_data".format(self.link.get_hash())
+        s = self.resource.get_external_join(0, ext_feature)
+        self.assertEqual(s,
+                         simple("""
+                             LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1
+                             ON EXTCORP_LEXICON_1.Word = COQ_WORD_1.Word"""))
+
     def test_linked_feature_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
         l1, l2 = self.resource.get_feature_joins(0, [ext_feature])
@@ -1094,7 +1153,7 @@ class TestCorpusWithExternal(unittest.TestCase):
             [simple("INNER JOIN Lexicon AS COQ_WORD_1 "
                     "ON COQ_WORD_1.WordId = WordId1"),
              simple("LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1 "
-                    "ON EXTCORP_LEXICON_1.Word = COQ_WORD_1.Word1")])
+                    "ON EXTCORP_LEXICON_1.Word = COQ_WORD_1.Word")])
         self.assertListEqual(l2, [])
 
     def test_linked_required_columns(self):
@@ -1144,6 +1203,7 @@ class TestCorpusWithExternal(unittest.TestCase):
              "EXTCORP_LEXICON_3.ExtData AS db_extcorp_coq_word_data_3",
              "ID1 AS coquery_invisible_corpus_id",
              "FileId1 AS coquery_invisible_origin_id"])
+
 
 
 class TestNGramCorpus(unittest.TestCase):
