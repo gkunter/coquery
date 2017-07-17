@@ -168,8 +168,11 @@ class Function(CoqObject):
             return self.get_name()
         else:
             args = []
-            args.append(",".join([session.translate_header(x)
-                                  for x in self.columns]))
+            if session is not None:
+                args.append(",".join([session.translate_header(x)
+                                      for x in self.columns]))
+            else:
+                args.append(",".join(self.columns))
             if self.value:
                 args.append('"{}"'.format(self.value))
             if len(self.columns) > 1:
@@ -239,6 +242,8 @@ class Function(CoqObject):
         """
         ref_corpus = options.cfg.reference_corpus.get(
                          options.cfg.current_server, None)
+        if ref_corpus is None:
+            return None
         res = options.cfg.current_resources[ref_corpus]
         ResourceClass, CorpusClass, LexiconClass, _ = res
         lexicon = LexiconClass()
@@ -337,6 +342,18 @@ class StringSeriesFunction(StringFunction):
     single_column = False
 
     def evaluate(self, df, value=None, *args, **kwargs):
+
+        # eliminate 'session' and 'manager' keywords because they are not
+        # accepted by the Series string functions:
+        try:
+            kwargs.pop("session")
+        except KeyError:
+            pass
+        try:
+            kwargs.pop("manager")
+        except KeyError:
+            pass
+
         # ensure that regex functions use unicode:
         if self.str_func in ("contains", "extract", "count"):
             if "(?u)" not in value:
@@ -345,15 +362,13 @@ class StringSeriesFunction(StringFunction):
             _df = pd.concat([getattr(df[col].astype(str).str
                                      if df[col].dtype != object
                                      else df[col].str,
-                                     self.str_func)
-                             (value, *args, **kwargs)
+                                     self.str_func)(value, *args, **kwargs)
                              for col in self.columns], axis="columns")
         else:
             _df = pd.concat([getattr(df[col].astype(str).str
                                      if df[col].dtype != object
                                      else df[col].str,
-                                     self.str_func)
-                             (*args, **kwargs)
+                                     self.str_func)(*args, **kwargs)
                              for col in self.columns], axis="columns")
 
         groups = len(_df.columns) // len(self.columns)
@@ -363,7 +378,6 @@ class StringSeriesFunction(StringFunction):
                            for col, _ in enumerate(self.columns)]
         else:
             _df.columns = [self.get_id()]
-
         return _df.fillna("")
 
 
@@ -1178,6 +1192,8 @@ class SuperCondProb(Proportion):
             span = pd.concat([left, df[columns]], axis="columns")
 
             resource = self.get_resource(**kwargs)
+            if resource is None:
+                return self.constant(df, None)
             url = sqlhelper.sql_url(options.cfg.current_server,
                                     resource.db_name)
             engine = sqlalchemy.create_engine(url)
