@@ -117,7 +117,11 @@ class CoqResourceTree(classes.CoqTreeWidget):
             leaf.setObjectName(rc_feature)
             if checkable:
                 leaf.setCheckState(0, QtCore.Qt.Unchecked)
-            label = getattr(resource, rc_feature)
+
+            try:
+                label = getattr(resource, rc_feature)
+            except AttributeError:
+                return None
 
             # Add labels if this feature is mapped to a query item type
             if rc_feature == getattr(resource, "query_item_word", None):
@@ -141,9 +145,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
         def fill_grouped():
             rc_features = [x for x in resource.get_queryable_features()
                            if (not x.endswith(("_id", "_table")) and
-                               not x.startswith(("tag_")) and
+                               not x.startswith(("tag_", "corpusngram")) and
                                not x.startswith(skip))]
-
             rc_features.extend(resource.get_exposed_ids())
 
             segment_features = [x for x in rc_features
@@ -185,7 +188,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
                     warnings.warn(str(e))
                     print(e)
                 finally:
-                    target_root.addChild(leaf)
+                    if leaf:
+                        target_root.addChild(leaf)
 
             if lexicon_root.childCount():
                 self.addTopLevelItem(lexicon_root)
