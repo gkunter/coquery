@@ -112,8 +112,8 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_time_feature(self.corpus_starttime)
         self.add_time_feature(self.corpus_endtime)
         self.add_time_feature(self.speaker_birth)
-        self.add_exposed_id(self.source_id)
-        self.add_exposed_id(self.speaker_id)
+        self.add_exposed_id("source")
+        self.add_exposed_id("speaker")
 
         self._file_id = 1
         self._token_id = 0
@@ -228,10 +228,10 @@ class BuilderClass(BaseCorpusBuilder):
                 l.insert(new_pos, x)
                 new_pos += 1
 
-        cls.binary_files = {}
+        cls._binary_files = {}
         for path, folders, files in os.walk(options.cfg.binary_path):
             for f in files:
-                cls.binary_files[f] = path
+                cls._binary_files[f] = path
 
         return l
 
@@ -248,6 +248,9 @@ class BuilderClass(BaseCorpusBuilder):
 
         # remove unneeded characters:
         df["Side"] = df["Side"].str.strip('"\' ').apply(utf8)
+
+        # replace unknown ivi_no by NA:
+        df["ivi_no"] = df["ivi_no"].replace("UNK", pd.np.nan).astype(float)
         return df.drop(["V1", "V2", "V3"], axis=1)
 
     @classmethod
@@ -379,7 +382,7 @@ class BuilderClass(BaseCorpusBuilder):
         conv_id = file_name[2:6]
         audio_name = "sw0{}.sph".format(conv_id)
         try:
-            return os.path.join(cls.binary_files[audio_name], audio_name)
+            return os.path.join(cls._binary_files[audio_name], audio_name)
         except KeyError:
             return ""
 
@@ -394,14 +397,16 @@ class BuilderClass(BaseCorpusBuilder):
 
     def _build_store_meta_data(self):
         self.DB.load_dataframe(self._df_caller,
-                               table=self.speaker_table,
+                               table_name=self.speaker_table,
                                index_label=None,
                                if_exists="replace")
 
-        self.DB.load_dataframe(self.merge_meta_data(self._df_call,
-                                                    self._df_topic,
-                                                    self._df_rating),
-                               table=self.source_table,
+        df = self.merge_meta_data(self._df_call,
+                                  self._df_topic,
+                                  self._df_rating)
+
+        self.DB.load_dataframe(df,
+                               table_name=self.source_table,
                                index_label=None,
                                if_exists="replace")
 
