@@ -155,7 +155,7 @@ class TestStringFunctions(unittest.TestCase):
         func = StringExtract(columns=["coq_word_label_1"], value="[abx]*")
         val = FunctionList([func]).lapply(df0, session=None)
         self.assertListEqual(
-            val[[-1]].values.ravel().tolist(),
+            val.iloc[:, -1].values.ravel().tolist(),
             ["ab", "ab", "ab", "x", "x"])
 
     def test_extract_groups(self):
@@ -167,15 +167,15 @@ class TestStringFunctions(unittest.TestCase):
         func = StringExtract(columns=["a"], value="(a).*(x)")
         val = FunctionList([func]).lapply(df, session=None)
         self.assertListEqual(
-            val[[-2]].values.ravel().tolist(), ["a"] * 5 + [""] * 10)
+            val.iloc[:, -2].values.ravel().tolist(), ["a"] * 5 + [""] * 10)
         self.assertListEqual(
-            val[[-1]].values.ravel().tolist(), ["x"] * 5 + [""] * 10)
+            val.iloc[:, -1].values.ravel().tolist(), ["x"] * 5 + [""] * 10)
 
     def test_upper(self):
         df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
                            "b": [""] * 10 + ["yyannxzzz"] * 5})
         func = StringUpper(columns=["a"])
-        val = FunctionList([func]).lapply(df, session=None)[[-1]]
+        val = FunctionList([func]).lapply(df, session=None).iloc[:, -1]
         self.assertListEqual(
             val.values.ravel().tolist(),
             ["ABX"] * 5 + ["A"] * 5 + ["BX"] * 5)
@@ -186,17 +186,17 @@ class TestStringFunctions(unittest.TestCase):
         func = StringUpper(columns=["a", "b"])
         val = FunctionList([func]).lapply(df, session=None)
         self.assertListEqual(
-            val[[-2]].values.ravel().tolist(),
+            val.iloc[:, -2].values.ravel().tolist(),
             ["ABX"] * 5 + ["A"] * 5 + ["BX"] * 5)
         self.assertListEqual(
-            val[[-1]].values.ravel().tolist(),
+            val.iloc[:, -1].values.ravel().tolist(),
             [""] * 10 + ["YYANNXZZZ"] * 5)
 
     def test_lower(self):
         df = pd.DataFrame({"a": list("ABCDEFGHIJ"),
                            "b": list("ABABABABAB")})
         func = StringLower(columns=["a"])
-        val = FunctionList([func]).lapply(df, session=None)[[-1]]
+        val = FunctionList([func]).lapply(df, session=None).iloc[:, -1]
         self.assertListEqual(
             val.values.ravel().tolist(), list("abcdefghij"))
 
@@ -206,9 +206,9 @@ class TestStringFunctions(unittest.TestCase):
         func = StringLower(columns=["a", "b"])
         val = FunctionList([func]).lapply(df, session=None)
         self.assertListEqual(
-            val[[-2]].values.ravel().tolist(), list("abcdefghij"))
+            val.iloc[:, -2].values.ravel().tolist(), list("abcdefghij"))
         self.assertListEqual(
-            val[[-1]].values.ravel().tolist(), list("ababababab"))
+            val.iloc[:, -1].values.ravel().tolist(), list("ababababab"))
 
 
 class TestMathFunctions(unittest.TestCase):
@@ -770,15 +770,15 @@ class TestDistributionalFunctions(unittest.TestCase):
             ["a", "b", "c", "d"])
 
 
+provided_tests = (TestFrequencyFunctions, TestStringFunctions,
+                  TestMathFunctions, TestLogicalFunctions,
+                  TestDistributionalFunctions)
+
+
 def main():
-    suite = unittest.TestSuite([
-         unittest.TestLoader().loadTestsFromTestCase(x) for x in
-         [TestFrequencyFunctions,
-          TestStringFunctions,
-          TestMathFunctions,
-          TestLogicalFunctions,
-          TestDistributionalFunctions]
-        ])
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(x)
+         for x in provided_tests])
     unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
