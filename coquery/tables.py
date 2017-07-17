@@ -96,6 +96,11 @@ class Column(object):
     def data_type(self, new_type):
         self._data_type = new_type
 
+    def is_numeric(self):
+        return (self.base_type.endswith("INT") or
+                self.base_type in ("FLOAT", "REAL", "DECIMAL",
+                                   "NUMERIC", "DOUBLE"))
+
 
 class Identifier(Column):
     """ Define a Column class that acts as the primary key in a table."""
@@ -405,8 +410,8 @@ class Table(object):
             with self._DB.engine.connect() as connection:
                 v_min, _ = connection.execute(S).fetchone()
 
-            if v_min >= 0 and "UNSIGNED" not in dt_type:
-                dt_type = "{} UNSIGNED".format(dt_type)
+            #if v_min >= 0 and "UNSIGNED" not in dt_type:
+                #dt_type = "{} UNSIGNED".format(dt_type)
 
         # all other data types:
         else:
