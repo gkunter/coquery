@@ -243,10 +243,12 @@ class BaseResource(CoqObject):
             List of strings containing the resource feature names
         """
         # create a list with all split resources:
-        split_features = [cls.split_resource_feature(x) for x in dir(cls) if "_" in x and not x.startswith("_")]
+        split_features = [cls.split_resource_feature(x) for x in dir(cls)
+                          if "_" in x and not x.startswith("_")]
 
         # create a list of table names from the resource features:
-        tables = [table for _, table, feature in split_features if feature == "table"]
+        tables = [table for _, table, feature in split_features
+                  if feature == "table"]
         # add special tables:
         tables += cls.special_table_list
 
@@ -266,8 +268,8 @@ class BaseResource(CoqObject):
         l = cls.get_resource_features()
         # FIXME: this function might be usable to make some table IDs
         # exposable (see issue #174)
-        return [x for x in l
-                if x not in cls.audio_features and
+        return [x for x in l if
+                x not in cls.audio_features and
                 x not in cls.video_features and
                 x not in cls.image_features]
 
@@ -903,6 +905,39 @@ class SQLResource(BaseResource):
                   table=ext_table, N=n+1).upper()
 
     @classmethod
+    def get_external_join(cls, n, rc_feature):
+        """
+        Return the join string for the link represented by the
+        resource feature.
+        """
+        hashed, table, _ = cls.split_resource_feature(rc_feature)
+        link, res = get_by_hash(hashed)
+        _, int_tab, int_feat = cls.split_resource_feature(link.rc_from)
+        int_alias = "COQ_{}_{}".format(int_tab.upper(), n+1)
+        int_column = getattr(cls, link.rc_from)
+
+        ext_table = getattr(res, "{}_table".format(table))
+        ext_alias = cls.alias_external_table(n, link, res)
+        ext_name = "{}.{}".format(res.db_name, ext_table)
+        ext_column = getattr(res, link.rc_to)
+
+        table_string = "{ext_name} AS {ext_alias}".format(
+            ext_name=ext_name, ext_alias=ext_alias)
+
+        if int_tab == "corpus":
+            s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}{N}"
+        else:
+            s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}"
+        where_string = s.format(
+                    ext_alias=ext_alias, ext_column=ext_column,
+                    int_alias=int_alias, int_column=int_column,
+                    N=n+1)
+
+        table_string = "{} {} ON {}".format(
+            link.join_type, table_string, where_string)
+        return table_string
+
+    @classmethod
     def get_feature_joins(cls, n, selected, conditions={}, first_item=1):
         """
         Returns a list of table joins that are needed to satisfy the given
@@ -946,35 +981,6 @@ class SQLResource(BaseResource):
                 where_list += l2
             return table_list, where_list
 
-        def get_external_join(n, rc_feature):
-            """
-            Return the join string for the link represented by the
-            resource feature.
-            """
-            hashed, table, _ = cls.split_resource_feature(rc_feature)
-            link, res = get_by_hash(hashed)
-            _, int_tab, int_feat = cls.split_resource_feature(link.rc_from)
-            int_alias = "COQ_{}_{}".format(int_tab.upper(), n+1)
-            int_column = getattr(cls, link.rc_from)
-
-            ext_table = getattr(res, "{}_table".format(table))
-            ext_alias = cls.alias_external_table(n, link, res)
-            ext_name = "{}.{}".format(res.db_name, ext_table)
-            ext_column = getattr(res, link.rc_to)
-
-            table_string = "{ext_name} AS {ext_alias}".format(
-                ext_name=ext_name, ext_alias=ext_alias)
-
-            s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}{N}"
-            where_string = s.format(
-                        ext_alias=ext_alias, ext_column=ext_column,
-                        int_alias=int_alias, int_column=int_column,
-                        N=n+1)
-
-            table_string = "{} {} ON {}".format(
-                link.join_type, table_string, where_string)
-            return table_string
-
         table_list = []
         where_list = []
 
@@ -1005,7 +1011,7 @@ class SQLResource(BaseResource):
         for rc_feature in sorted(selected):
             hashed, _, _ = cls.split_resource_feature(rc_feature)
             if hashed is not None:
-                table_string = get_external_join(n, rc_feature)
+                table_string = cls.get_external_join(n, rc_feature)
                 if table_string not in table_list:
                     table_list.append(table_string)
 
@@ -1192,8 +1198,16 @@ class SQLResource(BaseResource):
         return d
 
     @classmethod
-    def get_annotation(cls, n, table):
+    def get_annotation(cls, length, table):
         """
+        Get the join string that is needed to query time-aligned annotations.
+
+        Parameters
+        ----------
+        length : int
+            The number of query items
+        table : str
+            The resource table name, e.g. "segments"
         """
         sql_template = "LEFT JOIN {table_name} AS {table_alias}"
         kwargs = {
@@ -1202,15 +1216,16 @@ class SQLResource(BaseResource):
         table_str = sql_template.format(**kwargs)
 
         sql_template = (
-            "{table_alias}.{table_end} - COQ_CORPUS_1.{parent_start} > 0.001"
-            " AND {parent_alias}.{parent_end} - {table_alias}.{table_start} > 0.001"
-            " AND {table_alias}.{table_origin} = COQ_CORPUS_1.{parent_origin}")
+            "{table_alias}.{table_end} - {parent_start}1 > 0.001"
+            " AND {parent_end}{N} - {table_alias}.{table_start} > 0.001"
+            " AND {table_alias}.{table_origin} = {parent_origin}1")
         kwargs = {
+            "N": length,
             "table_alias": "COQ_{}_1".format(table.upper()),
             "table_start": getattr(cls, "{}_starttime".format(table)),
             "table_end": getattr(cls, "{}_endtime".format(table)),
             "table_origin": getattr(cls, "{}_origin_id".format(table)),
-            "parent_alias": "COQ_CORPUS_{}".format(n),
+            "parent_alias": "COQ_CORPUS_{}".format(length),
             "parent_start": cls.corpus_starttime,
             "parent_end": cls.corpus_endtime,
             "parent_origin": getattr(cls, "corpus_source_id", "") or
@@ -1919,8 +1934,13 @@ class CorpusClass(object):
         s = s.replace("'", "''")
         s = s.replace("%", "%%")
 
-        if (engine.url, s) in self._frequency_cache:
-            return self._frequency_cache[(engine.url, s)]
+        if options.cfg.query_case_sensitive:
+            key = (engine.url, s, True)
+        else:
+            key = (engine.url, s.lower(), False)
+
+        if key in self._frequency_cache:
+            return self._frequency_cache[key]
 
         query_list = tokens.preprocess_query(s)
         freq = 0
@@ -1931,7 +1951,7 @@ class CorpusClass(object):
             df = pd.read_sql(S, engine)
             freq += df.values.ravel()[0]
 
-        self._frequency_cache[(engine.url, s)] = freq
+        self._frequency_cache[key] = freq
         return freq
 
     def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):
