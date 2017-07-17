@@ -35,9 +35,8 @@ def main():
                       TestCorpusWithExternal, TestNGramCorpus]
 
     if not args or "corpusbuilder" in args:
-        from test.test_corpusbuilder import (
-            TestXMLCorpusBuilder,TestTEICorpusBuilder)
-        test_list += [TestXMLCorpusBuilder, TestTEICorpusBuilder]
+        from test.test_corpusbuilder import provided_tests
+        test_list += provided_tests
 
     if not args or "filters" in args:
         from test.test_filters import TestFilterString, TestApply
@@ -48,11 +47,8 @@ def main():
         test_list += [TestFunctionList]
 
     if not args or "functions" in args:
-        from test.test_functions import (
-            TestFrequencyFunctions, TestStringFunctions, TestMathFunctions,
-            TestLogicalFunctions)
-        test_list += [TestFrequencyFunctions, TestStringFunctions,
-                      TestMathFunctions, TestLogicalFunctions]
+        from test import test_functions
+        test_list += test_functions.provided_tests
 
     if not args or "managers" in args:
         from test.test_managers import TestManager
@@ -70,6 +66,10 @@ def main():
     if not args or "switchboard" in args:
         from test.test_switchboard import TestSwitchboard
         test_list += [TestSwitchboard]
+
+    if not args or "tables" in args:
+        from test.test_tables import provided_tests
+        test_list += provided_tests
 
     if not args or "textgrids" in args:
         from test.test_textgrids import TestTextGridModuleMethods
