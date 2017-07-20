@@ -285,6 +285,8 @@ class Session(object):
                 df = current_query.insert_static_data(df)
                 #df["coquery_invisible_query_number"] = i
 
+                self.to_file = to_file
+
                 if not to_file:
                     self.data_table = self.data_table.append(df)
                 else:
