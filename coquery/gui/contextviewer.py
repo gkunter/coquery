@@ -290,7 +290,7 @@ class ContextView(QtWidgets.QWidget):
     def prepare_textgrid(self, df, offset):
         grid = tgt.TextGrid()
         tier = tgt.IntervalTier()
-        tier.name = "Context"
+        tier.name = "Words"
         grid.add_tier(tier)
         for x in df.index:
             start = df.loc[x]["coq_word_starttime_1"]
