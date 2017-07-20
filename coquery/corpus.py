@@ -1106,21 +1106,15 @@ class SQLResource(BaseResource):
                 elif options.get_configuration_type() == SQL_SQLITE:
                     return "{} COLLATE NOCASE".format(s)
 
-        def get_operator(S, negated):
+        def get_operator(S):
             if options.cfg.regexp:
                 operator = "REGEXP"
             else:
                 token = tokens.COCAToken(S)
                 if token.has_wildcards(S):
-                    if negated:
-                        operator = "NOT LIKE"
-                    else:
-                        operator = "LIKE"
+                    operator = "LIKE"
                 else:
-                    if negated:
-                        operator = "<>"
-                    else:
-                        operator = "="
+                    operator = "="
             return operator
 
         d = defaultdict(list)
@@ -1157,7 +1151,7 @@ class SQLResource(BaseResource):
                 val = tokens.COCAToken.replace_wildcards(x)
                 format_str = handle_case("{alias} {op} '{val}'")
                 s = format_str.format(alias=alias,
-                                      op=get_operator(x, token.negated),
+                                      op=get_operator(x),
                                       val=val)
             else:
                 wildcards = []
@@ -1178,7 +1172,7 @@ class SQLResource(BaseResource):
                 if options.cfg.regexp:
                     operator = "REGEXP"
                 else:
-                    operator = "LIKE" if not token.negated else "NOT LIKE"
+                    operator = "LIKE"
                 format_str = handle_case("{alias} {op} '{val}'")
                 s_list = [format_str.format(
                             alias=alias,
@@ -1363,7 +1357,10 @@ class SQLResource(BaseResource):
                 else:
                     conditions = {}
                 for _, l in conditions.items():
-                    condition_list += ["({})".format(x) for x in l]
+                    s = " AND ".join(["({})".format(x) for x in l])
+                    if token.negated:
+                        s = "NOT ({})".format(s)
+                    condition_list.append(s)
 
                 if first_item != 1:
                     table_list, where_list = cls.get_feature_joins(

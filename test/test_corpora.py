@@ -549,22 +549,25 @@ class TestCorpus(unittest.TestCase):
     def test_get_token_conditions_negated_1(self):
         token = COCAToken("~a*")
         d = self.resource.get_token_conditions(0, token)
+        self.assertTrue(token.negated)
         self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word NOT LIKE 'a%'"]})
+            d, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
 
     def test_get_token_conditions_negated_2(self):
         token = COCAToken("~*.[n*]")
         d = self.resource.get_token_conditions(0, token)
+        self.assertTrue(token.negated)
         self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.POS NOT LIKE 'n%'"]})
+            d, {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
 
     def test_get_token_conditions_negated_3(self):
         token = COCAToken("~a*.[n*]")
         d = self.resource.get_token_conditions(0, token)
+        self.assertTrue(token.negated)
         self.assertDictEqual(
             d,
-            {"word": ["COQ_WORD_1.Word NOT LIKE 'a%'",
-                      "COQ_WORD_1.POS NOT LIKE 'n%'"]})
+            {"word": ["COQ_WORD_1.Word LIKE 'a%'",
+                      "COQ_WORD_1.POS LIKE 'n%'"]})
 
     def test_get_token_conditions_quote_char_1(self):
         token = COCAToken("'ll")
@@ -764,13 +767,13 @@ class TestCorpus(unittest.TestCase):
              ON COQ_SOURCE_2.FileId = FileId2""")])
         self.assertListEqual(l2, [])
 
-    def test_get_annotations(self):
-        s = self.resource.test_get_annotations(1, "segments")
-        print(s)
-        #self.assertEqual(s,
-                         #simple("""
+    #def test_get_annotations(self):
+        #s = self.resource.test_get_annotations(1, "segments")
+        #print(s)
+        ##self.assertEqual(s,
+                         ##simple("""
 
-                             #""")
+                             ##""")
 
     ### QUERY STRINGS
 
@@ -790,6 +793,46 @@ class TestCorpus(unittest.TestCase):
             INNER JOIN Lexicon AS COQ_WORD_1
                     ON COQ_WORD_1.WordId = WordId1"""
 
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
+
+    def test_query_string_combined(self):
+        query = TokenQuery("a*.[n*]", self.Session)
+        query_string = self.resource.get_query_string(query.query_list[0],
+                                                      ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Start AS Start1,
+                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            WHERE (COQ_WORD_1.Word LIKE 'a%') AND
+                  (COQ_WORD_1.POS LIKE 'n%')"""
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
+
+    def test_query_string_combined_negated_1(self):
+        query = TokenQuery("~a*.[n*]", self.Session)
+        query_string = self.resource.get_query_string(query.query_list[0],
+                                                      ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Start AS Start1,
+                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            WHERE NOT ((COQ_WORD_1.Word LIKE 'a%') AND
+                       (COQ_WORD_1.POS LIKE 'n%'))"""
         self.assertEqual(simple(query_string),
                          simple(target_string))
 
@@ -905,6 +948,39 @@ class TestCorpus(unittest.TestCase):
             WHERE (COQ_WORD_1.Word LIKE 'a%') AND
                   (COQ_WORD_2.Word LIKE 'b%')"""
 
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
+
+    def test_query_string_two_items_negated(self):
+        query = TokenQuery("~a*|b* ~b*", self.Session)
+        query_string = self.resource.get_query_string(query.query_list[0],
+                                                      ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   COQ_WORD_2.Word AS coq_word_label_2,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Start AS Start1,
+                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            INNER JOIN (SELECT End AS End2,
+                         FileId AS FileId2,
+                         ID AS ID2,
+                         Start AS Start2,
+                         WordId AS WordId2 FROM Corpus) AS COQ_CORPUS_2
+                    ON ID2 = ID1 + 1
+
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            INNER JOIN Lexicon AS COQ_WORD_2
+                    ON COQ_WORD_2.WordId = WordId2
+
+            WHERE NOT ((COQ_WORD_1.Word LIKE 'a%' OR COQ_WORD_1.Word LIKE 'b%'))
+                  AND
+                  NOT ((COQ_WORD_2.Word LIKE 'b%'))"""
         self.assertEqual(simple(query_string),
                          simple(target_string))
 
