@@ -1215,6 +1215,68 @@ class SuperCondProb(Proportion):
         return val
 
 
+class ConditionalProbability2(SuperCondProb):
+    """
+    Calculate the conditional probability P(B|A) for the selected columns.
+
+    This function expects two columns that represent A and B, respectively.
+    Usually, A corresponds to words preceding the target string B.
+
+    For every row _i_, P(B_i_|A_i_) = f(A_i_ + B_i_) / P(A_i_).
+
+    The content of these columns are interpreted as query strings. This means
+    that they have to be syntactically correct, or the function will fail.
+    """
+    _name = "CondProb"
+    minimum_columns = 2
+    maximum_columns = 2
+
+    def get_resource(self, **kwargs):
+        session = kwargs["session"]
+        return session.Resource
+
+    def evaluate(self, df, *args, **kwargs):
+        session = kwargs["session"]
+
+        resource = self.get_resource(**kwargs)
+        if resource is None:
+            return self.constant(df, None)
+
+        url = sqlhelper.sql_url(options.cfg.current_server, resource.db_name)
+        engine = sqlalchemy.create_engine(url)
+
+        try:
+            span = df[self.columns[0]] + " " + df[self.columns[1]]
+            left = df[self.columns[0]]
+
+            print(span.head())
+            print(left.head())
+
+            freq_full = span.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+            freq_part = left.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+
+            print(freq_full.head())
+            print(freq_part.head())
+        except Exception as e:
+            logging.error(str(e))
+            val = self.constant(df, None)
+        else:
+            val = freq_full / freq_part
+        finally:
+            engine.dispose()
+        return val
+
+
+class ExternalConditionalProbability2(ConditionalProbability2):
+    _name = "ExtCondProb"
+
+    def get_resource(self, **kwargs):
+        res = self.get_reference()
+        return res
+
+
 class ExternalCondProb(SuperCondProb):
     _name = "Reference Conditional Probability"
 
