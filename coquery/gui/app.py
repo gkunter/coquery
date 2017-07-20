@@ -3063,7 +3063,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                             in columns])
         if all(dtypes == object):
             return (functions.StringFunction,
-                    functions.Comparison)
+                    functions.Comparison,
+                    functions.BaseProportion)
         else:
             return (functions.MathFunction,
                     functions.LogicFunction)
