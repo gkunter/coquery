@@ -363,13 +363,18 @@ class Manager(CoqObject):
             print("\tarrange_groups({})".format(self._groups))
 
         for group in self._groups:
-            # always sort minimally by the token ID
-            columns = group.columns + ["coquery_invisible_corpus_id"]
-            directions = [True] * len(columns)
+            columns = list(group.columns)
 
-            df = df.sort_values(by=columns,
-                                ascending=directions,
-                                axis="index")
+            # always sort minimally by the token ID, unless the data is
+            # directly written to a file:
+            if not session.to_file:
+                columns.append("coquery_invisible_corpus_id")
+
+            if columns:
+                directions = [True] * len(columns)
+                df = df.sort_values(by=columns,
+                                    ascending=directions,
+                                    axis="index")
 
         df = df.reset_index(drop=True)
         if options.cfg.verbose:
