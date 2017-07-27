@@ -238,9 +238,9 @@ class TestFlatCorpusBuilder(unittest.TestCase):
         s = self.builder.build_lookup_get_padding_string()
         self.assertEqual(simple(s),
                          simple("""
-        INSERT INTO CorpusNgram (ID1, FileId1, Word1, Word2, Word3, POS1, POS2, POS3)
-        VALUES ({last_row} + 1, {FileId1}, {WordId2}, {WordId3}, {na_value}, {POS2}, {POS3}, {na_value}),
-               ({last_row} + 2, {FileId1}, {WordId3}, {na_value}, {na_value}, {POS3}, {na_value}, {na_value})
+        INSERT INTO CorpusNgram (ID1, FileId1, POS1, POS2, POS3, Word1, Word2, Word3)
+        VALUES ({last_row} + 1, {FileId1}, {POS2}, {POS3}, {na_value},{WordId2}, {WordId3}, {na_value}),
+               ({last_row} + 2, {FileId1}, {POS3}, {na_value}, {na_value}, {WordId3}, {na_value}, {na_value})
                """))
 
 
