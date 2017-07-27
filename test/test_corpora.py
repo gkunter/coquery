@@ -219,13 +219,16 @@ class TestCorpus(unittest.TestCase):
             self.resource.get_token_order([i1, i2]),
             [i2, i1])
 
-    def test_is_lexical(self):
+    def test_is_lexical_1(self):
         self.assertTrue(self.resource.is_lexical("word_label"))
         self.assertTrue(self.resource.is_lexical("lemma_label"))
         self.assertTrue(self.resource.is_lexical("word_id"))
-        self.assertTrue(self.resource.is_lexical("segment_label"))
-        self.assertTrue(self.resource.is_lexical("corpus_word_id"))
         self.assertFalse(self.resource.is_lexical("source_label"))
+        self.assertFalse(self.resource.is_lexical("segment_label"))
+
+    def test_is_lexical_2(self):
+        self.assertTrue(self.resource.is_lexical("corpus_id"))
+        self.assertTrue(self.resource.is_lexical("corpus_word_id"))
         self.assertFalse(self.resource.is_lexical("corpus_source_id"))
 
     def test_get_origin_rc(self):
@@ -1107,10 +1110,14 @@ class TestSuperFlat(unittest.TestCase):
         options.cfg.table_links = {}
         options.cfg.table_links[options.cfg.current_server] = [self.link]
 
-    def test_is_lexical(self):
+    def test_is_lexical_1(self):
+        self.assertFalse(self.resource.is_lexical("file_path"))
+        self.assertFalse(self.resource.is_lexical("file_id"))
+
+    def test_is_lexical_2(self):
+        self.assertTrue(self.resource.is_lexical("corpus_id"))
         self.assertTrue(self.resource.is_lexical("corpus_word"))
         self.assertTrue(self.resource.is_lexical("corpus_lemma"))
-        self.assertFalse(self.resource.is_lexical("file_path"))
 
     def test_get_origin_rc(self):
         self.assertEqual(self.resource.get_origin_rc(), "corpus_file_id")
@@ -1292,7 +1299,7 @@ class TestNGramCorpus(unittest.TestCase):
         options.cfg.limit_matches = False
         options.cfg.regexp = False
         options.cfg.query_case_sensitive = False
-        options.cfg.experimental = True
+        options.cfg.experimental = False
         options.get_configuration_type = lambda: SQL_MYSQL
         options.get_resource = _monkeypatch_get_resource
         self.Session = MockOptions()

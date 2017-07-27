@@ -108,6 +108,7 @@ class BaseResource(CoqObject):
     audio_features = []
     image_features = []
     video_features = []
+    lexical_features = []
     exposed_ids = []
 
     def __init__(self):
@@ -538,48 +539,56 @@ class BaseResource(CoqObject):
         """
         Return True if the given resource feature is a lexical feature.
 
-        A lexical feature is any feature that depends on the one of the query
-        item types.
+        There will be as many numbered columns for each lexical feature as
+        there are query items in the query strings.
 
-        More specifically, a resource feature is a lexical feature if the
-        table path to the resource feature traverses the table that contains
-        the resource feature that is mapped to a query item type , i.e. Word,
-        Lemma, POS, Gloss, Transcript.
+        Features that are not lexical features will occur only once in the
+        results table regardless of the number of query items.
 
-        Resources that represent links (i.e. that contain an identifier that
-        is used as the key to another table, and which therefore have the
+        A resource feature that is mapped to a query item type, i.e. Word,
+        Lemma, POS, Gloss, Transcript, is always considered a lexical feature.
+        The corpus ID is also always a lexical feature.
+
+        A resource feature that is stored in a table that is linked to a table
+        that contains a feature that is mapped to a query item type is also
+        considered a lexical feature.
+
+        For resources that represent links (i.e. that contain an identifier
+        that is used as the key to another table, and which therefore have the
         shape xxx_yyy_id), the corresponding id field from the other table is
         considered.
 
-        For external features, the linking resource is considered.
+        An external resource feature is considered a lexical feature if the
+        linking feature is lexical.
 
-        Columns in the Corpus table receive special treatment. These resources
-        are only considered lexical if they are mapped to one the query item
-        types.
-
+        Additional features can be declared as lexical by using the method
+        add_lexical_feature() during the initialization. For example, features
+        from the corpus table in a flat corpus that are not mapped to a query
+        item type may require this treatment.
         """
 
-        # special treatment for features (excluding links) from the corpus
-        # table -- they are treated as lexical only if they are directly
-        # mapped onto a query item type (this happens in flat corpora such as
-        # the Buckeye corpus).
-        if (rc_feature.startswith("corpus_") and
-                not rc_feature.endswith("_id")):
-            for item_type in (
-                    QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
-                    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
-                if rc_feature == getattr(cls, item_type, None):
-                    return True
+        # lookup feature in list of features explicitly declared lexical:
+        if rc_feature in cls.lexical_features:
+            return True
+
+        # get feature (taking external links into account):
+        feature = cls.get_referent_feature(rc_feature)
+        if feature not in dir(cls):
             return False
 
-        resource = cls.get_referent_feature(rc_feature)
+        if feature == "corpus_id":
+            # corpus ID is always lexical
+            return True
 
-        if resource not in dir(cls):
-            return False
-
-        _, table, feature = cls.split_resource_feature(resource)
-        if feature.endswith("_id"):
-            _, table, feature = cls.split_resource_feature(feature)
+        _, table, feat = cls.split_resource_feature(feature)
+        if feat.endswith("_id"):
+            _, table, feat = cls.split_resource_feature(feat)
+        for item_type in (
+                QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+            if feature == getattr(cls, item_type, None):
+                # features mapped onto query items are always lexical
+                return True
 
         item_tab_list = set([])
         for item_type in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
