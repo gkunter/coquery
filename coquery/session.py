@@ -46,6 +46,7 @@ class Session(object):
         self.query_list = []
         self.requested_fields = []
         self.groups = []
+        self.to_file = False
         options.cfg.query_label = ""
 
         # load current corpus module depending on the value of options.cfg.corpus,
