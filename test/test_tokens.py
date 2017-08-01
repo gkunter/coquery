@@ -221,8 +221,8 @@ class TestQueryTokenCOCA(unittest.TestCase):
     def runTest(self):
         super(TestQueryToken, self).runTest()
 
-    @staticmethod
-    def pos_check_function(l):
+    @classmethod
+    def pos_check_function(cls, l):
         return [x in ["V", "N"] for x in l]
 
     def setUp(self):
