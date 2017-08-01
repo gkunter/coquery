@@ -143,9 +143,8 @@ class TestTextGridModuleMethods(unittest.TestCase):
         writer = textgrids.TextgridWriter(self.df2, self.session)
         grids = writer.prepare_textgrids()
 
-        self.assertCountEqual(
-            list(writer.feature_timing.keys()),
-            ["corpus_id", "word_label"])
+        self.assertListEqual(
+            list(writer.feature_timing.keys()), ["corpus_id", "word_label"])
         self.assertEqual(
             writer.feature_timing["word_label"],
             ("corpus_starttime", "corpus_endtime"))
