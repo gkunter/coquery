@@ -1935,10 +1935,7 @@ class CorpusClass(object):
         if isinstance(s, (int, float)):
             s = "{}".format(s)
 
-        if s in ["%", "_"]:
-            s = "\\" + s
-        s = s.replace("'", "''")
-        s = s.replace("%", "%%")
+        s = s.replace("*", "\\*").replace("?", "\\?")
 
         if options.cfg.query_case_sensitive:
             key = (engine.url, s, True)
