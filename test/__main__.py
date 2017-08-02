@@ -10,7 +10,7 @@ def main():
     if args:
         print("Running tests for these modules:")
         print()
-        pprint(sorted(args), indent=4, compact=True)
+        pprint(sorted(args), indent=4)
         print()
     else:
         print("Running complete tests")
