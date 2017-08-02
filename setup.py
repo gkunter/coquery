@@ -21,7 +21,7 @@ with open(os.path.join(os.path.split(
 DESCRIPTION = "Coquery: a free corpus query tool"
 
 if __name__ == "__main__":
-    required_modules = ["pandas", "sqlalchemy"]
+    required_modules = ["pandas", "sqlalchemy", "lxml"]
     use_pyqt = False
 
     if find_module("PyQt5"):

@@ -1,5 +1,6 @@
 sqlalchemy
 numpy
+lxml
 matplotlib
 pandas
 seaborn
