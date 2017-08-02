@@ -12,6 +12,22 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 
+import getpass
+import codecs
+import logging
+import collections
+import os.path
+import warnings
+import time
+import pandas as pd
+import argparse
+import re
+import sys
+import textwrap
+import fnmatch
+import inspect
+from lxml import etree as ET
+
 """
 The module :mod:`corpusbuilder.py` provides the framework for corpus module
 installers.
@@ -54,28 +70,6 @@ any collection of text files in a directiory into a query-able corpus, and
 XML version of the British National Corpus.
 """
 
-import getpass
-import codecs
-import logging
-import collections
-import os.path
-import warnings
-import time
-import pandas as pd
-import argparse
-import re
-import sys
-import textwrap
-import fnmatch
-import inspect
-
-try:
-    from lxml import etree as ET
-except ImportError:
-    try:
-        import xml.etree.cElementTree as ET
-    except ImportError:
-        import xml.etree.ElementTree as ET
 try:
     from cStringIO import StringIO as IO_Stream
 except ImportError:
@@ -312,6 +306,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
     def check_arguments(self):
         """ Check the command line arguments. Add defaults if necessary."""
+        return
         if not self._widget:
             self.arguments, unknown = self.parser.parse_known_args()
             if not options.use_nltk:
@@ -342,7 +337,10 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
         if self._corpus_buffer:
             df = pd.DataFrame(self._corpus_buffer)
-            df.to_sql(self.corpus_table, self.DB.engine, if_exists="append", index=False)
+            df.to_sql(self.corpus_table,
+                      self.DB.engine,
+                      if_exists="append",
+                      index=False)
             self._corpus_buffer = []
 
     @classmethod
@@ -420,6 +418,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
             self._new_tables[current_table].setDB(self.DB)
             S = self._new_tables[current_table].get_create_string(
                 self.arguments.db_type,
+                self._new_tables.values(),
                 index_gen=current_table == getattr(self, "corpus_table"))
             self.DB.create_table(current_table, S)
             if self._widget:
@@ -1152,6 +1151,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
         word_id = (getattr(self, "corpus_word_id", None) or
                    getattr(self, "corpus_word"))
 
+        # FIXME: there should be columns for each lexical feature in the
+        # corpus table!
+
         for col in corpus_tab.columns:
             name = "{}1".format(col.name)
             if col.name != word_id:
@@ -1288,7 +1290,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
                                       ngram_table.columns)
         self.DB.create_table(
             self.corpusngram_table,
-            ngram_table.get_create_string(self.arguments.db_type))
+            ngram_table.get_create_string(self.arguments.db_type,
+                                          self._new_tables.values()))
 
         self._widget.progressSet.emit(1 + ((max_id-1) // step),
                                       "Creating ngram lookup table... (chunk %v of %m)")
@@ -1864,7 +1867,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 self._widget.progressUpdate.emit(0)
 
         self.check_arguments()
-
         if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
             raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
 
@@ -2035,7 +2037,7 @@ class XMLCorpusBuilder(BaseCorpusBuilder):
     Define a BaseCorpusBuilder subclass that can process XML files.
     """
 
-    def __init__(self, strip_namespace=True, gui=None):
+    def __init__(self, gui=None, strip_namespace=True):
         super(XMLCorpusBuilder, self).__init__(gui=gui)
         self._namespaces = None
         self._strip_namespace = strip_namespace
@@ -2083,20 +2085,24 @@ class XMLCorpusBuilder(BaseCorpusBuilder):
         """
         return data
 
+    def make_tree(self, data):
+        stream = IO_Stream(bytearray("\n".join(data), encoding="utf-8"))
+        tree = ET.iterparse(stream, remove_comments=True)
+        if self._strip_namespace:
+            for _, element in tree:
+                element.tag = element.tag.rpartition("}")[-1]
+        return tree
+
     def process_file(self, file_name):
         data = self.read_file(file_name, self.encoding)
         data = self.preprocess_data(data)
         try:
-            stream = IO_Stream(bytearray("\n".join(data), encoding="utf-8"))
-            self.tree = ET.iterparse(stream)
-            if self._strip_namespace:
-                for _, element in self.tree:
-                    element.tag = element.tag.rpartition("}")[-1]
+            tree = self.make_tree(data)
         except Exception as e:
             print(self._current_file)
             print_error_context(str(e), "\n".join(data).split("\n"))
             raise e
-        self.process_tree(self.tree)
+        self.process_tree(tree)
 
     def process_tree(self, tree):
         self.process_header(tree.root)
@@ -2182,14 +2188,14 @@ class TEICorpusBuilder(XMLCorpusBuilder):
     utterance_tag = "u"
     word_tag = "w"
 
-    def __init__(self, strip_namespace=True):
-        super(TEICorpusBuilder, self).__init__(strip_namespace)
-        self.open_tag_map = {self.head_tag: self.open_headline,
-                             self.div_tag: self.open_div,
-                             self.paragraph_tag: self.open_paragraph,
-                             self.sentence_tag: self.open_sentence,
-                             self.utterance_tag: self.open_utterance,
-                             self.word_tag: self.open_word}
+    def __init__(self, gui=None, strip_namespace=True):
+        super(TEICorpusBuilder, self).__init__(gui=gui, strip_namespace=strip_namespace)
+        self._open_tag_map = {self.head_tag: self.open_headline,
+                              self.div_tag: self.open_div,
+                              self.paragraph_tag: self.open_paragraph,
+                              self.sentence_tag: self.open_sentence,
+                              self.utterance_tag: self.open_utterance,
+                              self.word_tag: self.open_word}
 
     def open_headline(self, element):
         pass
@@ -2230,7 +2236,7 @@ class TEICorpusBuilder(XMLCorpusBuilder):
         tag = element.tag
         print("<{}>".format(tag))
         try:
-            self.open_tag_map[tag](element)
+            self._open_tag_map[tag](element)
         except KeyError:
             print("Unsupported tag: {}".format(tag))
 
