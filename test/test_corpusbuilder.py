@@ -43,7 +43,8 @@ xml_content = """<?xml version="1.0" encoding="UTF-8"?>
 
 # the following TEI example is CC-BY-SA 3.0 by teibyexample@kanti.be
 # http://teibyexample.org/examples/TBED04v00.htm#shakespeare
-tei_content = """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+tei_content = """<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
     <teiHeader>
         <encodingDesc>
             <!--...-->
@@ -70,18 +71,127 @@ tei_content = """<TEI xmlns="http://www.tei-c.org/ns/1.0">
     </teiHeader>
     <text>
         <body>
-            <p>
-                <s n="1">
-                    <w n="1">This</w>
-                    <w n="2">This</w>
-                    <w n="3">This</w>
-                    <w n="4">This</w>
-                </s>
-            </p>
+            <lg type="poem" met="-+ | -+ | -+ | -+ | -+ /">
+                <head>
+                    <title>Sonnet 17</title>
+                </head>
+                <lg type="sonnet" rhyme="abab cdcd efef gg">
+                    <lg type="quatrain">
+                        <l>
+                            <seg type="foot" real="+-">Who will</seg>
+                            <seg type="foot">believe</seg>
+                            <seg type="foot">my verse</seg>
+                            <seg type="foot">in time</seg>
+                            <seg type="foot">to come,</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">If it</seg>
+                            <seg type="foot">were fill'd</seg>
+                            <seg type="foot">with your</seg>
+                            <seg type="foot">most high</seg>
+                            <seg type="foot" real="+-">deserts?</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">Though yet,</seg>
+                            <seg type="foot" real="+-">heaven knows,</seg>
+                            <seg type="foot">it is</seg>
+                            <seg type="foot">but as</seg>
+                            <seg type="foot">a tomb</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">Which hides</seg>
+                            <seg type="foot">your life</seg>
+                            <seg type="foot">and shows</seg>
+                            <seg type="foot">not half</seg>
+                            <seg type="foot">your parts.</seg>
+                        </l>
+                    </lg>
+                    <lg type="quatrain">
+                        <l enjamb="y">
+                            <seg type="foot">If I</seg>
+                            <seg type="foot">could write</seg>
+                            <seg type="foot">the beau</seg>
+                            <seg type="foot">ty of</seg>
+                            <seg type="foot">your eyes</seg>
+                        </l>
+                        <l>
+                            <seg type="foot" real="--">And in</seg>
+                            <seg type="foot" real="++">fresh num</seg>
+                            <seg type="foot">bers num</seg>
+                            <seg type="foot">ber all</seg>
+                            <seg type="foot" met="-+-">your graces,</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">The age</seg>
+                            <seg type="foot">to come</seg>
+                            <seg type="foot">would say</seg>
+                            <seg type="foot">‘This po</seg>
+                            <seg type="foot">et lies;</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">Such heaven</seg>
+                            <seg type="foot">ly touch</seg>
+                            <seg type="foot">es ne'er</seg>
+                            <seg type="foot">touch'd earth</seg>
+                            <seg type="foot" met="-+-">ly faces’.</seg>
+                        </l>
+                    </lg>
+                    <lg type="quatrain">
+                        <l>
+                            <seg type="foot">So should</seg>
+                            <seg type="foot">my pap</seg>
+                            <seg type="foot">
+                                ers,
+                                <caesura />
+                                yell
+                            </seg>
+                            <seg type="foot">owed with</seg>
+                            <seg type="foot">their age,</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">Be scorn'd</seg>
+                            <seg type="foot">like old</seg>
+                            <seg type="foot" real="+-">men of</seg>
+                            <seg type="foot">less truth</seg>
+                            <seg type="foot">than tongue;</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">And your</seg>
+                            <seg type="foot">true rights</seg>
+                            <seg type="foot">be term'</seg>
+                            <seg type="foot">a po</seg>
+                            <seg type="foot">et's rage,</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">And stretch</seg>
+                            <seg type="foot">ed me</seg>
+                            <seg type="foot">tre of</seg>
+                            <seg type="foot">an an</seg>
+                            <seg type="foot">tique song.</seg>
+                        </l>
+                    </lg>
+                    <lg type="couplet">
+                        <l>
+                            <seg type="foot">But were</seg>
+                            <seg type="foot">some child</seg>
+                            <seg type="foot">of yours</seg>
+                            <seg type="foot">alive</seg>
+                            <seg type="foot">that time,</seg>
+                        </l>
+                        <l>
+                            <seg type="foot">You should</seg>
+                            <seg type="foot">live twice-</seg>
+                            <seg type="foot">in it,</seg>
+                            <caesura />
+                            <seg type="foot">and in</seg>
+                            <seg type="foot">my rhyme.</seg>
+                        </l>
+                    </lg>
+                </lg>
+            </lg>
         </body>
     </text>
-</TEI>
-"""
+</TEI>"""
 
 
 class TestingXML(XMLCorpusBuilder):
@@ -206,7 +316,9 @@ class TestCorpusNgram(unittest.TestCase):
 
         table = self.builder.build_lookup_get_ngram_table()
 
-        self.assertEqual(simple(table.get_create_string(SQL_SQLITE)),
+        s = table.get_create_string(SQL_SQLITE,
+                                    self.builder._new_tables.values())
+        self.assertEqual(simple(s),
                          simple("""
                          ID1 INT(3) PRIMARY KEY,
                          FileId1 INT(5),
@@ -253,8 +365,15 @@ class TestXMLCorpusBuilder(unittest.TestCase):
     def tearDown(self):
         try:
             os.remove(self.temp_file_name)
-        except IOError as e:
+        except (OSError, IOError) as e:
             pass
+
+    def _get_tree(self, content):
+        if sys.version_info < (3, 0):
+            tree = ET.XML(xml_content)
+        else:
+            tree = ET.XML(bytes(xml_content, encoding="utf8"))
+        return tree
 
     def test_read_file(self):
         with open(self.temp_file_name, "w") as temp_file:
@@ -287,7 +406,7 @@ class TestXMLCorpusBuilder(unittest.TestCase):
 
     def test_process_header(self):
         builder = TestingXML()
-        tree = ET.XML(bytes(xml_content, encoding="utf8"))
+        tree = self._get_tree(xml_content)
         builder.process_header(tree)
         children = [child.tag for child in builder.header]
         self.assertListEqual(children, ["source", "date", "genre"])
@@ -297,7 +416,7 @@ class TestXMLCorpusBuilder(unittest.TestCase):
 
     def test_process_body(self):
         builder = TestingXML()
-        tree = ET.XML(bytes(xml_content, encoding="utf8"))
+        tree = self._get_tree(xml_content)
         builder.process_body(tree)
         children = [child.tag for child in builder.body]
         self.assertListEqual(builder.content,
