@@ -121,8 +121,8 @@ class ExternalCorpus(SQLResource):
 class TestCorpus(unittest.TestCase):
     flat_resource = FlatResource
 
-    @staticmethod
-    def pos_check_function(l):
+    @classmethod
+    def pos_check_function(cls, l):
         return [x.lower().startswith(("n", "v")) for x in l]
 
     def setUp(self):
