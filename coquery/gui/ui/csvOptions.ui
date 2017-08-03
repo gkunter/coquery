@@ -26,16 +26,7 @@
    <item>
     <widget class="QGroupBox" name="OptionsBox">
      <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="leftMargin">
-       <number>10</number>
-      </property>
-      <property name="topMargin">
-       <number>10</number>
-      </property>
-      <property name="rightMargin">
-       <number>10</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>10</number>
       </property>
       <item>
@@ -273,6 +264,9 @@
      </property>
      <property name="textElideMode">
       <enum>Qt::ElideMiddle</enum>
+     </property>
+     <property name="horizontalScrollMode">
+      <enum>QAbstractItemView::ScrollPerPixel</enum>
      </property>
     </widget>
    </item>
