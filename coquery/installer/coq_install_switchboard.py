@@ -268,7 +268,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         df = pd.read_csv(IO_Stream(bytearray("\n".join(text),
                                              encoding="utf-8")),
-                         sep=",",
+                         sep=str(","),
                          names=[cls.source_topic,
                                 "ivi_no",
                                 "V1", "V2", "V3", "V4"],
