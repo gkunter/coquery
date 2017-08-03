@@ -111,7 +111,7 @@ class Identifier(Column):
         self.unique = unique
 
     def __repr__(self):
-        return ("Identifier(name='{}', data_type='{}', unique={},"
+        return ("Identifier(name='{}', data_type='{}', unique={}, "
                 "index_length={})").format(self._name, self._data_type,
                                            self.unique, self.index_length)
 
@@ -125,7 +125,7 @@ class Identifier(Column):
 
 
 class Link(Column):
-    """ Define a Column class that links a table to another table. In MySQL
+    """ Define a Column class that links a table to another table. In SQL
     terms, this acts like a foreign key."""
     key = True
 
@@ -137,6 +137,15 @@ class Link(Column):
         return "Link(name='{}', '{}', data_type='{}')".format(
             self._name, self._link, self._data_type)
 
+    def get_dtype(self, tables):
+        """
+        Look up the data type of the primary key of the linked table.
+        """
+        for tab in tables:
+            if tab.name == self._link:
+                return tab.primary.data_type
+        raise ValueError("No corresponding table found for {}".format(self))
+
 
 class Table(object):
     """ Define a class that is used to store table definitions."""
@@ -146,8 +155,7 @@ class Table(object):
         self.primary = None
         self._current_id = 0
         self._row_order = []
-        self._add_cache = dict()
-        self._add_cache2 = list()
+        self._add_cache = list()
         # The defaultdict _add_lookup will store the index of rows in this
         # table. It uses the trick described at http://ikigomu.com/?p=186
         # to achieve an O(1) lookup. When looking up a row as in
@@ -186,13 +194,13 @@ class Table(object):
         time preserving some memory space.
         """
 
-        if self._add_cache2:
-            df = pd.DataFrame(self._add_cache2)
+        if self._add_cache:
+            df = pd.DataFrame(self._add_cache)
 
             try:
                 df.columns = self._get_field_order()
             except ValueError as e:
-                raise e
+                raise ValueError("{}: {}".format(self.name, e))
 
             # make sure that all strings are unicode, even under
             # Python 2.7:
@@ -212,7 +220,7 @@ class Table(object):
 
             df.to_sql(self.name, self._DB.engine, if_exists="append",
                       index=False)
-            self._add_cache2 = list()
+            self._add_cache = list()
 
     def add(self, values):
         """
@@ -221,17 +229,36 @@ class Table(object):
 
         """
         l = [values[x] for x in self._row_order]
-
         if self.primary.name not in self._row_order:
             self._current_id += 1
-            self._add_cache2.append(tuple([self._current_id] + l))
+            self._add_cache.append(tuple([self._current_id] + l))
         else:
+            # A few installers appear to depend on this, but actually, I
+            # can't see how this will ever get executed.
+            # Installers that pass entry IDs in the values:
+            # CELEX, GABRA, OBC2, SWITCHBOARD
             self._current_id = values[self.primary.name]
-            self._add_cache2.append(tuple(l))
+            self._add_cache.append(tuple(l))
 
         self._add_lookup[tuple(l)] = self._current_id
 
-        if self._max_cache and len(self._add_cache2) > self._max_cache:
+        if self._max_cache and len(self._add_cache) > self._max_cache:
+            self.commit()
+
+        return self._current_id
+
+    def add_with_id(self, values):
+        """
+        Store the 'values' dictionary in the add cache of the table. The
+        primary key is assumed to be included in the values.
+        """
+        tup = tuple([values[x] for x in [self.primary.name] + self._row_order])
+
+        self._current_id = values[self.primary.name]
+        self._add_cache.append(tup)
+        self._add_lookup[tup] = self._current_id
+
+        if self._max_cache and len(self._add_cache) > self._max_cache:
             self.commit()
 
         return self._current_id
@@ -278,6 +305,9 @@ class Table(object):
         else:
             return None
 
+    def get_column_order(self):
+        return self._row_order
+
     def add_column(self, column):
         self.columns.append(column)
         if column.name in self._row_order:
@@ -295,7 +325,7 @@ class Table(object):
 
     def get_column(self, name):
         """
-        Return the specified column.
+        Return the specified column by name.
 
         Parameters
         ----------
@@ -419,7 +449,96 @@ class Table(object):
 
         return dt_type
 
-    def get_create_string(self, db_type, index_gen=False):
+    def _get_create_string_MySQL(self, tables, index_gen):
+        col_defs = []
+        for column in self.columns:
+            dtype = column.data_type
+            if column.key:
+                dtype = column.get_dtype(tables)
+
+            if not column.is_identifier:
+                col_defs.append("`{}` {}".format(column.name, dtype))
+            else:
+                if not column.unique:
+                    # add surrogate key
+                    # do not add AUTO_INCREMENT to strings or ENUMs:
+                    col_defs.insert(0, ("`{}_primary` INT NOT NULL AUTO_INCREMENT"
+                                        .format(column.name)))
+                    col_defs.insert(1,
+                                    "`{}` {}".format(column.name, dtype))
+                else:
+                    # do not add AUTO_INCREMENT to strings or ENUMs:
+                    if column.data_type.upper().startswith(
+                            ("ENUM", "VARCHAR", "TEXT")):
+                        pattern = "`{}` {}"
+                    else:
+                        pattern = "`{}` {} AUTO_INCREMENT"
+                    col_defs.append(pattern.format(column.name, dtype))
+                # add generated index column for next token?
+                if index_gen:
+                    if "mariadb" in self._DB.version.lower():
+                        kwd = "PERSISTENT"
+                    else:
+                        kwd = "STORED"
+                    # FIXME: GENERATED is available only in MySQL 5.7.5
+                    # onward. There has to be a check for version.
+                    #col_defs.append("Next{id} INT NOT NULL GENERATED ALWAYS AS ({id} + 1) {kwd}".format(
+                        #id=column.name, kwd=kwd))
+                    #col_defs.append("INDEX {id}Next{id} ({id}, Next{id})".format(
+                        #id=column.name))
+
+        if self.primary.unique:
+            s = "PRIMARY KEY (`{}`)".format(self.primary.name)
+        else:
+            s = "PRIMARY KEY (`{}_primary`)".format(self.primary.name)
+        col_defs.append(s)
+        return ",\n\t".join(col_defs)
+
+    def _get_create_string_SQLite(self, tables, index_gen):
+        col_defs = []
+        for column in self.columns:
+            # SQLite doesn't support the ENUM data type. ENUM columns are
+            # therefore converted to VARCHAR columns:
+
+            match = re.match("^\s*enum\((.+)\)(.*)$",
+                             column.data_type, re.IGNORECASE)
+            if match:
+                max_len = 0
+                for x in match.group(1).split(","):
+                    max_len = max(max_len, len(x.strip(" '\"")))
+                dtype = "VARCHAR({max_len}) {spec}".format(
+                    max_len=max_len, spec=match.group(2))
+            else:
+                dtype = column.data_type
+
+            if column.key:
+                dtype = column.get_dtype(tables)
+
+            if not column.is_identifier:
+                col_defs.append("{} {}".format(column.name, dtype))
+            else:
+                if not column.unique:
+                    # add surrogate key
+                    col_defs.insert(0, ("{}_primary INT NOT NULL PRIMARY KEY"
+                                        .format(column.name)))
+                    col_defs.insert(1, ("{} {}"
+                                        .format(column.name, dtype)))
+                else:
+                    col_defs.append(("{} {} PRIMARY KEY"
+                                        .format(column.name, dtype)))
+
+        # make SQLite columns case-insensitive by default
+        for i, x in enumerate(list(col_defs)):
+            field_type = x.split()[1]
+            if ("VARCHAR" in field_type.upper() or
+                    "TEXT" in field_type.upper()):
+                col_defs[i] = "{} COLLATE NOCASE".format(x)
+
+        table_str = ",\n\t".join(col_defs)
+        table_str = re.sub(r"\s*UNSIGNED", "", table_str)
+        return table_str
+
+    def get_create_string(self, db_type, tables, index_gen=False):
         """
         Generates the SQL command required to create the table.
 
@@ -440,95 +559,18 @@ class Table(object):
 
             At the moment, this is only available in MySQL databases.
 
+        tables : list of Table objects
+            A list of Table objects that is used to resolve links between
+            tables.
+
         Returns
         -------
         S : str
             A string that can be sent to the SQL engine in order to create
             the table according to the specifications.
         """
-        command_list = []
-        str_list = []
-        columns_added = set([])
-        for column in self.columns:
-            if db_type == SQL_MYSQL:
-                if column.is_identifier:
-                    if not column.unique:
-                        # add surrogate key
-                        # do not add AUTO_INCREMENT to strings or ENUMs:
-                        str_list.insert(0, ("`{}_primary` INT AUTO_INCREMENT"
-                                            .format(column.name)))
-                        str_list.insert(1, ("`{}` {}"
-                                            .format(column.name,
-                                                    column.data_type)))
-                        str_list.append("PRIMARY KEY ({}_primary)".format(
-                            column.name))
-                    else:
-                        # do not add AUTO_INCREMENT to strings or ENUMs:
-                        if column.data_type.upper().startswith(
-                                ("ENUM", "VARCHAR", "TEXT")):
-                            pattern = "`{}` {}"
-                        else:
-                            pattern = "`{}` {} AUTO_INCREMENT"
-                        pattern = "`{}` {}"
-                        str_list.append(pattern.format(column.name,
-                                                       column.data_type))
-                        str_list.append("PRIMARY KEY (`{}`)".format(
-                            column.name))
-                    # add generated index column for next token?
-                    if index_gen:
-                        if "mariadb" in self._DB.version.lower():
-                            kwd = "PERSISTENT"
-                        else:
-                            kwd = "STORED"
-                        # FIXME: GENERATED is available only in MySQL 5.7.5
-                        # onward. There has to be a check for version.
-                        #str_list.append("Next{id} INT NOT NULL GENERATED ALWAYS AS ({id} + 1) {kwd}".format(
-                            #id=column.name, kwd=kwd))
-                        #str_list.append("INDEX {id}Next{id} ({id}, Next{id})".format(
-                            #id=column.name))
-                else:
-                    str_list.append("`{}` {}".format(
-                        column.name,
-                        column.data_type))
-                columns_added.add(column.name)
-            elif db_type == SQL_SQLITE:
-                # replace ENUM by VARCHAR:
-                match = re.match("^\s*enum\((.+)\)(.*)$",
-                                 column.data_type,
-                                 re.IGNORECASE)
-                if match:
-                    max_len = 0
-                    for x in match.group(1).split(","):
-                        max_len = max(max_len, len(x.strip(" '\"")))
-                    data_type = "VARCHAR({max_len}) {spec}".format(
-                        max_len=max_len, spec=match.group(2))
-                else:
-                    data_type = column.data_type
-
-                if column.is_identifier:
-                    if not column.unique:
-                        # add surrogate key
-                        str_list.insert(0, ("{}_primary INT PRIMARY KEY"
-                                            .format(column.name)))
-                        str_list.insert(1, ("{} {}"
-                                            .format(column.name, data_type)))
-                    else:
-                        str_list.append(("{} {} PRIMARY KEY"
-                                         .format(column.name, data_type)))
-                else:
-                    str_list.append("{} {}".format(
-                        column.name, data_type))
-                columns_added.add(column.name)
         if db_type == SQL_SQLITE:
-            # make SQLite columns case-insensitive by default
-            for i, x in enumerate(list(str_list)):
-                field_type = x.split()[1]
-                if ("VARCHAR" in field_type.upper() or
-                        "TEXT" in field_type.upper()):
-                    str_list[i] = "{} COLLATE NOCASE".format(x)
-        S = ",\n\t".join(str_list)
-        command_list.insert(0, S)
-        table_str = "; ".join(command_list)
-        if db_type == SQL_SQLITE:
-            table_str = re.sub(r"\s*UNSIGNED", "", table_str)
+            table_str = self._get_create_string_SQLite(tables, index_gen)
+        else:
+            table_str = self._get_create_string_MySQL(tables, index_gen)
         return table_str
