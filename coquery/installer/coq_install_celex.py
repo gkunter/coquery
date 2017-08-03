@@ -12,11 +12,13 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 from __future__ import print_function
 
-import codecs
 import unicodedata
+import os
 
-from coquery.corpusbuilder import *
-from coquery.defines import *
+from coquery.corpusbuilder import BaseCorpusBuilder
+from coquery.tables import Column, Link, Identifier
+from coquery.defines import (
+    QUERY_ITEM_POS, QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_WORD, VIEW_MODE_TABLES)
 
 def dia_to_unicode(s):
     """
