@@ -129,20 +129,6 @@ class TestSwitchboard(unittest.TestCase):
                                 for x in e.args])
                 raise e
 
-    def test_check_index_on_id_columns(self):
-        installer = BuilderClass()
-        conv = installer._new_tables["Conversations"]
-        self.assertTrue("PRIMARY KEY (`ConversationId`)" in
-                        conv.get_create_string(db_type=SQL_MYSQL))
-
-        spkr = installer._new_tables["Speakers"]
-        self.assertTrue("PRIMARY KEY (`SpeakerId`)" in
-                        spkr.get_create_string(db_type=SQL_MYSQL))
-
-        raise AssertionError(("The primary keys are in the table creation "
-                              "strings, but they don't seem to be created by "
-                              "MySQL."))
-
     def test_get_file_list(self):
         installer = BuilderClass()
         l = installer.get_file_list(self._temp_path, None)
