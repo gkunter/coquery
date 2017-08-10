@@ -1349,6 +1349,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
             print(S)
             connection.execute(S.replace("\n", " ").strip())
 
+    def build_index_ngram(self):
+        pass
+
     def build_optimize(self):
         """
         Optimizes the table columns so that they use a minimal amount
