@@ -171,6 +171,8 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self.ui.quote_char.setCurrentIndex(index)
 
         self.ui.query_column.valueChanged.connect(self.set_query_column)
+        self.ui.query_column.valueChanged.connect(self.validate)
+
         self.ui.ignore_lines.valueChanged.connect(self.update_content)
         self.ui.separate_char.editTextChanged.connect(self.set_new_separator)
         self.ui.file_has_headers.stateChanged.connect(self.update_content)
@@ -218,12 +220,6 @@ class CSVOptionDialog(QtWidgets.QDialog):
         dialog = CSVOptionDialog(default=default, parent=parent, icon=icon)
         return dialog.exec_()
 
-    def accept(self):
-        super(CSVOptionDialog, self).accept()
-
-    def reject(self):
-        super(CSVOptionDialog, self).reject()
-
     #def set_new_skip(self):
         #self.table_model.skip_lines = self.ui.ignore_lines.value()
         #self.ui.FilePreviewArea.reset()
@@ -242,7 +238,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self.ui.combo_encoding.setCurrentIndex(index)
         self.ui.combo_encoding.currentIndexChanged.connect(self.update_content)
 
-    def split_file_content(self):
+    def split_file_content(self, file_name):
         """
         Split the content of the file on the basis of the current settings.
 
@@ -259,15 +255,15 @@ class CSVOptionDialog(QtWidgets.QDialog):
         header = 0 if self.ui.file_has_headers.isChecked() else None
         encoding = utf8(self.ui.combo_encoding.currentText())
         try:
-            self.file_table = pd.read_table(
-                self.file_name,
-                header=header,
-                sep=utf8(self.separator),
-                quoting=3 if not quote else 0,
-                quotechar=quote if quote else "#",
-                nrows=100,
-                error_bad_lines=False,
-                encoding=encoding)
+            df = pd.read_table(
+                    file_name,
+                    header=header,
+                    sep=utf8(self.separator),
+                    quoting=3 if not quote else 0,
+                    quotechar=quote if quote else "#",
+                    nrows=100,
+                    error_bad_lines=False,
+                    encoding=encoding)
         except (ValueError, pd.parser.CParserError) as e:
             # this is most likely due to an encoding error.
 
@@ -279,34 +275,34 @@ class CSVOptionDialog(QtWidgets.QDialog):
                 if options.use_chardet:
                     # detect character encoding using chardet
                     import chardet
-                    content = open(self.file_name, "rb").read()
+                    content = open(file_name, "rb").read()
                     detection = chardet.detect(content[:32000])
                     encoding = detection["encoding"]
                 else:
                     # dumb detection. First try utf-8, then latin-1.
                     try:
-                        codecs.open(self.file_name, "rb",
+                        codecs.open(file_name, "rb",
                                     encoding="utf-8").read()
                     except UnicodeDecodeError:
                         encoding = "latin-1"
                     else:
                         encoding = "utf-8"
                 try:
-                    self.file_table = pd.read_table(
-                        self.file_name,
-                        header=header,
-                        sep=utf8(self.separator),
-                        quoting=3 if not quote else 0,
-                        quotechar=quote if quote else "#",
-                        na_filter=False,
-                        nrows=100,
-                        error_bad_lines=False,
-                        encoding=encoding)
+                    df = pd.read_table(
+                            file_name,
+                            header=header,
+                            sep=utf8(self.separator),
+                            quoting=3 if not quote else 0,
+                            quotechar=quote if quote else "#",
+                            na_filter=False,
+                            nrows=100,
+                            error_bad_lines=False,
+                            encoding=encoding)
                 except (ValueError, pd.parser.CParserError) as e:
                     # the table could still not be read. Raise an error.
                     QtWidgets.QMessageBox.critical(
                         self.parent(), "Query file error",
-                        msg_csv_file_error.format(self.file_name))
+                        msg_csv_file_error.format(file_name))
                     raise e
                 else:
                     # we have found a working encoding
@@ -317,7 +313,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
                 # encoding.
                 QtWidgets.QMessageBox.critical(
                     self.parent(), "Query file error",
-                    msg_csv_encoding_error.format(file=self.file_name,
+                    msg_csv_encoding_error.format(file=file_name,
                                                   encoding=encoding))
                 # return to the last encoding, which was hopefully working:
                 self.set_encoding_selection(self._last_encoding)
@@ -325,18 +321,20 @@ class CSVOptionDialog(QtWidgets.QDialog):
             else:
                 QtWidgets.QMessageBox.critical(
                     self.parent(), "Query file error",
-                    msg_csv_file_error.format(self.file_name))
+                    msg_csv_file_error.format(file_name))
                 raise e
         # ascii encoding is always replaced by utf-8
         if encoding == "ascii":
             encoding = "utf-8"
         self._last_encoding = encoding
         if header is None:
-            self.file_table.columns = ["X{}".format(x) for x in range(len(self.file_table.columns))]
+            df.columns = ["X{}".format(x) for x in range(len(df.columns))]
 
         # make column headers SQL-conforming
-        self.file_table.columns = [re.sub("[^a-zA-Z0-9_]", "_", x)
-                                   for x in self.file_table.columns]
+        df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x)
+                                   for x in df.columns]
+
+        return df
 
     def select_file(self):
         """ Call a file selector, and add file name to query file input. """
@@ -353,19 +351,36 @@ class CSVOptionDialog(QtWidgets.QDialog):
         return name
 
     def update_content(self):
-        if not os.path.exists(utf8(self.ui.edit_file_name.text())):
-            self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
-            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+        current_file = utf8(self.ui.edit_file_name.text())
+        if not os.path.exists(current_file):
             self.file_table = pd.DataFrame()
         else:
-            self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
-            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
-            self.split_file_content()
+            self.file_table = self.split_file_content(current_file)
 
         self.table_model = MyTableModel(self, self.file_table, self.ui.ignore_lines.value())
         self.ui.FilePreviewArea.setModel(self.table_model)
         self.set_query_column()
         self.ui.FilePreviewArea.resizeColumnsToContents()
+
+        self.validate()
+
+    def validate(self):
+        self.blockSignals(True)
+        button_okay = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+        if not os.path.exists(utf8(self.ui.edit_file_name.text())):
+            self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
+            button_okay.setEnabled(False)
+        else:
+            self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
+            button_okay.setEnabled(True)
+
+        if self.ui.query_column.value() == 0:
+            self.ui.query_column.setValue(1)
+
+        if self.ui.query_column.value() > len(self.file_table.columns):
+            button_okay.setEnabled(False)
+
+        self.blockSignals(False)
 
     def set_new_separator(self):
         sep = utf8(self.ui.separate_char.currentText())
