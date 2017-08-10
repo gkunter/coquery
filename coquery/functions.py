@@ -121,6 +121,17 @@ class Function(CoqObject):
     minimum_columns = None
     maximum_columns = None
 
+    # The property 'arguments' contains the number and type of arguments that
+    # the function requires.
+    # Each element of the two lists is a tuple that specifies an argument.
+    # The tuples contain three elements:
+    #   (1) the internal name of the argument
+    #   (2) the label displayed on the widget
+    #   (3) the default value
+
+    arguments = {"input": [],
+                 "toggle": []}
+
     @staticmethod
     def get_description():
         return "Base functions"
@@ -296,8 +307,9 @@ class StringRegEx(StringFunction):
 
 class StringChain(StringFunction):
     _name = "CONCAT"
-    parameters = 1
     allow_null = True
+
+    arguments = {"input": [("sep", "Separator:", "-")]}
 
     def evaluate(self, df, *args, **kwargs):
         val = df[self.columns].apply(
@@ -310,7 +322,8 @@ class StringChain(StringFunction):
 
 class StringCount(StringRegEx):
     _name = "COUNT"
-    parameters = 1
+
+    arguments = {"input": [("regex", "Regular expression:", "")]}
 
     def _func(self, cell):
         if cell is None:
@@ -383,10 +396,10 @@ class StringSeriesFunction(StringFunction):
 
 class StringMatch(StringSeriesFunction):
     _name = "MATCH"
-    parameters = 1
-    toggle_parameters = {"case": ("Case-sensitive", False)}
     str_func = "contains"
     validate_input = StringFunction.validate_regex
+    arguments = {"input": [("regex", "Regular expression:", "")],
+                 "toggle": [("case", "Case-sensitive:", False)]}
 
     def evaluate(self, df, *args, **kwargs):
         val = super(StringMatch, self).evaluate(df, self.value,
@@ -399,10 +412,10 @@ class StringMatch(StringSeriesFunction):
 
 class StringExtract(StringSeriesFunction):
     _name = "EXTRACT"
-    parameters = 1
-    toggle_parameter = ("Case-sensitive", False)
     str_func = "extract"
     validate_input = StringFunction.validate_regex
+    arguments = {"input": [("regex", "Regular expression:", "")],
+                 "toggle": [("case", "Case-sensitive:", False)]}
 
     def evaluate(self, df, *args, **kwargs):
         # put the regex into parentheses if there is no match group:
@@ -415,33 +428,31 @@ class StringExtract(StringSeriesFunction):
 
 class StringUpper(StringSeriesFunction):
     _name = "UPPER"
-    parameters = 0
     str_func = "upper"
 
 
 class StringLower(StringSeriesFunction):
     _name = "LOWER"
-    parameters = 0
     str_func = "lower"
 
 
 class StringLength(StringSeriesFunction):
     _name = "LENGTH"
-    parameters = 0
     str_func = "len"
 
 
 class StringReplace(StringSeriesFunction):
     _name = "REPLACE"
-    parameters = 2
     str_func = "replace"
+    arguments = {"input": [("old", "Find:", ""),
+                           ("new", "Replace:", "")]}
 
 
 ####################
 ## Numeric functions
 ####################
 
-class MathFunction(Function):
+class NumFunction(Function):
     _name = "virtual"
     combine_modes = NUM_COMBINE
 
@@ -471,7 +482,7 @@ class MathFunction(Function):
             raise TypeError
 
 
-class CalcFunction(MathFunction):
+class CalcFunction(NumFunction):
     """
     CalcFunction is a meta class that uses the Numpy representation of the
     data frame for the calculations, thus speeding up performance.
@@ -490,28 +501,30 @@ class CalcFunction(MathFunction):
                 val = self._func(val, const)
         return pd.Series(data=val, index=df.index)
 
+class MathFunction(CalcFunction):
+    pass
 
-class Add(CalcFunction):
+class Add(MathFunction):
     _name = "ADD"
     _func = operator.add
 
 
-class Sub(CalcFunction):
+class Sub(MathFunction):
     _name = "SUB"
     _func = operator.sub
 
 
-class Mul(CalcFunction):
+class Mul(MathFunction):
     _name = "MUL"
     _func = operator.mul
 
 
-class Div(CalcFunction):
+class Div(MathFunction):
     _name = "DIV"
     _func = operator.truediv
 
 
-class NumpyFunction(CalcFunction):
+class NumpyFunction(MathFunction):
     """
     NumpyFunction is a wrapper for mathematical functions provided by Numpy.
     The function is specified in the class attribute `_func`.
