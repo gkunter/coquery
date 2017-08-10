@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-functionapply.py is part of Coquery.
+addfunction.py is part of Coquery.
 
 Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
 
@@ -15,36 +15,57 @@ from __future__ import unicode_literals
 from coquery import options
 from coquery import functions
 from coquery import managers
-from coquery.defines import *
+from coquery.defines import FUNCTION_DESC
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
-from .ui.addFunctionUi import Ui_FunctionsDialog
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 
 
-class FunctionItem(QtWidgets.QWidget):
+class Argument(QtWidgets.QWidget):
+    def __init__(self, wtype, tup, parent):
+        super(Argument, self).__init__(parent=parent)
+        self.layout = QtWidgets.QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(4)
+        self.wtype = wtype
+        self.name, label, default = tup
+        self.label = QtWidgets.QLabel(label)
+
+        if wtype == "input":
+            self.widget = QtWidgets.QLineEdit()
+            self.widget.setText(default)
+        elif wtype == "toggle":
+            self.widget = QtWidgets.QCheckBox()
+            self.widget.setCheckState(default)
+
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.widget)
+        self.layout.setStretch(1, 1)
+
+    def getValue(self):
+            if self.wtype == "input":
+                return self.widget.text()
+            elif self.wtype == "toggle":
+                return self.widget.checkState()
+
+
+class FunctionWidget(QtWidgets.QWidget):
     def __init__(self, func, checkable=True, *args, **kwargs):
-        super(FunctionItem, self).__init__(*args, **kwargs)
+        super(FunctionWidget, self).__init__(*args, **kwargs)
         self.checkable = checkable
 
         name = func.get_name()
         desc = FUNCTION_DESC.get(func._name, "(no description available)")
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
-                                           QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-        self.outerLayout = QtWidgets.QHBoxLayout(self)
-        self.outerLayout.setContentsMargins(4, 2, 4, 2)
-        self.outerLayout.setSpacing(4)
+        self.checkable = checkable
 
-        if checkable:
-            self.checkbox = QtWidgets.QCheckBox()
+        self.outerLayout = QtWidgets.QHBoxLayout(self)
+        self.outerLayout.setContentsMargins(4, 4, 4, 4)
+        self.outerLayout.setSpacing(8)
+
         self.innerLayout = QtWidgets.QVBoxLayout()
-        self.innerLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
         self.innerLayout.setContentsMargins(0, 0, 0, 0)
         self.innerLayout.setSpacing(0)
+
         self.label_1 = QtWidgets.QLabel(name, self)
         self.innerLayout.addWidget(self.label_1)
 
@@ -56,8 +77,32 @@ class FunctionItem(QtWidgets.QWidget):
             font.setPointSize(font.pointSize() * 0.8)
             self.label_2.setFont(font)
 
-        if checkable:
-            self.outerLayout.addWidget(self.checkbox)
+        self.arguments = QtWidgets.QWidget()
+        self.argumentLayout = QtWidgets.QHBoxLayout(self.arguments)
+        self.argumentLayout.setContentsMargins(0, 0, 0, 0)
+        self.argumentLayout.setSpacing(8)
+
+        if "input" in func.arguments:
+            for tup in func.arguments["input"]:
+                argument = Argument("input", tup, self)
+                self.argumentLayout.addWidget(argument)
+
+        if "toggle" in func.arguments:
+            for tup in func.arguments["toggle"]:
+                argument = Argument("toggle", tup, self)
+                self.argumentLayout.addWidget(argument)
+
+        self.innerLayout.addWidget(self.arguments)
+
+        if self.checkable:
+            self.checkbox = QtWidgets.QCheckBox()
+            self.outerLayout.insertWidget(0, self.checkbox)
+            self._arguments_shown = True
+        else:
+
+            self.arguments.hide()
+            self._arguments_shown = False
+
         self.outerLayout.addLayout(self.innerLayout)
         self.outerLayout.setStretch(1, 1)
 
@@ -73,20 +118,240 @@ class FunctionItem(QtWidgets.QWidget):
         else:
             return False
 
+    def hideArguments(self):
+        if not self.checkable:
+            self.arguments.hide()
+            self._arguments_shown = False
+
+    def showArguments(self):
+        self.arguments.show()
+        self._arguments_shown = True
+
     def sizeHint(self):
         size_hint = self.innerLayout.sizeHint()
-        if self.checkable:
-            height = max(size_hint.height(),
-                        QtWidgets.QLabel().sizeHint().height(),
-                        QtWidgets.QCheckBox().sizeHint().height(),
-                        self.innerLayout.sizeHint().height() * 1.1)
-        else:
-            height = max(size_hint.height(),
-                        QtWidgets.QLabel().sizeHint().height(),
-                        self.innerLayout.sizeHint().height() * 1.1)
+
+        height = (self.label_1.sizeHint().height() +
+                  self.label_2.sizeHint().height())
+
+        if self._arguments_shown:
+            height += self.arguments.sizeHint().height()
 
         size_hint.setHeight(height)
         return size_hint
+
+
+class FunctionList(QtWidgets.QListWidget):
+    def __init__(self, *args, **kwargs):
+        super(FunctionList, self).__init__(*args, **kwargs)
+        self.currentItemChanged.connect(self.change_selection)
+
+        border = QtGui.QPalette().color(QtGui.QPalette.Active,
+                                        QtGui.QPalette.Button)
+        selected = QtGui.QPalette().color(QtGui.QPalette.Active,
+                                          QtGui.QPalette.Highlight)
+        selected_text = QtGui.QPalette().color(QtGui.QPalette.Active,
+                                               QtGui.QPalette.HighlightedText)
+        border = QtGui.QPalette().color(QtGui.QPalette.Active,
+                                        QtGui.QPalette.Button)
+
+        self.setStyleSheet(("""
+            QListWidget::item {{ border-bottom: 1px solid {border}; }}
+            QListWidget::item:selected {{ background: {selected};
+                                          color: {selected_text}; }}
+            QListWidget::item:focus {{ background: {selected};
+                                          color: {selected_text}; }}
+            """).format(
+                border=border.name(),
+                selected=selected.name(),
+                selected_text=selected_text.name()))
+
+    def change_selection(self, new_item, prev_item):
+        self.blockSignals(True)
+        old = [self.itemWidget(self.item(i)).label_1.text()
+               for i in range(self.count())]
+
+        if prev_item:
+            prev_widget = self.itemWidget(prev_item)
+            if prev_widget:
+                prev_widget.hideArguments()
+                prev_item.setSizeHint(prev_widget.sizeHint())
+
+        if new_item:
+            new_widget = self.itemWidget(new_item)
+            if new_widget:
+                new_widget.showArguments()
+                new_item.setSizeHint(new_widget.sizeHint())
+
+        new = [self.itemWidget(self.item(i)).label_1.text()
+               for i in range(self.count())]
+
+        for x in zip(old, new):
+            print("{:5}   {} - {}".format(str(x[0] == x[1]), *x))
+        self.blockSignals(False)
+
+
+class ColumnFunctionDialog(QtWidgets.QDialog):
+    def __init__(self, columns, df, parent=None):
+        super(ColumnFunctionDialog, self).__init__(parent)
+        from .ui.addFunctionUi import Ui_FunctionsDialog
+        self.ui = Ui_FunctionsDialog()
+        self.ui.setupUi(self)
+
+        self.ui.parameter_box.hide()
+
+        self.df = df
+        self.columns = columns
+        self.available_columns = [x for x in df.columns if x not in columns]
+
+        self.edit_label = ""
+        self.session = get_toplevel_window().Session
+        self.available_functions = {}
+
+        self.ui.widget_selection.setSelectedList(
+            self.columns, self.session.translate_header)
+        self.ui.widget_selection.setAvailableList(
+            self.available_columns, self.session.translate_header)
+
+        self.ui.widget_selection.setMinimumItems(1)
+
+        self.ui.widget_selection.itemSelectionChanged.connect(
+            self.change_columns)
+        self.ui.list_classes.currentRowChanged.connect(
+            self.set_function_group)
+
+        try:
+            self.resize(options.settings.value("functionapply_size"))
+        except TypeError:
+            pass
+
+    def get_function_values(self):
+        return (None, None)
+
+    def set_function_values(self, func, values):
+        pass
+
+    def get_function_groups(self):
+        if all([x == object for x in self.df[self.columns].dtypes]):
+            function_groups = (functions.StringFunction,
+                               functions.Comparison,
+                               functions.BaseProportion,
+                               functions.LogicFunction)
+        elif all([x != object for x in self.df[self.columns].dtypes]):
+            function_groups = (functions.MathFunction,
+                               functions.Comparison,
+                               functions.LogicFunction)
+        else:
+            function_groups = (functions.Comparison,
+                               functions.LogicFunction, )
+        return function_groups
+
+    def add_function_groups(self):
+        self.blockSignals(True)
+        self.ui.list_classes.blockSignals(True)
+
+        self.ui.list_classes.clear()
+        self.available_functions = {}
+
+        all_functions = []
+        for attr_name in functions.__dict__:
+            cls = getattr(functions, attr_name)
+            try:
+                if issubclass(cls, functions.Function):
+                    all_functions.append(cls)
+            except TypeError:
+                # this is raised if attr is not a class, but e.g. a string
+                pass
+
+        for i, fun_class in enumerate(self.get_function_groups()):
+            group = QtWidgets.QListWidgetItem(fun_class.get_description())
+            self.ui.list_classes.addItem(group)
+
+            fun_list = []
+            for fun in all_functions:
+                if (issubclass(fun, fun_class) and fun != fun_class):
+                    fun_list.append(fun)
+
+            self.available_functions[i] = sorted(fun_list,
+                                                 key=lambda x: x.get_name())
+        self.set_function_group(0)
+        self.blockSignals(False)
+        self.ui.list_classes.blockSignals(False)
+
+    def set_function_group(self, i):
+        self.blockSignals(True)
+        self.ui.list_classes.blockSignals(True)
+        self.ui.list_functions.blockSignals(True)
+
+        self.ui.list_functions.clear()
+
+        for fun in [x for x in self.available_functions[i]
+                  if x._name != "virtual"]:
+            item = QtWidgets.QListWidgetItem()
+            item.setData(QtCore.Qt.UserRole, fun)
+            widget = FunctionWidget(fun, False)
+            self.ui.list_functions.addItem(item)
+            self.ui.list_functions.setItemWidget(item, widget)
+            item.setSizeHint(widget.sizeHint())
+
+        self.ui.list_classes.setCurrentRow(i)
+        self.ui.list_functions.setCurrentRow(0)
+        self.blockSignals(False)
+        self.ui.list_classes.blockSignals(False)
+        self.ui.list_functions.blockSignals(False)
+
+    def change_columns(self):
+        self.blockSignals(True)
+        self.columns = [x.data(QtCore.Qt.UserRole) for x
+                        in self.ui.widget_selection.selectedItems()]
+        func, values = self.get_function_values()
+        self.add_function_groups()
+        self.set_function_values(func, values)
+        self.blockSignals(False)
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.reject()
+
+    def closeEvent(self, *args):
+        options.settings.setValue("functionapply_size", self.size())
+
+    def exec_(self):
+        result = super(ColumnFunctionDialog, self).exec_()
+        if result == QtWidgets.QDialog.Accepted:
+            if self.checkable:
+                l = []
+                for i in range(self.ui.list_functions.count()):
+                    item = self.ui.list_functions.item(i)
+                    if self.ui.list_functions.itemWidget(item).checkState():
+                        l.append(item.data(QtCore.Qt.UserRole))
+                return l
+            else:
+                value = utf8(self.ui.edit_value_1.text())
+                escaped_value = value.replace("'", "\'")
+                columns = [x.data(QtCore.Qt.UserRole) for x
+                           in self.ui.widget_selection.selectedItems()]
+
+                if self._auto_label:
+                    label = None
+                else:
+                    label = utf8(self.ui.edit_label.text())
+                func = self.function_list[self.ui.list_functions.currentRow()]
+                aggr = utf8(self.ui.combo_combine.currentText())
+                if aggr == "":
+                    aggr = func.default_aggr
+
+                return (func, columns, escaped_value, aggr, label)
+        else:
+            return None
+
+    @staticmethod
+    def set_function(**kwargs):
+        dialog = ColumnFunctionDialog(**kwargs)
+        dialog.add_function_groups()
+        dialog.setVisible(True)
+
+        return dialog.exec_()
+
 
 class FunctionDialog(QtWidgets.QDialog):
     def __init__(self,
@@ -108,6 +373,7 @@ class FunctionDialog(QtWidgets.QDialog):
             checked = []
 
         super(FunctionDialog, self).__init__(parent)
+        from .ui.addFunctionUi import Ui_FunctionsDialog
         self.ui = Ui_FunctionsDialog()
         self.ui.setupUi(self)
 
@@ -140,7 +406,7 @@ class FunctionDialog(QtWidgets.QDialog):
 
         self.ui.edit_value_1.textChanged.connect(lambda: self.check_gui())
         self.ui.edit_label.textEdited.connect(self.check_label)
-        self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
+        #self.ui.list_functions.currentRowChanged.connect(lambda: self.check_gui())
         self.ui.widget_selection.itemSelectionChanged.connect(self.change_columns)
 
         self.ui.widget_selection.setMinimumItems(1)
@@ -156,11 +422,11 @@ class FunctionDialog(QtWidgets.QDialog):
 
         if not available_columns and not columns:
             self.ui.widget_selection.hide()
-            sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
-            sizePolicy.setHorizontalStretch(0)
-            sizePolicy.setVerticalStretch(0)
-            sizePolicy.setHeightForWidth(self.ui.list_functions.sizePolicy().hasHeightForWidth())
-            self.ui.list_functions.setSizePolicy(sizePolicy)
+            #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+            #sizePolicy.setHorizontalStretch(0)
+            #sizePolicy.setVerticalStretch(0)
+            #sizePolicy.setHeightForWidth(self.ui.list_functions.sizePolicy().hasHeightForWidth())
+            #self.ui.list_functions.setSizePolicy(sizePolicy)
 
         if not function_class:
             # remove function class selection widget
@@ -207,25 +473,25 @@ class FunctionDialog(QtWidgets.QDialog):
         self.check_gui()
 
     def set_function_group(self, i):
+        self.blockSignals(True)
+
         self.function_list = [x for x in self._func[i] if x._name != "virtual"]
-        self.ui.list_functions.blockSignals(True)
-        self.ui.list_classes.blockSignals(True)
         self.ui.list_functions.clear()
         for x in sorted(self.function_list,
                         key=lambda x: x.get_name(), reverse=True):
             desc = FUNCTION_DESC.get(x._name, "no description available")
             item = QtWidgets.QListWidgetItem()
             item.setData(QtCore.Qt.UserRole, x.get_name())
-            item_widget = FunctionItem(x, checkable=False)
+            item_widget = FunctionWidget(x, checkable=False)
+            item_widget.arguments.hide()
             item.setSizeHint(item_widget.sizeHint())
 
             self.ui.list_functions.addItem(item)
             self.ui.list_functions.setItemWidget(item, item_widget)
 
         self.ui.list_classes.setCurrentRow(i)
-        self.ui.list_functions.blockSignals(False)
-        self.ui.list_classes.blockSignals(False)
         self.ui.list_functions.setCurrentRow(0)
+        self.blockSignals(False)
 
     def select_function(self, func):
         self.ui.edit_value_1.setText(func.value)
@@ -266,7 +532,7 @@ class FunctionDialog(QtWidgets.QDialog):
         for x in sorted(func_list, key=lambda x: x.get_name(), reverse=True):
             item = QtWidgets.QListWidgetItem()
             item.setData(QtCore.Qt.UserRole, x)
-            item_widget = FunctionItem(x)
+            item_widget = FunctionWidget(x)
             item.setSizeHint(item_widget.sizeHint())
 
             if self.checkable:
@@ -304,7 +570,6 @@ class FunctionDialog(QtWidgets.QDialog):
             else:
                 self.ui.combo_combine.setCurrentIndex(0)
 
-
             self.ui.parameter_box.setEnabled(True)
             self.ui.edit_value_2.show()
             self.ui.label_argument_2.show()
@@ -325,8 +590,7 @@ class FunctionDialog(QtWidgets.QDialog):
                 else:
                     self.ui.edit_value_1.setStyleSheet('QLineEdit { background-color: white; }')
                     self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
-
-            self.ui.list_functions.item(self.ui.list_functions.currentRow()).setSelected(True)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
 
         aggr = str(self.ui.combo_combine.currentText())
         if aggr == "":

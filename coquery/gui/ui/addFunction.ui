@@ -52,24 +52,12 @@
       <widget class="QListWidget" name="list_classes"/>
      </item>
      <item>
-      <widget class="QListWidget" name="list_functions">
-       <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectRows</enum>
-       </property>
+      <widget class="FunctionList" name="list_functions">
        <property name="verticalScrollMode">
         <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
        <property name="horizontalScrollMode">
         <enum>QAbstractItemView::ScrollPerPixel</enum>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-       <property name="currentRow">
-        <number>-1</number>
-       </property>
-       <property name="sortingEnabled">
-        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -202,6 +190,11 @@
    <class>CoqListSelect</class>
    <extends>QListWidget</extends>
    <header location="global">..listselect</header>
+  </customwidget>
+  <customwidget>
+   <class>FunctionList</class>
+   <extends>QListWidget</extends>
+   <header>..addfunction</header>
   </customwidget>
  </customwidgets>
  <resources/>

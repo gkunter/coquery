@@ -37,11 +37,9 @@ class Ui_FunctionsDialog(object):
         self.list_classes = QtWidgets.QListWidget(FunctionsDialog)
         self.list_classes.setObjectName("list_classes")
         self.horizontalLayout.addWidget(self.list_classes)
-        self.list_functions = QtWidgets.QListWidget(FunctionsDialog)
-        self.list_functions.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.list_functions = FunctionList(FunctionsDialog)
         self.list_functions.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.list_functions.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
-        self.list_functions.setWordWrap(True)
         self.list_functions.setObjectName("list_functions")
         self.horizontalLayout.addWidget(self.list_functions)
         self.horizontalLayout.setStretch(0, 1)
@@ -111,7 +109,6 @@ class Ui_FunctionsDialog(object):
         self.label_4.setBuddy(self.combo_combine)
 
         self.retranslateUi(FunctionsDialog)
-        self.list_functions.setCurrentRow(-1)
         self.buttonBox.accepted.connect(FunctionsDialog.accept)
         self.buttonBox.rejected.connect(FunctionsDialog.reject)
         QtCore.QMetaObject.connectSlotsByName(FunctionsDialog)
@@ -120,12 +117,12 @@ class Ui_FunctionsDialog(object):
         _translate = QtCore.QCoreApplication.translate
         FunctionsDialog.setWindowTitle(_translate("FunctionsDialog", "Add a function – Coquery"))
         self.label.setText(_translate("FunctionsDialog", "&Label:"))
-        self.list_functions.setSortingEnabled(True)
         self.label_argument_1.setText(_translate("FunctionsDialog", "Ar&gument:"))
         self.edit_value_1.setPlaceholderText(_translate("FunctionsDialog", "(no value specified)"))
         self.label_argument_2.setText(_translate("FunctionsDialog", "Ar&gument:"))
         self.edit_value_2.setPlaceholderText(_translate("FunctionsDialog", "(no value specified)"))
         self.label_4.setText(_translate("FunctionsDialog", "&Combine values:"))
 
+from ..addfunction import FunctionList
 from ..listselect import CoqListSelect
 

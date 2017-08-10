@@ -652,7 +652,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_share_query.setVisible(False)
 
         # leave if the results table is empty:
-        if not self.ui.data_preview.isEnabled() or len(self.table_model.content) == 0:
+        if (not self.ui.data_preview.isEnabled() or
+            len(self.table_model.content) == 0):
             # disable the result-related menu entries:
             self.ui.action_save_selection.setDisabled(True)
             self.ui.action_save_results.setDisabled(True)
@@ -3122,9 +3123,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         kwargs["available_columns"] = self._get_available_columns(columns)
 
-        # run the dialog:
-        response = addfunction.FunctionDialog.set_function(
-            parent=self, columns=columns, **kwargs)
+        ## run the dialog:
+        #response = addfunction.FunctionDialog.set_function(
+            #parent=self, columns=columns, **kwargs)
+
+        response = addfunction.ColumnFunctionDialog.set_function(
+            columns=columns, df=self.table_model.content, parent=self)
 
         if response:
             if summary:
