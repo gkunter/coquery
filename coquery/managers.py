@@ -886,6 +886,7 @@ class Collocations(Manager):
     """
 
     ignore_user_functions = True
+    threshold = 0.05
 
     def _get_main_functions(self, df, session):
         """
@@ -1150,12 +1151,12 @@ class ContrastMatrix(FrequencyList):
             g2, p_g2, _, _ = scipy.stats.chi2_contingency(
                 obs, correction=False, lambda_="log-likelihood")
             if (freq_1 / total_1) < (freq_2 / total_2):
-                df = pd.Series([-g2, p_g2])
+                val = pd.Series([-g2, p_g2])
             else:
-                df = pd.Series([g2, p_g2])
-            return df
+                val = pd.Series([g2, p_g2])
+            return val
         except ValueError as e:
-            raise e
+            return pd.Series([0, 0])
 
     def get_cell_content(self, index, df, session):
         """
