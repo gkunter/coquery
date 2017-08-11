@@ -21,16 +21,8 @@ import numpy as np
 import sqlalchemy
 import operator
 import logging
-
-from . import options, sqlhelper, NAME
-from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
-from .general import CoqObject, collapse_words
-from .gui.pyqt_compat import get_toplevel_window
-
-try:
-    max_int = sys.maxint
-except AttributeError:
-    max_int = sys.maxsize
+import numbers
+from scipy import stats
 
 # make sure reduce() is available
 try:
@@ -40,66 +32,10 @@ except (ImportError):
     pass
 assert reduce
 
-# use stats.iqr() and stats.mode() if possible, otherwise use
-# replacement methods:
-try:
-    from scipy import stats
-    if "iqr" not in dir (stats):
-        # the 'iqr' method is not available in Python 2.7:
-        raise ImportError
-except ImportError:
-    import collections
-
-    def _mode(x):
-        return collections.Counter(x).most_common()[0][0]
-
-    def _iqr(x):
-        return np.subtract(*np.percentile(x, [75, 25]))
-else:
-    _iqr = stats.iqr
-    _mode = stats.mode
-
-def _save_first(x):
-    l = [y for y in x if y is not None]
-    try:
-        return l[0]
-    except IndexError:
-        return None
-
-def _save_last(x):
-    l = [y for y in x if y]
-    try:
-        return l[-1]
-    except IndexError:
-        return None
-
-combine_map = {
-    "all": all,
-    "any": any,
-    "none": lambda x: not any(x),
-    "sum": sum,
-    "max": max,
-    "min": min,
-    "mean": np.mean,
-    "sd": np.std,
-    "median": np.median,
-    "mode": _mode,
-    "IQR": _iqr,
-    "first": _save_first,
-    "last": _save_last,
-    "random": lambda x: np.random.choice(x),
-    "join": lambda x, y: y.join(x),
-    }
-
-BOOL_COMBINE = ["all", "any", "none"]
-SEQ_COMBINE = ["first", "last", "random", "mode", "max", "min"]
-NUM_COMBINE = ["sum", "mean", "sd", "median", "IQR"]
-NO_COMBINE = []
-
-STR_COMBINE = SEQ_COMBINE + BOOL_COMBINE
-NUM_COMBINE = NUM_COMBINE + SEQ_COMBINE
-ALL_COMBINE = NUM_COMBINE + SEQ_COMBINE + BOOL_COMBINE
-
+from . import options, sqlhelper, NAME
+from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
+from .general import CoqObject, collapse_words
+from .gui.pyqt_compat import get_toplevel_window
 
 #############################################################################
 ## Base function
@@ -107,11 +43,7 @@ ALL_COMBINE = NUM_COMBINE + SEQ_COMBINE + BOOL_COMBINE
 
 class Function(CoqObject):
     _name = "virtual"
-    parameters = 0
-    toggle_parameters = {}
-    default_aggr = "first"
     allow_null = False
-    combine_modes = ALL_COMBINE
 
     # set no_column_lables to True if the columns appear in the function name
     no_column_labels = False
@@ -129,15 +61,15 @@ class Function(CoqObject):
     #   (2) the label displayed on the widget
     #   (3) the default value
 
-    arguments = {"input": [],
-                 "toggle": []}
+    arguments = {"string": [],
+                 "check": []}
 
     @staticmethod
     def get_description():
         return "Base functions"
 
-    def __init__(self, columns=None, value=None, label=None, alias=None,
-                 group=None, aggr=None, **kwargs):
+    def __init__(self, columns=None, label=None, alias=None,
+                 group=None, **kwargs):
         """
         """
         if columns is None:
@@ -146,13 +78,9 @@ class Function(CoqObject):
         self.columns = columns
         self.alias = alias
         self.group = group
-        self.value = value
+        #self.value = kwargs.get("value", None)
         self._label = label
-        if aggr is not None:
-            self.aggr = aggr
-        else:
-            self.aggr = self.default_aggr
-        self.select = combine_map[self.aggr]
+        self.kwargs = kwargs
 
     def __repr__(self):
         return "{}(columns=[{}], value='{}', group={})".format(
@@ -167,9 +95,17 @@ class Function(CoqObject):
             return cls._name
 
     def get_flag(self, flag):
+        if flag == "case":
+            try:
+                ignore_case = self.kwargs["case"] == False
+            except KeyError:
+                ignore_case = True
+
+            return re.IGNORECASE if ignore_case else 0
+
         return False
 
-    def get_label(self, session, manager, unlabel=False):
+    def get_label(self, session, unlabel=False):
         if self._label and not unlabel:
             return self._label
 
@@ -184,10 +120,15 @@ class Function(CoqObject):
                                       for x in self.columns]))
             else:
                 args.append(",".join(self.columns))
-            if self.value:
-                args.append('"{}"'.format(self.value))
-            if len(self.columns) > 1:
-                args.append('"{}"'.format(self.aggr))
+
+            for kw in [x for x in self.kwargs if x not in ("session")]:
+                val = self.kwargs[kw]
+                if val is not None:
+                    if isinstance(val, numbers.Number):
+                        fmt = "{}"
+                    else:
+                        fmt = "'{}'"
+                    args.append(fmt.format(self.kwargs[kw]))
 
             return "{}({})".format(self.get_name(), ", ".join(args))
 
@@ -227,11 +168,9 @@ class Function(CoqObject):
                 return col
         return None
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         try:
             val = df[self.columns].apply(self._func)
-            if len(val.columns) > 1:
-                val = val.apply(self.select, axis="columns")
         except (KeyError, ValueError):
             val = self.constant(df, None)
 
@@ -273,7 +212,6 @@ class Function(CoqObject):
 
 
 class StringFunction(Function):
-    combine_modes = STR_COMBINE
 
     @staticmethod
     def get_description():
@@ -293,68 +231,26 @@ class StringFunction(Function):
         return True
 
 
-class StringRegEx(StringFunction):
-    validate_input = StringFunction.validate_regex
-
-    def __init__(self, value, columns=None, *args, **kwargs):
-        super(StringRegEx, self).__init__(columns, *args, **kwargs)
-        self.value = value
-        try:
-            self.re = re.compile(value, re.UNICODE)
-        except Exception:
-            self.re = None
-
-
 class StringChain(StringFunction):
     _name = "CONCAT"
     allow_null = True
 
-    arguments = {"input": [("sep", "Separator:", "-")]}
+    arguments = {"string": [("sep", "Separator:", "-")]}
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         val = df[self.columns].apply(
-                    lambda x: (x.astype(str).str.cat(sep=self.value)
+                    lambda x: (x.astype(str).str.cat(**kwargs)
                                if x.dtype != object
-                               else x.str.cat(sep=self.value)),
+                               else x.str.cat(**kwargs)),
                     axis="columns")
-        return val
-
-
-class StringCount(StringRegEx):
-    _name = "COUNT"
-
-    arguments = {"input": [("regex", "Regular expression:", "")]}
-
-    def _func(self, cell):
-        if cell is None:
-            return None
-
-        try:
-            match = self.re.findall(cell)
-        except TypeError:
-            return None
-
-        try:
-            return len(match)
-        except TypeError:
-            return 0
-
-    def evaluate(self, df, *args, **kwargs):
-        try:
-            if self.re is None:
-                raise ValueError
-            val = df[self.columns].applymap(self._func)
-            if len(val.columns) > 1:
-                val = val.apply(self.select, axis="columns")
-        except (KeyError, ValueError):
-            val = self.constant(df, None)
         return val
 
 
 class StringSeriesFunction(StringFunction):
     single_column = False
+    fill_na = ""
 
-    def evaluate(self, df, value=None, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
 
         # eliminate 'session' and 'manager' keywords because they are not
         # accepted by the Series string functions:
@@ -367,22 +263,25 @@ class StringSeriesFunction(StringFunction):
         except KeyError:
             pass
 
-        # ensure that regex functions use unicode:
-        if self.str_func in ("contains", "extract", "count"):
-            if "(?u)" not in value:
-                value = "(?u){}".format(value)
-        if value:
-            _df = pd.concat([getattr(df[col].astype(str).str
-                                     if df[col].dtype != object
-                                     else df[col].str,
-                                     self.str_func)(value, *args, **kwargs)
-                             for col in self.columns], axis="columns")
-        else:
-            _df = pd.concat([getattr(df[col].astype(str).str
-                                     if df[col].dtype != object
-                                     else df[col].str,
-                                     self.str_func)(*args, **kwargs)
-                             for col in self.columns], axis="columns")
+        if self.str_func in ("replace", "contains", "extract", "count"):
+            # ensure that regex functions use unicode:
+            pat = kwargs["pat"]
+            if "(?u)" not in pat:
+                pat = "(?u){}".format(pat)
+            kwargs["pat"] = pat
+
+            # add case-sensitivity flag:
+            kwargs["flags"] = self.get_flag("case")
+            try:
+                kwargs.pop("case")
+            except KeyError:
+                pass
+
+        _df = pd.concat([getattr(df[col].astype(str).str
+                                 if df[col].dtype != object
+                                 else df[col].str,
+                                 self.str_func)(**kwargs)
+                         for col in self.columns], axis="columns")
 
         groups = len(_df.columns) // len(self.columns)
         if groups > 1 or len(self.columns) > 1:
@@ -391,22 +290,32 @@ class StringSeriesFunction(StringFunction):
                            for col, _ in enumerate(self.columns)]
         else:
             _df.columns = [self.get_id()]
-        return _df.fillna("")
+
+        return _df.fillna(self.fill_na) if self.fill_na is not None else _df
+
+
+class StringCount(StringSeriesFunction):
+    _name = "COUNT"
+    str_func = "count"
+    fill_na = 0
+    validate_input = StringFunction.validate_regex
+    arguments = {"string": [("pat", "Regular expression:", "")],
+                 "check": [("case", "Case-sensitive:", False)]}
 
 
 class StringMatch(StringSeriesFunction):
     _name = "MATCH"
     str_func = "contains"
+    fill_na = False
     validate_input = StringFunction.validate_regex
-    arguments = {"input": [("regex", "Regular expression:", "")],
-                 "toggle": [("case", "Case-sensitive:", False)]}
+    arguments = {"string": [("pat", "Regular expression:", "")],
+                 "check": [("case", "Case-sensitive:", False)]}
 
-    def evaluate(self, df, *args, **kwargs):
-        val = super(StringMatch, self).evaluate(df, self.value,
-                                                self.get_flag("case"))
+    def evaluate(self, df, **kwargs):
+        val = super(StringMatch, self).evaluate(df, **kwargs)
         # replace empty strings (which may be caused if the column contains
         # a Null value) by False:
-        val = val.replace("", False)
+        val = val.replace("", self.fill_na)
         return val
 
 
@@ -414,38 +323,46 @@ class StringExtract(StringSeriesFunction):
     _name = "EXTRACT"
     str_func = "extract"
     validate_input = StringFunction.validate_regex
-    arguments = {"input": [("regex", "Regular expression:", "")],
-                 "toggle": [("case", "Case-sensitive:", False)]}
+    arguments = {"string": [("pat", "Regular expression:", "")],
+                 "check": [("case", "Case-sensitive:", False)]}
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
+        pat = kwargs["pat"]
         # put the regex into parentheses if there is no match group:
-        if not re.search(r"\([^)]*\)", self.value):
-            val = "({})".format(self.value)
-        else:
-            val = self.value
-        return super(StringExtract, self).evaluate(df, val, expand=True)
+        if not re.search(r"\([^)]*\)", pat):
+            pat = "({})".format(pat)
+        kwargs["pat"] = pat
+        kwargs["expand"] = True
 
-
-class StringUpper(StringSeriesFunction):
-    _name = "UPPER"
-    str_func = "upper"
-
-
-class StringLower(StringSeriesFunction):
-    _name = "LOWER"
-    str_func = "lower"
-
-
-class StringLength(StringSeriesFunction):
-    _name = "LENGTH"
-    str_func = "len"
+        return super(StringExtract, self).evaluate(df, **kwargs)
 
 
 class StringReplace(StringSeriesFunction):
     _name = "REPLACE"
     str_func = "replace"
-    arguments = {"input": [("old", "Find:", ""),
-                           ("new", "Replace:", "")]}
+    fill_na = None
+
+    arguments = {"string": [("pat", "Find:", ""),
+                           ("repl", "Replace:", "")],
+                 "check": [("case", "Case-sensitive:", False)]}
+
+
+class StringUpper(StringSeriesFunction):
+    _name = "UPPER"
+    str_func = "upper"
+    fill_na = None
+
+
+class StringLower(StringSeriesFunction):
+    _name = "LOWER"
+    str_func = "lower"
+    fill_na = None
+
+
+class StringLength(StringSeriesFunction):
+    _name = "LENGTH"
+    str_func = "len"
+    fill_na = 0
 
 
 ####################
@@ -454,13 +371,12 @@ class StringReplace(StringSeriesFunction):
 
 class NumFunction(Function):
     _name = "virtual"
-    combine_modes = NUM_COMBINE
 
     @staticmethod
     def get_description():
         return "Mathematical functions"
 
-    def coerce_value(self, df, **kwargs):
+    def coerce_value(self, df, value):
         """
         Coerce the function argument to the appropriate type depending on the
         values of the supplied data frame.
@@ -470,13 +386,13 @@ class NumFunction(Function):
 
         if all([dt in (int, float) for dt in column_dtypes]):
             # if all columns are numeric, the value is coerced to float
-            return float(self.value)
+            return float(value)
         elif any([dt == object for dt in column_dtypes]):
             # if there is any string column, the value is coerced to a string:
-            return str(self.value)
+            return str(value)
         elif any([dt == bool for dt in column_dtypes]):
             # if there is any bool column, the value is coerced to a bool:
-            return bool(self.value)
+            return bool(value)
         else:
             # undefined behavior
             raise TypeError
@@ -488,101 +404,147 @@ class CalcFunction(NumFunction):
     data frame for the calculations, thus speeding up performance.
     """
     _name = "virtual"
+    arguments = {"float": [("value", "Value:", None)]}
 
-    def evaluate(self, df, *args, **kwargs):
-        if len(self.columns) == 1 and not self.value:
+    def evaluate(self, df, **kwargs):
+        if len(self.columns) == 1 and kwargs["value"] is None:
             val = reduce(self._func, df[self.columns[0]].values)
         else:
             val = df[self.columns[0]].values
             for x in self.columns[1:]:
                 val = self._func(val, df[x].values)
-            if self.value:
-                const = self.coerce_value(df, **kwargs)
+
+            if kwargs["value"] is not None:
+                const = self.coerce_value(df, kwargs["value"])
                 val = self._func(val, const)
         return pd.Series(data=val, index=df.index)
 
-class MathFunction(CalcFunction):
-    pass
 
-class Add(MathFunction):
+class OperatorFunction(CalcFunction):
+    """
+    Functions that define mathematical operations (addition, subtraction,
+    division, multiplication).
+    """
+
+    @staticmethod
+    def get_description():
+        return "Mathematical operations"
+
+
+class Add(OperatorFunction):
     _name = "ADD"
     _func = operator.add
 
 
-class Sub(MathFunction):
+class Sub(OperatorFunction):
     _name = "SUB"
     _func = operator.sub
 
 
-class Mul(MathFunction):
+class Mul(OperatorFunction):
     _name = "MUL"
     _func = operator.mul
 
 
-class Div(MathFunction):
+class Div(OperatorFunction):
     _name = "DIV"
     _func = operator.truediv
 
 
-class NumpyFunction(MathFunction):
+class Log(OperatorFunction):
+    _name = "LOG"
+    single_column = False
+    arguments = {"choose": [("base", "Base:", "Log",
+                             ("Log2", "Log10", "LogN"))]}
+
+    def evaluate(self, df, **kwargs):
+        base = kwargs.get("base")
+        func = {"Log2": pd.np.log2,
+                "Log10": pd.np.log10,
+                "LogN": pd.np.log}[base]
+
+        val = func(df[self.columns].values)
+        if len(self.columns) > 1:
+            columns = ["{}_{}".format(self.get_id(), col + 1)
+                       for col, _ in enumerate(self.columns)]
+        else:
+            columns = [self.get_id()]
+
+        val = pd.DataFrame(data=val, index=df.index, columns=columns)
+        return val
+
+
+class StatisticalFunction(CalcFunction):
     """
-    NumpyFunction is a wrapper for mathematical functions provided by Numpy.
+    NumpyFunction is a wrapper for statistical functions provided by Numpy.
     The function is specified in the class attribute `_func`.
     """
     _name = "virtual"
-    parameters = 0
+    arguments = {}
 
-    def evaluate(self, df, *args, **kwargs):
+    @staticmethod
+    def get_description():
+        return "Statistical functions"
+
+    def evaluate(self, df, **kwargs):
         _df = df[self.columns]
         if len(self.columns) == 1:
-            val = self._func(_df.values, axis=None)
+            val = self._func(_df.values, axis=None, **kwargs)
         else:
-            val = self._func(_df.values)
+            val = self._func(_df.values, **kwargs)
 
         return pd.Series(data=val, index=df.index)
 
 
-class Min(NumpyFunction):
+class Min(StatisticalFunction):
     _name = "MIN"
 
-    def _func(self, values, axis=1):
+    def _func(self, values, axis=1, **kwargs):
         return pd.np.nanmin(values, axis=axis)
 
 
-class Max(NumpyFunction):
+class Max(StatisticalFunction):
     _name = "MAX"
 
-    def _func(self, values, axis=1):
+    def _func(self, values, axis=1, **kwargs):
         return pd.np.nanmax(values, axis=axis)
 
 
-class Mean(NumpyFunction):
+class Mean(StatisticalFunction):
     _name = "MEAN"
 
-    def _func(self, values, axis=1):
+    def _func(self, values, axis=1, **kwargs):
         return pd.np.mean(values, axis=axis)
 
 
-class Median(NumpyFunction):
+class Median(StatisticalFunction):
     _name = "MEDIAN"
 
-    def _func(self, values, axis=1):
+    def _func(self, values, axis=1, **kwargs):
         return pd.np.median(values, axis=axis)
 
 
-class StandardDeviation(NumpyFunction):
+class StandardDeviation(StatisticalFunction):
     _name = "SD"
 
-    def _func(self, values, axis=1):
+    def _func(self, values, axis=1, **kwargs):
         return pd.np.std(values, axis=axis)
 
 
-class InterquartileRange(NumpyFunction):
+class InterquartileRange(StatisticalFunction):
     _name = "IQR"
 
-    def _func(self, values, axis=1):
+    def _func(self, values, axis=1, **kwargs):
         return pd.np.subtract(
             *pd.np.percentile(values, [75, 25], axis=axis))
+
+
+class Percentile(StatisticalFunction):
+    _name = "Percentile"
+    arguments = {"float": [("value", "Percentile", 95, (0, 100))]}
+
+    def _func(self, values, axis=1, **kwargs):
+        return pd.np.percentile(values, kwargs["value"], axis=axis)
 
 
 #############################################################################
@@ -591,7 +553,7 @@ class InterquartileRange(NumpyFunction):
 
 class Comparison(CalcFunction):
     _name = "virtual"
-    combine_modes = BOOL_COMBINE
+    arguments = {"string": [("value", "Value:", "")]}
 
     @staticmethod
     def get_description():
@@ -630,7 +592,6 @@ class LessEqual(Comparison):
 
 class LogicFunction(CalcFunction):
     _name = "virtual"
-    combine_modes = BOOL_COMBINE
 
     @staticmethod
     def get_description():
@@ -671,11 +632,9 @@ class Xor(LogicFunction):
     #_name = "ISNOTMISSING"
     #parameters = 0
 
-    #def evaluate(self, df, *args, **kwargs):
+    #def evaluate(self, df, **kwargs):
         #columns = self.columns(df, **kwargs)
         #val = df[columns].notnull()
-        #if len(val.columns) > 1:
-            #val = val.apply(self.select, axis="columns")
         #return val
 
 
@@ -683,28 +642,26 @@ class Xor(LogicFunction):
     #_name = "ISMISSING"
     #parameters = 0
 
-    #def evaluate(self, df, *args, **kwargs):
-        #return ~super(IsMissing, self).evaluate(df, *args, **kwargs)
+    #def evaluate(self, df, **kwargs):
+        #return ~super(IsMissing, self).evaluate(df, **kwargs)
 
 
 #class IsNotEmpty(LogicFunction):
     #_name = "ISNOTEMPTY"
     #parameters = 0
 
-    #def evaluate(self, df, *args, **kwargs):
+    #def evaluate(self, df, **kwargs):
         #columns = self.columns(df, **kwargs)
         #val = df[columns].apply(lambda x: x.notnull() &
                                           #x.index.isin(x.nonzero()[0]))
-        #if len(val.columns) > 1:
-            #val = val.apply(self.select, axis="columns")
         #return val
 
 
 #class IsEmpty(IsNotEmpty):
     #_name = "ISEMPTY"
 
-    #def evaluate(self, df, *args, **kwargs):
-        #return ~super(IsEmpty, self).evaluate(df, *args, **kwargs)
+    #def evaluate(self, df, **kwargs):
+        #return ~super(IsEmpty, self).evaluate(df, **kwargs)
 
 
 #############################################################################
@@ -721,12 +678,10 @@ class BaseFreq(Function):
 
 class Freq(BaseFreq):
     _name = "statistics_frequency"
-    combine_modes = NO_COMBINE
     no_column_labels = True
-    default_aggr = "sum"
     drop_on_na = False
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         """
         Count the number of rows with equal values in the target columns.
         """
@@ -810,9 +765,9 @@ class FreqPMW(Freq):
     _name = "statistics_frequency_pmw"
     words = 1000000
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         session = kwargs["session"]
-        val = super(FreqPMW, self).evaluate(df, *args, **kwargs)
+        val = super(FreqPMW, self).evaluate(df, **kwargs)
         if len(val) > 0:
             corpus_size = session.Corpus.get_corpus_size()
         val = val.apply(lambda x: x / (corpus_size / self.words))
@@ -832,10 +787,10 @@ class FreqNorm(Freq):
     """
     _name = "statistics_frequency_normalized"
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         session = kwargs["session"]
 
-        val = super(FreqNorm, self).evaluate(df, *args, **kwargs)
+        val = super(FreqNorm, self).evaluate(df, **kwargs)
 
         if len(val) == 0:
             return pd.Series([], index=df.index)
@@ -848,7 +803,7 @@ class FreqNorm(Freq):
         else:
             fun = SubcorpusSize(session=session,
                                 columns=self.columns, group=self.group)
-        subsize = fun.evaluate(df, *args, **kwargs)
+        subsize = fun.evaluate(df, **kwargs)
 
         d = pd.concat([val, subsize], axis=1)
         d.columns = ["val", "subsize"]
@@ -859,9 +814,8 @@ class FreqNorm(Freq):
 
 class RowNumber(Freq):
     _name = "statistics_row_number"
-    maximum_columns = 0
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         val = pd.Series(range(1, len(df)+1), index=df.index)
         return val
 
@@ -869,7 +823,7 @@ class RowNumber(Freq):
 class Rank(Freq):
     _name = "statistics_rank"
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         rank_df = df[self.columns].drop_duplicates().reset_index(drop=True)
         rank_df[self._name] = rank_df.sort_values(by=rank_df.columns.tolist()).index.tolist()
         val = df.merge(rank_df, how="left")[self._name]
@@ -890,10 +844,10 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
     _name = "reference_frequency"
     single_column = True
 
-    def __init__(self, *args, **kwargs):
-        super(ReferenceCorpusFrequency, self).__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super(ReferenceCorpusFrequency, self).__init__(**kwargs)
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         session = kwargs["session"]
 
         self._res = self.get_reference()
@@ -926,9 +880,9 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
     _name = "reference_frequency_pmw"
     words = 1000000
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         val = super(ReferenceCorpusFrequencyPMW, self).evaluate(
-            df, *args, **kwargs)
+            df, **kwargs)
 
         if len(val) > 0:
             corpus_size = self._res.corpus.get_corpus_size()
@@ -945,7 +899,7 @@ class ReferenceCorpusFrequencyPTW(ReferenceCorpusFrequencyPMW):
 class ReferenceCorpusSize(BaseReferenceCorpus):
     _name = "reference_corpus_size"
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         self._res = self.get_reference()
         ext_size = self._res.corpus.get_corpus_size()
         return self.constant(df, ext_size)
@@ -967,7 +921,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
 
         return tmp[0]
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         session = kwargs["session"]
 
         self._res = self.get_reference()
@@ -994,10 +948,10 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
                                 group=self.group)
         else:
             fun = CorpusSize(session=session)
-        size = fun.evaluate(df, *args, **kwargs)
+        size = fun.evaluate(df, **kwargs)
 
         ext_freq = super(ReferenceCorpusLLKeyness, self).evaluate(
-            df, *args, **kwargs)
+            df, **kwargs)
         if len(ext_freq) > 0:
             ext_size = self._res.corpus.get_corpus_size()
 
@@ -1031,7 +985,7 @@ class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
 #class FilteredRows(BaseFilter):
     #_name = "statistics_filtered_rows"
 
-    #def evaluate(self, df, *args, **kwargs):
+    #def evaluate(self, df, **kwargs):
         #manager = kwargs["manager"]
         #key = kwargs.get("key", None)
         #if key:
@@ -1047,7 +1001,7 @@ class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
 #class PassingRows(BaseFilter):
     #_name = "statistics_passing_rows"
 
-    #def evaluate(self, df, *args, **kwargs):
+    #def evaluate(self, df, **kwargs):
         #manager = kwargs["manager"]
         #key = kwargs.get("key", None)
         #if key:
@@ -1076,7 +1030,7 @@ class Proportion(BaseProportion):
     _name = "statistics_proportion"
     no_column_labels = True
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         fun = Proportion(columns=self.columns, group=self.group)
         if self.find_function(df, fun):
             if options.cfg.verbose:
@@ -1085,7 +1039,7 @@ class Proportion(BaseProportion):
         else:
             if options.cfg.verbose:
                 print(self._name, "calculating df.Proportion()")
-        val = super(Proportion, self).evaluate(df, *args, **kwargs)
+        val = super(Proportion, self).evaluate(df, **kwargs)
         val = val / len(val)
         val.index = df.index
         return val
@@ -1094,8 +1048,8 @@ class Proportion(BaseProportion):
 class Percent(Proportion):
     _name = "statistics_percent"
 
-    def evaluate(self, *args, **kwargs):
-        return 100 * super(Percent, self).evaluate(*args, **kwargs)
+    def evaluate(self, df, **kwargs):
+        return 100 * super(Percent, self).evaluate(df, **kwargs)
 
 
 class Entropy(Proportion):
@@ -1109,9 +1063,9 @@ class Entropy(Proportion):
     # come across so far: entropy is a measure of "how hard it is to describe
     # this thing".
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         _df = df[self.columns]
-        _df["COQ_PROP"] = super(Entropy, self).evaluate(df, *args, **kwargs)
+        _df["COQ_PROP"] = super(Entropy, self).evaluate(df, **kwargs)
         _df = _df.drop_duplicates()
         props = _df["COQ_PROP"].values
         if len(_df) == 1:
@@ -1127,7 +1081,7 @@ class Tokens(Function):
     no_column_labels = True
     maximum_columns = 0
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         val = self.constant(df, len(df.dropna(how="all")))
         return val
 
@@ -1136,7 +1090,7 @@ class Types(Function):
     _name = "statistics_types"
     no_column_labels = True
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         val = self.constant(df, len(df[self.columns].drop_duplicates()))
         return val
 
@@ -1145,10 +1099,10 @@ class TypeTokenRatio(Types):
     _name = "statistics_ttr"
     no_column_labels = True
 
-    def evaluate(self, df, *args, **kwargs):
-        types = super(TypeTokenRatio, self).evaluate(df, *args, **kwargs)
+    def evaluate(self, df, **kwargs):
+        types = super(TypeTokenRatio, self).evaluate(df, **kwargs)
         tokens = Tokens(group=self.group,
-                        columns=self.columns).evaluate(df, *args, **kwargs)
+                        columns=self.columns).evaluate(df, **kwargs)
         df = pd.DataFrame(data={"types": types, "tokens": tokens},
                           index=df.index)
         val = df.apply(lambda row: row.types / row.tokens, axis="columns")
@@ -1177,7 +1131,7 @@ class SuperCondProb(Proportion):
                   .replace("\?", "\\?", regex=True))
         return val
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         session = kwargs["session"]
 
         left = 1
@@ -1192,7 +1146,7 @@ class SuperCondProb(Proportion):
             fun = ContextColumns(left=1, right=0)
             if options.cfg.verbose:
                 print(self._name, "calculating df.ContextColumns()")
-            left = fun.evaluate(df, *args, **kwargs)
+            left = fun.evaluate(df, **kwargs)
 
         # no left context specified:
         if len(left.columns) == 0:
@@ -1248,9 +1202,7 @@ class ConditionalProbability2(SuperCondProb):
         session = kwargs["session"]
         return session.Resource
 
-    def evaluate(self, df, *args, **kwargs):
-        session = kwargs["session"]
-
+    def evaluate(self, df, **kwargs):
         resource = self.get_resource(**kwargs)
         if resource is None:
             return self.constant(df, None)
@@ -1316,7 +1268,7 @@ class ConditionalProbability(Proportion):
     collocate of query token q, and f(c) is the total number of
     occurrences of c in the corpus. """
 
-    def evaluate(self, df, freq_cond, freq_total, *args, **kwargs):
+    def evaluate(self, df, freq_cond, freq_total, **kwargs):
         return df[freq_cond] / df[freq_total]
 
 
@@ -1335,7 +1287,7 @@ class MutualInformation(Proportion):
 
     """
 
-    def evaluate(self, df, f_1, f_2, f_coll, size, span, *args, **kwargs):
+    def evaluate(self, df, f_1, f_2, f_coll, size, span, **kwargs):
         try:
             val = pd.np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) / pd.np.log(2)
         except (ZeroDivisionError, TypeError, Exception) as e:
@@ -1352,15 +1304,14 @@ class MutualInformation(Proportion):
 
 class CorpusSize(Function):
     _name = "statistics_corpus_size"
-    combine_modes = NO_COMBINE
     no_column_labels = True
 
     @staticmethod
     def get_description():
         return "Corpus size functions"
 
-    def evaluate(self, df, *args, **kwargs):
-        session = kwargs["session"]
+    def evaluate(self, df, **kwargs):
+        session = get_toplevel_window().Session
         corpus_size = session.Corpus.get_corpus_size()
         val = self.constant(df, corpus_size)
         return val
@@ -1370,10 +1321,10 @@ class SubcorpusSize(CorpusSize):
     _name = "statistics_subcorpus_size"
     no_column_labels = True
 
-    def evaluate(self, df, *args, **kwargs):
+    def evaluate(self, df, **kwargs):
         try:
-            session = kwargs["session"]
-            manager = kwargs["manager"]
+            session = get_toplevel_window().Session
+            manager = session.get_manager()
             fun = SubcorpusSize(session=session,
                                 columns=self.columns, group=self.group)
             if self.find_function(df, fun):
@@ -1408,7 +1359,7 @@ class SubcorpusRangeMin(CorpusSize):
         return min_r
 
     def evaluate(self, df, *args, **kwargs):
-        session = kwargs["session"]
+        session = get_toplevel_window().Session
 
         corpus_features = [x for x, _ in
                            session.Resource.get_corpus_features()]
@@ -1433,8 +1384,8 @@ class SubcorpusRangeMax(SubcorpusRangeMin):
 class SentenceId(Function):
     _name = "coq_sentence_id"
 
-    def evaluate(self, df, *args, **kwargs):
-        session = kwargs["session"]
+    def evaluate(self, df, **kwargs):
+        session = get_toplevel_window().Session
         _df = pd.merge(df,
                        session.Resource.get_sentence_ids(
                            df["coquery_invisible_corpus_id"]),
@@ -1488,8 +1439,8 @@ class ContextColumns(Function):
             index=self.left_cols + self.right_cols)
         return val
 
-    def evaluate(self, df, *args, **kwargs):
-        session = kwargs["session"]
+    def evaluate(self, df, **kwargs):
+        session = get_toplevel_window().Session
         with session.db_engine.connect() as db_connection:
             if ("coquery_invisible_corpus_id" not in df.columns or
                     "coquery_invisible_origin_id" not in df.columns or
@@ -1560,7 +1511,6 @@ class ContextString(ContextColumns):
 
 #class QueryFunction(Function):
     #_name = "virtual"
-    #combine_modes = BOOL_COMBINE
 
     #@staticmethod
     #def get_description():
