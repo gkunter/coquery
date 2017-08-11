@@ -503,7 +503,7 @@ class Session(object):
                 fun = manager.get_function(s)
                 try:
                     # if options.cfg.verbose: print(9)
-                    return "{}({})".format(fun.get_label(session=self, manager=manager),
+                    return "{}({})".format(fun.get_label(session=self),
                                            match.group(2))
                 except AttributeError:
                     # if options.cfg.verbose: print(10)
@@ -522,8 +522,7 @@ class Session(object):
                     return header
                 else:
                     # if options.cfg.verbose: print(12)
-                    label = fun.get_label(session=self, manager=manager,
-                                          unlabel=ignore_alias)
+                    label = fun.get_label(session=self, unlabel=ignore_alias)
                     if not num:
                         return label
                     else:

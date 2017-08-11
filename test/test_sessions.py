@@ -231,7 +231,7 @@ class TestSessionMethods(unittest.TestCase):
     def test_translate_header_multicolumn_functions(self):
         val = ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5
         df = pd.DataFrame({"coq_word_label_1": val})
-        func = StringExtract(columns=["coq_word_label_1"], value="(a).*(x)")
+        func = StringExtract(columns=["coq_word_label_1"], pat="(a).*(x)")
         self.session.column_functions = FunctionList([func])
         self.manager.set_column_order(df.columns)
         df = self.manager.process(df, self.session)
