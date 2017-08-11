@@ -1603,6 +1603,111 @@ class CoqListWidget(QtWidgets.QListWidget):
         return new_item
 
 
+class CoqFloatEdit(QtWidgets.QLineEdit):
+    """
+    Define a QLineEidt class that takes float numbers as input.
+
+    Allowed characters are numbers 0-9, '-' and the decimal point character.
+    The backspace character '\b' is also allowed.
+    """
+    allowed_characters = "0123456789-"
+    valueChanged = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super(CoqFloatEdit, self).__init__(*args, **kwargs)
+        self.dec = QtCore.QLocale().decimalPoint()
+        self.textChanged.connect(self._fire)
+
+    def _fire(self):
+        self.valueChanged.emit()
+
+    def setValue(self, val):
+        if val is not None:
+            self.setText(QtCore.QLocale().toString(val))
+
+    def value(self):
+        val, success = QtCore.QLocale().toDouble(self.text())
+        if success:
+            return val
+        else:
+            return None
+
+    def keyPressEvent(self, ev):
+        def get_next_char_event():
+            """
+            Get a QKeyEvent instance that moves the cursor to the next
+            character. It tries to handle correctly left-to-right and
+            right-to-left writing systems. But of course, this won't work
+            straightaway...
+            """
+            if QtCore.QLocale().textDirection() == QtCore.Qt.LeftToRight:
+                key = QtCore.Qt.Key_Right
+            else:
+                key = QtCore.Qt.Key_Left
+
+            return QtGui.QKeyEvent(QtCore.QEvent.KeyRelease,
+                                   key,
+                                   QtCore.Qt.NoModifier)
+
+        text = ev.text()
+        content = utf8(self.text())
+        leading_figures = content[:self.cursorPosition()].strip("-")
+        text_to_dec = content.partition(self.dec)[0]
+
+        # handle special keys that don't have a visual representation or are
+        # represented by an escape sequence:
+        if (not "{}".format(text) or
+                ev.key() in (QtCore.Qt.Key_Delete, QtCore.Qt.Key_Enter,
+                             QtCore.Qt.Key_Return, QtCore.Qt.Key_Backspace)):
+            return super(CoqFloatEdit, self).keyPressEvent(ev)
+
+        # handle the decimal point key:
+        if text == self.dec:
+            try:
+                current_char = content[self.cursorPosition()]
+            except IndexError:
+                current_char = None
+            if current_char == self.dec:
+                ev = get_next_char_event()
+            elif self.dec in content or not leading_figures:
+                return ev.ignore()
+
+            return super(CoqFloatEdit, self).keyPressEvent(ev)
+
+        # handle the remaining allowed characters:
+        if text in self.allowed_characters:
+            if (text == "-" and
+                    self.cursorPosition() > 0):
+                return ev.ignore()
+            elif (text == "0" and
+                      self.cursorPosition() == 0 and
+                      text_to_dec == "0"):
+                ev = get_next_char_event()
+            elif (text == "0" and
+                      self.cursorPosition() > 0 and
+                      all([x == "0" for x in leading_figures])):
+                return ev.ignore()
+
+            return super(CoqFloatEdit, self).keyPressEvent(ev)
+
+        ev.ignore()
+
+
+class CoqIntEdit(CoqFloatEdit):
+    dec = None
+
+    def __init__(self, *args, **kwargs):
+        super(CoqIntEdit, self).__init__(*args, **kwargs)
+        self.dec = None
+
+    def value(self):
+        val, success = QtCore.QLocale().toInt(self.text())
+        if success:
+            return val
+        else:
+            return None
+
+
 class CoqTagEdit(QtWidgets.QLineEdit):
     """ Define a QLineEdit class that is used to enter query filters. """
 
