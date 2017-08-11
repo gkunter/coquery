@@ -62,17 +62,17 @@ class FunctionList(CoqObject):
                     print(fun.get_name())
                     then = datetime.datetime.now()
                     for x in range(5000):
-                        val = fun.evaluate(df,
-                                           session=session, manager=manager)
+                        val = fun.evaluate(df, **fun.kwargs)
                     print(datetime.datetime.now() - then)
                 else:
-                    val = fun.evaluate(df, session=session, manager=manager)
+                    val = fun.evaluate(df, **fun.kwargs)
             except Exception as e:
+                raise e
                 # can be caused by a function applied to a non-existing column
                 self._list.remove(fun)
                 exception = RuntimeError(
                                 msg_runtime_error_function.format(
-                                    fun.get_label(session, manager), str(e)))
+                                    fun.get_label(session), str(e)))
             else:
                 # Functions can return either single columns or data frames.
                 # Handle the function result accordingly:
