@@ -280,12 +280,13 @@ class CoqListSelect(QtWidgets.QWidget):
 
 
 class SelectionDialog(QtWidgets.QDialog):
-    def __init__(self, title, selected, available, text="", translator=None,
-                 *args, **kwargs):
+    def __init__(self, title, selected, available, text="", minimum=None,
+                 translator=None, *args, **kwargs):
         super(SelectionDialog, self).__init__(*args, **kwargs)
         self.setWindowTitle(title)
         self.main_layout = QtWidgets.QVBoxLayout(self)
         self.list_select = CoqListSelect()
+        self.list_select.setMinimumItems(minimum or 0)
         self.list_select.setAvailableList(available, translator)
         self.list_select.setSelectedList(selected, translator)
         self.main_layout.addWidget(self.list_select)
