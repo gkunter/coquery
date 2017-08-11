@@ -21,9 +21,9 @@ from .mockmodule import MockOptions, MockSettings
 from coquery.functions import (
     Freq,
     StringCount, StringLength, StringChain, StringMatch, StringExtract,
-    StringUpper, StringLower,
-    Add, Sub, Mul, Div,
-    Min, Max, Mean, Median, StandardDeviation, InterquartileRange,
+    StringUpper, StringLower, StringReplace,
+    Add, Sub, Mul, Div, Log,
+    Min, Max, Mean, Median, StandardDeviation, InterquartileRange, Percentile,
     Equal, NotEqual, GreaterThan, GreaterEqual, LessThan, LessEqual,
     And, Or, Xor,
     SuperCondProb
@@ -90,24 +90,6 @@ class TestFrequencyFunctions(unittest.TestCase):
         val = FunctionList([func]).lapply(df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [2, 1, 2, 1, 1])
 
-    def test_count_with_nan(self):
-        df = pd.DataFrame(df1)
-        func = StringCount(columns=["db_celex_coq_phonoword_phoncvbr_1"],
-                           value="[")
-        df = FunctionList([func]).lapply(df, session=None)
-        func = Freq(columns=[x for x in df.columns
-                             if not x.startswith("coquery_invisible")])
-        func_list = FunctionList([func])
-        val_a = func_list.lapply(df, session=None)[func.get_id()]
-
-        df = pd.DataFrame(df1)
-        df = df[[x for x in df if x.startswith("coq_")]]
-        func = Freq(columns=df.columns)
-        func_list = FunctionList([func])
-        val_b = func_list.lapply(df, session=None)[func.get_id()]
-
-        self.assertListEqual(val_a.tolist(), val_b.tolist())
-
 
 class TestStringFunctions(unittest.TestCase):
     def setUp(self):
@@ -120,39 +102,105 @@ class TestStringFunctions(unittest.TestCase):
         options.cfg.corpus = "Test"
         options.cfg.benchmark = False
 
-    def test_count(self):
-        func = StringCount(columns=["coq_word_label_1"], value="x")
+    def test_count_1(self):
+        func = StringCount(columns=["coq_word_label_1"], pat="x")
         val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [0, 0, 0, 1, 1])
+
+    def test_count_2(self):
+        func = StringCount(columns=["coq_word_label_1"], pat="X")
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(val.tolist(), [0, 0, 0, 1, 1])
+
+    def test_count_case_1(self):
+        func = StringCount(columns=["coq_word_label_1"], pat="x", case=True)
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(val.tolist(), [0, 0, 0, 1, 1])
+
+    def test_count_case_2(self):
+        func = StringCount(columns=["coq_word_label_1"], pat="X", case=True)
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(val.tolist(), [0, 0, 0, 0, 0])
+
+    def test_count_null(self):
+        func = StringCount(columns=["coq_word_label_2"], pat="a")
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(val.tolist(), [1, 1, 1, 1, 0])
 
     def test_length(self):
         func = StringLength(columns=["coq_word_label_1"])
         val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [3, 3, 3, 1, 1])
 
+    def test_length_null(self):
+        func = StringLength(columns=["coq_word_label_2"])
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(val.tolist(), [1, 1, 1, 1, 0])
+
     def test_chain(self):
         func = StringChain(
             columns=["coq_word_label_1", "coq_source_genre_1"],
-            value=" ")
+            sep=" ")
         val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(),
             ["abc SPOK", "abc NEWS", "abc NEWS", "x SPOK", "x NEWS"])
 
-    def test_match(self):
-        func = StringMatch(columns=["coq_word_label_1"], value="[a]")
+    def test_match_1(self):
+        func = StringMatch(columns=["coq_word_label_1"], pat="[a]")
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(
+            val.tolist(), [True, True, True, False, False])
+
+    def test_match_2(self):
+        func = StringMatch(columns=["coq_word_label_1"], pat="[A]")
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(
+            val.tolist(), [True, True, True, False, False])
+
+    def test_match_case_1(self):
+        func = StringMatch(columns=["coq_word_label_1"], pat="[A]", case=True)
+        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        self.assertListEqual(
+            val.tolist(), [False, False, False, False, False])
+
+    def test_match_case_2(self):
+        func = StringMatch(columns=["coq_word_label_1"], pat="[a]", case=True)
         val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(), [True, True, True, False, False])
 
     def test_match_null(self):
-        func = StringMatch(columns=["coq_word_label_2"], value="[a]")
+        func = StringMatch(columns=["coq_word_label_2"], pat="[a]")
         val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(), [True, True, True, True, False])
 
-    def test_extract(self):
-        func = StringExtract(columns=["coq_word_label_1"], value="[abx]*")
+    def test_extract_1(self):
+        func = StringExtract(columns=["coq_word_label_1"], pat="[ABX]*")
+        val = FunctionList([func]).lapply(df0, session=None)
+        self.assertListEqual(
+            val.iloc[:, -1].values.ravel().tolist(),
+            ["ab", "ab", "ab", "x", "x"])
+
+    def test_extract_2(self):
+        func = StringExtract(columns=["coq_word_label_1"], pat="[abx]*")
+        val = FunctionList([func]).lapply(df0, session=None)
+        self.assertListEqual(
+            val.iloc[:, -1].values.ravel().tolist(),
+            ["ab", "ab", "ab", "x", "x"])
+
+    def test_extract_case_1(self):
+        func = StringExtract(columns=["coq_word_label_1"],
+                             pat="[ABX]*", case=True)
+        val = FunctionList([func]).lapply(df0, session=None)
+        self.assertListEqual(
+            val.iloc[:, -1].values.ravel().tolist(),
+            ["", "", "", "", ""])
+
+    def test_extract_case_2(self):
+        func = StringExtract(columns=["coq_word_label_1"],
+                             pat="[abx]*", case=True)
         val = FunctionList([func]).lapply(df0, session=None)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(),
@@ -164,7 +212,7 @@ class TestStringFunctions(unittest.TestCase):
         """
         df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
                            "b": [""] * 10 + ["yyannxzzz"] * 5})
-        func = StringExtract(columns=["a"], value="(a).*(x)")
+        func = StringExtract(columns=["a"], pat="(a).*(x)")
         val = FunctionList([func]).lapply(df, session=None)
         self.assertListEqual(
             val.iloc[:, -2].values.ravel().tolist(), ["a"] * 5 + [""] * 10)
@@ -210,6 +258,33 @@ class TestStringFunctions(unittest.TestCase):
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(), list("ababababab"))
 
+    def test_replace_1(self):
+        func = StringReplace(columns=["coq_source_genre_1"],
+                             pat="S", repl="s")
+        val = FunctionList([func]).lapply(df0, session=None).iloc[:, -1]
+        self.assertListEqual(
+            val.values.ravel().tolist(),
+            ["sPOK", "NEWs", "NEWs", "sPOK", "NEWs"])
+
+    def test_replace_2(self):
+        func = StringReplace(columns=["coq_source_genre_1"],
+                             pat="s", repl="s")
+        val = FunctionList([func]).lapply(df0, session=None).iloc[:, -1]
+        self.assertListEqual(
+            val.values.ravel().tolist(),
+            ["sPOK", "NEWs", "NEWs", "sPOK", "NEWs"])
+
+    def test_replace_multi(self):
+        func = StringReplace(columns=["coq_word_label_1", "coq_word_label_2"],
+                             pat="a", repl="A")
+        val = FunctionList([func]).lapply(df0, session=None)
+        self.assertListEqual(
+            val.iloc[:, -2].values.ravel().tolist(),
+            ["Abc"] * 3 + ["x"] * 2)
+        self.assertListEqual(
+            val.iloc[:, -1].values.ravel().tolist(),
+            ["A"] * 4 + [pd.np.nan])
+
 
 class TestMathFunctions(unittest.TestCase):
     def setUp(self):
@@ -230,8 +305,8 @@ class TestMathFunctions(unittest.TestCase):
                      "column_5": list("abcd"),
                      "column_6": [0, 1, 0, 1]})
 
-    def assert_result(self, func_class, df, columns, expected, value=None):
-        func = func_class(columns=columns, value=value)
+    def assert_result(self, func_class, df, columns, expected, value=None, **kwargs):
+        func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
         npt.assert_equal(result[func.get_id()].values, expected)
 
@@ -239,97 +314,97 @@ class TestMathFunctions(unittest.TestCase):
         columns = ["column_1", "column_2"]
         value = "2"
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_int_2(self):
         columns = ["column_1", "column_2"]
         value = "2.0"
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_int_3(self):
         columns = ["column_1", "column_2"]
         value = 2.0
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_int_4(self):
         columns = ["column_1", "column_2"]
         value = 2
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_float_1(self):
         columns = ["column_3", "column_4"]
         value = "2"
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_float_2(self):
         columns = ["column_3", "column_4"]
         value = "2.0"
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_float_3(self):
         columns = ["column_3", "column_4"]
         value = 2.0
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_float_4(self):
         columns = ["column_3", "column_4"]
         value = 2
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), 2)
+        self.assertEqual(func.coerce_value(self.df, value), 2)
         self.assertEqual(type(
-            func.coerce_value(df=self.df, session=None)), float)
+            func.coerce_value(self.df, value)), float)
 
     def test_coerce_value_string_1(self):
         columns = ["column_1", "column_5"]
         value = "2"
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), "2")
+        self.assertEqual(func.coerce_value(self.df, value), "2")
         self.assertEqual(
-            type(func.coerce_value(df=self.df, session=None)), str)
+            type(func.coerce_value(self.df, value)), str)
 
     def test_coerce_value_string_2(self):
         columns = ["column_1", "column_5"]
         value = "2.0"
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), "2.0")
+        self.assertEqual(func.coerce_value(self.df, value), "2.0")
         self.assertEqual(
-            type(func.coerce_value(df=self.df, session=None)), str)
+            type(func.coerce_value(self.df, value)), str)
 
     def test_coerce_value_string_3(self):
         columns = ["column_1", "column_5"]
         value = 2.0
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), "2.0")
+        self.assertEqual(func.coerce_value(self.df, value), "2.0")
         self.assertEqual(
-            type(func.coerce_value(df=self.df, session=None)), str)
+            type(func.coerce_value(self.df, value)), str)
 
     def test_coerce_value_string_4(self):
         columns = ["column_1", "column_5"]
         value = 2
         func = Add(columns=columns, value=value)
-        self.assertEqual(func.coerce_value(df=self.df, session=None), "2")
+        self.assertEqual(func.coerce_value(self.df, value), "2")
         self.assertEqual(
-            type(func.coerce_value(df=self.df, session=None)), str)
+            type(func.coerce_value(self.df, value)), str)
 
     def test_add(self):
         columns = ["column_1", "column_2"]
@@ -400,6 +475,39 @@ class TestMathFunctions(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self.assert_result(func, self.df, columns, expected)
+
+    def test_log2(self):
+        columns = ["column_1", "column_2"]
+        expected = [[pd.np.log2(x) for x in self.df[columns[0]]],
+                    [pd.np.log2(x) for x in self.df[columns[1]]]]
+        base = "Log2"
+        func = Log(columns=columns, base=base)
+        val = FunctionList([func]).lapply(self.df, session=None)
+        self.assertListEqual(
+            val.iloc[:, -2].values.ravel().tolist(), expected[0])
+        self.assertListEqual(
+            val.iloc[:, -1].values.ravel().tolist(), expected[1])
+
+    def test_log2_columnwise(self):
+        columns = ["column_1"]
+        expected = [pd.np.log2(x) for x in self.df.column_1]
+        func = Log
+        base = "Log2"
+        self.assert_result(func, self.df, columns, expected, base=base)
+
+    def test_log10_columnwise(self):
+        columns = ["column_1"]
+        expected = [pd.np.log10(x) for x in self.df.column_1]
+        func = Log
+        base = "Log10"
+        self.assert_result(func, self.df, columns, expected, base=base)
+
+    def test_logN_columnwise(self):
+        columns = ["column_1"]
+        expected = [pd.np.log(x) for x in self.df.column_1]
+        func = Log
+        base = "LogN"
+        self.assert_result(func, self.df, columns, expected, base=base)
 
     def test_max(self):
         columns = ["column_1", "column_2"]
@@ -506,6 +614,20 @@ class TestMathFunctions(unittest.TestCase):
         func = InterquartileRange
         self.assert_result(func, self.df, columns, expected)
 
+    def test_percentile(self):
+        columns = ["column_1", "column_2"]
+        expected = [2.5, 4, 5, 6]
+        func = Percentile
+        value = 50
+        self.assert_result(func, self.df, columns, expected, value=value)
+
+    def test_percentile_columnwise(self):
+        columns = ["column_1"]
+        expected = [6] * 4
+        func = Percentile
+        value = 50
+        self.assert_result(func, self.df, columns, expected, value=value)
+
 
 class TestLogicalFunctions(unittest.TestCase):
     def setUp(self):
@@ -529,8 +651,8 @@ class TestLogicalFunctions(unittest.TestCase):
         options.cfg.corpus = "Test"
         options.cfg.benchmark = False
 
-    def assert_result(self, func_class, df, columns, expected, value=None):
-        func = func_class(columns=columns, value=value)
+    def assert_result(self, func_class, df, columns, expected, value=None, **kwargs):
+        func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
         npt.assert_equal(result[func.get_id()].values, expected)
 
@@ -771,8 +893,10 @@ class TestDistributionalFunctions(unittest.TestCase):
 
 
 provided_tests = (TestFrequencyFunctions, TestStringFunctions,
-                  TestMathFunctions, TestLogicalFunctions,
-                  TestDistributionalFunctions)
+                  TestMathFunctions,
+                  TestLogicalFunctions,
+                  TestDistributionalFunctions,
+                  )
 
 
 def main():
