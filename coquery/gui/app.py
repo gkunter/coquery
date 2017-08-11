@@ -3059,28 +3059,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.Session.summary_group = result
             self.enable_apply_button()
 
-    def _get_function_classes(self, columns):
-        dtypes = pd.Series([self.table_model.get_dtype(x) for x
-                            in columns])
-        if all(dtypes == object):
-            return (functions.StringFunction,
-                    functions.Comparison,
-                    functions.BaseProportion)
-        else:
-            return (functions.MathFunction,
-                    functions.LogicFunction)
-
-    def _get_available_columns(self, columns):
-        available = []
-        if hasattr(self, "table_model"):
-            if not columns:
-                columns = [x for x in self.table_model.content.columns]
-                available = []
-            else:
-                available = [x for x in self.table_model.content.columns
-                            if x not in columns]
-        return available
-
     def _add_to_functionlist(self, func_list, func_spec):
         """
         Add a function with the given specification to the function list.
@@ -3089,19 +3067,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         func_type : Function
         columns : list of str
-        value : str
-        aggregation : str
+        values : dict
         label : str
 
-        Such a list is returned by the addfunction.FunctionDialog methids.
+        Such a list is returned by the addfunction.FunctionDialog methods.
 
         Returns
         -------
         func : Function
             The function that is added
         """
-        fun_type, columns, value, aggr, label = func_spec
-        fun = fun_type(columns=columns, value=value, aggr=aggr)
+        fun_type, columns, values, label = func_spec
+        fun = fun_type(columns=columns, **values)
         self.Session.column_functions.add_function(fun)
 
         if label:
@@ -3114,29 +3091,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.settings.setValue("column_properties", properties)
         return fun
 
-    def add_function(self, columns=None, summary=False, group=False, **kwargs):
+    def add_function(self, columns=None):
         from . import addfunction
-        if not summary:
-            dtypes = pd.Series([self.table_model.get_dtype(x) for x
-                                in columns])
-            kwargs["function_class"] = self._get_function_classes(columns)
 
-        kwargs["available_columns"] = self._get_available_columns(columns)
-
-        ## run the dialog:
-        #response = addfunction.FunctionDialog.set_function(
-            #parent=self, columns=columns, **kwargs)
-
-        response = addfunction.ColumnFunctionDialog.set_function(
+        response = addfunction.FunctionDialog.set_function(
             columns=columns, df=self.table_model.content, parent=self)
 
         if response:
-            if summary:
-                l = [x(columns=columns, group=False) for x in response]
-                self.Session.summary_functions.set_list(l)
-            else:
-                self._add_to_functionlist(
-                    self.Session.column_functions, response)
+            self._add_to_functionlist(self.Session.column_functions,
+                                      response)
 
             if AUTO_FUNCTION in options.settings.value(
                         "settings_auto_apply", AUTO_APPLY_DEFAULT):
@@ -3147,23 +3110,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def edit_function(self, column):
         from . import addfunction
         func = self.Session.column_functions.find_function(column)
+        response = addfunction.FunctionDialog.edit_function(
+            func, df=self.table_model.content, parent=self)
 
-        available_columns = self._get_available_columns(func.columns)
-        try:
-            available_columns.remove(func.get_id())
-        except ValueError as e:
-            print(e)
-        diag = addfunction.FunctionDialog(
-                func=func,
-                value=func.value,
-                columns=func.columns,
-                available_columns=available_columns,
-                function_class=self._get_function_classes(func.columns),
-                parent=self)
-        response = diag.exec_()
         if response:
-            fun_type, columns, value, aggr, label = response
-            new_func = fun_type(columns=columns, value=value, aggr=aggr)
+            fun_type, columns, values, label = response
+            new_func = fun_type(columns=columns, **values)
             self.Session.column_functions.replace_function(func, new_func)
 
             if AUTO_FUNCTION in options.settings.value(
