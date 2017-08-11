@@ -1907,13 +1907,11 @@ class CorpusClass(object):
         self._corpus_range_cache[cache_key] = val
         return self._corpus_range_cache[cache_key]
 
-    def get_frequency(self, s, engine):
+    def get_frequency(self, s, engine, literal=False):
         """
         Return the frequency for a token specified by s.
 
-        The string ``s`` contains a query item specification. The frequency
-        can be restricted to only a part of the corpus by providing a filter
-        list.
+        The string ``s`` contains a query item specification.
 
         Frequencies are cached so that recurrent calls of the method with the
         same values for ``s`` are not queried from the SQL
@@ -1933,9 +1931,12 @@ class CorpusClass(object):
         """
 
         if isinstance(s, (int, float)):
-            s = "{}".format(s)
+            s = str(s)
 
-        s = s.replace("*", "\\*").replace("?", "\\?")
+        # escape asterisks and question marks so that they are not interpreted
+        # as wildcards:
+        s = s.replace("*", "\\*")
+        s = s.replace("?", "\\?")
 
         if options.cfg.query_case_sensitive:
             key = (engine.url, s, True)
