@@ -2,6 +2,8 @@
 * API change: Table.get_create_string() expects list of existing tables as
   second argument
 * New corpus: Old Bailey Corpus 2.0
+* New function dialog with better handling of function arguments
+* New functions: Percentile, Log, Replace
 * mathematical functions can now be applied column-wise
 * experimental support N-gram lookup tables
 * bring time series visualization to the visualization designer
