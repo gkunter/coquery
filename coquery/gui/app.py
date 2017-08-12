@@ -23,7 +23,6 @@ import re
 import warnings
 
 from coquery import managers
-from coquery import functions
 from coquery import sqlhelper
 from coquery import NAME, __version__
 from coquery.general import memory_dump
@@ -301,7 +300,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         header.setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
         header.resizeSection(1, 24)
         header.resizeSection(2, 24)
-
 
         # use a file system model for the file name auto-completer::
         self.dirModel = QtWidgets.QFileSystemModel(parent=self)
@@ -595,8 +593,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
         self.ui.button_filters.clicked.connect(self.manage_filters)
 
-        self.ui.data_preview.horizontalHeader().sectionFinallyResized.connect(self.result_column_resize)
-        self.ui.data_preview.horizontalHeader().customContextMenuRequested.connect(self.show_header_menu)
+        h_header = self.ui.data_preview.horizontalHeader()
+        h_header.sectionFinallyResized.connect(self.result_column_resize)
+        h_header.customContextMenuRequested.connect(self.show_header_menu)
+
         self.ui.data_preview.verticalHeader().customContextMenuRequested.connect(self.show_row_header_menu)
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
 
@@ -979,15 +979,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._hidden = True
         w = self.ui.button_toggle_hidden.sizeHint().width()
         self._old_sizes = self.ui.splitter_columns.sizes()
-        self.ui.splitter_columns.setStretchFactor(0,1)
-        self.ui.splitter_columns.setStretchFactor(1,0)
+        self.ui.splitter_columns.setStretchFactor(0, 1)
+        self.ui.splitter_columns.setStretchFactor(1, 0)
         self.ui.splitter_columns.setSizes([splitter_sizeHint.width() - w, w])
 
     def expand_hidden_columns(self):
         splitter_sizeHint = self.ui.splitter_columns.sizeHint()
         self._hidden = False
-        self.ui.splitter_columns.setStretchFactor(0,1)
-        self.ui.splitter_columns.setStretchFactor(1,1)
+        self.ui.splitter_columns.setStretchFactor(0, 1)
+        self.ui.splitter_columns.setStretchFactor(1, 1)
         self.ui.splitter_columns.setSizes(self._old_sizes)
 
         # reset width if the slider was minimized:
@@ -1063,6 +1063,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         options.cfg.context_left = self.ui.context_left_span.value()
         options.cfg.context_right = self.ui.context_right_span.value()
         options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+
+    def get_selected_functions(self):
+        columns = []
+        for x in self.ui.data_preview.selectionModel().selectedColumns():
+            columns.append(self.table_model.header[x.column()])
+        if not columns:
+            columns.append(self.table_model.header[0])
+        return columns
 
     ###
     ### action methods
@@ -1390,9 +1398,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                  getattr(self.Session.Resource,
                                          QUERY_ITEM_WORD))
             msg = msg_no_word_information.format(rc_feature)
+            title = "No word information available for stopwords – Coquery"
+
             QtWidgets.QMessageBox.warning(self,
-                                      "No word information available for stopwords – Coquery",
-                                      msg,
+                                      msg, title,
                                       QtWidgets.QMessageBox.Ok,
                                       QtWidgets.QMessageBox.Ok)
 
@@ -1446,7 +1455,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         if self.ui.combo_corpus.count():
             corpus_name = utf8(self.ui.combo_corpus.currentText())
-            self.resource, self.corpus, self.lexicon, self.path = options.cfg.current_resources[corpus_name]
+            tup = options.cfg.current_resources[corpus_name]
+            self.resource, self.corpus, self.lexicon, self.path = tup
             self.column_tree.setup_resource(self.resource)
         else:
             self.column_tree.clear()
@@ -1459,11 +1469,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         # try to transfer as many features from previous selections to the
         # new resource tree:
-        self.column_tree.select(self._forgotten_features.union(self.selected_features))
+        self.column_tree.select(
+            self._forgotten_features.union(self.selected_features))
         # remember the currently selected features, but remember those that
         # were selected but could not be selected anymore:
         currently_selected = self.column_tree.selected()
-        self._forgotten_features.update(self.selected_features.difference(currently_selected))
+        self._forgotten_features.update(
+            self.selected_features.difference(currently_selected))
         self.selected_features = currently_selected
 
         # delete groups (see #276)
@@ -1542,7 +1554,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             hidden_cols = pd.Index(manager.hidden_columns)
 
             vis_cols = [x for x in self.Session.output_object.columns
-                        if not x in hidden_cols]
+                        if x not in hidden_cols]
 
             to_show = self.Session.output_object[vis_cols]
             to_hide = self.Session.output_object[hidden_cols]
@@ -1576,7 +1588,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 hide()
             else:
                 show()
-            if self._hidden == None:
+            if self._hidden is None:
                 self.collapse_hidden_columns()
 
     def display_results(self, drop=True):
@@ -1896,7 +1908,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         # Create an alert in the system taskbar to indicate that the query has
         # completed:
-        logger.info("Done")
+        logging.info("Done")
         print("run_query: done")
 
     def get_output_column_menu(self, point=None, selection=[]):
@@ -2248,7 +2260,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # using SQLAlchemy may be found here:
             # http://stackoverflow.com/questions/9437498
 
-            logger.warning("Last query is incomplete.")
+            logging.warning("Last query is incomplete.")
             self.showMessage("Terminating query...")
             try:
                 self.Session.Corpus.resource.DB.kill_connection()
@@ -2455,7 +2467,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             msg = "<code style='color: darkred'>{type}: {code}</code>".format(
                 type=type(e).__name__, code=sys.exc_info()[1])
-            logger.error(msg)
+            logging.error(msg)
             QtWidgets.QMessageBox.critical(
                 self, "Visualization error – Coquery",
                 VisualizationModuleError(name, msg).error_message)
@@ -2576,7 +2588,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
             if success and (rm_installer or rm_database or rm_module):
-                logger.warning("Removed corpus {}.".format(entry.name))
+                logging.warning("Removed corpus {}.".format(entry.name))
                 self.showMessage("Removed corpus {}.".format(entry.name))
                 self.corpusListUpdated.emit()
 
@@ -2660,7 +2672,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             try:
                 self.corpus_manager.exec_()
             except Exception as e:
-                logger.error(e)
+                logging.error(e)
                 raise e
             self.corpusListUpdated.disconnect(self.corpus_manager.update)
 
@@ -2895,7 +2907,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     parent = node.parent()
                 except AttributeError:
                     print("Warning: Node has no parent")
-                    logger.warn("Warning: Node has no parent")
+                    logging.warn("Warning: Node has no parent")
                     return checked
                 if parent and parent.isLinked():
                     checked.append((parent.link, node.rc_feature))
@@ -3036,11 +3048,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             label_stopwords.format(len(l)))
 
     def menu_add_function(self):
-        columns = []
-        for x in self.ui.data_preview.selectionModel().selectedColumns():
-            columns.append(self.table_model.header[x.column()])
-        if not columns:
-            columns.append(self.table_model.header[0])
+        columns = self.get_selected_functions()
         self.add_function(columns)
 
     def edit_summary_function(self):
@@ -3052,7 +3060,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             all_columns = list(vis_cols) + list(hidden_cols)
         except AttributeError:
             all_columns = []
-
         result = groups.SummaryDialog.edit(
             self.Session.summary_group, all_columns, parent=self)
         if result:
@@ -3144,4 +3151,3 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 def _translate(x, text, y):
     return utf8(options.cfg.app.translate(x, text, y))
 
-logger = logging.getLogger(NAME)
