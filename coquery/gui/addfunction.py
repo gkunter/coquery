@@ -85,6 +85,9 @@ class Argument(QtWidgets.QWidget):
         elif self.wtype == "choose":
             return self.widget.currentText()
 
+    def setFocus(self):
+        return self.widget.setFocus()
+
 
 class FunctionWidget(QtWidgets.QWidget):
     argumentsChanged = QtCore.Signal()
@@ -92,6 +95,7 @@ class FunctionWidget(QtWidgets.QWidget):
     def __init__(self, func, checkable=True, *args, **kwargs):
         super(FunctionWidget, self).__init__(*args, **kwargs)
         self.checkable = checkable
+        self.argument_list = []
 
         name = func.get_name()
         desc = FUNCTION_DESC.get(func._name, "(no description available)")
@@ -129,6 +133,7 @@ class FunctionWidget(QtWidgets.QWidget):
                     argument = Argument(wtype, tup, self)
                     self.argumentLayout.addWidget(argument)
                     argument.valueChanged.connect(self._fire)
+                    self.argument_list.append(argument)
             except KeyError:
                 # ignore if an argument type is not used by function
                 pass
@@ -198,6 +203,12 @@ class FunctionWidget(QtWidgets.QWidget):
             argument = item.widget()
             argument.setValue(d[utf8(argument.objectName())])
 
+    def setFocus(self):
+        if self.argument_list:
+            return self.argument_list[0].setFocus()
+        else:
+            return super(FunctionWidget, self).setFocus()
+
 
 class FunctionList(QtWidgets.QListWidget):
     contentChanged = QtCore.Signal()
@@ -241,6 +252,7 @@ class FunctionList(QtWidgets.QListWidget):
         if widget:
             widget.showArguments()
             item.setSizeHint(widget.sizeHint())
+            widget.setFocus()
 
     def collapseItem(self, item):
         widget = self.itemWidget(item)
@@ -286,8 +298,6 @@ class FunctionDialog(QtWidgets.QDialog):
         self.available_columns = [x for x in self.df.columns
                                   if x not in self.columns]
 
-        self.edit_label = ""
-        self._auto_label = True
         self.available_functions = {}
 
         self.ui.label_selected_columns.clicked.connect(self.select_columns)
@@ -295,7 +305,6 @@ class FunctionDialog(QtWidgets.QDialog):
 
         self.ui.list_classes.currentRowChanged.connect(
             self.set_function_group)
-        self.ui.edit_label.textEdited.connect(self.check_auto_label)
         self.ui.list_functions.currentRowChanged.connect(
             self.set_function_label)
         self.ui.list_functions.contentChanged.connect(self.set_function_label)
@@ -304,16 +313,6 @@ class FunctionDialog(QtWidgets.QDialog):
             self.resize(options.settings.value("functionapply_size"))
         except TypeError:
             pass
-
-    def set_columns(self, columns):
-        self.columns = columns
-        self.available_columns = [x for x in self.df.columns
-                                  if x not in columns]
-        session = get_toplevel_window().Session
-        labels = ["{:2} {}".format(i+1, session.translate_header(x))
-                  for i, x in enumerate(self.columns)]
-        self.ui.label_selected_columns.setText("\n".join(labels))
-        self.change_columns()
 
     def select_columns(self):
         selected = SelectionDialog.show(
@@ -324,7 +323,15 @@ class FunctionDialog(QtWidgets.QDialog):
             parent=self)
         self.set_columns(selected)
 
-    def change_columns(self):
+    def set_columns(self, columns):
+        self.columns = columns
+        self.available_columns = [x for x in self.df.columns
+                                  if x not in columns]
+        session = get_toplevel_window().Session
+        labels = ["{:2} {}".format(i+1, session.translate_header(x))
+                  for i, x in enumerate(self.columns)]
+        self.ui.label_selected_columns.setText("\n".join(labels))
+
         self.blockSignals(True)
         func, values = self.get_function_values()
         self.add_function_groups()
@@ -346,6 +353,7 @@ class FunctionDialog(QtWidgets.QDialog):
                     item = self.ui.list_functions.find_function(func)
                     widget = self.ui.list_functions.itemWidget(item)
                     widget.setValues(values)
+                    widget.setFocus()
                     self.ui.list_functions.setCurrentItem(item)
 
     def get_function_groups(self):
@@ -364,21 +372,11 @@ class FunctionDialog(QtWidgets.QDialog):
                                functions.LogicFunction, )
         return function_groups
 
-    def check_auto_label(self):
-        s = utf8(self.ui.edit_label.text())
-        if self.auto_label:
-            self.auto_label = False
-        elif not s:
-            self.auto_label = True
-
     def set_function_label(self):
         func, values = self.get_function_values()
         session = get_toplevel_window().Session
         tmp_func = func(columns=self.columns, session=session, **values)
-        label = tmp_func.get_label(session=session)
-
-        if self._auto_label:
-            self.ui.edit_label.setText(label)
+        self.ui.edit_label.setText(tmp_func.get_label(session=session))
 
     def add_function_groups(self):
         self.blockSignals(True)
@@ -448,12 +446,7 @@ class FunctionDialog(QtWidgets.QDialog):
         if result == QtWidgets.QDialog.Accepted:
             func, values = self.get_function_values()
             columns = self.columns
-            if self._auto_label:
-                label = None
-            else:
-                label = utf8(self.ui.edit_label.text())
-
-            return (func, columns, values, label)
+            return (func, columns, values)
         else:
             return None
 

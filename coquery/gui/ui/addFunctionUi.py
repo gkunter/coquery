@@ -24,11 +24,10 @@ class Ui_FunctionsDialog(object):
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.widget_label)
         self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.label = QtWidgets.QLabel(self.widget_label)
-        self.label.setObjectName("label")
-        self.horizontalLayout_3.addWidget(self.label)
         self.edit_label = QtWidgets.QLineEdit(self.widget_label)
+        self.edit_label.setFocusPolicy(QtCore.Qt.NoFocus)
         self.edit_label.setText("")
+        self.edit_label.setReadOnly(True)
         self.edit_label.setObjectName("edit_label")
         self.horizontalLayout_3.addWidget(self.edit_label)
         self.verticalLayout_2.addWidget(self.widget_label)
@@ -75,7 +74,6 @@ class Ui_FunctionsDialog(object):
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout_2.addWidget(self.buttonBox)
         self.verticalLayout_2.setStretch(1, 4)
-        self.label.setBuddy(self.edit_label)
 
         self.retranslateUi(FunctionsDialog)
         self.buttonBox.accepted.connect(FunctionsDialog.accept)
@@ -85,7 +83,6 @@ class Ui_FunctionsDialog(object):
     def retranslateUi(self, FunctionsDialog):
         _translate = QtCore.QCoreApplication.translate
         FunctionsDialog.setWindowTitle(_translate("FunctionsDialog", "Add a function – Coquery"))
-        self.label.setText(_translate("FunctionsDialog", "&Label:"))
         self.label_2.setText(_translate("FunctionsDialog", "Selected columns:"))
         self.button_select_columns.setText(_translate("FunctionsDialog", "&Change columns..."))
 
