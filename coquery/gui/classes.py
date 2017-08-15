@@ -123,6 +123,9 @@ class CoqVerticalHeader(QtWidgets.QHeaderView):
 
 class CoqHorizontalHeader(QtWidgets.QHeaderView):
     sectionFinallyResized = QtCore.Signal(int, int, int)
+    addedToSelection = QtCore.Signal(int)
+    removedFromSelection = QtCore.Signal(int)
+    alteredSelection = QtCore.Signal(tuple)
 
     def __init__(self, *args, **kwargs):
         super(CoqHorizontalHeader, self).__init__(*args, **kwargs)
@@ -148,12 +151,17 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
             self._resizing = False
         else:
             ix = self.logicalIndexAt(e.pos())
+            old_list = self._selected_columns
             if ix in self._selected_columns:
                 mode = QtCore.QItemSelectionModel.Deselect
                 self._selected_columns.remove(ix)
+                self.removedFromSelection.emit(ix)
             else:
                 mode = QtCore.QItemSelectionModel.Select
                 self._selected_columns.append(ix)
+                self.addedToSelection.emit(ix)
+            new_list = self._selected_columns
+            self.alteredSelection.emit((new_list, old_list))
 
             select = self.parent().selectionModel()
             model = self.model()
