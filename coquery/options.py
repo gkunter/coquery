@@ -442,15 +442,9 @@ class Options(object):
         # whether a GUI is requested. This parse doesn't raise an argument
         # error.
         args, unknown = self.parser.parse_known_args()
-        if not args.gui:
-            print(CONSOLE_DEPRECATION, file=sys.stderr)
 
-        if use_qt:
-            self.args.gui = args.gui
-            self.args.to_file = False
-        else:
-            self.args.gui = False
-            self.args.to_file = True
+        self.args.gui = args.gui
+        self.args.to_file = False
 
         match = re.search("--connection\s+(.+)", self.args.parameter_string)
         if match:
@@ -1061,9 +1055,17 @@ class Options(object):
                     if f_columns is not None:
                         fnc = func_types.get(f_type, None)
                         if fnc:
-                            function_list.append(
-                                (fnc, f_columns.strip().split(",")))
-                summary = Summary(name, columns.split(","), function_list)
+                            if f_columns:
+                                cols = f_columns.strip().split(",")
+                            else:
+                                cols = []
+                            function_list.append((fnc, cols))
+
+                if columns:
+                    cols = columns.strip().split(",")
+                else:
+                    cols = []
+                summary = Summary(name, cols, function_list)
             if not sum_names:
                 summary = Summary("summary", [], [])
             self.args.summary_group.append(summary)
