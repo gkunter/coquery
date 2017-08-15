@@ -77,6 +77,18 @@ class CoqGroupTree(QtWidgets.QWidget):
         self.setup_hooks()
         self.check_buttons()
         self._item_number = 0
+        self.selected_columns = []
+
+    def selectionChanged(self, new_selection, old_selection):
+        """
+        This slot can be used to inform the group tree about changes in the
+        currently selected columns. This information will be used to set the
+        default grouping columns.
+
+        To use it, connect this slot to the selectionChanged signal of the
+        table that displays the data.
+        """
+        self.selected_columns = new_selection
 
     def add_groups(self, group_list):
         for group in group_list:
@@ -124,14 +136,16 @@ class CoqGroupTree(QtWidgets.QWidget):
         try:
             vis_cols = get_toplevel_window().table_model.content.columns
             hidden_cols = get_toplevel_window().hidden_model.content.columns
-            all_columns = list(vis_cols) + list(hidden_cols)
+            available_columns = list(vis_cols) + list(hidden_cols)
         except AttributeError:
-            all_columns = []
+            available_columns = []
+
+        columns = self.selected_columns or available_columns
 
         self._item_number += 1
         name = self.group_label.format(self._item_number)
         group = Group(name, list(vis_cols))
-        result = GroupDialog.edit(group, all_columns,
+        result = GroupDialog.edit(group, columns,
                                   parent=get_toplevel_window())
         if result:
             item = CoqGroupTreeItem(result)
