@@ -97,6 +97,9 @@ class FunctionWidget(QtWidgets.QWidget):
             self.button = QtWidgets.QPushButton("Change columns...")
             self.button.clicked.connect(self.selectColumns)
             self.main_layout.addWidget(self.button, 0, 2)
+            l = self._columns + self._available_columns
+            if len(l) == 0:
+                self.button.setDisabled(True)
 
         h = self.function_label.sizeHint().height() + 1
         self.function_label.setMinimumHeight(h)
@@ -201,7 +204,6 @@ class GroupDialog(QtWidgets.QDialog):
         # when the group is formed.
         # FIXME: at some point, this needs to be redone so that earlier
         # group columns are available for later groups.
-
         all_columns = [x for x in all_columns
                        if not re.match("func_.*_group_", x)]
         selected_columns = [x for x in group.columns
@@ -221,9 +223,7 @@ class GroupDialog(QtWidgets.QDialog):
                             for fnc_class, columns in group.functions}
 
         # add function widgets:
-        for x in sorted(self.function_list,
-                        key=lambda x: x.get_name()):
-
+        for x in sorted(self.function_list, key=lambda x: x.get_name()):
             # check if this function needs and uses columns:
             if (x.maximum_columns is None or x.maximum_columns > 0):
                 cols = function_columns.get(x, selected_columns)
