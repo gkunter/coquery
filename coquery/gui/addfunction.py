@@ -310,7 +310,8 @@ class FunctionDialog(QtWidgets.QDialog):
         self.available_columns = [x for x in self.df.columns
                                   if x not in columns]
         session = get_toplevel_window().Session
-        labels = [session.translate_header(x) for x in self.columns]
+        labels = ["{:2} {}".format(i+1, session.translate_header(x))
+                  for i, x in enumerate(self.columns)]
         self.ui.label_selected_columns.setText("\n".join(labels))
         self.change_columns()
 
