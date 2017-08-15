@@ -3084,18 +3084,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         func : Function
             The function that is added
         """
-        fun_type, columns, values, label = func_spec
+        fun_type, columns, values = func_spec
         fun = fun_type(columns=columns, **values)
         self.Session.column_functions.add_function(fun)
 
-        if label:
-            # FIXME: this is a rather awkward way of setting the column
-            # alias using the label:
-            options.cfg.column_names[fun.get_id()] = label
-            properties = options.settings.value("column_properties", {})
-            current_properties = properties.get(options.cfg.corpus, {})
-            current_properties["alias"][fun.get_id()] = label
-            options.settings.setValue("column_properties", properties)
         return fun
 
     def add_function(self, columns=None):
@@ -3121,7 +3113,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             func, df=self.table_model.content, parent=self)
 
         if response:
-            fun_type, columns, values, label = response
+            fun_type, columns, values = response
             new_func = fun_type(columns=columns, **values)
             self.Session.column_functions.replace_function(func, new_func)
 
