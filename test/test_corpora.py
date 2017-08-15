@@ -75,11 +75,16 @@ class MockBuckeye(SQLResource):
     corpus_word = "Word"
     corpus_pos = "POS"
     corpus_lemma = "Lemma"
+    corpus_starttime = "Start"
+    corpus_endtime = "End"
     corpus_file_id = "FileId"
     file_table = "Files"
     file_id = "FileId",
     file_path = "Path"
     name = "SuperFlat"
+
+    lexical_features = ["corpus_word", "corpus_pos",
+                        "corpus_starttime", "corpus_endtime"]
 
     query_item_word = "corpus_word"
     query_item_pos = "corpus_pos"
@@ -1174,7 +1179,7 @@ class TestSuperFlat(unittest.TestCase):
         query = TokenQuery("a* b*", self.Session)
         join_list = self.resource.get_corpus_joins(query.query_list[0])
         l = self.resource.get_condition_list(
-            query.query_list[0], join_list, ["word_label"])
+            query.query_list[0], join_list, ["corpus_word"])
         self.assertListEqual(
             l, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'b%')"])
 
@@ -1186,6 +1191,49 @@ class TestSuperFlat(unittest.TestCase):
             simple("""
                    LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1
                    ON EXTCORP_LEXICON_1.Word = COQ_CORPUS_1.Word1"""))
+
+    def test_get_required_columns_NULL_1(self):
+        # tests issues related to #256
+        query = TokenQuery("_NULL *", self.Session)
+        l = self.resource.get_required_columns(
+            query.query_list[0], ["corpus_word"])
+        self.assertListEqual(
+            l,
+            ["NULL AS coq_corpus_word_1",
+             "Word2 AS coq_corpus_word_2",
+             "ID2 AS coquery_invisible_corpus_id",
+             "FileId2 AS coquery_invisible_origin_id"])
+
+    def test_get_required_columns_NULL_2(self):
+        # tests issues related to #256
+        query = TokenQuery("_NULL *", self.Session)
+        l = self.resource.get_required_columns(
+            query.query_list[0], ["corpus_word", "file_path"])
+        self.assertListEqual(
+            l,
+            ["NULL AS coq_corpus_word_1",
+             "Word2 AS coq_corpus_word_2",
+             "COQ_FILE_2.Path AS coq_file_path_1",
+             "ID2 AS coquery_invisible_corpus_id",
+             "FileId2 AS coquery_invisible_origin_id"])
+
+    def test_leading_null(self):
+        """
+        Test behavior with leading _NULL query items (in response to issue
+        #282).
+        """
+        query = TokenQuery("_NULL o*", self.Session)
+        l = self.resource.get_required_columns(
+            query.query_list[0], ["corpus_word", "corpus_starttime"])
+        print("\n".join(l))
+        self.assertListEqual(
+            l,
+            ["NULL AS coq_corpus_word_1",
+             "Word2 AS coq_corpus_word_2",
+             "NULL AS coq_corpus_starttime_1",
+             "Start2 AS coq_corpus_starttime_2",
+             "ID2 AS coquery_invisible_corpus_id",
+             "FileId2 AS coquery_invisible_origin_id"])
 
 
 class TestCorpusWithExternal(unittest.TestCase):
