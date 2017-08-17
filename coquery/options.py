@@ -36,7 +36,6 @@ import hashlib
 from collections import defaultdict
 
 from . import general, NAME
-from . import filters
 from .errors import (
     IllegalImportInModuleError, IllegalCodeInModuleError,
     ConfigurationError, ModuleIncompleteError,
@@ -48,6 +47,7 @@ from .defines import (
     CONTEXT_NONE, CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_STRING)
 from .unicode import utf8
 from .links import parse_link_text
+from .filters import parse_filter_text
 
 
 # make ast work in all Python versions:
@@ -875,67 +875,15 @@ class Options(object):
 
             # read FILTER section
 
-            # getting the filters from the configuration is
-            # somewhat complicated. Each filter has three
-            # configuration variables:
-            # filter_N_column, filter_N_operator, filter_N_value,
-            # where N is the number of the filter.
-            filt_columns = {}
-            filt_operators = {}
-            filt_values = {}
-            #group_filt_columns = {}
-            #group_filt_operators = {}
-            #group_filt_values = {}
-
             for var, value in config_file.items("filter"):
+                f_type, _, n = var.partition("_")
                 try:
-                    parsed = var.split("_")
-                    if len(parsed) == 3:
-                        f_type, s_num, cat = parsed
-                        try:
-                            num = int(s_num)
-                        except ValueError:
-                            continue
-                        if f_type == "filter":
-                            if cat == "column":
-                                filt_columns[num] = value
-                            elif cat == "operator":
-                                filt_operators[num] = int(value)
-                            elif cat == "value":
-                                filt_values[num] = value
-                        #elif f_type == "groupfilter":
-                            #if cat == "column":     group_filt_columns[num] = value
-                            #elif cat == "operator": group_filt_operators[num] = int(value)
-                            #elif cat == "value":    group_filt_values[num] = value
-                except:
+                    filt = parse_filter_text(value)
+                except ValueError:
                     pass
-            max_filt = max(len(filt_columns),
-                           len(filt_operators),
-                           len(filt_values))
-            for i in range(max_filt):
-                col = filt_columns.get(i, None)
-                op = filt_operators.get(i, None)
-                val = filt_values.get(i, None)
-                if all([col, op, val]):
-                    try:
-                        filt = filters.Filter(col, op, val)
-                    except ValueError:
-                        pass
-                    else:
-                        self.args.filter_list.append(filt)
-
-            #max_group_filt = max(len(group_filt_columns), len(group_filt_operators), len(group_filt_values))
-            #for i in range(max_group_filt):
-                #col = group_filt_columns.get(i, None)
-                #op = group_filt_operators.get(i, None)
-                #val = group_filt_values.get(i, None)
-                #if all([col, op, val]):
-                    #try:
-                        #filt = filters.Filter(col, op, val)
-                    #except ValueError:
-                        #pass
-                    #else:
-                        #self.args.group_filter_list.append(filt)
+                else:
+                    print(filt)
+                    self.args.filter_list.append(filt)
 
             # read FUNCTIONS section
             sum_columns = {}
@@ -1167,13 +1115,7 @@ def save_configuration():
         config.add_section("filter")
 
     for i, filt in enumerate(cfg.filter_list):
-        config.set("filter", "filter_{}_column".format(i), filt.feature)
-        config.set("filter", "filter_{}_operator".format(i), filt.operator)
-        config.set("filter", "filter_{}_value".format(i), filt.value)
-    #for i, filt in enumerate(cfg.group_filter_list):
-        #config.set("filter", "groupfilter_{}_column".format(i), filt.feature)
-        #config.set("filter", "groupfilter_{}_operator".format(i), filt.operator)
-        #config.set("filter", "groupfilter_{}_value".format(i), filt.value)
+        config.set("filter", "filter_{}".format(i), str(filt))
 
     if "functions" not in config.sections():
         config.add_section("functions")
