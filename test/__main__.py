@@ -39,8 +39,8 @@ def main():
         test_list += provided_tests
 
     if not args or "filters" in args:
-        from test.test_filters import TestFilterString, TestApply
-        test_list += [TestFilterString, TestApply]
+        from test.test_filters import provided_tests
+        test_list += provided_tests
 
     if not args or "functionlist" in args:
         from test.test_functionlist import TestFunctionList
