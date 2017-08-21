@@ -175,6 +175,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._forgotten_features = set()
         self.hidden_features = set()
 
+        self._groups = {}
+
         self._first_corpus = False
         if options.cfg.first_run and not options.cfg.current_resources:
             self._first_corpus = True
@@ -1479,9 +1481,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.selected_features = currently_selected
 
         # delete groups (see #276)
+        self._groups[options.cfg.corpus] = self.ui.tree_groups.groups()
         self.ui.tree_groups.clear()
-
         options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
+        if options.cfg.corpus in self._groups:
+            self.ui.tree_groups.add_groups(self._groups[options.cfg.corpus])
 
         self.ui.check_restrict.setEnabled(False)
         # Enable "Restrict to sentences" checkbox if corpus
