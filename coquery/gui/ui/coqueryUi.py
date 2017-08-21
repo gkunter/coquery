@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(720, 748)
+        MainWindow.resize(753, 770)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -450,7 +450,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 753, 31))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -482,7 +482,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.statusbar.sizePolicy().hasHeightForWidth())
         self.statusbar.setSizePolicy(sizePolicy)
-        self.statusbar.setSizeGripEnabled(True)
+        self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.action_open_input_file = QtWidgets.QAction(MainWindow)
@@ -826,8 +826,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-weight:600;\">No match.</span></p></body></html>"))
+"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menuHilfe.setTitle(_translate("MainWindow", "&Help"))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus"))

@@ -355,28 +355,25 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             lambda s: self.ui.status_message.setText(s))
 
         statusbar = self.statusBar()
-        statusbar.layout().setContentsMargins(0, 0, 4, 0)
-        pb_height = QtWidgets.QProgressBar().sizeHint().height()
+        pb_height = QtWidgets.QProgressBar().sizeHint().height() + 2
         statusbar.setMinimumHeight(pb_height)
         statusbar.setMaximumHeight(pb_height)
         statusbar.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                 QtWidgets.QSizePolicy.Minimum)
-        statusbar.layout().addWidget(self.ui.status_message, 1)
-        statusbar.layout().addWidget(self.ui.multi_query_progress, 1)
-        statusbar.layout().addWidget(self.ui.status_progress, 1)
-        statusbar.layout().addItem(
-            QtWidgets.QSpacerItem(20, 0,
-                                  QtWidgets.QSizePolicy.Expanding,
-                                  QtWidgets.QSizePolicy.Expanding))
+        statusbar.addWidget(self.ui.status_message, 1)
+        statusbar.addWidget(self.ui.multi_query_progress, 2)
+        statusbar.addWidget(self.ui.status_progress, 3)
+
         label = _translate("MainWindow", "Connection: ", None)
-        statusbar.layout().addWidget(QtWidgets.QLabel(label))
-        statusbar.layout().addWidget(self.ui.combo_config)
-        statusbar.layout().setStretchFactor(self.ui.status_message, 0)
-        statusbar.layout().setStretchFactor(self.ui.status_progress, 1)
-        statusbar.layout().setStretchFactor(self.ui.multi_query_progress, 1)
+        frame = QtWidgets.QFrame()
+        layout = QtWidgets.QHBoxLayout(frame)
+        layout.addWidget(QtWidgets.QLabel(label))
+        layout.addWidget(self.ui.combo_config)
+        statusbar.addPermanentWidget(frame)
 
         self.change_mysql_configuration(options.cfg.current_server)
-        self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
+        self.ui.combo_config.currentIndexChanged.connect(
+            self.switch_configuration)
 
         state = self.test_mysql_connection()
         if not state:
@@ -396,7 +393,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def setup_icons(self):
         self.ui.action_help.setIcon(self.get_icon("Lifebuoy"))
-        self.ui.action_connection_settings.setIcon(self.get_icon("Data Configuration"))
+        self.ui.action_connection_settings.setIcon(
+            self.get_icon("Data Configuration"))
         self.ui.action_settings.setIcon(self.get_icon("Maintenance"))
         self.ui.action_build_corpus.setIcon(self.get_icon("Add Database"))
         self.ui.action_manage_corpus.setIcon(self.get_icon("Database"))
