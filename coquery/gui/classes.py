@@ -346,7 +346,9 @@ class CoqRotatedButton(QtWidgets.QPushButton):
         size = options.rect.size()
         size.transpose()
         options.rect.setSize(size)
-        options.features = QtWidgets.QStyleOptionButton.None_
+
+        # get default ButtonFeature for a normal push button (0x00):
+        options.features = QtWidgets.QStyleOptionButton.ButtonFeature(0)
 
         features = []
 
