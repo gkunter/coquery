@@ -15,15 +15,14 @@ from __future__ import unicode_literals
 
 import collections
 
-from coquery.visualizer import visualizer as vis
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
-from seaborn.palettes import cubehelix_palette
 
-from coquery.gui.pyqt_compat import QtCore
-from coquery.functions import *
-from coquery.managers import *
+from coquery.functions import (Freq, FreqPMW, FreqNorm, Proportion, Percent)
+from coquery.visualizer import visualizer as vis
+from coquery import options
+from coquery.managers import get_manager
 
 
 class Visualizer(vis.BaseVisualizer):
@@ -199,12 +198,9 @@ class Visualizer(vis.BaseVisualizer):
     def draw(self, func_x=default_func, column_x=None):
         """ Plot bar charts. """
         def plot_facet(data, color):
-            session = options.cfg.main_window.Session
             if self.stacked:
-                ax = plt.gca()
-
                 if len(self._groupby) == 2:
-                    data["COQ_FUNC"] = fun.evaluate(data, session=session)
+                    data["COQ_FUNC"] = fun.evaluate(data)
 
                     df = data.pivot_table(index=self._groupby[0],
                                           columns=[self._groupby[-1]],
@@ -221,44 +217,44 @@ class Visualizer(vis.BaseVisualizer):
                     for x in self._levels[-1]:
                         if x not in df.columns:
                             df[x] = 0
+
+                    val = df[self._levels[-1]]
                     if self.percentage:
-                        df[self._levels[-1]] = df[self._levels[-1]].apply(lambda x: 100 * x / x.sum(), axis=1).cumsum(axis=1)
-                    else:
-                        df[self._levels[-1]] = df[self._levels[-1]].cumsum(axis=1)
+                        val = val.values * 100 / val.sum()
+                    df[self._levels[-1]] = val.cumsum()
 
                     for i, stack in enumerate(self._levels[-1][::-1]):
-                        tmp = sns.barplot(
+                        col = self.options["color_palette_values"][::-1][i]
+                        sns.barplot(
                             x=stack,
                             y=self._groupby[0],
                             data=df,
-                            color=self.options["color_palette_values"][::-1][i],
+                            color=col,
                             ax=plt.gca())
                 else:
                     # one stacked bar (so, this is basically a spine chart)
-                    #self.ct = data[self._groupby[0]].value_counts()[self._levels[-1]]
-                    data["COQ_FUNC"] = fun.evaluate(data, session=session)
+                    data["COQ_FUNC"] = fun.evaluate(data)
                     df = data[self._groupby + ["COQ_FUNC"]].drop_duplicates()
                     df["COQ_FUNC"] = df["COQ_FUNC"].cumsum()
                     df = df.reset_index(drop=True)
                     for n, i in enumerate(df.index[::-1]):
-                        tmp = sns.barplot(
+                        col = self.options["color_palette_values"][::-1][n]
+                        sns.barplot(
                             x="COQ_FUNC",
                             data=df.iloc[i],
-                            color=self.options["color_palette_values"][::-1][n],
+                            color=col,
                             ax=plt.gca())
 
                 # FIXME: reimplement mouse-over
                 #self.add_rectangles(df, ax, stacked=True)
                 #ax.format_coord = lambda x, y: self.format_coord(x, y, ax)
             else:
-                ax = plt.gca()
                 if self._value_column:
                     df = data
                     values = self._value_column
                 else:
                     values = "COQ_FUNC"
-                    df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d,
-                                                                     session=options.cfg.main_window.Session))
+                    df = data.assign(COQ_FUNC=lambda d: fun.evaluate(d))
 
                 df = df[self._groupby + [values]].drop_duplicates().fillna(0)
 
@@ -269,12 +265,11 @@ class Visualizer(vis.BaseVisualizer):
                           "data": df}
 
                 try:
-                    kwargs.update({"hue": df[self._groupby[1]], "hue_order": self._levels[1]})
+                    kwargs.update({"hue": df[self._groupby[1]],
+                                   "hue_order": self._levels[1]})
                 except IndexError:
                     # use only one grouping variable
                     pass
-
-                ax = sns.barplot(**kwargs)
 
                 # FIXME: reimplement mouse-over
                 #self.add_rectangles(df, ax, stacked=False)
@@ -369,7 +364,7 @@ class BarPlot(vis.Visualizer):
             data_columns = [col for col in (self._x, self._y) if col]
             func = kwargs.get("func", Freq)
             fun = func(columns=data_columns, session=session)
-            df[numeric] = fun.evaluate(df, session)
+            df[numeric] = fun.evaluate(df)
             df = (df.drop("coquery_invisible_corpus_id", axis=1)
                     .drop_duplicates().fillna(0).reset_index(drop=True))
             if len(cat) == 2:
@@ -402,7 +397,13 @@ class BarPlot(vis.Visualizer):
 
     def plot_facet(self, **kwargs):
         params = self.get_parameters(**kwargs)
-        ax = sns.barplot(**params)
+
+        print(params)
+        sns.barplot(**params)
+
+        #sns.barplot(data=df,
+                    #color=col[n], ax=params["ax"], **kwargs)
+
 
         if self._x and self._y:
             self.legend_title = params["hue"]
@@ -434,8 +435,6 @@ class StackedBars(BarPlot):
         data = params["data"]
         x = params["x"]
         y = params["y"]
-        levels_x = params.get("levels_x")
-        levels_y = params.get("levels_y")
         hue = params["hue"]
         numeric = self._default
 
@@ -447,7 +446,6 @@ class StackedBars(BarPlot):
             axis = x
 
         if hue and sum([bool(x), bool(y)]) == 1:
-            order = hue
             hue = None
 
         if hue:
@@ -488,8 +486,8 @@ class StackedBars(BarPlot):
             if split != axis:
                 d = {axis: params["order"], split: val}
                 df = (pd.merge(data[data[split] == val],
-                            pd.DataFrame(d),
-                            how="right")
+                               pd.DataFrame(d),
+                               how="right")
                         .fillna(0)
                         .sort_values(by=axis)
                         .reset_index(drop=True))
@@ -521,6 +519,7 @@ class StackedBars(BarPlot):
         if len(num) == 1 and len(cat) == 1:
             return False
         return True
+
 
 class PercentBars(StackedBars):
     """
