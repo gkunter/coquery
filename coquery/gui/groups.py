@@ -298,13 +298,17 @@ class SummaryDialog(GroupDialog):
     def __init__(self, group, all_columns, parent=None):
         super(SummaryDialog, self).__init__(group, all_columns, parent)
         self.ui.label.hide()
-        self.ui.label_2.hide()
         self.ui.label_duplicates.hide()
         self.ui.radio_remove_duplicates.hide()
         self.ui.radio_keep_duplicates.hide()
         self.ui.widget_selection.hide()
         self.ui.edit_label.hide()
-        self.ui.verticalLayout.setRowStretch(1, 0)
+        scroll_area = self.ui.verticalLayout.takeAt(0).widget()
+        self.ui.tabWidget.hide()
+        self.ui.gridLayout.addWidget(scroll_area, 0, 0)
+        self.ui.gridLayout.setColumnStretch(0, 1)
+        self.ui.gridLayout.setColumnStretch(1, 0)
+
 
     @staticmethod
     def edit(group, all_columns, parent=None):
