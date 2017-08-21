@@ -11,6 +11,7 @@ coquery$ python -m test.test_functionlist
 from __future__ import unicode_literals
 
 import unittest
+import warnings
 
 from coquery.functionlist import FunctionList
 from coquery.functions import Function
@@ -68,6 +69,24 @@ class TestFunctionList(unittest.TestCase):
 
         f_list.add_function(func3)
         self.assertEqual(f_list.get_list(), [func1, func2, func3])
+
+    def test_add_function_duplicate(self):
+        func1 = Function(columns=["col1", "col2"], value="x")
+        func2 = Function(columns=["col3", "col4"], value="y")
+
+        f_list = FunctionList([])
+
+        f_list.add_function(func1)
+        self.assertEqual(f_list.get_list(), [func1])
+
+        f_list.add_function(func2)
+        self.assertEqual(f_list.get_list(), [func1, func2])
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            f_list.add_function(func1)
+
+        self.assertEqual(f_list.get_list(), [func1, func2])
 
     def test_has_function(self):
         func1 = Function(columns=["col1", "col2"], value="x")

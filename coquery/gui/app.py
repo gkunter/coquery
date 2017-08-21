@@ -328,6 +328,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.set_button_labels()
 
         self.ui.data_preview.setEnabled(False)
+        self.ui.button_add_summary_function.setEnabled(False)
+        self.ui.button_filters.setEnabled(False)
         self.ui.text_no_match.hide()
 
         ## set vertical splitter: top: no stretch, bottom: full stretch
@@ -497,10 +499,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.label_limit_matches = classes.CoqClickableLabel("Matches per &query")
         self.ui.spin_query_limit = QtWidgets.QSpinBox()
-        self.ui.spin_query_limit.valueChanged.connect(_set_number_of_tokens)
         self.ui.spin_query_limit.setMinimum(1)
         self.ui.spin_query_limit.setMaximum(9999)
+        self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
         self.ui.label_limit_matches.setBuddy(self.ui.spin_query_limit)
+        self.ui.spin_query_limit.valueChanged.connect(_set_number_of_tokens)
 
         _hlayout.addItem(QtWidgets.QSpacerItem(QtWidgets.QCheckBox().sizeHint().width() * 2,
                                            0, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
@@ -1605,6 +1608,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # enable menu entries:
             self.ui.action_save_results.setEnabled(True)
             self.ui.action_copy_to_clipboard.setEnabled(True)
+
+        self.ui.button_add_summary_function.setEnabled(True)
+        self.ui.button_filters.setEnabled(True)
 
         # Results and Visualizations menu are disabled for corpus statistics:
         self.ui.menuAnalyse.setDisabled(self.Session.is_statistics_session())
@@ -3086,18 +3092,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         func : Function
             The function that is added
         """
-        fun_type, columns, values, label = func_spec
+        fun_type, columns, values = func_spec
         fun = fun_type(columns=columns, **values)
         self.Session.column_functions.add_function(fun)
 
-        if label:
-            # FIXME: this is a rather awkward way of setting the column
-            # alias using the label:
-            options.cfg.column_names[fun.get_id()] = label
-            properties = options.settings.value("column_properties", {})
-            current_properties = properties.get(options.cfg.corpus, {})
-            current_properties["alias"][fun.get_id()] = label
-            options.settings.setValue("column_properties", properties)
         return fun
 
     def add_function(self, columns=None):
@@ -3123,7 +3121,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             func, df=self.table_model.content, parent=self)
 
         if response:
-            fun_type, columns, values, label = response
+            fun_type, columns, values = response
             new_func = fun_type(columns=columns, **values)
             self.Session.column_functions.replace_function(func, new_func)
 

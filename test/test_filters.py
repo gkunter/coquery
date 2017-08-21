@@ -342,12 +342,40 @@ class TestApply(unittest.TestCase):
         self.assert_index_equal(
             filt13.apply(self.df), self.df[self.df[FLOAT_COLUMN] == 1.2345])
 
+
+class TestModuleMethods(unittest.TestCase):
+    def test_parse_filter_text_1(self):
+        template = ("Filter("
+                    "feature='{}', operator='{}', value='{}', "
+                    "dtype={}, stage={})")
+        values = ["coq_corpus_word_1", "OP_EQ", "IN", object, 1]
+        s = template.format(*values)
+
+        filt = parse_filter_text(s)
+        self.assertEqual(str(filt), s)
+
+    def test_parse_filter_text_2(self):
+        template = ("Filter("
+                    "feature='{}', operator='{}', value={}, "
+                    "dtype={}, stage={})")
+        values = ["coq_corpus_id_1", "OP_EQ", 123, int, 1]
+        s = template.format(*values)
+
+        filt = parse_filter_text(s)
+        self.assertEqual(str(filt), s)
+
+
+provided_tests = (TestFilterString, TestApply,
+                  TestModuleMethods,
+                  )
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestFilterString),
-        unittest.TestLoader().loadTestsFromTestCase(TestApply),
-        ])
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(x)
+         for x in provided_tests])
     unittest.TextTestRunner().run(suite)
+
 
 if __name__ == '__main__':
     main()

@@ -41,6 +41,7 @@ def html_escape(text):
             text = text.replace(old, new)
     return text
 
+
 def collapse_words(word_list):
     """ Concatenate the words in the word list, taking clitics, punctuation
     and some other stop words into account."""
@@ -184,11 +185,18 @@ class CoqObject(object):
                     not hasattr(getattr(self, x), "__call__")):
                 attr = getattr(self, x)
                 # special handling of containers:
-                if isinstance(attr, (set, dict, list, tuple)):
+                if isinstance(attr, (set, list, tuple)):
                     s = str([x.get_hash()
                              if isinstance(x, CoqObject) else str(x)
                              for x in attr])
                     l.append(s)
+                elif isinstance(attr, dict):
+                    for key in sorted(attr.keys()):
+                        val = attr[key]
+                        if isinstance(val, CoqObject):
+                            l.append("{}{}".format(x, val.get_hash()))
+                        else:
+                            l.append("{}{}".format(x, str(val)))
                 else:
                     l.append(str(attr))
         return hashlib.md5(u"".join(l).encode()).hexdigest()
@@ -224,6 +232,7 @@ def get_visible_columns(df, manager, session, hidden=False):
 
     #l = set_preferred_order(l)
     return l
+
 
 def set_preferred_order(l, session):
     """
@@ -302,8 +311,8 @@ def memory_dump():
                       'class': cls,
                       'size': size,
                       "ref": len(referents)})
-            #if len(referents) < 2000:
-                #print(obj)
+            if len(referents) < 2000:
+                print(obj)
 
 try:
     from pympler import summary, muppy

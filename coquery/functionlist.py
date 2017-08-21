@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import pandas as pd
 import datetime
+import warnings
 
 from . import options
 from .general import CoqObject
@@ -106,7 +107,10 @@ class FunctionList(CoqObject):
         return False
 
     def add_function(self, fun):
-        self._list.append(fun)
+        if not self.has_function(fun):
+            self._list.append(fun)
+        else:
+            warnings.warn("Function duplicate not added: {}".format(fun))
 
     def remove_function(self, fun):
         self._list.remove(fun)
@@ -131,4 +135,3 @@ class FunctionList(CoqObject):
         s = super(FunctionList, self).__repr__(*args, **kwargs)
         return "{}({})".format(
             s, self._list.__repr__(*args, **kwargs))
-

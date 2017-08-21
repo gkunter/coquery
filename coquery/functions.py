@@ -24,6 +24,12 @@ import logging
 import numbers
 from scipy import stats
 
+from . import options, sqlhelper, NAME
+from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
+from .general import CoqObject, collapse_words
+from .gui.pyqt_compat import get_toplevel_window
+
+
 # make sure reduce() is available
 try:
     from functools import reduce
@@ -31,11 +37,6 @@ except (ImportError):
     # in python 2.7, reduce() is still a built-in method
     pass
 assert reduce
-
-from . import options, sqlhelper, NAME
-from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
-from .general import CoqObject, collapse_words
-from .gui.pyqt_compat import get_toplevel_window
 
 #############################################################################
 ## Base function
@@ -83,9 +84,9 @@ class Function(CoqObject):
         self.kwargs = kwargs
 
     def __repr__(self):
-        return "{}(columns=[{}], value='{}', group={})".format(
+        return "{}(columns=[{}], kwargs={}, group={})".format(
             self._name, ", ".join(["'{}'".format(x) for x in self.columns]),
-            str(self.value), self.group)
+            str(self.kwargs), self.group)
 
     @classmethod
     def get_name(cls):
@@ -97,7 +98,7 @@ class Function(CoqObject):
     def get_flag(self, flag):
         if flag == "case":
             try:
-                ignore_case = self.kwargs["case"] == False
+                ignore_case = self.kwargs["case"] is False
             except KeyError:
                 ignore_case = True
 
@@ -343,7 +344,7 @@ class StringReplace(StringSeriesFunction):
     fill_na = None
 
     arguments = {"string": [("pat", "Find:", ""),
-                           ("repl", "Replace:", "")],
+                            ("repl", "Replace:", "")],
                  "check": [("case", "Case-sensitive:", False)]}
 
 
@@ -653,7 +654,7 @@ class Xor(LogicFunction):
     #def evaluate(self, df, **kwargs):
         #columns = self.columns(df, **kwargs)
         #val = df[columns].apply(lambda x: x.notnull() &
-                                          #x.index.isin(x.nonzero()[0]))
+                                 #x.index.isin(x.nonzero()[0]))
         #return val
 
 
@@ -788,21 +789,16 @@ class FreqNorm(Freq):
     _name = "statistics_frequency_normalized"
 
     def evaluate(self, df, **kwargs):
-        session = kwargs["session"]
-
         val = super(FreqNorm, self).evaluate(df, **kwargs)
 
         if len(val) == 0:
             return pd.Series([], index=df.index)
 
         if self.group:
-            fun = SubcorpusSize(session=session,
-                                columns=self.group.columns,
-                                group=self.group)
+            fun = SubcorpusSize(columns=self.group.columns, group=self.group)
 
         else:
-            fun = SubcorpusSize(session=session,
-                                columns=self.columns, group=self.group)
+            fun = SubcorpusSize(columns=self.columns, group=self.group)
         subsize = fun.evaluate(df, **kwargs)
 
         d = pd.concat([val, subsize], axis=1)

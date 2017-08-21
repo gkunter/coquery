@@ -11,9 +11,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import logging
+import re
 import pandas as pd
 
-from . import NAME
 from .general import CoqObject
 
 # Since Filter.__repr__() uses globals() to look up the strings corresponding
@@ -33,6 +33,40 @@ except NameError:
     string_types = (str, )
 
 
+def parse_filter_text(s):
+    """
+    Parse the string, and return a Filter instance that matches the string.
+
+    This function is used by the option file parser to restore saved filters.
+
+    The string is assumed to be produced by Filter.__repr__. No attempt is
+    made to parse other strings (e.g. those with different argument orders).
+
+    If the string cannot be parsed for whatever reason, the function rises a
+    ValueError.
+    """
+    try:
+        regex = re.match(r"^Filter\((.*)\)$", s)
+        arguments = [x.split("=") for x in regex.group(1).split(", ")]
+        kwargs = {}
+        for kwd, value in arguments:
+            val = value.strip("'")
+
+            # coerce the value to a numeric type:
+            try:
+                val = int(val)
+            except ValueError:
+                try:
+                    val = float(val)
+                except ValueError:
+                    pass
+            kwargs[kwd] = val
+    except Exception as e:
+        raise ValueError(s)
+
+    return Filter(**kwargs)
+
+
 class Filter(CoqObject):
     def __init__(self, feature, dtype, operator, value, stage=FILTER_STAGE_FINAL):
         super(Filter, self).__init__()
@@ -48,20 +82,14 @@ class Filter(CoqObject):
         self.stage = stage
 
     def __repr__(self):
-        # This is a bit of a hack. In order to get the __repr__, we look up
-        # the name of the constant from defines (which is imported into the
-        # global namespace) that matches the value of the instance attribute
-        # self.operator:
-        op = [key for key, val in globals().items()
-              if val == self.operator][0]
-        value = ("'{}'".format(self.value)
-                 if isinstance(self.value, string_types)
-                 else self.value)
-        stage = ("FILTER_STAGE_FINAL"
-                 if self.stage == FILTER_STAGE_FINAL
-                 else "FILTER_STAGE_BEFORE_TRANSFORM")
-        S = "Filter(feature='{}', operator={}, value={}, dtype={}, stage={})"
-        return S.format(self.feature, op, value, self.dtype, stage)
+        if isinstance(self.value, string_types):
+            val = "'{}'".format(self.value)
+        else:
+            val = self.value
+
+        S = "Filter(feature='{}', operator='{}', value={}, dtype={}, stage={})"
+        return S.format(self.feature, self.operator, val,
+                        self.dtype, self.stage)
 
     def fix(self, x):
         """
@@ -184,10 +212,8 @@ class Filter(CoqObject):
             except SyntaxError as e:
                 S = "Could not apply filter {}: {}".format(self, str(e))
                 print(S)
-                logger.warn(S)
+                logging.warn(S)
                 return df
             except TypeError as e:
                 S = "Could not apply filter {}: are there missing values in your data?"
                 raise RuntimeError(S)
-
-logger = logging.getLogger(NAME)
