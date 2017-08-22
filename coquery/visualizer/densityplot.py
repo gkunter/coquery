@@ -202,21 +202,23 @@ class DensityPlot(vis.Visualizer):
             levels = levels_z
 
         if not category:
+            col = self.get_palette(kwargs["palette"], kwargs["color_number"])
             if len(num) == 1:
-                col = sns.color_palette(kwargs["palette"], n_colors=1)
                 sns.kdeplot(data[num[0]], vertical=self.flip,
-                            color = col[0],
+                            color=col[0],
                             cumulative=self.cumulative)
             else:
                 sns.kdeplot(data[num[0]], data[num[1]],
-                            cmap=kwargs["palette"],
-                            shade=True, shade_lowest=False, alpha=0.5)
+                            #cmap=kwargs["palette"],
+                            colors=col,
+                            cmap=None,
+                            shade=True, shade_lowest=False,
+                            alpha=0.5)
         else:
             for i, level in enumerate(levels):
                 df = data[data[category] == level]
                 if len(num) == 1:
-                    col = sns.color_palette(kwargs["palette"],
-                                            n_colors=len(levels))
+                    col = self.get_palette(kwargs["palette"], len(levels))
                     sns.kdeplot(df[num[0]], vertical=self.flip,
                                 color=col[i],
                                 cumulative=self.cumulative)
