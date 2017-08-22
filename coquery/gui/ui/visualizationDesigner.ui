@@ -929,6 +929,13 @@
             <string>&amp;Palettes</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_9">
+            <item row="3" column="0">
+             <widget class="QRadioButton" name="radio_custom">
+              <property name="text">
+               <string>&amp;Custom</string>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="2">
              <widget class="QComboBox" name="combo_sequential">
               <item>
@@ -1021,13 +1028,6 @@
                 <string>YlOrRd</string>
                </property>
               </item>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QRadioButton" name="radio_custom">
-              <property name="text">
-               <string>&amp;Custom</string>
-              </property>
              </widget>
             </item>
             <item row="0" column="0" colspan="2">
@@ -1158,7 +1158,7 @@
             <item row="3" column="2">
              <widget class="QComboBox" name="combo_custom"/>
             </item>
-            <item row="4" column="2">
+            <item row="5" column="2">
              <spacer name="verticalSpacer_4">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -1170,6 +1170,13 @@
                </size>
               </property>
              </spacer>
+            </item>
+            <item row="4" column="0" colspan="2">
+             <widget class="QCheckBox" name="check_reverse">
+              <property name="text">
+               <string>&amp;Reverse palette</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
