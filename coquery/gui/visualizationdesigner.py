@@ -128,8 +128,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_remove_custom.hide()
         self.ui.button_reverse_order.hide()
         self.ui.label_38.hide()
-        self.ui.spin_number.hide()
-        self.ui.label_37.hide()
+        #self.ui.spin_number.hide()
+        #self.ui.label_37.hide()
 
         self.populate_figure_types()
 
@@ -333,28 +333,36 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_refresh_data.clicked.connect(
             lambda: self.dataRequested.emit())
 
-        # Hook up palette combo boxes:
-        self.ui.combo_qualitative.currentIndexChanged.connect(
-            lambda x: self.change_palette(utf8(self.ui.combo_qualitative.currentText())))
-        self.ui.combo_sequential.currentIndexChanged.connect(
-            lambda x: self.change_palette(utf8(self.ui.combo_sequential.currentText())))
-        self.ui.combo_diverging.currentIndexChanged.connect(
-            lambda x: self.change_palette(utf8(self.ui.combo_diverging.currentText())))
-        self.ui.combo_qualitative.currentIndexChanged.connect(
-            lambda: self.ui.radio_qualitative.setChecked(True))
-        self.ui.combo_sequential.currentIndexChanged.connect(
-            lambda: self.ui.radio_sequential.setChecked(True))
-        self.ui.combo_diverging.currentIndexChanged.connect(
-            lambda: self.ui.radio_diverging.setChecked(True))
+        ## Hook up palette combo boxes:
+        #self.ui.combo_qualitative.currentIndexChanged.connect(
+            #lambda x: self.change_palette())
+        #self.ui.combo_sequential.currentIndexChanged.connect(
+            #lambda x: self.change_palette())
+        #self.ui.combo_diverging.currentIndexChanged.connect(
+            #lambda x: self.change_palette())
 
+        self.ui.combo_qualitative.currentIndexChanged.connect(
+            lambda x: self.set_radio(self.ui.radio_qualitative))
+        self.ui.combo_sequential.currentIndexChanged.connect(
+            lambda x: self.set_radio(self.ui.radio_sequential))
+        self.ui.combo_diverging.currentIndexChanged.connect(
+            lambda x: self.set_radio(self.ui.radio_diverging))
 
         # Hook up palette radio buttons:
-        self.ui.radio_qualitative.toggled.connect(
-            lambda x: self.change_palette(utf8(self.ui.combo_qualitative.currentText())))
-        self.ui.radio_sequential.toggled.connect(
-            lambda x: self.change_palette(utf8(self.ui.combo_sequential.currentText())))
-        self.ui.radio_diverging.toggled.connect(
-            lambda x: self.change_palette(utf8(self.ui.combo_diverging.currentText())))
+        self.ui.radio_qualitative.pressed.connect(
+            lambda: self.set_radio(self.ui.radio_qualitative))
+        self.ui.radio_sequential.pressed.connect(
+            lambda: self.set_radio(self.ui.radio_sequential))
+        self.ui.radio_diverging.pressed.connect(
+            lambda: self.set_radio(self.ui.radio_diverging))
+
+        # Hook up reverse checkbox
+        self.ui.check_reverse.toggled.connect(
+            lambda x: self.change_palette())
+
+        # Hook up number of color spinner
+        self.ui.spin_number.valueChanged.connect(
+            lambda x: self.change_palette())
 
         # Hook up clear buttons.
         self.ui.button_clear_x.clicked.connect(lambda: self.ui.tray_data_x.clear())
@@ -587,22 +595,34 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.list_figures.blockSignals(False)
 
     def show_palette(self):
+        self._palette_name = self.get_palette_name()
+        self._color_number = self.ui.spin_number.value()
         self.ui.color_test_area.clear()
-        #test_numbers = self.ui.spin_number.value()
-        test_numbers = 12
-        test_palette = sns.color_palette(self._palette_name, test_numbers)
-        for i, (r, g, b)in enumerate(test_palette):
+        name, _, rev = self._palette_name.partition("_")
+        test_palette = sns.color_palette(name, self._color_number)
+        if rev == "r":
+            test_palette = test_palette[::-1]
+        for i, (r, g, b) in enumerate(test_palette):
             item = QtWidgets.QListWidgetItem()
             self.ui.color_test_area.addItem(item)
             brush = QtGui.QBrush(QtGui.QColor(
                         int(r * 255), int(g * 255), int(b * 255)))
             item.setBackground(brush)
 
-    def change_palette(self, x):
-        if x != self._palette_name:
-            self._palette_name = x
+    def change_palette(self):
+        x = self.get_palette_name()
+        n = self.ui.spin_number.value()
+        if (x != self._palette_name or n != self._color_number):
+            print(x, n)
             self.show_palette()
             self.plot_figure()
+
+    def set_radio(self, radio):
+        radio.blockSignals(True)
+        if not radio.isChecked():
+            radio.setChecked(True)
+        self.change_palette()
+        radio.blockSignals(False)
 
     def restore_settings(self):
         def get_or_set_size(key, factor=1.0):
@@ -630,7 +650,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         val = val == "true"
         self.ui.check_show_legend.setChecked(val)
 
-
         family = options.settings.value(
             "visualizationdesigner_figure_font", None)
         index = self.ui.combo_font_figure.findText(family)
@@ -657,6 +676,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.spin_size_legend_entries.setValue(
             get_or_set_size("visualizationdesigner_size_legend_entries", 0.8))
 
+        val = options.settings.value("visualizationdesigner_reverse_palette", "true")
+        self._reversed = val == "true"
+        self.ui.check_reverse.setChecked(self._reversed)
+        val = options.settings.value("visualizationdesigner_color_number", 12)
+        self._color_number = int(val)
+        self.ui.spin_number.setValue(self._color_number)
+
         palette = options.settings.value("visualizationdesigner_palette", None)
         if palette is None:
             palette = "Paired"
@@ -673,6 +699,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.ui.combo_qualitative.setCurrentIndex(
                 self.ui.combo_qualitative.findText("Paired"))
             palette = "Paired"
+
+        if self._reversed:
+            palette = "{}_r".format(palette)
         self._palette_name = palette
 
     def display_values(self):
@@ -731,6 +760,25 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 )
         return d
 
+    def get_palette_name(self):
+        for widget in dir(self.ui):
+            if widget.startswith("radio_"):
+                check = getattr(self.ui, widget)
+                _, ptype = widget.split("_")
+                if (ptype in ("qualitative", "sequential", "diverging") and
+                        check.isChecked()):
+                    combo_name = "combo_{}".format(ptype)
+                    combo = getattr(self.ui, combo_name)
+                    pal_name = utf8(combo.currentText())
+                    break
+        else:
+            return None
+
+        if self.ui.check_reverse.isChecked():
+            return "{}_r".format(pal_name)
+        else:
+            return pal_name
+
     def plot_figure(self):
         values = self.get_gui_values()
         figure_type = values["figure_type"]
@@ -780,13 +828,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                       sharex=True, sharey=True)
 
         try:
-            self.grid = self.grid.map_dataframe(self.vis.plot_facet,
-                                                x=data_x, y=data_y, z=data_z,
-                                                levels_x=levels_x,
-                                                levels_y=levels_y,
-                                                levels_z=levels_z,
-                                                session=self.session,
-                                                palette=self._palette_name)
+            self.grid = self.grid.map_dataframe(
+                self.vis.plot_facet,
+                x=data_x, y=data_y, z=data_z,
+                levels_x=levels_x, levels_y=levels_y, levels_z=levels_z,
+                session=self.session,
+                palette=self.get_palette_name(),
+                color_number=self.ui.spin_number.value())
             self.setup_canvas(self.grid.fig)
             self.add_annotations()
             self.change_legend()
@@ -867,6 +915,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
         options.settings.setValue("visualizationdesigner_show_legend", val)
 
         options.settings.setValue("visualizationdesigner_legend_columns", self.legend_columns)
+
+        val = "true" if self.ui.check_reverse.isChecked() else "false"
+        options.settings.setValue("visualizationdesigner_reverse_palette", val)
+        options.settings.setValue("visualizationdesigner_color_number",
+                                   self.ui.spin_number.value())
 
         super(VisualizationDesigner, self).close(*args)
 

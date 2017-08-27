@@ -766,6 +766,14 @@ class Visualizer(QtCore.QObject):
         empty = [x for x in (data_x, data_y, data_z) if x is None]
         return categorical, numeric, empty
 
+    @staticmethod
+    def get_palette(pal, n):
+        base, _, rev = pal.partition("_")
+        col = sns.color_palette(base, n)
+        if rev:
+            col = col[::-1]
+        return col
+
 
 def get_grid_layout(n):
     """ Return a tuple containing a nrows, ncols pair that can be used to

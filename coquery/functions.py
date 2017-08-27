@@ -767,7 +767,7 @@ class FreqPMW(Freq):
     words = 1000000
 
     def evaluate(self, df, **kwargs):
-        session = kwargs["session"]
+        session = get_toplevel_window().Session
         val = super(FreqPMW, self).evaluate(df, **kwargs)
         if len(val) > 0:
             corpus_size = session.Corpus.get_corpus_size()
@@ -844,7 +844,7 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         super(ReferenceCorpusFrequency, self).__init__(**kwargs)
 
     def evaluate(self, df, **kwargs):
-        session = kwargs["session"]
+        session = get_toplevel_window().Session
 
         self._res = self.get_reference()
 
@@ -918,7 +918,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
         return tmp[0]
 
     def evaluate(self, df, **kwargs):
-        session = kwargs["session"]
+        session = get_toplevel_window().Session
 
         self._res = self.get_reference()
 
@@ -1109,7 +1109,7 @@ class SuperCondProb(Proportion):
     _name = "Conditional Probability"
 
     def get_resource(self, **kwargs):
-        session = kwargs["session"]
+        session = get_toplevel_window().Session
         return session.Resource
 
     @staticmethod
@@ -1128,7 +1128,7 @@ class SuperCondProb(Proportion):
         return val
 
     def evaluate(self, df, **kwargs):
-        session = kwargs["session"]
+        session = get_toplevel_window().Session
 
         left = 1
         context_columns = ["coq_context_lc{}".format(i+1)
@@ -1195,7 +1195,7 @@ class ConditionalProbability2(SuperCondProb):
     maximum_columns = 2
 
     def get_resource(self, **kwargs):
-        session = kwargs["session"]
+        session = get_toplevel_window().Session
         return session.Resource
 
     def evaluate(self, df, **kwargs):
