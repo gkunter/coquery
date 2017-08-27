@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-import string
 import re
 import pandas as pd
 import logging
@@ -163,7 +162,6 @@ class BuilderClass(BaseCorpusBuilder):
             df.columns = ["X{}".format(x) for x in df.columns]
         else:
             df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x) for x in df.columns]
-
         df[self.corpus_file_id] = 1
         self.DB.load_dataframe(df, self.corpus_table, self.corpus_id)
 
