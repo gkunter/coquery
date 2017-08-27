@@ -462,10 +462,9 @@ class Table(object):
                 if not column.unique:
                     # add surrogate key
                     # do not add AUTO_INCREMENT to strings or ENUMs:
-                    col_defs.insert(0, ("`{}_primary` INT NOT NULL AUTO_INCREMENT"
-                                        .format(column.name)))
-                    col_defs.insert(1,
-                                    "`{}` {}".format(column.name, dtype))
+                    s = "`{}_primary` INT NOT NULL AUTO_INCREMENT"
+                    col_defs.insert(0, s.format(column.name))
+                    col_defs.insert(1, "`{}` {}".format(column.name, dtype))
                 else:
                     # do not add AUTO_INCREMENT to strings or ENUMs:
                     if column.data_type.upper().startswith(
@@ -475,11 +474,11 @@ class Table(object):
                         pattern = "`{}` {} AUTO_INCREMENT"
                     col_defs.append(pattern.format(column.name, dtype))
                 # add generated index column for next token?
-                if index_gen:
-                    if "mariadb" in self._DB.version.lower():
-                        kwd = "PERSISTENT"
-                    else:
-                        kwd = "STORED"
+                #if index_gen:
+                    #if "mariadb" in self._DB.version.lower():
+                        #kwd = "PERSISTENT"
+                    #else:
+                        #kwd = "STORED"
                     # FIXME: GENERATED is available only in MySQL 5.7.5
                     # onward. There has to be a check for version.
                     #col_defs.append("Next{id} INT NOT NULL GENERATED ALWAYS AS ({id} + 1) {kwd}".format(
@@ -521,11 +520,10 @@ class Table(object):
                     # add surrogate key
                     col_defs.insert(0, ("{}_primary INT NOT NULL PRIMARY KEY"
                                         .format(column.name)))
-                    col_defs.insert(1, ("{} {}"
-                                        .format(column.name, dtype)))
+                    col_defs.insert(1, ("{} {}".format(column.name, dtype)))
                 else:
                     col_defs.append(("{} {} PRIMARY KEY"
-                                        .format(column.name, dtype)))
+                                     .format(column.name, dtype)))
 
         # make SQLite columns case-insensitive by default
         for i, x in enumerate(list(col_defs)):
