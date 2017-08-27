@@ -9,12 +9,15 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
+import os
+
 from coquery import options
 from coquery.unicode import utf8
 from .pyqt_compat import QtWidgets
 
 from .csvoptions import quote_chars, CSVOptionDialog, CSVOptions
 from .ui.namedTableOptionsUi import Ui_NamedTableOptions
+
 
 class NamedTableOptionsDialog(CSVOptionDialog):
     def __init__(self, filename, fields=None, default=None, parent=None,
@@ -81,6 +84,8 @@ class NamedTableOptionsDialog(CSVOptionDialog):
             pass
 
     def validate_dialog(self):
+        current_file = utf8(self.ui.edit_file_name.text())
+        self.ui.groupBox.setEnabled(os.path.exists(current_file))
         try:
             has_word = "word" in self.map
         except:
