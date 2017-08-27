@@ -13,13 +13,12 @@ from __future__ import unicode_literals
 
 import os
 import logging
-import warnings
 import sqlalchemy
 
-from .errors import *
-from .defines import *
+from .defines import SQL_MYSQL, SQL_SQLITE
 from . import options
 from . import NAME
+
 
 def _conf_dict(configuration):
     """
@@ -63,7 +62,8 @@ def _conf_dict(configuration):
     elif isinstance(configuration, tuple):
         if len(configuration) != 5:
             raise ValueError
-        return dict(zip(["host", "port", "type", "user", "password"], configuration))
+        return dict(zip(["host", "port", "type", "user", "password"],
+                        configuration))
 
     elif isinstance(configuration, dict):
         t = configuration.get("type")
@@ -79,6 +79,7 @@ def _conf_dict(configuration):
             if "password" not in configuration:
                 raise ValueError
         return configuration
+
 
 def test_configuration(name):
     """
@@ -140,6 +141,7 @@ def test_configuration(name):
         else:
             return (False, IOError)
 
+
 def sql_url(configuration, db_name=""):
     """
     Return a SQLAlchemy engine url for the given configuration.
@@ -162,12 +164,13 @@ def sql_url(configuration, db_name=""):
     d = _conf_dict(configuration)
 
     if d["type"] == SQL_MYSQL:
-        S = "mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}?charset=utf8mb4&local_infile=1".format(
-            host=d["host"], port=d["port"], user=d["user"], password=d["password"],
-            db_name=db_name)
+        S = ("mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}"
+             "?charset=utf8mb4&local_infile=1").format(db_name=db_name, **d)
     elif d["type"] == SQL_SQLITE:
-        S = "sqlite+pysqlite:///{}".format(sqlite_path(configuration, db_name))
+        S = "sqlite+pysqlite:///{}".format(sqlite_path(configuration,
+                                                       db_name))
     return S
+
 
 def sqlite_path(configuration, db_name=None):
     """
@@ -194,6 +197,7 @@ def sqlite_path(configuration, db_name=None):
         S = options.cfg.database_path
     return S
 
+
 def drop_database(configuration, db_name):
     """
     Drops the database 'db_name' from the given configuration.
@@ -216,13 +220,20 @@ def drop_database(configuration, db_name):
         os.remove(sqlite_path(configuration, db_name))
     engine.dispose()
 
+
 def create_database(configuration, db_name):
     s = sql_url(configuration)
     engine = sqlalchemy.create_engine(s)
     if engine.dialect.name == SQL_MYSQL:
         with engine.connect() as connection:
-            connection.execute("CREATE DATABASE {} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci".format(db_name.split()[0]))
+            S = """
+                CREATE DATABASE {}
+                CHARACTER SET utf8mb4
+                COLLATE utf8mb4_unicode_ci
+                """.format(db_name.split()[0])
+            connection.execute(S)
     engine.dispose()
+
 
 def has_database(configuration, db_name):
     """
@@ -242,9 +253,13 @@ def has_database(configuration, db_name):
     """
     engine = sqlalchemy.create_engine(sql_url(configuration, db_name))
     if engine.dialect.name == SQL_MYSQL:
-        S = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{}'".format(db_name)
+        S = """
+            SELECT SCHEMA_NAME
+            FROM INFORMATION_SCHEMA.SCHEMATA
+            WHERE SCHEMA_NAME = '{}'
+            """.format(db_name)
         try:
-            results = engine.execute(S)
+            engine.execute(S)
         except sqlalchemy.exc.InternalError as e:
             return False
         except Exception as e:
@@ -254,27 +269,6 @@ def has_database(configuration, db_name):
     elif engine.dialect.name == SQL_SQLITE:
         return os.path.exists(sqlite_path(configuration, db_name))
 
-def has_index(engine, table, column):
-    """
-    Check if the specified column has an index.
-
-    Parameters
-    ----------
-    engine : an SQLAlchemy engine
-
-    table, column : str
-        The name of the table and the column, respectively
-
-    Returns
-    -------
-    b : bool
-        True if the column has an index, or False otherwise.
-    """
-    with engine.connect() as connection:
-        if engine.name == SQL_MYSQL:
-            return bool(connection.execute('SHOW INDEX FROM %s WHERE Key_name = "%s"' % (table, index)))
-        elif engine.name == SQL_SQLITE:
-            return bool(len(connection.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND name = '{}' AND tbl = '{}'".format(index, table)).fetchall()))
 
 def create_index(engine, table, index, variables, length=None):
     """
@@ -300,7 +294,8 @@ def create_index(engine, table, index, variables, length=None):
 
     with engine.connect() as connection:
         # Do not create an index if the table is empty:
-        if not connection.execute("SELECT * FROM {} LIMIT 1".format(table)).fetchone():
+        S = "SELECT * FROM {} LIMIT 1".format(table)
+        if not connection.execute(S).fetchone():
             return
 
         if length:
@@ -309,28 +304,6 @@ def create_index(engine, table, index, variables, length=None):
             index, table, ",".join(variables))
         connection.execute(S)
 
-def has_table(engine, table):
-    """
-    Check if the table 'table' exists in the current database.
-
-    Parameters
-    ----------
-    engine : an SQLAlchemy engine
-
-    table : str
-        The name of the table
-
-    Returns
-    -------
-    b : bool
-        True if the table exists, or False otherwise.
-    """
-    with engine.connect() as connection:
-        if engine.name == SQL_MYSQL:
-            return bool(connection.execute("SELECT * FROM information_schema.tables WHERE table_schema = '{}' AND table = '{}'".format(self.db_name, table)))
-        elif engine.name == SQL_SQLITE:
-            S = "SELECT * from sqlite_master WHERE type = 'table' and name = '{}'".format(table)
-            return bool(connection.execute(S).fetchall())
 
 def get_index_length(engine, table, column, coverage=0.95):
     """
