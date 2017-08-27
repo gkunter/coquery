@@ -133,6 +133,7 @@ module_code = """# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from coquery.corpus import *
 
+
 class Resource(SQLResource):
     name = '{name}'
     display_name = '{display_name}'
@@ -141,18 +142,17 @@ class Resource(SQLResource):
 {variables}
 {resource_code}
 
+
 class Lexicon(LexiconClass):
     '''
     Corpus-specific code
     '''
-
 {lexicon_code}
 
 class Corpus(CorpusClass):
     '''
     Corpus-specific code
     '''
-
 {corpus_code}
 """
 
@@ -1566,32 +1566,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         """
         self.surface_feature = rc_feature
 
-    def verify_corpus(self):
-        """
-        Apply some basic checks to determine whether a MySQL database is
-        available to the corpus module.
-
-        This method first checks whether a database under the given name is
-        exists on the MySQL server. It then tests whether the database
-        contains all data tables specified in the table descriptions defined
-        by previous calls to :func:`create_table_description`.
-
-        Returns
-        -------
-        bool : boolean
-            True if the database and all tables in the table
-            descriptions exist, or False otherwise.
-        """
-        no_fail = True
-        if not sqlhelper.has_database(options.cfg.current_server, self.arguments.db_name):
-            no_fail = False
-            logging.warning("Database {} not found.".format(self.arguments.db_name))
-        for x in self.table_description:
-            if not sqlhelper.has_table(self.DB.engine, x):
-                logging.warning("Table {} not found.".format(x))
-                no_fail = False
-        return no_fail
-
     def get_module_path(self, name):
         """
         Return the path to the corpus module that is written during a build.
@@ -1611,8 +1585,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
     def build_write_module(self):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
-        if not self.arguments.w:
-            return
         base_variables = dir(type(self).__bases__[0])
         # set_query_items() initializes those class variables that map the
         # different query item types to resource features from the class.
@@ -1679,10 +1651,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
         """
         configuration = options.cfg.current_server
 
-        if self.arguments.c:
-            if sqlhelper.has_database(configuration, self.arguments.db_name):
-                sqlhelper.drop_database(configuration, self.arguments.db_name)
-            sqlhelper.create_database(configuration, self.arguments.db_name)
+        if sqlhelper.has_database(configuration, self.arguments.db_name):
+            sqlhelper.drop_database(configuration, self.arguments.db_name)
+        sqlhelper.create_database(configuration, self.arguments.db_name)
 
         self.DB = sqlwrap.SqlDB(
             Host=self.arguments.db_host,
@@ -1809,11 +1780,11 @@ class BaseCorpusBuilder(corpus.SQLResource):
         - the corpus module
         - the corpus installer in case of adhoc corpora
         """
-        if self.arguments.c:
-            try:
-                sqlhelper.drop_database(options.cfg.current_server, self.arguments.db_name)
-            except:
-                pass
+        try:
+            sqlhelper.drop_database(options.cfg.current_server,
+                                    self.arguments.db_name)
+        except:
+            pass
 
         path = self.get_module_path(self.arguments.name)
         try:
@@ -1870,9 +1841,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 self._widget.progressUpdate.emit(0)
 
         self.check_arguments()
-        if (self.arguments.l or self.arguments.c) and not self.validate_path(self.arguments.path):
-            raise RuntimeError("The given path {} does not appear to contain valid corpus data files.".format(self.arguments.path))
-
         self.setup_db()
 
         if self._widget:
@@ -1892,13 +1860,13 @@ class BaseCorpusBuilder(corpus.SQLResource):
             progress_done()
 
             try:
-                if self.arguments.c and not self.interrupted:
+                if not self.interrupted:
                     if self.arguments.metadata:
                         self.add_metadata(self.arguments.metadata)
                     self.build_create_tables()
                     progress_done()
 
-                if self.arguments.l and not self.interrupted:
+                if not self.interrupted:
                     current = progress_next(current)
                     if self.arguments.metadata:
                         self.store_metadata()
@@ -1913,9 +1881,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                             stage()
                     progress_done()
 
-                if (self.arguments.o and
-                        not self.interrupted and
-                        self.DB.db_type == SQL_MYSQL):
+                if (not self.interrupted and self.DB.db_type == SQL_MYSQL):
                     current = progress_next(current)
                     self.build_optimize()
                     progress_done()
@@ -1930,12 +1896,12 @@ class BaseCorpusBuilder(corpus.SQLResource):
                     print(e)
                     raise e
 
-                if self.arguments.i and not self.interrupted:
+                if not self.interrupted:
                     current = progress_next(current)
                     self.build_create_indices()
                     progress_done()
 
-                if self.verify_corpus() and not self.interrupted:
+                if not self.interrupted:
                     current = progress_next(current)
                     self.build_write_module()
 
@@ -2192,7 +2158,8 @@ class TEICorpusBuilder(XMLCorpusBuilder):
     word_tag = "w"
 
     def __init__(self, gui=None, strip_namespace=True):
-        super(TEICorpusBuilder, self).__init__(gui=gui, strip_namespace=strip_namespace)
+        super(TEICorpusBuilder, self).__init__(gui=gui,
+                                               strip_namespace=strip_namespace)
         self._open_tag_map = {self.head_tag: self.open_headline,
                               self.div_tag: self.open_div,
                               self.paragraph_tag: self.open_paragraph,
