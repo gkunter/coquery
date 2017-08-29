@@ -369,6 +369,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         label = _translate("MainWindow", "Connection: ", None)
         frame = QtWidgets.QFrame()
         layout = QtWidgets.QHBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(QtWidgets.QLabel(label))
         layout.addWidget(self.ui.combo_config)
         statusbar.addPermanentWidget(frame)
