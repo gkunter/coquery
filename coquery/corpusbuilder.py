@@ -1279,7 +1279,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         elif hasattr(self, "corpus_word"):
             na_value = DEFAULT_MISSING_VALUE
 
-        step = 50000
+        step = 250000 // self.corpusngram_width
         current_id = 0
 
         word_id = (getattr(self, "corpus_word_id", None) or
@@ -1293,8 +1293,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
             ngram_table.get_create_string(self.arguments.db_type,
                                           self._new_tables.values()))
 
-        self._widget.progressSet.emit(1 + ((max_id-1) // step),
-                                      "Creating ngram lookup table... (chunk %v of %m)")
+        self._widget.progressSet.emit(
+            1 + ((max_id-1) // step),
+            "Creating ngram lookup table... (chunk %v of %m)")
         self._widget.progressUpdate.emit(1)
 
         sql_template = """
