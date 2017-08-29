@@ -373,7 +373,7 @@ def parse_query_string(S, token_type):
                       "." * (len(S) - char_pos - 1))
 
         if escaping:
-            current_word = add(current_word, current_char)
+            current_word = add(current_word, "\\{}".format(current_char))
             escaping = False
             continue
         if current_char == "\\":
@@ -591,7 +591,7 @@ def get_quantifiers(S):
         return (S, 1, 1)
 
 
-def preprocess_query(S):
+def preprocess_query(S, literal=False):
     """
     Analyze the quantification in S, and return a list of strings so that
     all permutations are included.
@@ -603,6 +603,13 @@ def preprocess_query(S):
     ----------
     S : string
         A string that could be used as a query string
+    literal : bool
+        True if the query string should be queried as is, or False otherwise.
+        In other words, if `literal` is True, a query string such as `[?]`
+        will match only tokens that correspond to the string `[?]`. If
+        `literal` is False (the default), this string is interpreted as a
+        lemma query item matching all tokens that have exactly one character
+        as the value of the lemma.
 
     Returns
     -------
@@ -610,7 +617,10 @@ def preprocess_query(S):
         A list of query string tokens
     """
 
-    tokens = parse_query_string(S, COCAToken)
+    if not literal:
+        tokens = parse_query_string(S, COCAToken)
+    else:
+        tokens = [x.strip() for x in S.split() if x.strip()]
 
     outer = []
     current_pos = 1

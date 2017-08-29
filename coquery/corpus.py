@@ -1937,6 +1937,7 @@ class CorpusClass(object):
         # as wildcards:
         s = s.replace("*", "\\*")
         s = s.replace("?", "\\?")
+        s = s.replace('"', '\\"')
 
         if options.cfg.query_case_sensitive:
             key = (engine.url, s, True)
@@ -1946,7 +1947,8 @@ class CorpusClass(object):
         if key in self._frequency_cache:
             return self._frequency_cache[key]
 
-        query_list = tokens.preprocess_query(s)
+        query_list = tokens.preprocess_query(s, literal=literal)
+
         freq = 0
 
         for sub in query_list:
