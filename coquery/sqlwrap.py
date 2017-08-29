@@ -153,8 +153,6 @@ class SqlDB(object):
             The SQL string used to create the new table
         """
         S = 'CREATE TABLE {} ({})'.format(table_name, description)
-        print(S)
-        print(self.engine)
         with self.engine.connect() as connection:
             return connection.execute(S)
 
