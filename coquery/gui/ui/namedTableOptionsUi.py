@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'namedTableOptions.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -196,6 +196,7 @@ class Ui_NamedTableOptions(object):
         self.FilePreviewArea.setAlternatingRowColors(True)
         self.FilePreviewArea.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectColumns)
         self.FilePreviewArea.setTextElideMode(QtCore.Qt.ElideMiddle)
+        self.FilePreviewArea.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.FilePreviewArea.setObjectName("FilePreviewArea")
         self.verticalLayout_2.addWidget(self.FilePreviewArea)
         self.buttonBox = QtWidgets.QDialogButtonBox(NamedTableOptions)
