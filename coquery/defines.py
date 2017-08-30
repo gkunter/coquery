@@ -185,6 +185,9 @@ COLUMN_NAMES = {
     "coq_statistics_uniques": "Uniques",
     "coq_statistics_uniquenessratio": "Uniqueness ratio",
     "coq_statistics_averagefrequency": "Average frequency",
+
+    "frequency_condprob": "Conditional Probability",
+    "frequency_ext_condprob": "Reference Conditional Probability",
         }
 
 ROW_NAMES = {
@@ -242,6 +245,10 @@ FUNCTION_DESC = {
     "MEDIAN": "Calculate the row-wise median",
     "MIN": "Calculate the row-wise minimum",
     "SD": "Calculate the row-wise standard deviation",
+
+    "frequency_condprob": "Calculate the conditional probability of second column given first column",
+    "frequency_ext_condprob": "Calculate the conditional probability of second column given first column in the reference corpus",
+
         }
 
 PREFERRED_ORDER = ["corpus_word", "word_label",
