@@ -361,14 +361,19 @@ class FunctionDialog(QtWidgets.QDialog):
             function_groups = (functions.StringFunction,
                                functions.Comparison,
                                functions.BaseProportion,
+                               functions.BaseFreq,
                                functions.LogicFunction)
         elif all([x != object for x in self.df[self.columns].dtypes]):
             function_groups = (functions.OperatorFunction,
                                functions.StatisticalFunction,
                                functions.Comparison,
+                               functions.BaseProportion,
+                               functions.BaseFreq,
                                functions.LogicFunction)
         else:
             function_groups = (functions.Comparison,
+                               functions.BaseProportion,
+                               functions.BaseFreq,
                                functions.LogicFunction, )
         return function_groups
 
