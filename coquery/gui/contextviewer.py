@@ -13,7 +13,11 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
-import tgt
+try:
+    import tgt
+    use_tgt = True
+except ImportError:
+    use_tgt = False
 
 from coquery import options
 from coquery.unicode import utf8
@@ -288,6 +292,8 @@ class ContextView(QtWidgets.QWidget):
 
 
     def prepare_textgrid(self, df, offset):
+        if not use_tgt:
+            return None
         grid = tgt.TextGrid()
         tier = tgt.IntervalTier()
         tier.name = "Words"

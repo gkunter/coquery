@@ -161,7 +161,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
             speaker_root = create_root("Speakers")
             file_root = create_root("Files")
             segment_root = create_root("Segments")
-            query_root = create_root("Query string")
+            query_root = create_root("coquery")
 
             for rc_feature in rc_features:
                 leaf = create_item(rc_feature)

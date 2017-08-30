@@ -84,28 +84,28 @@ class TestTokensModuleMethods(unittest.TestCase):
 
     def test_parse_query_string_escape1(self):
         S = r'\"this is a query\"'
-        L = ['"this', 'is', 'a', 'query"']
+        L = ['\\"this', 'is', 'a', 'query\\"']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
     def test_parse_query_string_escape2(self):
         S1 = r'this \[is] a query'
-        L1 = ['this', '[is]', 'a', 'query']
+        L1 = ['this', '\\[is]', 'a', 'query']
         S2 = r'this \[is a query'
-        L2 = ['this', '[is', 'a', 'query']
+        L2 = ['this', '\\[is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
         self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
 
     def test_parse_query_string_escape2(self):
         S1 = r'this \/is] a query'
-        L1 = ['this', '/is]', 'a', 'query']
+        L1 = ['this', '\\/is]', 'a', 'query']
         S2 = r'this is a que\/ry'
-        L2 = ['this', 'is', 'a', 'que/ry']
+        L2 = ['this', 'is', 'a', 'que\\/ry']
         self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
         self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
 
     def test_parse_query_string_escape3(self):
         S = r'this\ is a query'
-        L = ['this is', 'a', 'query']
+        L = ['this\\ is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
     def test_unicode_1(self):
@@ -213,6 +213,28 @@ class TestTokensModuleMethods(unittest.TestCase):
         L = ["ABC/"]
         result = tokens.parse_query_string(S, tokens.COCAToken)
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+
+
+    def test_preprocess_string_literal(self):
+        S = r"\? \* \_ \%"
+        L = [[(1, "\\?"), (2, "\\*"), (3, "\\_"), (4, "\\%")]]
+        print(tokens.preprocess_query(S, literal=True))
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S, literal=True), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S, literal=True), L)
+
+    def test_preprocess_string_not_literal(self):
+        S = r"\? \* \_ \% ? * _ %"
+        L = [[(1, "?"), (2, "*"), (3, "_"), (4, "%")]]
+        print(tokens.preprocess_query(S, literal=True))
+        try:
+            self.assertItemsEqual(tokens.preprocess_query(S), L)
+        except AttributeError:
+            self.assertCountEqual(tokens.preprocess_query(S), L)
+
+
+
 
 
 class TestQueryTokenCOCA(unittest.TestCase):
@@ -1194,6 +1216,7 @@ class TestQuantification(unittest.TestCase):
             self.assertItemsEqual(tokens.preprocess_query(S), L)
         except AttributeError:
             self.assertCountEqual(tokens.preprocess_query(S), L)
+
 
 # An CQL query syntax is not implemented yet, but might be in the future.
 #class TestQueryTokenCQL(unittest.TestCase):

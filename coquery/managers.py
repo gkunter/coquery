@@ -72,7 +72,9 @@ class Group(CoqObject):
                     .apply(function_list.lapply,
                            session=session, manager=manager))
             if self.show_distinct:
-                df = df.drop_duplicates(self.columns)
+                df = df.drop_duplicates(
+                    self.columns +
+                    [x.get_id() for x in function_list.get_list()])
         return df
 
     def get_functions(self):

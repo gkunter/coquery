@@ -502,7 +502,7 @@ class BuilderClass(TEICorpusBuilder):
         targets = charge.attrib["targets"]
         for target in targets.split():
             rs = trial.find(".//rs[@id='{}']".format(target))
-            if rs:
+            if rs is not None:
                 if rs.attrib["type"] == "offenceDescription":
                     for interp in rs.findall(".//interp"):
                         i_type = interp.attrib["type"]
@@ -520,7 +520,7 @@ class BuilderClass(TEICorpusBuilder):
                         elif i_type == "verdictSubcategory":
                             d[self.source_verdictsubtype] = val
         rs = trial.find(".//rs[@type='punishmentDescription']")
-        if rs:
+        if rs is not None:
             for interp in rs.findall(".//interp"):
                 i_type = interp.attrib["type"]
                 val = interp.attrib["value"]
