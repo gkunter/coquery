@@ -68,7 +68,6 @@ class FunctionList(CoqObject):
                 else:
                     val = fun.evaluate(df, **fun.kwargs)
             except Exception as e:
-                raise e
                 # can be caused by a function applied to a non-existing column
                 self._list.remove(fun)
                 exception = RuntimeError(
