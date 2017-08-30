@@ -1014,7 +1014,7 @@ class ReferenceCorpusDiffKeyness(ReferenceCorpusLLKeyness):
 ## Distributional functions
 #############################################################################
 
-class BaseProportion(Freq):
+class BaseProportion(Function):
     _name = "virtual"
 
     @staticmethod
@@ -1035,7 +1035,12 @@ class Proportion(BaseProportion):
         else:
             if options.cfg.verbose:
                 print(self._name, "calculating df.Proportion()")
-        val = super(Proportion, self).evaluate(df, **kwargs)
+        fun_freq = Freq(columns=self.columns, group=self.group)
+        if self.find_function(df, fun):
+            val = df[fun_freq.get_id()]
+        else:
+            val = fun_freq.evaluate(df, **kwargs)
+
         val = val / len(val)
         val.index = df.index
         return val
@@ -1105,80 +1110,7 @@ class TypeTokenRatio(Types):
         return val
 
 
-class SuperCondProb(Proportion):
-    _name = "Conditional Probability"
-
-    def get_resource(self, **kwargs):
-        session = get_toplevel_window().Session
-        return session.Resource
-
-    @staticmethod
-    def get_freq_str(span):
-        columns = span.columns
-        for i, col in enumerate(columns):
-            if i == 0:
-                val = span.iloc[:, 0]
-            else:
-                val = val.str.cat(span.iloc[:, i], sep=" ")
-
-        val = (val.replace("{", "\\{", regex=True)
-                  .replace("\[", "\\[", regex=True)
-                  .replace("\*", "\\*", regex=True)
-                  .replace("\?", "\\?", regex=True))
-        return val
-
-    def evaluate(self, df, **kwargs):
-        session = get_toplevel_window().Session
-
-        left = 1
-        context_columns = ["coq_context_lc{}".format(i+1)
-                           for i in range(left)]
-
-        if all([col in df.columns for col in context_columns]):
-            left = df[context_columns]
-            if options.cfg.verbose:
-                print(self._name, "using df.ContextColumns()")
-        else:
-            fun = ContextColumns(left=1, right=0)
-            if options.cfg.verbose:
-                print(self._name, "calculating df.ContextColumns()")
-            left = fun.evaluate(df, **kwargs)
-
-        # no left context specified:
-        if len(left.columns) == 0:
-            val = self.constant(df, None)
-        else:
-            max_col = df["coquery_invisible_number_of_tokens"].max()
-            columns = ["coq_{}_{}".format(
-                getattr(session.Resource, QUERY_ITEM_WORD),
-                x+1) for x in range(max_col)]
-            span = pd.concat([left, df[columns]], axis="columns")
-
-            resource = self.get_resource(**kwargs)
-            if resource is None:
-                return self.constant(df, None)
-            url = sqlhelper.sql_url(options.cfg.current_server,
-                                    resource.db_name)
-            engine = sqlalchemy.create_engine(url)
-            try:
-                val = self.get_freq_str(span)
-                freq_full = val.apply(
-                    lambda x: resource.corpus.get_frequency(x, engine))
-
-                val = self.get_freq_str(left)
-                freq_part = val.apply(
-                    lambda x: resource.corpus.get_frequency(x, engine))
-            except Exception as e:
-                logging.error(str(e))
-                val = self.constant(df, None)
-            else:
-                val = freq_full / freq_part
-            finally:
-                engine.dispose()
-        return val
-
-
-class ConditionalProbability2(SuperCondProb):
+class ConditionalProbability2(Proportion):
     """
     Calculate the conditional probability P(B|A) for the selected columns.
 
@@ -1187,10 +1119,8 @@ class ConditionalProbability2(SuperCondProb):
 
     For every row _i_, P(B_i_|A_i_) = f(A_i_ + B_i_) / P(A_i_).
 
-    The content of these columns are interpreted as query strings. This means
-    that they have to be syntactically correct, or the function will fail.
     """
-    _name = "CondProb"
+    _name = "frequency_condprob"
     minimum_columns = 2
     maximum_columns = 2
 
@@ -1231,15 +1161,7 @@ class ConditionalProbability2(SuperCondProb):
 
 
 class ExternalConditionalProbability2(ConditionalProbability2):
-    _name = "ExtCondProb"
-
-    def get_resource(self, **kwargs):
-        res = self.get_reference()
-        return res
-
-
-class ExternalCondProb(SuperCondProb):
-    _name = "Reference Conditional Probability"
+    _name = "frequency_ext_condprob"
 
     def get_resource(self, **kwargs):
         res = self.get_reference()
