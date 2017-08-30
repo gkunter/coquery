@@ -177,6 +177,9 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
         super(CoqHorizontalHeader, self).mousePressEvent(e)
         self.button_pressed = True
 
+    def reset(self):
+        super(CoqHorizontalHeader, self).reset()
+        self._selected_columns = []
 
 class CoqHelpBrowser(QtWidgets.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
