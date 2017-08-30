@@ -1429,7 +1429,8 @@ class SQLResource(BaseResource):
             """.format(S, options.cfg.number_of_tokens)
         return S
 
-    def get_context(self, token_id, origin_id, number_of_tokens, db_connection, sentence_id=None, left=None, right=None):
+    def get_context(self, token_id, origin_id, number_of_tokens,
+                    db_connection, sentence_id=None, left=None, right=None):
         def get_orth(word_id):
             """
             Return the orthographic forms of the word_ids.
@@ -1489,7 +1490,9 @@ class SQLResource(BaseResource):
         try:
             token_id = int(token_id)
         except ValueError:
-            return [None] * int(left_span), [None] * int(number_of_tokens), [None] * int(right_span)
+            return ([None] * int(left_span),
+                    [None] * int(number_of_tokens),
+                    [None] * int(right_span))
 
         if left_span > token_id:
             start = 1
@@ -1531,7 +1534,9 @@ class SQLResource(BaseResource):
             right_context_words = get_orth([x for (x, ) in results])
         right_context_words = right_context_words + [''] * (right_span - len(right_context_words))
 
-        return (left_context_words, string_context_words, right_context_words)
+        return (left_context_words,
+                string_context_words,
+                right_context_words)
 
     def get_sentence_ids(self, id_list):
         """
