@@ -1135,22 +1135,15 @@ class ConditionalProbability2(Proportion):
 
         url = sqlhelper.sql_url(options.cfg.current_server, resource.db_name)
         engine = sqlalchemy.create_engine(url)
-
+        span = df[self.columns[0]] + " " + df[self.columns[1]]
+        left = df[self.columns[0]]
         try:
-            span = df[self.columns[0]] + " " + df[self.columns[1]]
-            left = df[self.columns[0]]
-
-            print(span.head())
-            print(left.head())
-
             freq_full = span.apply(
                 lambda x: resource.corpus.get_frequency(x, engine))
             freq_part = left.apply(
                 lambda x: resource.corpus.get_frequency(x, engine))
-
-            print(freq_full.head())
-            print(freq_part.head())
         except Exception as e:
+            print(str(e))
             logging.error(str(e))
             val = self.constant(df, None)
         else:
