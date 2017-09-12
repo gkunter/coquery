@@ -46,6 +46,7 @@ class Column(object):
         self._data_type = data_type
         self.index_length = index_length
         self.unique = False
+        self.create = True
 
     def __repr__(self):
         return "Column({}, {}, {})".format(self._name,
@@ -129,9 +130,10 @@ class Link(Column):
     terms, this acts like a foreign key."""
     key = True
 
-    def __init__(self, name, table_name):
+    def __init__(self, name, table_name, create=True):
         super(Link, self).__init__(name, "", True)
         self._link = table_name
+        self.create = create
 
     def __repr__(self):
         return "Link(name='{}', '{}', data_type='{}')".format(
@@ -452,6 +454,9 @@ class Table(object):
     def _get_create_string_MySQL(self, tables, index_gen):
         col_defs = []
         for column in self.columns:
+            if not column.create:
+                continue
+
             dtype = column.data_type
             if column.key:
                 dtype = column.get_dtype(tables)
@@ -496,6 +501,9 @@ class Table(object):
     def _get_create_string_SQLite(self, tables, index_gen):
         col_defs = []
         for column in self.columns:
+            if not column.create:
+                continue
+
             # SQLite doesn't support the ENUM data type. ENUM columns are
             # therefore converted to VARCHAR columns:
 
