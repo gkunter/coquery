@@ -1054,7 +1054,8 @@ def save_configuration():
 
     config.set("main", "query_mode", cfg.MODE)
     if cfg.query_list and cfg.save_query_string:
-        config.set("main", "query_string", encode_query_string("\n".join(cfg.query_list)))
+        config.set("main", "query_string",
+                   encode_query_string("\n".join(cfg.query_list)))
     if cfg.input_path and cfg.save_query_file:
         config.set("main", "csv_file", cfg.input_path)
         config.set("main", "csv_separator", cfg.input_separator)
@@ -1592,6 +1593,7 @@ def decode_query_string(s):
     escape = False
     l = []
     char_list = []
+    s = s.replace("%%", "%")
     for ch in s:
         if escape:
             char_list.append(ch)
@@ -1627,6 +1629,7 @@ def encode_query_string(s):
     for s in l:
         s = s.replace("\\", "\\\\")
         s = s.replace('"', '\\"')
+        s = s.replace("%", "%%")
         str_list.append(s)
     return ",".join(['"{}"'.format(x) for x in str_list])
 
