@@ -89,6 +89,7 @@ from .defines import (SQL_MYSQL,
                       QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_POS,
                       QUERY_ITEM_WORD)
 from .unicode import utf8
+from .general import check_fs_case_sensitive
 
 insert_cache = collections.defaultdict(list)
 
@@ -516,17 +517,31 @@ class BaseCorpusBuilder(corpus.SQLResource):
         found_list = [x for x
                       in [os.path.basename(y) for y in file_list]
                       if x in cls.expected_files]
+        found_list_lower = [x.lower() for x in found_list]
 
-        if len(set(found_list)) < len(set(cls.expected_files)):
-            missing_list = [x for x in cls.expected_files
-                            if x not in found_list]
+        missing_list = []
+
+        for file_name in cls.expected_files:
+            path, basename = os.path.split(file_name)
+            if check_fs_case_sensitive(path):
+                if basename not in found_list:
+                    missing_list.append(basename)
+            else:
+                if basename.lower() not in found_list_lower:
+                    missing_list.append(basename)
+
+        if missing_list:
             sample = "<br/>".join(missing_list[:5])
             if len(missing_list) > 6:
                 S = "{}</code>, and {} other files"
                 sample = S.format(sample, len(missing_list) - 3)
             elif len(missing_list) == 6:
                 sample = "<br/>".join(missing_list[:6])
-            raise RuntimeError("<p>Not all expected corpora files were found in the specified corpus data directory. Missing files are:</p><p><code>{}</code></p>".format(sample))
+            S = """
+            <p>Not all expected corpora files were found in the specified
+            corpus data directory. Missing files are:</p>
+            <p><code>{}</code></p>""".format(sample)
+            raise RuntimeError(S)
 
     def get_corpus_code(self):
         """
