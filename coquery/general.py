@@ -111,7 +111,7 @@ def check_fs_case_sensitive(path):
     Check if the file system is case-sensitive.
     """
     with tempfile.NamedTemporaryFile(prefix="tMp", dir=path) as temp_path:
-        return not os.path.exists(temp_path.lower())
+        return not os.path.exists(temp_path.name.lower())
 
 
 def get_home_dir(create=True):

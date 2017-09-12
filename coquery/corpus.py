@@ -1937,12 +1937,14 @@ class CorpusClass(object):
 
         if isinstance(s, (int, float)):
             s = str(s)
-
         # escape asterisks and question marks so that they are not interpreted
         # as wildcards:
         s = s.replace("*", "\\*")
         s = s.replace("?", "\\?")
         s = s.replace('"', '\\"')
+        s = s.replace("#", "\\#")
+        s = s.replace("/", "\\/")
+        s = s.replace("%", "\\%")
 
         if options.cfg.query_case_sensitive:
             key = (engine.url, s, True)
@@ -1953,14 +1955,19 @@ class CorpusClass(object):
             return self._frequency_cache[key]
 
         query_list = tokens.preprocess_query(s, literal=literal)
-
-        freq = 0
+        freq = None
 
         for sub in query_list:
             S = self.resource.get_query_string(sub, [], columns=["COUNT(*)"])
-            print(S)
-            df = pd.read_sql(S, engine)
-            freq += df.values.ravel()[0]
+            try:
+                df = pd.read_sql(S, engine)
+            except Exception as e:
+                logging.warn(str(e))
+                print(str(e))
+            else:
+                if freq is None:
+                    freq = 0
+                freq += df.values.ravel()[0]
 
         self._frequency_cache[key] = freq
         return freq

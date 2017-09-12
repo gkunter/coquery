@@ -50,6 +50,10 @@ def main():
         from test import test_functions
         test_list += test_functions.provided_tests
 
+    if not args or "general" in args:
+        from test import test_general
+        test_list += test_general.provided_tests
+
     if not args or "managers" in args:
         from test.test_managers import TestManager
         test_list += [TestManager]

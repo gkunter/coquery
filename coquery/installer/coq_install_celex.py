@@ -67,23 +67,23 @@ class BuilderClass(BaseCorpusBuilder):
     file_filter = "e??.cd"
 
     corpus_table = "Ortho_Words"
-    corpus_id = "IdNum"
-    corpus_phonoword_id = "IdNum"
-    corpus_morphword_id = "IdNum"
+    corpus_id = "ID"
+    corpus_phonoword_id = "ID"
+    corpus_morphword_id = "ID"
     corpus_word = "Word"
     corpus_worddia = "WordDia"
     corpus_cob = "Word_Cob"
-    corpus_lemma_id = "IdNumLemma"
-    corpus_phonolemma_id = "IdNumLemma"
-    corpus_morphlemma_id = "IdNumLemma"
-    corpus_syntaxlemma_id = "IdNumLemma"
+    corpus_lemma_id = "LemmaId"
+    corpus_phonolemma_id = "LemmaId"
+    corpus_morphlemma_id = "LemmaId"
+    corpus_syntaxlemma_id = "LemmaId"
     corpus_orthocnt = "Word_OrthoCnt"
     corpus_orthostatus = "Word_OrthoStatus"
     corpus_cobspelldev = "Word_CobSpellDev"
     corpus_wordsyldia = "Word_WordSylDia"
 
     lemma_table = "Ortho_Lemmas"
-    lemma_id = "IdNum"
+    lemma_id = "LemmaId"
     lemma_label = "Head"
     lemma_headdia = "HeadDia"
     lemma_cob = "Lemma_Cob"
@@ -93,7 +93,7 @@ class BuilderClass(BaseCorpusBuilder):
     lemma_headsyldia = "Lemma_HeadSylDia"
 
     phonoword_table = "Phono_Words"
-    phonoword_id = "IdNum"
+    phonoword_id = "PhonoWordId"
     phonoword_word = "Word"
     phonoword_phonstrsdisc = "Word_PhonStrsDISC"
     phonoword_proncnt = "Word_PronCnt"
@@ -101,7 +101,7 @@ class BuilderClass(BaseCorpusBuilder):
     phonoword_phonsylbclx = "Word_PhonSylBCLX"
 
     phonolemma_table = "Phono_Lemmas"
-    phonolemma_id = "IdNum"
+    phonolemma_id = "PhonoLemmaId"
     phonolemma_head = "Head"
     phonolemma_proncnt = "Lemma_PronCnt"
     phonolemma_phonstrsdisc = "Lemma_PhonStrsDISC"
@@ -109,13 +109,13 @@ class BuilderClass(BaseCorpusBuilder):
     phonolemma_phonsylbclx = "Lemma_PhonSylBCLX"
 
     morphword_table = "Morpho_Words"
-    morphword_id = "IdNum"
+    morphword_id = "MorphWordId"
     morphword_word = "Word"
     morphword_flecttype = "Word_FlectType"
     morphword_transinfl = "Word_TransInfl"
 
     morphlemma_table = "Morpho_Lemmas"
-    morphlemma_id = "IdNum"
+    morphlemma_id = "MorphLemmaId"
     morphlemma_head = "Head"
     morphlemma_morphstatus = "Lemma_MorphStatus"
     morphlemma_lang = "Lemma_Lang"
@@ -141,7 +141,7 @@ class BuilderClass(BaseCorpusBuilder):
     morphlemma_strucopac = "Lemma_StrucOpac"
 
     syntaxlemma_table = "Syntax_Lemmas"
-    syntaxlemma_id = "Lemma_IdNum"
+    syntaxlemma_id = "SyntaxLemmaId"
     syntaxlemma_head = "Head"
     syntaxlemma_classnum = "Lemma_ClassNum"
     syntaxlemma_class = "Lemma_Class"
@@ -242,9 +242,26 @@ class BuilderClass(BaseCorpusBuilder):
                     "'2x','2x3x','2xN','2xP','2xx','3','3?','31','32','32x',"
                     "'33','3A','3Ax','3B','3Bx','3C','3N','3Nx','3O','3P',"
                     "'3x','3x3x','3xB','3xN','3xx','A','A0','A1','A1x','A2',"
-                    "'A2x','A3','A3x','AA','AB','AI','AN','ANx','AP','AQ','Ax','AxAx','AxB','AxN','AxP','Axx','B','B0','B1','B1x','B2','B2x','B3','B3x','BA','BB','BBx','BC','BN','BNx','BP','BPx','Bx','C','C2','CB','CC','CP','D','DN','DO','I','II','IN','Ix','N','N0','N0x','N1','N1x','N2','N2x','N3','N3x','NA','NB','NBx','NN','NNx','NP','NQ','Nx','Nx2','NxB','NxN','NxNx','NxP','Nxx','NxxN','O','O1','O3','OA','OB','OC','ON','ONx','OO','OP','Ox','P','PB','PN','PO','PP','PQx','Px','Q','Q?x','Q3x','QA','QN','QNx','QO','QQ','Qx','x0','x1','x1N','x1x','x2','x2Bx','x2P','x2x','x3','x3P','x3x','xA','xAN','xAP','xAx','xB','xN','xNN','xNx','xNxP','xO','xP','xx','xx3','xxN','xxx') NOT NULL"),
-             Column(self.morphlemma_immsa, "ENUM('','AA','AAA','AAF','AAS','AF','AFS','AS','ASA','ASAS','ASS','ASSA','F','FA','FAFA','FAS','FF','FS','FSA','S','SA','SAA','SAAS','SAS','SASA','SF','SFA','SS','SSA') NOT NULL"),
-             Column(self.morphlemma_immallo, "ENUM('','B','C','D','F','N','Z') NOT NULL"),
+                    "'A2x','A3','A3x','AA','AB','AI','AN','ANx','AP','AQ',"
+                    "'Ax','AxAx','AxB','AxN','AxP','Axx','B','B0','B1','B1x',"
+                    "'B2','B2x','B3','B3x','BA','BB','BBx','BC','BN','BNx',"
+                    "'BP','BPx','Bx','C','C2','CB','CC','CP','D','DN','DO',"
+                    "'I','II','IN','Ix','N','N0','N0x','N1','N1x','N2','N2x',"
+                    "'N3','N3x','NA','NB','NBx','NN','NNx','NP','NQ','Nx',"
+                    "'Nx2','NxB','NxN','NxNx','NxP','Nxx','NxxN','O','O1',"
+                    "'O3','OA','OB','OC','ON','ONx','OO','OP','Ox','P','PB',"
+                    "'PN','PO','PP','PQx','Px','Q','Q?x','Q3x','QA','QN',"
+                    "'QNx','QO','QQ','Qx','x0','x1','x1N','x1x','x2','x2Bx',"
+                    "'x2P','x2x','x3','x3P','x3x','xA','xAN','xAP','xAx',"
+                    "'xB','xN','xNN','xNx','xNxP','xO','xP','xx','xx3','xxN',"
+                    "'xxx') NOT NULL"),
+             Column(self.morphlemma_immsa,
+                    "ENUM('','AA','AAA','AAF','AAS','AF','AFS','AS','ASA',"
+                    "'ASAS','ASS','ASSA','F','FA','FAFA','FAS','FF','FS',"
+                    "'FSA','S','SA','SAA','SAAS','SAS','SASA','SF','SFA',"
+                    "'SS','SSA') NOT NULL"),
+             Column(self.morphlemma_immallo,
+                    "ENUM('','B','C','D','F','N','Z') NOT NULL"),
              Column(self.morphlemma_immsubst, "ENUM('','N','Y') NOT NULL"),
              Column(self.morphlemma_immopac, "ENUM('','N','Y') NOT NULL"),
              Column(self.morphlemma_transder, "ENUM('','-a#','-a+er#','-a+o#','-a+t#','-able#','-about','-about#','-aceti#','-acy#','-after','-against','-age#','-age##','-ah#','-ail+al#','-aim+am#','-ain#','-ain+an#','-ain+en#','-ain+ent#','-ain+ic#','-ain+in#','-ainto+in#','-air+ar#','-air+er#','-al#','-al+e#','-al+ll#','-al+u#','-along+long#','-ample+empl#','-an#','-anentwave','-anniversary','-ant#','-ar#','-ar+er#','-ar+i#','-ar+re#-ey+y','-aratoryschool+school','-ard+er#','-are+re','-arithm','-ark+eark#','-ary#','-as#','-ase+ss#','-ass+iss#','-ast+st#','-ast+sti#','-asure+nsur#','-asy#','-at+d#','-at+t#','-ate#','-ate#-star+ar','-ate##','-ateagainst#','-atein#','-ation','-ation#','-ation+e','-atrol#-orpedoboat+boat','-auxiliary','-away+way#','-ax#-carbon+on','-ay#','-b#','-b+m#','-b+pt#','-bagpipes+pipes','-be+p#','-be+pt#','-bebop+bop','-ber+er#','-bereft+reft','-beto+pt#','-binations+s','-ble#','-ble+il#','-blue','-bockers+s','-c#','-c+qu#','-cal#','-castic+ky','-cat','-cate#','-ce+ci#','-ce+s#','-ce+se#','-ce+t#','-ce+ti#','-chop#','-chute#','-ck+qu#','-cks+x#','-code','-coleslaw+slaw','-colonelblimp+blimp','-consonant','-cotton','-crat#','-crophone+ke','-ct+g#','-cy+ti#','-cycle+ke','-d#','-d+s#','-d+t#','-day','-de+s#','-de+ss#','-deep','-densation#','-detached','-detective+tec','-deto+s#','-disease','-dish','-dive','-dkerchief+k#','-dle#','-dle+l#','-dmother','-dmother+n#','-dog#','-down#','-duction','-dvancedlevel+level','-dyboy','-e#','-e#-e#','-e##','-e+a#','-e+ac#','-e+an#','-e+ar#','-e+at#','-e+ct#','-e+i#','-e+ic#','-e+ig#','-e+in#','-e+it#','-e+l#','-e+m#','-e+n#','-e+o#','-e+ot#','-e+pt#','-e+s#','-e+t#','-e+u#','-eabout+t#','-eace+ac#','-eakfast#-lunch+unch','-eal+el#','-ear+ar#','-ear+ir#','-ear+or#','-east+est#','-eat+et#','-eaudecologne+cologne','-ece+c#','-ect+ic#','-ect+ig#','-ed+d#','-ed+ss#','-edo','-edplatypus','-edy#','-edy+i#','-ee','-ee#','-ee+a#','-eel+il#','-eer#','-efrom#','-eian','-eian+b#','-ein#','-eive+ipi#','-el+uls#','-eleison','-elsalvador+salvadore#','-em+mpt#','-emathics','-ematics+s','-eme#','-empire+imper#','-en+in#','-en+n#','-encefiction+fi','-end#','-ening+ning','-ent#','-entitycard+card','-eof#','-eon','-eon#','-eous#','-ep+p#','-er#','-er+r#','-er+ri#','-erambulator+ram','-eration','-eration+s','-erations+s','-erative','-eree','-erer#','-erer+r#','-ergeant+arge','-ern','-ern#-venience','-ernist','-eror+r#','-ers+s','-erto+r#','-ery#','-es#','-es+a#','-escape+scape#','-essor','-et','-et+t#','-etable','-etarian#','-ethering+ithering','-eto','-eto#','-eum#','-eur#','-evatedrailway','-evision+l#','-ew+a#','-ewith#','-ex#','-ey#','-ey+i#','-eyeglasses+glasses','-f#','-f+ic#','-f+v#','-f+ve','-f+ve#','-falcon','-fall+al','-fessional#-ateur','-fibre','-fidencetrick','-footlights+lights','-for#','-ford#-cambridge+bridge','-frenchfries+fries','-from#','-g#','-ghfidelity+fi','-got','-graph','-gun','-gy#','-h#','-h+n#','-had+d','-haddock','-handcuffs+cuffs','-hant+ant#','-has+s','-have+ai#-ot+t','-have+ve','-house','-hronization','-i#','-i#-stellar+ar','-ia#','-ian#','-ian+o#','-ic#','-ic##','-ic+er#','-ic+o#','-ican#','-ice+et#','-iceberg+berg','-id#','-idatedannuities+s','-ie#','-ief+ev#','-ier#','-ies+y','-ign+gn#','-ik#','-il+vy#','-ill+o#-ot+t','-im+m#','-imate','-imensional','-in#','-in+n#','-in+ni#','-in+nn#','-ination','-incense+cense','-ind+ound#','-ine#','-ine+ens#','-inese+e','-influenza+flu','-ing+n#-to+na','-ingroom#','-ink+unk#','-intosh','-io#','-ion#','-ion+or#','-ion+u#','-ior#','-ious#','-ir+red#','-ir+ri#','-is#','-is+s','-is+t#','-isement','-ish#','-ism#','-istan#','-it+t#','-ite#','-itory','-itous#','-itulate','-ity#','-ity+ar#','-ium#','-ivarius','-ive#','-ive+p#','-ive+pt#','-iwog#','-ix+ec#','-ize#','-k#','-k+c#','-k+ch#','-k+quer#','-k+t#','-ke#-fog+g','-ke+c#','-ke+ch#','-ke+ck#','-keeper#','-l#','-l#-l','-l#-monologue+logue','-l+t#','-le#','-le+ell#-e#','-le+il#','-le+ol#','-le+ul#','-leadingreins+reins','-lemen#','-ll#-ot+t','-lunch','-m+i#-ot+t','-m+t#','-ma#','-magazine','-maker#','-maniac','-matography','-meter','-mime','-monger','-motor','-mum','-n#','-n#-corundum+rundum','-nasium','-nation#-inflation+flation','-nent#','-ner','-nstration','-o#','-o##','-oad+ead#','-oanalyse#','-ock#','-of','-of#','-of+d#','-off','-off#','-og','-ography','-oia#','-oid#','-oil','-oin+unct#','-oisleather+m#','-oitre+aiss#','-ol+l#','-olate','-olate#','-old+eld##','-omrade+amarad#','-on','-on#','-on+ti#','-onamide+a','-onate','-ong+eng#','-onia#','-ooth+eethe','-ope+ap#','-ophrenia#','-or#','-or#-hotel+el','-or+r#','-orary','-oratory','-ortable#','-orus#','-ory#','-os#','-ose#','-ose+s#','-ose+uzz#','-ounce+unci#','-ound+und#','-our+or#','-ous#','-ous+eg#','-ous+os#','-out+ut#','-overnment#','-overnor+uv','-ow#','-oy+uct#','-path','-pea','-pen','-pere#','-pet#','-phonic','-piano','-point','-pointpen+pen','-pore','-pperclass','-procuratorfiscal+fiscal','-pronoun','-que+c#','-r#','-r#-country','-r+n#','-r+t#','-randum','-raphone#','-rdinarylevel+level','-re+s#','-ree+ir#','-refrigerator+fridge','-rication','-rigine','-rmation','-ry#','-ry##','-ry+er#','-s','-s#','-s#-y+ie#','-s+e#','-s+k#','-s+l#','-s+rul#','-s+t#','-sband+bb#','-school','-scope','-se#','-se+c#','-se+ce','-se+n#','-se+t#','-se+ti#','-se+z#','-section','-sexual','-sh+c#','-sh+t#','-shall+ll','-shipman+d#','-sia+t#','-sin+t#','-sis+t#','-sistor+n#','-sition','-skyist','-sole#','-soprano','-ss+z#','-ssiere','-stone','-stroke','-sun','-sy+t#','-t#','-t#-to+na','-t+d#','-t+n#','-t+s#','-t+ss#','-tacles+s','-te#','-telephone+phone','-tense','-ter','-ter+s#','-terrier','-th#','-th##','-the+s#-e','-them+em','-therapist','-tic#','-tical#','-tide','-tingroom','-tion+k#-rumpus+us','-tive#-electron+tron','-to','-to#','-tobacco','-tombomb+bomb','-tor','-tralian+s#','-troops+s','-tto+s#','-turboprop+prop#','-ty#','-ty+st#','-uary#','-uate','-ucational','-ue#','-ular','-ulary','-ulate','-ulation','-uli','-um#','-umn+onn#','-unist#','-unition+o','-up#','-up+m#','-ur#','-ur+or#','-ur+r#','-ure#','-ure+or#','-uroys+s','-urteen+rt#','-ury+ri#','-us','-us#','-us##','-us+e#','-us+i#','-us+os#','-us+s#','-usiness+iz','-utation','-ute+aut#','-uth','-val','-ve#','-ve+b#','-ve+f','-ve+f#','-ve+ff','-ve+of','-ve+p#','-vein','-veon#','-verb','-vertisement','-vict','-voice','-w+v#','-wall#','-wave','-will+ll','-winds+s','-with','-with#','-woman','-would+d','-x+c#','-x+ct#','-x+g#','-x+ge#','-x+go#','-xy+ct#','-y#','-y#-worth+orth','-y#-y+i#','-y##','-y+act#','-y+di#','-y+et#','-y+eut#','-y+i#','-y+i##','-y+iac#','-y+iast#','-y+ic#','-y+ie#','-y+ix#','-y+j#','-y+t#','-yclub+i#','-ydrogenbomb+bomb','-ylatedspirits+s','-yon+i#','-yse#','-ysis#','#','#-a#','#-adam','#-am+m','#-am+rm','#-analyse+alyse','#-ant#','#-ar#','#-are+re','#-ase+ss#','#-be+p#','#-beneath+neath','#-ber+er#','#-bicycle+cycle','#-broadcast+cast','#-bulldozer+dozer','#-catamaran+maran','#-cavalcade+cade','#-conception+ception','#-confound+found','#-consecrate+secrate','#-did+d','#-does+s','#-e','#-e#','#-e+in#','#-edge+age','#-electron+tron','#-eller','#-en+in#','#-enforce+inforce','#-estimate+timate','#-execute+cute','#-f+ve','#-for','#-ge+se','#-had+d','#-has+s','#-have+ve','#-hijack+jack','#-ic#','#-idolatry+olatry','#-ile#','#-inflate+flate','#-ion#','#-is+s','#-k+c#','#-kangaroo+aroo','#-l','#-l+n#','#-le#','#-lfpenny+penny','#-n','#-not+t','#-o+a','#-of+a','#-ology+ogy','#-on','#-ork+urc#','#-ot+t','#-our+or#','#-ous#','#-s#','#-shall+ll','#-t','#-to','#-um#','#-ur+r#','#-us+s','#-utic+ic#','#-ution','#-will+ll','#-would+d','#-y#','#-y##','#-y+i#','##','##-ed+d','###','#+b#','#+d','#+e','#+g#','#+l#','#+m#','#+n#','#+o#','#+p#','#+r#','#+s','#+t#','+a#','+ac#','+al#','+an#','+at#','+b#','+b##','+c#','+d#','+e','+e#','+en#','+er#','+f#','+g#','+g##','+i#','+il#','+in#','+ion#','+is#','+ist#','+it#','+k#','+l','+l#','+le#','+m','+m#','+m##','+mat#','+n','+n#','+ni#','+o#','+od#','+p','+p#','+p#-of+a','+p##','+p##+p#','+per#','+r#','+ri#','+s#','+sim#','+t','+t#','+t##','+to#','+u#','+ul#','+v#','+y#','+z#') NOT NULL"),
@@ -259,14 +276,56 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.morphword_table,
             [Identifier(self.morphword_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.morphword_word, "VARCHAR(35) NOT NULL"),
-             Column(self.morphword_flecttype, "ENUM('a1S','a1Sr','a2S','a2Sr','a3S','a3Sr','aP','aPr','b','c','e1S','e2S','e2Sr','e3S','e3Sr','eP','i','P','pa','par','pe','Pr','S','X') NOT NULL"),
-             Column(self.morphword_transinfl, "ENUM('','@','@ @','@ @ @','@ @ @ @','@ @ @ @ @','@ @ @ @ @+s','@ @ @ @-y+ies','@ @ @ @+es','@ @ @ @+s','@ @ @-y+ies','@ @ @+ed','@ @ @+es','@ @ @+ing','@ @ @+s','@ @-e+ing','@ @-f+ves','@ @-fe+ves','@ @-y+ied','@ @-y+ier','@ @-y+ies','@ @-y+iest','@ @+bed','@ @+bing','@ @+d','@ @+ed','@ @+es','@ @+ged','@ @+ging','@ @+ing','@ @+led','@ @+ling','@ @+ped','@ @+ping','@ @+red','@ @+ring','@ @+s','@ @+ted','@ @+ting','@-e+ing','@-e+ing @','@-e+ing @ @','@-ey+ier','@-ey+iest','@-f+ves','@-fe+ves','@-y+ied','@-y+ied @','@-y+ied @ @','@-y+ier','@-y+ier @','@-y+ies','@-y+ies @','@-y+ies @ @','@-y+ies @ @ @','@-y+iest','@-y+iest @','@+@d','@+@ing','@+@s','@+bed','@+bed @','@+bed @ @','@+ber','@+best','@+bing','@+bing @','@+bing @ @','@+d','@+d @','@+d @ @','@+ded','@+ded @','@+der','@+dest','@+ding','@+ding @','@+ed','@+ed @','@+ed @ @','@+ed @ @ @','@+er','@+er @','@+er @ @','@+es','@+es @','@+es @ @','@+es @ @ @','@+est','@+est @','@+ged','@+ged @','@+ged @ @','@+ger','@+gest','@+ging','@+ging @','@+ging @ @','@+ing','@+ing @','@+ing @ @','@+ing @ @ @','@+ked','@+ked @','@+king','@+king @','@+led','@+led @','@+ler','@+lest','@+ling','@+ling @','@+med','@+med @','@+mer','@+mest','@+ming','@+ming @','@+ned','@+ned @','@+ner','@+ner @','@+nest','@+nest @','@+ning','@+ning @','@+ning @ @','@+ped','@+ped @','@+ped @ @','@+ping','@+ping @','@+ping @ @','@+r','@+r @','@+red','@+red @','@+ring','@+ring @','@+s','@+s @','@+s @ @','@+s @ @ @','@+sed','@+sed @','@+ses','@+ses @','@+sing','@+sing @','@+st','@+st @','@+ted','@+ted @','@+ted @ @','@+ter','@+ter @','@+test','@+test @','@+ting','@+ting @','@+ting @ @','@+ved','@+ved @','@+ving','@+ving @','@+zed','@+zes','@+zing','IRR') NOT NULL")])
+             Column(self.morphword_flecttype,
+                    "ENUM('a1S','a1Sr','a2S','a2Sr','a3S','a3Sr','aP','aPr',"
+                    "'b','c','e1S','e2S','e2Sr','e3S','e3Sr','eP','i','P',"
+                    "'pa','par','pe','Pr','S','X') NOT NULL"),
+             Column(self.morphword_transinfl,
+                    "ENUM('','@','@ @','@ @ @','@ @ @ @','@ @ @ @ @',"
+                    "'@ @ @ @ @+s','@ @ @ @-y+ies','@ @ @ @+es','@ @ @ @+s',"
+                    "'@ @ @-y+ies','@ @ @+ed','@ @ @+es','@ @ @+ing',"
+                    "'@ @ @+s','@ @-e+ing','@ @-f+ves','@ @-fe+ves',"
+                    "'@ @-y+ied','@ @-y+ier','@ @-y+ies','@ @-y+iest',"
+                    "'@ @+bed','@ @+bing','@ @+d','@ @+ed','@ @+es',"
+                    "'@ @+ged','@ @+ging','@ @+ing','@ @+led','@ @+ling','"
+                    "@ @+ped','@ @+ping','@ @+red','@ @+ring','@ @+s',"
+                    "'@ @+ted','@ @+ting','@-e+ing','@-e+ing @',"
+                    "'@-e+ing @ @','@-ey+ier','@-ey+iest','@-f+ves',"
+                    "'@-fe+ves','@-y+ied','@-y+ied @','@-y+ied @ @',"
+                    "'@-y+ier','@-y+ier @','@-y+ies','@-y+ies @',"
+                    "'@-y+ies @ @','@-y+ies @ @ @','@-y+iest','@-y+iest @',"
+                    "'@+@d','@+@ing','@+@s','@+bed','@+bed @','@+bed @ @',"
+                    "'@+ber','@+best','@+bing','@+bing @','@+bing @ @',"
+                    "'@+d','@+d @','@+d @ @','@+ded','@+ded @','@+der',"
+                    "'@+dest','@+ding','@+ding @','@+ed','@+ed @',"
+                    "'@+ed @ @','@+ed @ @ @','@+er','@+er @','@+er @ @',"
+                    "'@+es','@+es @','@+es @ @','@+es @ @ @','@+est',"
+                    "'@+est @','@+ged','@+ged @','@+ged @ @','@+ger',"
+                    "'@+gest','@+ging','@+ging @','@+ging @ @','@+ing',"
+                    "'@+ing @','@+ing @ @','@+ing @ @ @','@+ked','@+ked @',"
+                    "'@+king','@+king @','@+led','@+led @','@+ler','@+lest',"
+                    "'@+ling','@+ling @','@+med','@+med @','@+mer','@+mest',"
+                    "'@+ming','@+ming @','@+ned','@+ned @','@+ner',"
+                    "'@+ner @','@+nest','@+nest @','@+ning','@+ning @',"
+                    "'@+ning @ @','@+ped','@+ped @','@+ped @ @','@+ping',"
+                    "'@+ping @','@+ping @ @','@+r','@+r @','@+red',"
+                    "'@+red @','@+ring','@+ring @','@+s','@+s @','@+s @ @',"
+                    "'@+s @ @ @','@+sed','@+sed @','@+ses','@+ses @',"
+                    "'@+sing','@+sing @','@+st','@+st @','@+ted','@+ted @',"
+                    "'@+ted @ @','@+ter','@+ter @','@+test','@+test @',"
+                    "'@+ting','@+ting @','@+ting @ @','@+ved','@+ved @',"
+                    "'@+ving','@+ving @','@+zed','@+zes','@+zing','IRR') "
+                    "NOT NULL")])
 
         self.create_table_description(self.syntaxlemma_table,
             [Identifier(self.syntaxlemma_id, "SMALLINT(5) UNSIGNED NOT NULL"),
              Column(self.syntaxlemma_head, "VARCHAR(34) NOT NULL"),
-             Column(self.syntaxlemma_classnum, "ENUM('1','10','11','12','13','14','15','2','3','4','5','6','7','8','9') NOT NULL"),
-             Column(self.syntaxlemma_class, "ENUM('A','ABB','ADV','ART','C','CCON','I','LET','N','NUM','PREP','PRON','SCON','TO','V') NOT NULL"),
+             Column(self.syntaxlemma_classnum,
+                    "ENUM('1','10','11','12','13','14','15','2','3','4','5',"
+                    "'6','7','8','9') NOT NULL"),
+             Column(self.syntaxlemma_class,
+                    "ENUM('A','ABB','ADV','ART','C','CCON','I','LET','N',"
+                    "'NUM','PREP','PRON','SCON','TO','V') NOT NULL"),
              Column(self.syntaxlemma_c_n, "ENUM('N','Y') NOT NULL"),
              Column(self.syntaxlemma_unc_n, "ENUM('N','Y') NOT NULL"),
              Column(self.syntaxlemma_sing_n, "ENUM('N','Y') NOT NULL"),
@@ -312,29 +371,39 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.syntaxlemma_sub_c, "ENUM('N','Y') NOT NULL")])
 
         self.create_table_description(self.lemma_table,
-            [Identifier(self.lemma_id, "SMALLINT(5) UNSIGNED NOT NULL", unique=False),
+            [Identifier(self.lemma_id,
+                        "SMALLINT(5) UNSIGNED NOT NULL", unique=False),
              Column(self.lemma_label, "VARCHAR(34) NOT NULL"),
              Column(self.lemma_headdia, "VARCHAR(34) NOT NULL"),
              Column(self.lemma_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-             Column(self.lemma_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
+             Column(self.lemma_orthocnt,
+                    "ENUM('1','2','3','4','5') NOT NULL"),
              Column(self.lemma_orthostatus, "ENUM('B', 'A') NOT NULL"),
              Column(self.lemma_cobspelldev, "MEDIUMINT(5) UNSIGNED NOT NULL"),
              Column(self.lemma_headsyldia, "VARCHAR(42) NOT NULL")])
 
         self.create_table_description(self.corpus_table,
-            [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL", unique=False),
+            [Identifier(self.corpus_id,
+                        "MEDIUMINT(6) UNSIGNED NOT NULL", unique=False),
              Column(self.corpus_word, "VARCHAR(35) NOT NULL"),
+             Link(self.corpus_phonoword_id, self.phonoword_table,
+                  create=False),
+             Link(self.corpus_morphword_id, self.morphword_table,
+                  create=False),
              Column(self.corpus_worddia, "VARCHAR(35) NOT NULL"),
              Column(self.corpus_cob, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Link(self.corpus_lemma_id, self.lemma_table),
-             Link(self.corpus_phonoword_id, self.phonoword_table),
-             Link(self.corpus_phonolemma_id, self.phonolemma_table),
-             Link(self.corpus_morphword_id, self.morphword_table),
-             Link(self.corpus_morphlemma_id, self.morphlemma_table),
-             Link(self.corpus_syntaxlemma_id, self.syntaxlemma_table),
-             Column(self.corpus_orthocnt, "ENUM('1','2','3','4','5') NOT NULL"),
+             Link(self.corpus_phonolemma_id, self.phonolemma_table,
+                  create=False),
+             Link(self.corpus_morphlemma_id, self.morphlemma_table,
+                  create=False),
+             Link(self.corpus_syntaxlemma_id, self.syntaxlemma_table,
+                  create=False),
+             Column(self.corpus_orthocnt,
+                    "ENUM('1','2','3','4','5') NOT NULL"),
              Column(self.corpus_orthostatus, "ENUM('B', 'A') NOT NULL"),
-             Column(self.corpus_cobspelldev, "MEDIUMINT(6) UNSIGNED NOT NULL"),
+             Column(self.corpus_cobspelldev,
+                    "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.corpus_wordsyldia, "VARCHAR(43) NOT NULL")])
 
         self.map_query_item(QUERY_ITEM_TRANSCRIPT, "phonoword_phonstrsdisc")
@@ -416,7 +485,8 @@ class BuilderClass(BaseCorpusBuilder):
                         _,
                         self._value_corpus_cobspelldev,
                         self._value_corpus_wordsyldia) = columns[:9]
-                        self._value_corpus_word = dia_to_unicode(self._value_corpus_worddia)
+                        self._value_corpus_word = (
+                            dia_to_unicode(self._value_corpus_worddia))
                         add_orth_word()
                         # add alternative spellings:
                         for cnt in range(int(self._value_corpus_orthocnt)-1):
@@ -425,7 +495,8 @@ class BuilderClass(BaseCorpusBuilder):
                                 self._value_corpus_orthostatus,
                                 _,
                                 self._value_corpus_cobspelldev,
-                                self._value_corpus_wordsyldia) = columns[(9+cnt*5):(14+cnt*5)]
+                                self._value_corpus_wordsyldia) = (
+                                    columns[(9 + cnt * 5):(14 + cnt * 5)])
                             except ValueError:
                                 pass
                             else:
@@ -439,7 +510,8 @@ class BuilderClass(BaseCorpusBuilder):
                         _,
                         self._value_lemma_cobspelldev,
                         self._value_lemma_headsyldia) = columns[:8]
-                        self._value_lemma_label = dia_to_unicode(self._value_lemma_headdia)
+                        self._value_lemma_label = (
+                            dia_to_unicode(self._value_lemma_headdia))
 
                         add_orth_lemma()
 
@@ -449,7 +521,8 @@ class BuilderClass(BaseCorpusBuilder):
                                 (self._value_lemma_orthostatus,
                                 _,
                                 self._value_lemma_cobspelldev,
-                                self._value_lemma_headsyldia) = columns[(8+cnt*4):(12+cnt*4)]
+                                self._value_lemma_headsyldia) = (
+                                    columns[(8 + cnt * 4):(12 + cnt * 4)])
                             except ValueError:
                                 print(columns)
                                 pass
