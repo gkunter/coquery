@@ -225,6 +225,14 @@ class TestTables(unittest.TestCase):
             PRIMARY KEY (`ID_primary`)
             """))
 
+    def test_get_create_string_duplicate_ids(self):
+        tab = tables.Table("Table")
+        tab.add_column(tables.Identifier("ID", "MEDIUMINT"))
+        tab.add_column(tables.Link("ID", "MEDIUMINT", create=False))
+
+        s = tab.get_create_string(SQL_SQLITE, [])
+        self.assertEqual(simple(s),
+                         simple("ID MEDIUMINT PRIMARY KEY"))
 
     def test_add(self):
         self._add_all_test_columns()
