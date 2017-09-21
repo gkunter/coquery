@@ -1,4 +1,5 @@
 (0.10.1dev, unreleased)
+* can restrict query files to a number of rows
 * API change: Table.get_create_string() expects list of existing tables as
   second argument
 * New corpus: Old Bailey Corpus 2.0
