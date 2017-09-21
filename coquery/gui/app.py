@@ -1680,7 +1680,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             skip_lines=options.cfg.skip_lines,
             encoding=options.cfg.input_encoding,
             file_name=utf8(self.ui.edit_file_name.text()),
-            selected_column=options.cfg.query_column_number)
+            selected_column=options.cfg.query_column_number,
+            nrows=options.cfg.csv_restrict)
 
         results = csvoptions.CSVOptionDialog.getOptions(
             default=csv_options, parent=self, icon=options.cfg.icon)
@@ -1692,6 +1693,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.cfg.skip_lines = results.skip_lines
             options.cfg.quote_char = results.quote_char
             options.cfg.input_encoding = results.encoding
+            options.cfg.csv_restrict = results.nrows
             self.ui.edit_file_name.setText(results.file_name)
 
             if options.cfg.input_separator == "{tab}":

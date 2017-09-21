@@ -27,7 +27,7 @@ from .ui.csvOptionsUi import Ui_FileOptions
 class CSVOptions(object):
     def __init__(self, file_name="", sep=",", header=True, quote_char='"',
                  skip_lines=0, encoding="utf-8", selected_column=None,
-                 mapping=None, dtypes=None):
+                 mapping=None, dtypes=None, nrows=None):
         self.sep = sep
         self.header = header
         self.quote_char = quote_char
@@ -37,11 +37,15 @@ class CSVOptions(object):
         self.mapping = mapping if mapping else {}
         self.dtypes = dtypes
         self.file_name = file_name
+        self.nrows = nrows
 
     def __repr__(self):
-        return "CSVOptions(sep='{}', header={}, quote_char='{}', skip_lines={}, encoding='{}', selected_column={}, mapping={}, dtypes={})".format(
-            self.sep, self.header, self.quote_char.replace("'", "\'"), self.skip_lines,
-            self.encoding, self.selected_column, self.mapping, self.dtypes)
+        return ("CSVOptions(sep='{}', header={}, quote_char='{}', "
+                "skip_lines={}, encoding='{}', selected_column={}, "
+                "nrows={}, mapping={}, dtypes={})".format(
+                    self.sep, self.header, self.quote_char.replace("'", "\'"),
+                    self.skip_lines, self.encoding, self.selected_column,
+                    self.nrows, self.mapping, self.dtypes))
 
 
 class MyTableModel(QtCore.QAbstractTableModel):
@@ -162,6 +166,9 @@ class CSVOptionDialog(QtWidgets.QDialog):
         else:
             self.ui.query_column.setValue(default.selected_column)
 
+        self.ui.spin_nrows.setValue(0 if default.nrows is None else
+                                    default.nrows)
+
         self.ui.file_has_headers.setChecked(default.header)
         self.ui.ignore_lines.setValue(default.skip_lines)
 
@@ -173,15 +180,19 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self.ui.query_column.valueChanged.connect(self.set_query_column)
         self.ui.query_column.valueChanged.connect(self.validate)
 
-        self.ui.ignore_lines.valueChanged.connect(self.update_content)
-        self.ui.separate_char.editTextChanged.connect(self.set_new_separator)
-        self.ui.file_has_headers.stateChanged.connect(self.update_content)
-        self.ui.quote_char.currentIndexChanged.connect(self.update_content)
-        self.ui.combo_encoding.currentIndexChanged.connect(self.update_content)
-        self.ui.FilePreviewArea.clicked.connect(self.click_column)
-        self.ui.FilePreviewArea.horizontalHeader().sectionClicked.connect(self.click_column)
-        self.ui.edit_file_name.textChanged.connect(self.update_content)
         self.ui.button_browse_file.clicked.connect(self.select_file)
+        self.ui.separate_char.editTextChanged.connect(self.set_new_separator)
+        self.ui.FilePreviewArea.clicked.connect(self.click_column)
+        self.ui.FilePreviewArea.horizontalHeader().sectionClicked.connect(
+            self.click_column)
+
+        for signal in (self.ui.ignore_lines.valueChanged,
+                       self.ui.file_has_headers.stateChanged,
+                       self.ui.quote_char.currentIndexChanged,
+                       self.ui.combo_encoding.currentIndexChanged,
+                       self.ui.edit_file_name.textChanged,
+                       self.ui.spin_nrows.valueChanged):
+            signal.connect(self.update_content)
 
         self.set_encoding_selection(default.encoding)
 
@@ -205,12 +216,14 @@ class CSVOptionDialog(QtWidgets.QDialog):
         if result:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
                 utf8(self.ui.quote_char.currentText())]
+            nrows = self.ui.spin_nrows.value() or None
             return CSVOptions(
                 sep=self.separator,
                 selected_column=self.ui.query_column.value(),
                 header=self.ui.file_has_headers.isChecked(),
                 skip_lines=int(self.ui.ignore_lines.value()),
                 encoding=utf8(self.ui.combo_encoding.currentText()),
+                nrows=nrows,
                 quote_char=quote,
                 file_name=utf8(self.ui.edit_file_name.text()),
                 dtypes=self.file_table.dtypes)
@@ -254,6 +267,11 @@ class CSVOptionDialog(QtWidgets.QDialog):
             header = None
         header = 0 if self.ui.file_has_headers.isChecked() else None
         encoding = utf8(self.ui.combo_encoding.currentText())
+
+        nrows = self.ui.spin_nrows.value() or 99
+        if header:
+            nrows = nrows + 1
+
         try:
             df = pd.read_table(
                     file_name,
@@ -261,7 +279,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
                     sep=utf8(self.separator),
                     quoting=3 if not quote else 0,
                     quotechar=quote if quote else "#",
-                    nrows=100,
+                    nrows=nrows,
                     error_bad_lines=False,
                     encoding=encoding)
         except (ValueError, pd.parser.CParserError) as e:

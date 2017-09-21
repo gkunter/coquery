@@ -137,6 +137,9 @@ class Session(object):
                 file_mode = "a"
             else:
                 file_mode = "w"
+                if options.cfg.verbose:
+                    logging.info("Writing query results to file {}".format(
+                        options.cfg.output_path))
 
             output_file = codecs.open(
                 options.cfg.output_path,
@@ -623,10 +626,10 @@ class SessionInputFile(Session):
                     sep=options.cfg.input_separator,
                     quotechar=options.cfg.quote_char,
                     encoding=options.cfg.input_encoding,
+                    nrows=options.cfg.csv_restrict,
                     na_filter=False)
             except ValueError:
                 raise EmptyInputFileError(InputFile)
-
             if self.header is None:
                 if options.cfg.file_has_headers:
                     self.header = input_file.columns.values.tolist()
