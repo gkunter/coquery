@@ -203,18 +203,77 @@ class TestCorpus(unittest.TestCase):
         for x1, x2 in zip(l1, l2):
             self.assertEqual(x1, x2)
 
+    def test_string_entropy_0(self):
+        strings = ["*", "?*", "*?"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertTListEqual(entropies, [entropies[0]] * len(entropies))
+        strings = ["a", "b"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertTListEqual(entropies, [entropies[0]] * len(entropies))
+
+    def test_string_entropy_1(self):
+        strings = ["*", "?", "a"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_2(self):
+        strings = ["a*", "a?", "a", "aa"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_3(self):
+        strings = ["a?", "a", "aa"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_4(self):
+        strings = ["a*", "a?*", "aa*"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_5(self):
+        strings = ["*a", "*aa", "a*", "aa*"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_6(self):
+        strings = ["~a*", "a*"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_7(self):
+        strings = ["[n*]", "a*"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_8(self):
+        strings = ["*", "[n*]", "a*", "[nn*]", "aa*"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
+    def test_string_entropy_9(self):
+        strings = ["*", "[n*]", "*a"]
+        entropies = [self.resource.string_entropy(s) for s in strings]
+        self.assertListEqual(entropies, sorted(entropies, reverse=True))
+
     def test_get_token_order_1(self):
         i1 = (0, (1, '*'))
         i2 = (1, (2, '*'))
         self.assertListEqual(
             self.resource.get_token_order([i1, i2]),
             [i1, i2])
+        self.assertListEqual(
+            self.resource.get_token_order([i2, i1]),
+            [i2, i1])
 
     def test_get_token_order_2(self):
         i1 = (0, (1, '*'))
         i2 = (1, (2, 'the'))
         self.assertListEqual(
             self.resource.get_token_order([i1, i2]),
+            [i2, i1])
+        self.assertListEqual(
+            self.resource.get_token_order([i2, i1]),
             [i2, i1])
 
     def test_get_token_order_3(self):
@@ -223,6 +282,48 @@ class TestCorpus(unittest.TestCase):
         self.assertListEqual(
             self.resource.get_token_order([i1, i2]),
             [i2, i1])
+        self.assertListEqual(
+            self.resource.get_token_order([i2, i1]),
+            [i2, i1])
+
+    def test_get_token_order_4(self):
+        """
+        Test penalization of POS tags (1)
+        """
+        i1 = (0, (1, 'a*'))
+        i2 = (1, (2, '[n*]'))
+        self.assertListEqual(
+            self.resource.get_token_order([i1, i2]),
+            [i1, i2])
+        self.assertListEqual(
+            self.resource.get_token_order([i2, i1]),
+            [i1, i2])
+
+    def test_get_token_order_5(self):
+        """
+        Test penalization of POS tags (2)
+        """
+        i1 = (0, (1, 'a*'))
+        i2 = (1, (2, '[nn*]'))
+        self.assertListEqual(
+            self.resource.get_token_order([i1, i2]),
+            [i2, i1])
+        self.assertListEqual(
+            self.resource.get_token_order([i2, i1]),
+            [i2, i1])
+
+    def test_get_token_order_6(self):
+        """
+        Test penalization of negation
+        """
+        i1 = (0, (1, 'a*'))
+        i2 = (1, (2, '~a*'))
+        self.assertListEqual(
+            self.resource.get_token_order([i1, i2]),
+            [i1, i2])
+        self.assertListEqual(
+            self.resource.get_token_order([i2, i1]),
+            [i1, i2])
 
     def test_is_lexical_1(self):
         self.assertTrue(self.resource.is_lexical("word_label"))
@@ -739,6 +840,20 @@ class TestCorpus(unittest.TestCase):
              "ID1 AS coquery_invisible_corpus_id",
              "FileId1 AS coquery_invisible_origin_id"])
 
+    def test_get_token_offset_1(self):
+        S = "a*"
+        query = TokenQuery(S, self.Session)
+        self.assertEqual(
+            self.resource.get_token_offset(query.query_list[0]),
+            0)
+
+    def test_get_token_offset_2(self):
+        S = "_NULL a*"
+        query = TokenQuery(S, self.Session)
+        self.assertEqual(
+            self.resource.get_token_offset(query.query_list[0]),
+            1)
+
     def test_get_required_columns_NULL_1(self):
         # tests issue #256
         query = TokenQuery("_NULL *", self.Session)
@@ -1225,7 +1340,6 @@ class TestSuperFlat(unittest.TestCase):
         query = TokenQuery("_NULL o*", self.Session)
         l = self.resource.get_required_columns(
             query.query_list[0], ["corpus_word", "corpus_starttime"])
-        print("\n".join(l))
         self.assertListEqual(
             l,
             ["NULL AS coq_corpus_word_1",
@@ -1350,6 +1464,7 @@ class TestNGramCorpus(unittest.TestCase):
         options.cfg.experimental = False
         options.get_configuration_type = lambda: SQL_MYSQL
         options.get_resource = _monkeypatch_get_resource
+        options.cfg.no_ngram = False
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Lexicon = None
@@ -1363,7 +1478,13 @@ class TestNGramCorpus(unittest.TestCase):
         query = TokenQuery(S, self.Session)
         l = [simple(s) for s
              in self.resource.get_corpus_joins(query.query_list[0])]
-        self.assertListEqual(l, ["FROM CorpusNgram"])
+        self.assertListEqual(l,
+                             [simple("FROM (SELECT End AS End1,"
+                                     "             FileId AS FileId1,"
+                                     "             ID AS ID1,"
+                                     "             Start AS Start1,"
+                                     "             WordId AS WordId1"
+                                     "      FROM   Corpus) AS COQ_CORPUS_1")])
 
     def test_corpus_joins_three_items(self):
         S = "* * *"
@@ -1469,6 +1590,51 @@ class TestNGramCorpus(unittest.TestCase):
                     "       FROM Corpus) AS COQ_CORPUS_4 "
                     "       ON ID4 = ID5 - 1"),
              simple("INNER JOIN CorpusNgram ON ID1 = ID5 - 4")])
+
+    def test_get_token_offset(self):
+        S = "_NULL a*"
+        query = TokenQuery(S, self.Session)
+        self.assertEqual(
+            self.resource.get_token_offset(query.query_list[0]),
+            0)
+
+    def test_corpus_required_columns_initial_null_placeholder(self):
+        S = "_NULL a*"
+        query = TokenQuery(S, self.Session)
+        l = self.resource.get_required_columns(query.query_list[0],
+                                               ["word_label"])
+        self.assertListEqual(
+            l,
+            ["NULL AS coq_word_label_1",
+             "COQ_WORD_2.Word AS coq_word_label_2",
+             "ID1 AS coquery_invisible_corpus_id",
+             "FileId1 AS coquery_invisible_origin_id"])
+
+    def test_feature_joins_initial_null_placeholder(self):
+        l1, l2 = self.resource.get_feature_joins(0, ["word_label"],
+                                                 first_item=2)
+        self.assertListEqual(l1, [simple("""
+            INNER JOIN Lexicon AS COQ_WORD_2
+                    ON COQ_WORD_2.WordId = WordId1""")])
+
+    def test_query_string_initial_null_placeholder(self):
+        query = TokenQuery("_NULL a* b*", self.Session)
+        query_string = self.resource.get_query_string(
+            query.query_list[0], ["word_label"])
+        target_string = """
+            SELECT NULL AS coq_word_label_1,
+                   COQ_WORD_2.Word AS coq_word_label_2,
+                   COQ_WORD_3.Word AS coq_word_label_3,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+            FROM CorpusNgram
+            INNER JOIN Lexicon AS COQ_WORD_2 ON COQ_WORD_2.WordId = WordId1
+            INNER JOIN Lexicon AS COQ_WORD_3 ON COQ_WORD_3.WordId = WordId2
+            WHERE (COQ_WORD_2.Word LIKE 'a%')
+              AND (COQ_WORD_3.Word LIKE 'b%')
+            """
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
 
 
 def main():
