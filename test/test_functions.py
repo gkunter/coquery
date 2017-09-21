@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 """
 This module tests the functions module.
 
@@ -25,8 +25,7 @@ from coquery.functions import (
     Add, Sub, Mul, Div, Log,
     Min, Max, Mean, Median, StandardDeviation, InterquartileRange, Percentile,
     Equal, NotEqual, GreaterThan, GreaterEqual, LessThan, LessEqual,
-    And, Or, Xor,
-    SuperCondProb
+    And, Or, Xor, If, IfAny,
     )
 from coquery.functionlist import FunctionList
 from coquery import options
@@ -414,7 +413,7 @@ class TestMathFunctions(unittest.TestCase):
 
     def test_add_nan(self):
         columns = ["column_1", "column_3"]
-        expected = [4, pd.np.nan, pd.np.nan, 9]
+        expected = [4, None, None, 9]
         func = Add
         self.assert_result(func, self.df, columns, expected)
 
@@ -470,7 +469,7 @@ class TestMathFunctions(unittest.TestCase):
 
     def test_div_zero(self):
         columns = ["column_1", "column_3"]
-        expected = [1, pd.np.nan, pd.np.nan, pd.np.inf]
+        expected = [1, None, None, pd.np.inf]
         func = Div
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -651,7 +650,8 @@ class TestLogicalFunctions(unittest.TestCase):
         options.cfg.corpus = "Test"
         options.cfg.benchmark = False
 
-    def assert_result(self, func_class, df, columns, expected, value=None, **kwargs):
+    def assert_result(self, func_class, df, columns, expected, value=None,
+                      **kwargs):
         func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
         npt.assert_equal(result[func.get_id()].values, expected)
@@ -842,6 +842,12 @@ class TestLogicalFunctions(unittest.TestCase):
         func = And
         self.assert_result(func, self.df, columns, expected)
 
+    def test_and_value_none(self):
+        columns = ["column_3"]
+        expected = [True, None, True, None, True, None]
+        func = And
+        self.assert_result(func, self.df, columns, expected, value=True)
+
     def test_or(self):
         columns = ["column_4", "column_5"]
         expected = [True, True, True, True, False, True]
@@ -853,6 +859,20 @@ class TestLogicalFunctions(unittest.TestCase):
         expected = [True, False, True, False, False, True]
         func = Xor
         self.assert_result(func, self.df, columns, expected)
+
+    def test_if(self):
+        columns = ["column_4"]
+        expected = ["zero", "one", "zero", "one", "zero", "one"]
+        func = If
+        self.assert_result(func, self.df, columns, expected,
+                           value1="one", value2="zero")
+
+    def test_if_none(self):
+        columns = ["column_3"]
+        expected = ["one", None, "one", None, "one", None]
+        func = If
+        self.assert_result(func, self.df, columns, expected,
+                           value1="one", value2="zero")
 
 
 class TestDistributionalFunctions(unittest.TestCase):
@@ -870,7 +890,7 @@ class TestDistributionalFunctions(unittest.TestCase):
         df = pd.DataFrame(
             {"left1": list("abcd"),
              "word": list("XXYY")})
-
+        raise NotImplementedError
         val = SuperCondProb().get_freq_str(df)
         self.assertListEqual(
             val.values.tolist(),
@@ -880,6 +900,7 @@ class TestDistributionalFunctions(unittest.TestCase):
         df = pd.DataFrame(
             {"left1": list("abcd"),
              "word": ["{vocnoise}", "?funny", "[comment]", "*illegal"]})
+        raise NotImplementedError
 
         val = SuperCondProb().get_freq_str(df)
         self.assertListEqual(
@@ -892,7 +913,9 @@ class TestDistributionalFunctions(unittest.TestCase):
             ["a", "b", "c", "d"])
 
 
-provided_tests = (TestFrequencyFunctions, TestStringFunctions,
+provided_tests = (
+                  TestFrequencyFunctions,
+                  TestStringFunctions,
                   TestMathFunctions,
                   TestLogicalFunctions,
                   TestDistributionalFunctions,
