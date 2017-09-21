@@ -297,6 +297,7 @@ class Options(object):
         self.args.output_separator = ","
         self.args.corpus = None
         self.args.gui = True
+        self.args.csv_restrict = None
 
         self.args.table_links = defaultdict(list)
 
@@ -331,6 +332,7 @@ class Options(object):
         self.args.column_color = {}
         self.args.column_names = {}
         self.args.row_color = {}
+        self.args.no_ngram = False
 
         self.args.managers = {}
         self.args.summary_group = []
@@ -372,6 +374,7 @@ class Options(object):
         group = self.parser.add_argument_group("Debug options")
         group.add_argument("-v", "--verbose", help="produce a verbose output", action="store_true", dest="verbose")
         group.add_argument("-E", "--explain", help="explain mySQL queries in log file", action="store_true", dest="explain_queries")
+        group.add_argument("--no_ngram", help="do not use N-gram lookup tables", action="store_true")
         group.add_argument("--benchmark", help="benchmarking of Coquery", action="store_true")
         group.add_argument("--profile", help="deterministic profiling of Coquery", action="store_true")
         group.add_argument("--memory-dump", help="list objects that consume much memory after queries", action="store_true", dest="memory_dump")
