@@ -1294,12 +1294,22 @@ class SQLResource(BaseResource):
                 s = " OR ".join(s_list + s_exp)
 
             d[tab].append(s)
+            if token.lemmatize and label == QUERY_ITEM_POS:
+                pos_spec = s
+
 
         if token.lemmatize:
-            condition = cls.get_lemmatized_conditions(i, token)
+            # rewrite token conditions so that the specifications are used to
+            # obtain the matching lemmas in a subquery:
+            conditions = ["({})".format(x) for x in list(d.values())[0]]
+            condition_template = cls.get_lemmatized_conditions(i, token)
             d = {"word": [
-                    condition.format(where=" AND ".join(
-                    ["({})".format(x) for x in list(d.values())[0]]))]}
+                condition_template.format(where=" AND ".join(conditions))]}
+            try:
+                # add POS specification if provided:
+                d["word"].append(pos_spec)
+            except UnboundLocalError:
+                pass
 
         return d
 

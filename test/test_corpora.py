@@ -745,6 +745,9 @@ class TestCorpus(unittest.TestCase):
                      FROM       Lexicon AS COQ_WORD_1
                      WHERE (COQ_WORD_1.Word LIKE 'a%') AND
                            (COQ_WORD_1.POS LIKE 'n%'))"""))
+        self.assertEqual(
+            simple(d["word"][1]),
+            simple("COQ_WORD_1.POS LIKE 'n%'"))
         self.Session.Resource = self.resource
 
     def test_token_conditions_lemmatized_deep_1(self):
@@ -774,6 +777,24 @@ class TestCorpus(unittest.TestCase):
                      INNER JOIN Lemmas AS COQ_LEMMA_1
                              ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
                      WHERE (COQ_WORD_1.Transcript LIKE 'a%'))"""))
+
+    def test_token_conditions_lemmatized_deep_3(self):
+        S = "#a*.[n*]"
+        token = COCAToken(S)
+        d = self.resource.get_token_conditions(0, token)
+        self.assertEqual(
+            simple(d["word"][0]),
+            simple("""
+                COQ_LEMMA_1.Lemma IN
+                    (SELECT DISTINCT Lemma
+                     FROM       Lexicon AS COQ_WORD_1
+                     INNER JOIN Lemmas AS COQ_LEMMA_1
+                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
+                     WHERE (COQ_WORD_1.Word LIKE 'a%') AND
+                           (COQ_WORD_1.POS LIKE 'n%'))"""))
+        self.assertEqual(
+            simple(d["word"][1]),
+            simple("COQ_WORD_1.POS LIKE 'n%'"))
 
     ### SELECT COLUMNS
 
