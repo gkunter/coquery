@@ -1,11 +1,14 @@
 (0.10.1dev, unreleased)
+* API change: disposed of obsolete LexiconClass
 * API change: Table.get_create_string() expects list of existing tables as
   second argument
+* corpora can be exported and imported
+* can restrict query files to a number of rows
 * New corpus: Old Bailey Corpus 2.0
 * New function dialog with better handling of function arguments
-* New functions: Percentile, Log, Replace
+* New functions: IF, IFANY, Percentile, Log, Replace
 * mathematical functions can now be applied column-wise
-* experimental support N-gram lookup tables
+* experimental support for N-gram lookup tables
 * bring time series visualization to the visualization designer
 * add button to refresh the data frame used by the visualization designer
 * user data columns are now available again (and can also be removed)

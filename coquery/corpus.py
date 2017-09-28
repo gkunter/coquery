@@ -9,6 +9,7 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import division
 from __future__ import unicode_literals
 from __future__ import print_function
 
@@ -16,9 +17,12 @@ import warnings
 from collections import defaultdict
 import re
 import logging
-
+import math
 import sqlalchemy
 import pandas as pd
+import os
+import tempfile
+import zipfile
 
 from .errors import UnsupportedQueryItemError
 from .defines import (
@@ -37,63 +41,8 @@ from .links import get_by_hash
 
 
 class LexiconClass(object):
-    """
-    Define a base lexicon class.
-    """
-    def pos_check_function(self, l):
-        return [self.is_part_of_speech(s) for s in l]
+    pass
 
-    def check_pos_list(self, L):
-        """ Returns the number of elements for which
-        Corpus.is_part_of_speech() is True, i.e. the number of
-        elements that are considered a part of speech tag """
-        count = 0
-        for CurrentPos in L:
-            if self.is_part_of_speech(CurrentPos):
-                count += 1
-        return count
-
-    def is_part_of_speech(self, pos):
-        if hasattr(self.resource, QUERY_ITEM_POS):
-            current_token = tokens.COCAToken(pos)
-            rc_feature = getattr(self.resource, QUERY_ITEM_POS)
-            _, table, _ = self.resource.split_resource_feature(rc_feature)
-            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                getattr(self.resource, "{}_id".format(table)),
-                getattr(self.resource, "{}_table".format(table)),
-                getattr(self.resource, rc_feature),
-                self.resource.get_operator(current_token),
-                pos)
-            engine = self.resource.get_engine()
-            df = pd.read_sql(S.replace("%", "%%"), engine)
-            engine.dispose()
-            return len(df.index) > 0
-        else:
-            return False
-
-    def add_table_path(self, start_feature, end_feature):
-        """
-        Add the join string  needed to access end_feature from the table
-        containing start_feature.
-
-        This method modifies the class attributes joined_tables (to keep
-        track of tables that are already included in the join) and
-        table_list (which contains the join strings).
-        """
-        # FIXME: treat features from linked tables like native features
-        _, last_table, _ = self.resource.split_resource_feature(start_feature)
-        _, end_table, _ = self.resource.split_resource_feature(end_feature)
-
-        table_path = self.resource.get_table_path(last_table, end_table)
-        for table in table_path[1:]:
-            if table not in self.joined_tables:
-                self.table_list.append("INNER JOIN {table} ON {table}.{table_id} = {prev_table}.{prev_table_id}".format(
-                    table=getattr(self.resource, "{}_table".format(table)),
-                    table_id=getattr(self.resource, "{}_id".format(table)),
-                    prev_table=getattr(self.resource, "{}_table".format(last_table)),
-                    prev_table_id=getattr(self.resource, "{}_{}_id".format(last_table, table))))
-                self.joined_tables.append(table)
-            last_table = table
 
 class BaseResource(CoqObject):
     """
@@ -113,6 +62,8 @@ class BaseResource(CoqObject):
 
     def __init__(self):
         super(BaseResource, self).__init__()
+        self._joined_tables = []
+        self._table_list = []
 
     @classmethod
     def format_resource_feature(cls, rc_feature, N):
@@ -600,7 +551,7 @@ class BaseResource(CoqObject):
 
         path = cls.get_table_path("corpus", table)
 
-        return any([tab in path for tab in item_tab_list])
+        return any([x in path for x in item_tab_list])
 
     @classmethod
     def is_tokenized(cls, rc_feature):
@@ -631,10 +582,9 @@ class SQLResource(BaseResource):
             Operators = {True: "!=", False: "="}
         return Operators[False]
 
-    def __init__(self, lexicon, corpus):
+    def __init__(self, _, corpus):
         super(SQLResource, self).__init__()
         self._word_cache = {}
-        self.lexicon = lexicon
         self.corpus = corpus
         self.db_type = options.get_configuration_type()
         self.attach_list = []
@@ -663,6 +613,40 @@ class SQLResource(BaseResource):
         return sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
             *args, **kwargs)
+
+    def dump_table(self, path, rc_table):
+        engine = self.get_engine()
+        table = getattr(self, "{}_table".format(rc_table))
+        S = "SELECT * FROM {}".format(table)
+        for chunk in pd.read_sql(S, con=engine, chunksize=100000):
+            chunk.to_csv(path, header=False, index=False, mode="a",
+                         encoding="utf-8")
+        engine.dispose()
+
+    def get_module_path(self):
+        d = options.get_available_resources(options.cfg.current_server)
+        return d[self.name][-1]
+
+    def pack_corpus(self, name):
+        """
+        Creates a self-contained corpus package.
+
+        The corpus package is in essence a zip file containing a dump of each
+        table in the data base alongside a corpus module.
+        """
+        zf = zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED)
+        for tab in self.get_table_tree("corpus"):
+            temp_file = tempfile.NamedTemporaryFile()
+            temp_name = temp_file.name
+            try:
+                self.dump_table(temp_name, tab)
+                zf.write(temp_name, arcname="{}.csv".format(tab))
+            finally:
+                temp_file.close()
+
+        zf.write(self.get_module_path(),
+                 arcname=os.path.basename(self.get_module_path()))
+        zf.close()
 
     def get_statistics(self, db_connection, signal=None, s=None):
         stats = []
@@ -756,17 +740,107 @@ class SQLResource(BaseResource):
         return template.format(fields=", ".join(sorted(fields)),
                                corpus=cls.corpus_table)
 
+    @staticmethod
+    def string_entropy(s):
+        """
+        Estimate the Boltzmann entropy of a string (kind of).
+
+        This function approximates the specificity of a query string by using
+        a formula that built around Bolzmann entropy
+
+        S = N * -sum(p_i * log(p_i))
+
+        with N being the number of characters in the string and p_i being the
+        "probability state" of each character within the string.
+
+        "Probability state" is, of course, not well-defined in this context.
+        You could use, for instance, the overall probability of the character
+        within the target language, but you could also take the preceding
+        character into account and calculate something like a conditional
+        probability.
+
+        The function is tweaked to produce the results expected for the query
+        strings found in the module tests.
+
+        Wildcard '?' is treated as a character of probability 0.5
+        Wildcard '*' has a probability of something extremely low; in fact the
+        presence of this character is strongly penalized and yields a very low
+        entropy.
+
+        """
+        _MAX_ENTROPY = 10
+
+
+        any_char = -0.001
+        wildcard_q = 13/26 * math.log2(13/26)
+        wildcard_a = -0.75
+
+        if s.startswith("~"):
+            l = []
+            s = s.strip("~")
+            for ch in s:
+                if ch == "?":
+                    l.append("#")
+                elif ch == "*":
+                    l.append("*")
+                else:
+                    l.append("?")
+            s = "".join(l)
+
+        s = s.replace("\\?", "#")
+        s = s.replace("\\*", "#")
+        s = s.replace("\\[", "#")
+        s = s.replace("\\", "")
+        POS = "[" in s and "]" in s
+        s = s.replace("[", "")
+        s = s.replace("]", "")
+        while "**" in s:
+            s = s.replace("**", "*")
+        s = s.replace("?*", "*")
+        s = s.replace("*?", "*")
+
+        S = _MAX_ENTROPY
+        N = 1
+        for chunk in s.split("|"):
+            if chunk == "*":
+                return _MAX_ENTROPY
+
+            x = 0
+            for i, ch in enumerate(chunk):
+                if ch == "?":
+                    # penalize initial wildcards, see issue #285
+                    if i == 0:
+                        x += wildcard_q * 2
+                    else:
+                        x += wildcard_q / i
+                elif ch == "*":
+                    # penalize initial wildcards, see issue #285
+                    if i == 0:
+                        x += wildcard_a * 2
+                    else:
+                        x += wildcard_a / i
+                else:
+                    x += -any_char / math.sqrt(len(chunk))
+
+            S = min(S, -x)
+            N = max(N, len(chunk))
+
+        # penalize POS query items:
+        if POS:
+            S = (3 / math.sqrt(N)) * S
+        return S
+
+    @staticmethod
+    def penalize_query_item(x, i):
+        if x[1] == "*":
+            return 9999
+        else:
+            return (len(x[1]) - 2 * x[1].count("["))
+
     @classmethod
     def get_token_order(cls, token_list):
-        def key_fnc(x, i):
-            if x[1] == "*":
-                return 0
-            else:
-                return (len(x[1]) - 2 * x[1].count("["))
-
-        return sorted(token_list,
-                      key=lambda x: key_fnc(x[1], x[0]),
-                      reverse=True)
+        l = sorted(token_list, key=lambda x: cls.string_entropy(x[1][1]))
+        return l
 
     @classmethod
     def get_corpus_joins(cls, query_items, ignore_ngram=False):
@@ -789,9 +863,11 @@ class SQLResource(BaseResource):
         width = getattr(cls, "corpusngram_width", 0)
         joined = False
         for i, (offset, (N, _)) in enumerate(token_list):
-            if (hasattr(cls, "corpusngram_table") and
-                offset < width and
-                not ignore_ngram):
+            if (offset < width and
+                    cls.has_ngram() and
+                    not ignore_ngram and
+                    len(token_list) > 1):
+                # use ngram lookup table
                 if not joined:
                     if i == 0:
                         joins.append("FROM {corpus}".format(
@@ -814,30 +890,30 @@ class SQLResource(BaseResource):
                                               ref_N=ref_N,
                                               offs=offs))
                     joined = True
-                continue
-
-            if i == 0:
-                s = "FROM       {corpus} AS COQ_CORPUS_{N}"
-                comp = ""
-                ref_N = N
-                ref_offs = offset
             else:
-                if N > ref_N:
-                    comp = "{{id}}{{ref_N}} + {offs}"
-                    offs = offset - ref_offs
+                # use self-joined corpus tables
+                if i == 0:
+                    s = "FROM       {corpus} AS COQ_CORPUS_{N}"
+                    comp = ""
+                    ref_N = N
+                    ref_offs = offset
                 else:
-                    comp = "{{id}}{{ref_N}} - {offs}"
-                    offs = abs(offset - ref_offs)
-                s = ("INNER JOIN {{corpus}} AS COQ_CORPUS_{{N}} "
-                     "ON {{id}}{{N}} = {comp}").format(
-                         comp=comp.format(offs=offs))
-            s = s.format(
-                    corpus=cls.get_subselect_corpus(N, ref_N),
-                    id=cls.corpus_id,
-                    N=N, ref_N=ref_N,
-                    comp=comp)
+                    if N > ref_N:
+                        comp = "{{id}}{{ref_N}} + {offs}"
+                        offs = offset - ref_offs
+                    else:
+                        comp = "{{id}}{{ref_N}} - {offs}"
+                        offs = abs(offset - ref_offs)
+                    s = ("INNER JOIN {{corpus}} AS COQ_CORPUS_{{N}} "
+                         "ON {{id}}{{N}} = {comp}").format(
+                             comp=comp.format(offs=offs))
+                s = s.format(
+                        corpus=cls.get_subselect_corpus(N, ref_N),
+                        id=cls.corpus_id,
+                        N=N, ref_N=ref_N,
+                        comp=comp)
 
-            joins.append(s)
+                joins.append(s)
         return joins
 
     @classmethod
@@ -905,6 +981,41 @@ class SQLResource(BaseResource):
                 l.append(tup)
         return root, l
 
+    def add_table_path(self, start_feature, end_feature):
+        """
+        Add the join string  needed to access end_feature from the table
+        containing start_feature.
+
+        This method modifies the class attributes joined_tables (to keep
+        track of tables that are already included in the join) and
+        table_list (which contains the join strings).
+        """
+        # FIXME: treat features from linked tables like native features
+        _, last_table, _ = self.split_resource_feature(start_feature)
+        _, end_table, _ = self.split_resource_feature(end_feature)
+
+        table_path = self.get_table_path(last_table, end_table)
+        sql_template = """
+            INNER JOIN {table}
+            ON {table}.{table_id} = {prev_table}.{prev_table_id}"""
+
+        for table in table_path[1:]:
+            if table not in self.joined_tables:
+                self.table_list.append(sql_template.format(
+                    table=getattr(self, "{}_table".format(table)),
+                    table_id=getattr(self, "{}_id".format(table)),
+                    prev_table=getattr(self, "{}_table".format(last_table)),
+                    prev_table_id=getattr(self, "{}_{}_id".format(last_table,
+                                                                  table))))
+                self.joined_tables.append(table)
+            last_table = table
+
+    @classmethod
+    def has_ngram(cls):
+        return (hasattr(cls, "corpusngram_table") and
+                not options.cfg.no_ngram)
+
+
     @staticmethod
     def alias_external_table(n, link, res):
         _, table, _ = res.split_resource_feature(link.rc_to)
@@ -965,6 +1076,9 @@ class SQLResource(BaseResource):
             sql_template = "{table_name} AS {table_alias}"
             table_str = sql_template.format(
                 table_name=table_name, table_alias=table_alias)
+
+            if cls.has_ngram():
+                n = n - first_item + 1
 
             if parent == "corpus":
                 sql_template = "{table_alias}.{table_id} = {parent_id}{N}"
@@ -1191,12 +1305,22 @@ class SQLResource(BaseResource):
                 s = " OR ".join(s_list + s_exp)
 
             d[tab].append(s)
+            if token.lemmatize and label == QUERY_ITEM_POS:
+                pos_spec = s
+
 
         if token.lemmatize:
-            condition = cls.get_lemmatized_conditions(i, token)
+            # rewrite token conditions so that the specifications are used to
+            # obtain the matching lemmas in a subquery:
+            conditions = ["({})".format(x) for x in list(d.values())[0]]
+            condition_template = cls.get_lemmatized_conditions(i, token)
             d = {"word": [
-                    condition.format(where=" AND ".join(
-                    ["({})".format(x) for x in list(d.values())[0]]))]}
+                condition_template.format(where=" AND ".join(conditions))]}
+            try:
+                # add POS specification if provided:
+                d["word"].append(pos_spec)
+            except UnboundLocalError:
+                pass
 
         return d
 
@@ -1239,6 +1363,34 @@ class SQLResource(BaseResource):
         return table_str
 
     @classmethod
+    def get_token_offset(cls, token_list):
+        """
+        Return the token offset for the given token list.
+
+        The token offset corresponds to the number of columns that are
+        prepended to the actual output columns in a query string that starts
+        with _NULL query items.
+
+        For corpora with n-gram lookup tables, the offset is always 0 in order
+        to maximize the informativity of the look-up table (in the spirit of
+        issue #286).
+        """
+
+        if cls.has_ngram():
+            return 0
+
+        # _first_item stores the number of the first item that is not
+        # _NULL. This number will be used for coquery_invisible_corpus_id and
+        # coquery_invisible_origin_id.
+        pos = None
+
+        for i, (_, token) in enumerate(token_list):
+            if pos is None and token:
+                pos = i
+        return pos or 0
+
+
+    @classmethod
     def get_required_columns(cls, token_list, selected, to_file=False):
         """
         Return a list of strings. Each string refers to a column in the
@@ -1255,22 +1407,19 @@ class SQLResource(BaseResource):
         # _first_item stores the number of the first item that is not
         # _NULL. This number will be used for coquery_invisible_corpus_id and
         # coquery_invisible_origin_id.
-        _first_item = None
+        _token_offset = cls.get_token_offset(token_list)
+        _first_item = _token_offset + 1
 
         columns = []
         for rc_feature in selected:
             current_pos = 1
             for i, (pos, token) in enumerate(token_list):
-                if not _first_item and token:
-                    _first_item = i + 1
-
                 hashed, tab, feat = cls.split_resource_feature(rc_feature)
                 # external resources:
                 if hashed:
                     link, res = get_by_hash(hashed)
                     if link.rc_from in lexicon_features:
-                        ext_alias = cls.alias_external_table(i,
-                                                         link, res)
+                        ext_alias = cls.alias_external_table(i, link, res)
                         ext_rc = "{}_{}".format(tab, feat)
                         ext_column = getattr(res, ext_rc)
                         if token is not None:
@@ -1302,9 +1451,6 @@ class SQLResource(BaseResource):
                     if s not in columns:
                         columns.append(s)
 
-        if not _first_item:
-            _first_item = 1
-
         for rc_feature in selected:
             if rc_feature in corpus_features:
                 _, tab, feat = cls.split_resource_feature(rc_feature)
@@ -1313,7 +1459,7 @@ class SQLResource(BaseResource):
                 else:
                     template = "{name}{N}"
                 template = "{} AS coq_{{rc_feature}}_1".format(template)
-                s = template.format(N=_first_item,
+                s = template.format(N=_token_offset + 1,
                                     table=tab.upper(),
                                     name=getattr(cls, rc_feature),
                                     rc_feature=rc_feature)
@@ -1429,6 +1575,27 @@ class SQLResource(BaseResource):
             """.format(S, options.cfg.number_of_tokens)
         return S
 
+    def pos_check_function(self, l):
+        return [self.is_part_of_speech(s) for s in l]
+
+    def is_part_of_speech(self, pos):
+        pos_feature = getattr(self, QUERY_ITEM_POS, None)
+        if pos_feature:
+            current_token = tokens.COCAToken(pos)
+            _, table, _ = self.split_resource_feature(pos_feature)
+            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                getattr(self, "{}_id".format(table)),
+                getattr(self, "{}_table".format(table)),
+                pos_feature,
+                self.get_operator(current_token),
+                pos)
+            engine = self.get_engine()
+            df = pd.read_sql(S.replace("%", "%%"), engine)
+            engine.dispose()
+            return len(df.index) > 0
+        else:
+            return False
+
     def get_context(self, token_id, origin_id, number_of_tokens,
                     db_connection, sentence_id=None, left=None, right=None):
         def get_orth(word_id):
@@ -1459,13 +1626,13 @@ class SQLResource(BaseResource):
                             word_feature = getattr(self, QUERY_ITEM_WORD)
                         _, table, feature = self.split_resource_feature(word_feature)
 
-                        self.lexicon.joined_tables = []
-                        self.lexicon.table_list = [self.word_table]
-                        self.lexicon.add_table_path("word_id", word_feature)
+                        self.joined_tables = []
+                        self.table_list = [self.word_table]
+                        self.add_table_path("word_id", word_feature)
 
                         self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
                             getattr(self, word_feature),
-                            " ".join(self.lexicon.table_list),
+                            " ".join(self.table_list),
                             self.word_table,
                             self.word_id)
                     try:
@@ -1477,7 +1644,6 @@ class SQLResource(BaseResource):
                         self._word_cache[i] = DEFAULT_MISSING_VALUE
                 L.append(self._word_cache[i])
             return L
-
         if left is not None:
             left_span = left
         else:
@@ -1598,7 +1764,6 @@ class CorpusClass(object):
 
     def __init__(self):
         super(CorpusClass, self).__init__()
-        self.lexicon = None
         self.resource = None
 
     def get_file_data(self, token_id, features):
@@ -1613,10 +1778,10 @@ class CorpusClass(object):
         else:
             tokens = list(token_id)
 
-        self.lexicon.joined_tables = ["corpus"]
-        self.lexicon.table_list = [self.resource.corpus_table]
+        self.resource.joined_tables = ["corpus"]
+        self.resource.table_list = [self.resource.corpus_table]
 
-        self.lexicon.add_table_path("corpus_id", "file_id")
+        self.resource.add_table_path("corpus_id", "file_id")
 
         feature_list = ["{}.{}".format(
                                     self.resource.file_table,
@@ -1628,7 +1793,7 @@ class CorpusClass(object):
         token_ids = [str(x) for x in tokens]
         S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
                 features=", ".join(feature_list),
-                path=" ".join(self.lexicon.table_list),
+                path=" ".join(self.resource.table_list),
                 corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
                 token_ids=", ".join(token_ids))
@@ -1752,12 +1917,12 @@ class CorpusClass(object):
         if not filters and getattr(self.resource, "number_of_tokens", None):
             return self.resource.number_of_tokens
 
-        self.lexicon.table_list = []
-        self.lexicon.joined_tables = []
+        self.resource.table_list = []
+        self.resource.joined_tables = []
         filter_strings = []
         for rc_feature, values in filters:
             _, tab, feat = self.resource.split_resource_feature(rc_feature)
-            self.lexicon.add_table_path("corpus_id", rc_feature)
+            self.resource.add_table_path("corpus_id", rc_feature)
 
             # FIXME: remove code replication with get_subcorpus_range()
             if len(values) == 1:
@@ -1782,7 +1947,7 @@ class CorpusClass(object):
 
         if filter_strings:
             from_str = "{} WHERE {}".format(
-                " ".join([self.resource.corpus_table] + self.lexicon.table_list),
+                " ".join([self.resource.corpus_table] + self.resource.table_list),
                 " AND ".join(filter_strings))
         else:
             from_str = self.resource.corpus_table
@@ -1873,8 +2038,8 @@ class CorpusClass(object):
         if len(row) == 0:
             val = 0, self.get_corpus_size()
         else:
-            self.lexicon.table_list = []
-            self.lexicon.joined_tables = []
+            self.resource.table_list = []
+            self.resource.joined_tables = []
             conditions = []
             for column in row.index:
                 try:
@@ -1883,7 +2048,7 @@ class CorpusClass(object):
                     print("couldn't split", column)
                     continue
                 _, tab, feat = self.resource.split_resource_feature(rc_feature)
-                self.lexicon.add_table_path("corpus_id", rc_feature)
+                self.resource.add_table_path("corpus_id", rc_feature)
 
                 # FIXME: remove code replication with get_corpus_size()
                 raw_values = self.reverse_substitution(column, row[column])
@@ -1899,7 +2064,7 @@ class CorpusClass(object):
                         ",".join(["'{}'".format(x) for x in raw_values]))
                 conditions.append(s)
 
-            tables = [self.resource.corpus_table] + self.lexicon.table_list
+            tables = [self.resource.corpus_table] + self.resource.table_list
             from_str = "{} WHERE {}".format(" ".join(tables),
                                             " AND ".join(conditions))
 
@@ -2099,10 +2264,8 @@ class CorpusClass(object):
         else:
             word_feature = getattr(self.resource, QUERY_ITEM_WORD)
 
-        if hasattr(self.resource, "corpus_word_id"):
-            corpus_word_id = self.resource.corpus_word_id
-        else:
-            corpus_word_id = self.resource.corpus_word
+        corpus_word_id = (getattr(self.resource, "corpus_word_id", None) or
+                          getattr(self.resource, "corpus_word"))
 
         _, tab, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(tab))
@@ -2111,9 +2274,9 @@ class CorpusClass(object):
         word_start = getattr(self.resource, "{}_starttime".format(tab), None)
         word_end = getattr(self.resource, "{}_endtime".format(tab), None)
 
-        self.lexicon.table_list = []
-        self.lexicon.joined_tables = []
-        self.lexicon.add_table_path("corpus_id", word_feature)
+        self.resource.table_list = []
+        self.resource.joined_tables = []
+        self.resource.add_table_path("corpus_id", word_feature)
 
         if hasattr(self.resource, "tag_table"):
             headers = ["coquery_invisible_corpus_id", "COQ_TAG_ID"]
@@ -2127,7 +2290,7 @@ class CorpusClass(object):
                 "word_table": word_table,
                 "word_id": word_id,
 
-                "joined_tables": " ".join(self.lexicon.table_list),
+                "joined_tables": " ".join(self.resource.table_list),
 
                 "tag_table": self.resource.tag_table,
                 "tag": self.resource.tag_label,
@@ -2167,14 +2330,14 @@ class CorpusClass(object):
             kwargs = {
                 "corpus": self.resource.corpus_table,
                 "corpus_id": self.resource.corpus_id,
-                "corpus_word_id": self.resource.corpus_word_id,
+                "corpus_word_id": corpus_word_id,
                 "source_id": origin_id,
 
                 "word": getattr(self.resource, word_feature),
                 "word_table": word_table,
                 "word_id": word_id,
 
-                "joined_tables": " ".join(self.lexicon.table_list),
+                "joined_tables": " ".join(self.resource.table_list),
 
                 "current_source_id": source_id,
                 "start": max(0, token_id - 1000),
@@ -2258,9 +2421,6 @@ class CorpusClass(object):
             return list(range(int(x.coquery_invisible_corpus_id),
                               int(x.end)))
 
-        if not hasattr(self.resource, QUERY_ITEM_WORD):
-            raise UnsupportedQueryItemError
-
         def parse_row(row, tags):
             word = row.coq_word_label_1
             word_id = row.coquery_invisible_corpus_id
@@ -2307,6 +2467,9 @@ class CorpusClass(object):
             else:
                 return s2.format(tag)
 
+        if not hasattr(self.resource, QUERY_ITEM_WORD):
+            raise UnsupportedQueryItemError
+
         if not (token_id, source_id, token_width) in self._context_cache:
             self._read_context_for_renderer(token_id, source_id, token_width)
         df, tags = self._context_cache[(token_id, source_id, token_width)]
@@ -2327,7 +2490,8 @@ class CorpusClass(object):
 
         tab["end"] = (tab[["coquery_invisible_corpus_id",
                            "coquery_invisible_number_of_tokens"]].sum(axis=1))
-        # the method expand_row has the side effect that it adds the
+
+        # the method expand_row() has the side effect that it adds the
         # token id range for each row to the list self.id_list
         self.id_list = list(pd.np.hstack(tab.apply(expand_row, axis=1)))
 

@@ -233,6 +233,8 @@ FUNCTION_DESC = {
     "AND": "Combine the selected columns by logical AND",
     "OR": "Combine the selected columns by logical OR",
     "XOR": "Combine the selected columns by logical XOR",
+    "IF": "Return the first value if the values in the selected columns are logically true, or the second value otherwise",
+    "IFANY": "Return the first value if any value in the selected columns is logically true, or the second value otherwise",
 
     "ADD": "Add the selected column, or add the argument",
     "DIV": "Divide the selected columns (in order), or divide by the argument",

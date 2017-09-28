@@ -297,6 +297,7 @@ class Options(object):
         self.args.output_separator = ","
         self.args.corpus = None
         self.args.gui = True
+        self.args.csv_restrict = None
 
         self.args.table_links = defaultdict(list)
 
@@ -331,6 +332,7 @@ class Options(object):
         self.args.column_color = {}
         self.args.column_names = {}
         self.args.row_color = {}
+        self.args.no_ngram = False
 
         self.args.managers = {}
         self.args.summary_group = []
@@ -372,6 +374,7 @@ class Options(object):
         group = self.parser.add_argument_group("Debug options")
         group.add_argument("-v", "--verbose", help="produce a verbose output", action="store_true", dest="verbose")
         group.add_argument("-E", "--explain", help="explain mySQL queries in log file", action="store_true", dest="explain_queries")
+        group.add_argument("--no_ngram", help="do not use N-gram lookup tables", action="store_true")
         group.add_argument("--benchmark", help="benchmarking of Coquery", action="store_true")
         group.add_argument("--profile", help="deterministic profiling of Coquery", action="store_true")
         group.add_argument("--memory-dump", help="list objects that consume much memory after queries", action="store_true", dest="memory_dump")
@@ -494,7 +497,7 @@ class Options(object):
                 # values the features provided by each of the tables defined in
                 # the resource. The features are included as tuples, with first,
                 # the display name and second, the resource feature name.
-                resource, _, _ = get_resource(self.args.corpus, self.args.current_server)
+                resource, _ = get_resource(self.args.corpus, self.args.current_server)
                 corpus_features = resource.get_corpus_features()
                 lexicon_features = resource.get_lexicon_features()
                 for rc_feature, column in corpus_features + lexicon_features:
@@ -850,6 +853,8 @@ class Options(object):
             self.args.textgrids_file_path = config_file.str("gui", "textgrids_file_path", fallback=os.path.expanduser("~"))
             self.args.results_file_path = config_file.str("gui", "results_file_path", fallback=os.path.expanduser("~"))
             self.args.output_file_path = config_file.str("gui", "output_file_path", fallback=os.path.expanduser("~"))
+            self.args.export_file_path = config_file.str(
+                "gui", "export_file_path", fallback=os.path.expanduser("~"))
             self.args.stopwords_file_path = config_file.str("gui", "stopwords_file_path", fallback=os.path.expanduser("~"))
             self.args.filter_file_path = config_file.str("gui", "filter_file_path", fallback=os.path.expanduser("~"))
             self.args.uniques_file_path = config_file.str("gui", "uniques_file_path", fallback=os.path.expanduser("~"))
@@ -1217,6 +1222,10 @@ def save_configuration():
         except AttributeError:
             config.set("gui", "output_file_path", os.path.expanduser("~"))
         try:
+            config.set("gui", "export_file_path", cfg.export_file_path)
+        except AttributeError:
+            config.set("gui", "export_file_path", os.path.expanduser("~"))
+        try:
             config.set("gui", "textgrids_file_path", cfg.textgrids_file_path)
         except AttributeError:
             config.set("gui", "textgrids_file_path", os.path.expanduser("~"))
@@ -1484,8 +1493,8 @@ def get_available_resources(configuration):
 
     This method scans the content of the sub-directory 'corpora' for valid
     corpus modules. This directory has additional subdirectories for each
-    MySQL configuration. If a corpus module is found, the three resource
-    classes Resource, Corpus, and Lexicon are retrieved from the module.
+    MySQL configuration. If a corpus module is found, the resource classes
+    Resource and Corpus are retrieved from the module.
 
     Parameters
     ----------
@@ -1498,7 +1507,7 @@ def get_available_resources(configuration):
     d : dict
         A dictionary with resource names as keys, and tuples of resource
         classes as values:
-        (module.Resource, module.Corpus, module.Lexicon, module_name)
+        (module.Resource, module.Corpus, module_name)
     """
 
     def ensure_init_file(path):
@@ -1526,7 +1535,7 @@ def get_available_resources(configuration):
         #try:
             #validate_module(
                 #module_name,
-                #expected_classes = ["Resource", "Corpus", "Lexicon"],
+                #expected_classes = ["Resource", "Corpus"],
                 #whitelisted_modules = ["corpus", "__future__"],
                 #allow_if = False,
                 #hash = False)
@@ -1550,7 +1559,9 @@ def get_available_resources(configuration):
             logger.warn(s)
         else:
             try:
-                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
+                d[module.Resource.name] = (module.Resource,
+                                           module.Corpus,
+                                           module_name)
             except (AttributeError, ImportError) as e:
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
@@ -1558,8 +1569,8 @@ def get_available_resources(configuration):
 
 def get_resource(name, connection=None):
     """
-    Return a tuple containing the Resource, Corpus, and Lexicon of the
-    corpus module specified by 'name'.
+    Return a tuple containing the Resource and the Corpus of the corpus module
+    specified by 'name'.
 
     Arguments
     ---------
@@ -1572,13 +1583,13 @@ def get_resource(name, connection=None):
     Returns
     -------
     res : tuple
-        A tuple consisting of the Resource class, Corpus class, and Lexicon
-        class defined in the corpus module
+        A tuple consisting of the Resource class and the Corpus class defined
+        in the corpus module
     """
     if not connection:
         connection = cfg.current_server
-    Resource, Corpus, Lexicon, _ = get_available_resources(connection)[name]
-    return Resource, Corpus, Lexicon
+    Resource, Corpus, path = get_available_resources(connection)[name]
+    return Resource, Corpus
 
 
 def decode_query_string(s):

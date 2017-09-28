@@ -196,14 +196,10 @@ class Function(CoqObject):
         if ref_corpus is None:
             return None
         res = options.cfg.current_resources[ref_corpus]
-        ResourceClass, CorpusClass, LexiconClass, _ = res
-        lexicon = LexiconClass()
+        ResourceClass, CorpusClass, _ = res
         corpus = CorpusClass()
-        resource = ResourceClass(lexicon, corpus)
+        resource = ResourceClass(None, corpus)
         corpus.resource = resource
-        corpus.lexicon = lexicon
-        lexicon.resource = resource
-        lexicon.corpus = corpus
 
         return resource
 
@@ -405,6 +401,7 @@ class CalcFunction(NumFunction):
     data frame for the calculations, thus speeding up performance.
     """
     _name = "virtual"
+    _ignore_na = False
     arguments = {"float": [("value", "Value:", None)]}
 
     def evaluate(self, df, **kwargs):
@@ -414,10 +411,15 @@ class CalcFunction(NumFunction):
             val = df[self.columns[0]].values
             for x in self.columns[1:]:
                 val = self._func(val, df[x].values)
-
             if kwargs["value"] is not None:
                 const = self.coerce_value(df, kwargs["value"])
                 val = self._func(val, const)
+            if not self._ignore_na:
+                nan_rows = pd.np.any(pd.isnull(df[self.columns].values),
+                                     axis=1)
+                if nan_rows.any():
+                    val = val.astype(object)
+                    val[nan_rows] = None
         return pd.Series(data=val, index=df.index)
 
 
@@ -554,6 +556,7 @@ class Percentile(StatisticalFunction):
 
 class Comparison(CalcFunction):
     _name = "virtual"
+    _ignore_na = True
     arguments = {"string": [("value", "Value:", "")]}
 
     @staticmethod
@@ -593,6 +596,7 @@ class LessEqual(Comparison):
 
 class LogicFunction(CalcFunction):
     _name = "virtual"
+    _ignore_na = False
 
     @staticmethod
     def get_description():
@@ -612,6 +616,34 @@ class Or(LogicFunction):
 class Xor(LogicFunction):
     _name = "XOR"
     _func = pd.np.logical_xor
+
+
+class If(And):
+    _name = "IF"
+    arguments = {"string": [("value1", "Then:", ""),
+                            ("value2", "Else:", "")]}
+
+    def evaluate(self, df, **kwargs):
+        then_val = kwargs.pop("value1")
+        else_val = kwargs.pop("value2")
+        kwargs["value"] = True
+        val = super(If, self).evaluate(df, **kwargs)
+
+        # apply conditional replacement:
+        recode = pd.np.where(val, then_val, else_val)
+
+        _null = pd.isnull(val)
+        # replace NaN results by NaN (because pd.np.nan AND True evaluates to
+        # True, see e.g. https://stackoverflow.com/q/17273312/)
+        if _null.any():
+            recode = recode.astype(object)
+            recode[_null] = None
+        return pd.Series(data=recode, index=val.index)
+
+
+class IfAny(If, Or):
+    _name = "IFANY"
+
 
 #class IsTrue(LogicFunction):
     #_name = "ISTRUE"

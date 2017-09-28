@@ -94,11 +94,11 @@ class TextgridWriter(object):
             else:
                 # determine the table that contains timing information by
                 # following the table path:
-                self.resource.lexicon.joined_tables = ["corpus"]
-                self.resource.lexicon.table_list = ["corpus"]
-                self.resource.lexicon.add_table_path("corpus_id",
+                self.resource.joined_tables = ["corpus"]
+                self.resource.table_list = ["corpus"]
+                self.resource.add_table_path("corpus_id",
                                                     "{}_id".format(tab))
-                for current_tab in self.resource.lexicon.joined_tables:
+                for current_tab in self.resource.joined_tables:
                     # check if timing information has been selected for the
                     # current table from the table path:
                     start_label = "{}_starttime".format(current_tab)

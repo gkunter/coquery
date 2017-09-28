@@ -17,7 +17,7 @@ from coquery.defines import QUERY_MODE_TOKENS, CONTEXT_NONE
 from coquery.errors import TokenParseError
 from coquery.functions import StringExtract
 from coquery.functionlist import FunctionList
-from coquery.corpus import SQLResource, LexiconClass, CorpusClass
+from coquery.corpus import SQLResource, CorpusClass
 from coquery.managers import Manager, Summary
 
 
@@ -32,6 +32,7 @@ class TestSessionInputFile(unittest.TestCase):
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
         options.cfg.summary_group = [Summary("summary")]
+        options.cfg.csv_restrict = None
 
         self.temp_file = tempfile.NamedTemporaryFile("w")
         options.cfg.input_path = self.temp_file.name
@@ -217,8 +218,7 @@ class TestSessionMethods(unittest.TestCase):
             self.session = SessionCommandLine()
 
         self.corpus = CorpusClass()
-        self.lexicon = LexiconClass()
-        self.session.Resource = SQLResource(self.lexicon, self.corpus)
+        self.session.Resource = SQLResource(None, self.corpus)
         self.session.Resource.name = "MockResource"
         self.session.Resource.word_table = "Lexicon"
         self.session.Resource.word_label = "Word"
