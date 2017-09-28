@@ -853,6 +853,8 @@ class Options(object):
             self.args.textgrids_file_path = config_file.str("gui", "textgrids_file_path", fallback=os.path.expanduser("~"))
             self.args.results_file_path = config_file.str("gui", "results_file_path", fallback=os.path.expanduser("~"))
             self.args.output_file_path = config_file.str("gui", "output_file_path", fallback=os.path.expanduser("~"))
+            self.args.export_file_path = config_file.str(
+                "gui", "export_file_path", fallback=os.path.expanduser("~"))
             self.args.stopwords_file_path = config_file.str("gui", "stopwords_file_path", fallback=os.path.expanduser("~"))
             self.args.filter_file_path = config_file.str("gui", "filter_file_path", fallback=os.path.expanduser("~"))
             self.args.uniques_file_path = config_file.str("gui", "uniques_file_path", fallback=os.path.expanduser("~"))
@@ -1219,6 +1221,10 @@ def save_configuration():
             config.set("gui", "output_file_path", cfg.output_file_path)
         except AttributeError:
             config.set("gui", "output_file_path", os.path.expanduser("~"))
+        try:
+            config.set("gui", "export_file_path", cfg.export_file_path)
+        except AttributeError:
+            config.set("gui", "export_file_path", os.path.expanduser("~"))
         try:
             config.set("gui", "textgrids_file_path", cfg.textgrids_file_path)
         except AttributeError:

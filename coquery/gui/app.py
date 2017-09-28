@@ -21,6 +21,7 @@ import pandas as pd
 import datetime
 import re
 import warnings
+import zipfile
 
 from coquery import managers
 from coquery import sqlhelper
@@ -2506,7 +2507,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
             current_corpus = utf8(self.ui.combo_corpus.currentText())
-            resource, _, _, module = options.cfg.current_resources[current_corpus]
+            resource, _, _ = options.cfg.current_resources[current_corpus]
             try:
                 url = resource.url
             except AttributeError:
@@ -2529,7 +2530,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import removecorpus
 
         try:
-            resource, _, _, module = options.cfg.current_resources[entry.name]
+            resource, _, module = options.cfg.current_resources[entry.name]
         except KeyError:
             if entry.adhoc:
                 database = "coq_{}".format(entry.name.lower())
@@ -2588,7 +2589,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # text files:
             if rm_installer and success:
                 try:
-                    res, _, _, _ = options.cfg.current_resources[entry.name]
+                    res, _, _ = options.cfg.current_resources[entry.name]
                     path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(res.db_name))
                     os.remove(path)
                 except Exception as e:
@@ -2604,6 +2605,32 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.corpusListUpdated.emit()
 
             self.change_corpus()
+
+    def export_corpus(self, entry):
+        resource_class, corpus_class, _ = options.cfg.current_resources[entry.name]
+        corpus = corpus_class()
+        resource = resource_class(_, corpus)
+
+        caption = "Choose export file name"
+        path = os.path.join(options.cfg.export_file_path,
+                            "{}.coq".format(resource.name))
+
+        name = QtWidgets.QFileDialog.getSaveFileName(caption=caption,
+                                                     directory=path)
+        if type(name) == tuple:
+            name = name[0]
+        if not name:
+            return
+
+        # FIXME: this has to be packed into a thread!
+        try:
+            resource.pack_corpus(name)
+        except Exception as e:
+            raise e
+        else:
+            S = "Exported corpus {} to {}.".format(entry.name, name)
+            logging.info(S)
+            self.showMessage(S)
 
     def build_corpus(self):
         from coquery. installer import coq_install_generic
@@ -2675,8 +2702,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.corpus_manager.show()
             self.corpus_manager.installCorpus.connect(self.install_corpus)
             self.corpus_manager.removeCorpus.connect(self.remove_corpus)
+            self.corpus_manager.dumpCorpus.connect(self.export_corpus)
             self.corpus_manager.buildCorpus.connect(self.build_corpus)
-            self.corpus_manager.buildCorpusFromTable.connect(self.build_corpus_from_table)
+            self.corpus_manager.buildCorpusFromTable.connect(
+                self.build_corpus_from_table)
             self.corpusListUpdated.connect(self.corpus_manager.update)
             #self.corpus_manager.check_orphans()
 

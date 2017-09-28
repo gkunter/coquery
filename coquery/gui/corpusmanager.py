@@ -149,13 +149,18 @@ class CoqAccordionEntry(QtWidgets.QWidget):
         button_reinstall.setIcon(self._stack.parent().get_icon("Connection Sync"))
         button_reinstall.setText("Reinstall")
         button_reinstall.setToolTip("Reinstall corpus")
+        button_dump = QtWidgets.QPushButton("Export")
+        button_dump.setToolTip("Export corpus")
+        button_dump.setIcon(self._stack.parent().get_icon("Save"))
 
         # make all buttons the same width:
         max_width = 0
-        for button in [button_build, button_remove, button_install, button_reinstall]:
+        all_buttons = [button_build, button_remove, button_install,
+                       button_reinstall, button_dump]
+        for button in all_buttons:
             max_width = max(max_width, button.sizeHint().width())
 
-        for button in [button_build, button_remove, button_install, button_reinstall]:
+        for button in all_buttons:
             button.setMinimumWidth(max_width)
 
         if self._is_builder:
@@ -163,9 +168,11 @@ class CoqAccordionEntry(QtWidgets.QWidget):
             self.button_build.setParent(entry_widget)
             entry_widget.header_layout.addWidget(self.button_build)
             if self._build_from_table:
-                self.button_build.clicked.connect(lambda: self._stack.buildCorpusFromTable.emit(self))
+                self.button_build.clicked.connect(
+                    lambda: self._stack.buildCorpusFromTable.emit(self))
             else:
-                self.button_build.clicked.connect(lambda: self._stack.buildCorpus.emit(self))
+                self.button_build.clicked.connect(
+                    lambda: self._stack.buildCorpus.emit(self))
         else:
             if installed or not self._builtin:
                 self.button_remove = button_remove
@@ -175,6 +182,13 @@ class CoqAccordionEntry(QtWidgets.QWidget):
                 if self._stack:
                     self.button_remove.clicked.connect(lambda:
                     self._stack.removeCorpus.emit(self))
+
+                self.button_dump = button_dump
+                self.button_dump.setParent(entry_widget)
+                self.widget_layout.addWidget(self.button_dump)
+                if self._stack:
+                    self.button_dump.clicked.connect(
+                        lambda: self._stack.dumpCorpus.emit(self))
 
             if not self._adhoc:
                 if not installed:
@@ -308,6 +322,8 @@ class CorpusManager(QtWidgets.QDialog):
     installCorpus = QtCore.Signal(object)
     buildCorpus = QtCore.Signal(object)
     buildCorpusFromTable = QtCore.Signal(object)
+    dumpCorpus = QtCore.Signal(object)
+
     def __init__(self, parent=None):
         super(CorpusManager, self).__init__(parent)
         self.ui = Ui_corpusManager()

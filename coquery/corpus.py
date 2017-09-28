@@ -20,6 +20,9 @@ import logging
 import math
 import sqlalchemy
 import pandas as pd
+import os
+import tempfile
+import zipfile
 
 from .errors import UnsupportedQueryItemError
 from .defines import (
@@ -35,6 +38,10 @@ from . import tokens, NAME
 from . import options
 from . import sqlhelper
 from .links import get_by_hash
+
+
+class LexiconClass(object):
+    pass
 
 
 class BaseResource(CoqObject):
@@ -544,7 +551,7 @@ class BaseResource(CoqObject):
 
         path = cls.get_table_path("corpus", table)
 
-        return any([tab in path for tab in item_tab_list])
+        return any([x in path for x in item_tab_list])
 
     @classmethod
     def is_tokenized(cls, rc_feature):
@@ -606,6 +613,40 @@ class SQLResource(BaseResource):
         return sqlalchemy.create_engine(
             sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
             *args, **kwargs)
+
+    def dump_table(self, path, rc_table):
+        engine = self.get_engine()
+        table = getattr(self, "{}_table".format(rc_table))
+        S = "SELECT * FROM {}".format(table)
+        for chunk in pd.read_sql(S, con=engine, chunksize=100000):
+            chunk.to_csv(path, header=False, index=False, mode="a",
+                         encoding="utf-8")
+        engine.dispose()
+
+    def get_module_path(self):
+        d = options.get_available_resources(options.cfg.current_server)
+        return d[self.name][-1]
+
+    def pack_corpus(self, name):
+        """
+        Creates a self-contained corpus package.
+
+        The corpus package is in essence a zip file containing a dump of each
+        table in the data base alongside a corpus module.
+        """
+        zf = zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED)
+        for tab in self.get_table_tree("corpus"):
+            temp_file = tempfile.NamedTemporaryFile()
+            temp_name = temp_file.name
+            try:
+                self.dump_table(temp_name, tab)
+                zf.write(temp_name, arcname="{}.csv".format(tab))
+            finally:
+                temp_file.close()
+
+        zf.write(self.get_module_path(),
+                 arcname=os.path.basename(self.get_module_path()))
+        zf.close()
 
     def get_statistics(self, db_connection, signal=None, s=None):
         stats = []
@@ -730,7 +771,6 @@ class SQLResource(BaseResource):
         _MAX_ENTROPY = 10
 
 
-        _old = s
         any_char = -0.001
         wildcard_q = 13/26 * math.log2(13/26)
         wildcard_a = -0.75
@@ -2224,9 +2264,8 @@ class CorpusClass(object):
         else:
             word_feature = getattr(self.resource, QUERY_ITEM_WORD)
 
-        corpus_word_id = getattr(self.resource,
-                                 "corpus_word_id",
-                                 self.resource.corpus_word)
+        corpus_word_id = (getattr(self.resource, "corpus_word_id", None) or
+                          getattr(self.resource, "corpus_word"))
 
         _, tab, _ = self.resource.split_resource_feature(word_feature)
         word_table = getattr(self.resource, "{}_table".format(tab))
