@@ -5,13 +5,17 @@ import unittest
 import sys
 import tempfile
 import os
+import argparse
 
 from coquery.defines import SQL_SQLITE
+from coquery.coquery import options
 from coquery.corpusbuilder import (
     BaseCorpusBuilder, XMLCorpusBuilder, TEICorpusBuilder)
 from coquery.tables import Table, Column, Identifier, Link
 
 from .test_corpora import simple
+
+options.cfg = argparse.Namespace()
 
 try:
     from lxml import etree as ET
@@ -20,11 +24,6 @@ except ImportError:
         import xml.etree.cElementTree as ET
     except ImportError:
         import xml.etree.ElementTree as ET
-
-try:
-    from cStringIO import StringIO as IO_Stream
-except ImportError:
-    from io import BytesIO as IO_Stream
 
 xml_content = """<?xml version="1.0" encoding="UTF-8"?>
 <file>
@@ -291,6 +290,8 @@ class TestCorpusNgram(unittest.TestCase):
     def setUp(self):
         self.builder = NgramBuilder()
         self.maxDiff = None
+        options.cfg.no_ngram = False
+
 
     def test_get_ngram_columns(self):
         l = self.builder.build_lookup_get_ngram_columns()
@@ -328,6 +329,7 @@ class TestCorpusNgram(unittest.TestCase):
                          """))
 
     def test_get_insert_string(self):
+        options.cfg.no_ngram = False
         s1 = self.builder.build_lookup_get_insert_string()
         s2 = """
             INSERT INTO CorpusNgram (ID1, FileId1, WordId1, WordId2, WordId3)
@@ -365,7 +367,7 @@ class TestXMLCorpusBuilder(unittest.TestCase):
     def tearDown(self):
         try:
             os.remove(self.temp_file_name)
-        except (OSError, IOError) as e:
+        except (OSError, IOError):
             pass
 
     def _get_tree(self, content):
@@ -418,7 +420,6 @@ class TestXMLCorpusBuilder(unittest.TestCase):
         builder = TestingXML()
         tree = self._get_tree(xml_content)
         builder.process_body(tree)
-        children = [child.tag for child in builder.body]
         self.assertListEqual(builder.content,
                              ["This", "is", "a", "test."])
         self.assertEqual(builder._corpus_id, 4)
