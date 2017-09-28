@@ -28,11 +28,8 @@ def main():
         test_list += [TestCELEX]
 
     if not args or "corpus" in args:
-        from test.test_corpora import (
-            TestCorpus, TestSuperFlat,
-            TestCorpusWithExternal, TestNGramCorpus)
-        test_list += [TestCorpus, TestSuperFlat,
-                      TestCorpusWithExternal, TestNGramCorpus]
+        from test.test_corpora import provided_tests
+        test_list += provided_tests
 
     if not args or "corpusbuilder" in args:
         from test.test_corpusbuilder import provided_tests
