@@ -141,7 +141,6 @@ class TestCorpus(unittest.TestCase):
         options.get_configuration_type = lambda: SQL_MYSQL
         self.Session = MockOptions()
         self.Session.Resource = self.resource
-        self.Session.Lexicon = None
         self.Session.Corpus = None
 
         COCAToken.set_pos_check_function(self.pos_check_function)
@@ -1240,7 +1239,6 @@ class TestSuperFlat(unittest.TestCase):
         options.get_resource = _monkeypatch_get_resource
         self.Session = MockOptions()
         self.Session.Resource = self.resource
-        self.Session.Lexicon = None
         self.Session.Corpus = None
 
         self.link = coquery.links.Link(
@@ -1387,7 +1385,6 @@ class TestCorpusWithExternal(unittest.TestCase):
         options.get_resource = _monkeypatch_get_resource
         self.Session = MockOptions()
         self.Session.Resource = self.resource
-        self.Session.Lexicon = None
         self.Session.Corpus = None
 
         self.link = coquery.links.Link(
@@ -1488,7 +1485,6 @@ class TestNGramCorpus(unittest.TestCase):
         options.cfg.no_ngram = False
         self.Session = MockOptions()
         self.Session.Resource = self.resource
-        self.Session.Lexicon = None
         self.Session.Corpus = None
 
     def test_get_origin_rc(self):

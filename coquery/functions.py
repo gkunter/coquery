@@ -196,14 +196,10 @@ class Function(CoqObject):
         if ref_corpus is None:
             return None
         res = options.cfg.current_resources[ref_corpus]
-        ResourceClass, CorpusClass, LexiconClass, _ = res
-        lexicon = LexiconClass()
+        ResourceClass, CorpusClass, _ = res
         corpus = CorpusClass()
-        resource = ResourceClass(lexicon, corpus)
+        resource = ResourceClass(None, corpus)
         corpus.resource = resource
-        corpus.lexicon = lexicon
-        lexicon.resource = resource
-        lexicon.corpus = corpus
 
         return resource
 

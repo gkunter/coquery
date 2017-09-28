@@ -37,65 +37,6 @@ from . import sqlhelper
 from .links import get_by_hash
 
 
-class LexiconClass(object):
-    """
-    Define a base lexicon class.
-    """
-    def pos_check_function(self, l):
-        return [self.is_part_of_speech(s) for s in l]
-
-    def check_pos_list(self, L):
-        """ Returns the number of elements for which
-        Corpus.is_part_of_speech() is True, i.e. the number of
-        elements that are considered a part of speech tag """
-        count = 0
-        for CurrentPos in L:
-            if self.is_part_of_speech(CurrentPos):
-                count += 1
-        return count
-
-    def is_part_of_speech(self, pos):
-        if hasattr(self.resource, QUERY_ITEM_POS):
-            current_token = tokens.COCAToken(pos)
-            rc_feature = getattr(self.resource, QUERY_ITEM_POS)
-            _, table, _ = self.resource.split_resource_feature(rc_feature)
-            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                getattr(self.resource, "{}_id".format(table)),
-                getattr(self.resource, "{}_table".format(table)),
-                getattr(self.resource, rc_feature),
-                self.resource.get_operator(current_token),
-                pos)
-            engine = self.resource.get_engine()
-            df = pd.read_sql(S.replace("%", "%%"), engine)
-            engine.dispose()
-            return len(df.index) > 0
-        else:
-            return False
-
-    def add_table_path(self, start_feature, end_feature):
-        """
-        Add the join string  needed to access end_feature from the table
-        containing start_feature.
-
-        This method modifies the class attributes joined_tables (to keep
-        track of tables that are already included in the join) and
-        table_list (which contains the join strings).
-        """
-        # FIXME: treat features from linked tables like native features
-        _, last_table, _ = self.resource.split_resource_feature(start_feature)
-        _, end_table, _ = self.resource.split_resource_feature(end_feature)
-
-        table_path = self.resource.get_table_path(last_table, end_table)
-        for table in table_path[1:]:
-            if table not in self.joined_tables:
-                self.table_list.append("INNER JOIN {table} ON {table}.{table_id} = {prev_table}.{prev_table_id}".format(
-                    table=getattr(self.resource, "{}_table".format(table)),
-                    table_id=getattr(self.resource, "{}_id".format(table)),
-                    prev_table=getattr(self.resource, "{}_table".format(last_table)),
-                    prev_table_id=getattr(self.resource, "{}_{}_id".format(last_table, table))))
-                self.joined_tables.append(table)
-            last_table = table
-
 class BaseResource(CoqObject):
     """
     """
@@ -114,6 +55,8 @@ class BaseResource(CoqObject):
 
     def __init__(self):
         super(BaseResource, self).__init__()
+        self._joined_tables = []
+        self._table_list = []
 
     @classmethod
     def format_resource_feature(cls, rc_feature, N):
@@ -632,10 +575,9 @@ class SQLResource(BaseResource):
             Operators = {True: "!=", False: "="}
         return Operators[False]
 
-    def __init__(self, lexicon, corpus):
+    def __init__(self, _, corpus):
         super(SQLResource, self).__init__()
         self._word_cache = {}
-        self.lexicon = lexicon
         self.corpus = corpus
         self.db_type = options.get_configuration_type()
         self.attach_list = []
@@ -998,6 +940,35 @@ class SQLResource(BaseResource):
                 # insert tuple for current table into list:
                 l.append(tup)
         return root, l
+
+    def add_table_path(self, start_feature, end_feature):
+        """
+        Add the join string  needed to access end_feature from the table
+        containing start_feature.
+
+        This method modifies the class attributes joined_tables (to keep
+        track of tables that are already included in the join) and
+        table_list (which contains the join strings).
+        """
+        # FIXME: treat features from linked tables like native features
+        _, last_table, _ = self.split_resource_feature(start_feature)
+        _, end_table, _ = self.split_resource_feature(end_feature)
+
+        table_path = self.get_table_path(last_table, end_table)
+        sql_template = """
+            INNER JOIN {table}
+            ON {table}.{table_id} = {prev_table}.{prev_table_id}"""
+
+        for table in table_path[1:]:
+            if table not in self.joined_tables:
+                self.table_list.append(sql_template.format(
+                    table=getattr(self, "{}_table".format(table)),
+                    table_id=getattr(self, "{}_id".format(table)),
+                    prev_table=getattr(self, "{}_table".format(last_table)),
+                    prev_table_id=getattr(self, "{}_{}_id".format(last_table,
+                                                                  table))))
+                self.joined_tables.append(table)
+            last_table = table
 
     @classmethod
     def has_ngram(cls):
@@ -1564,6 +1535,27 @@ class SQLResource(BaseResource):
             """.format(S, options.cfg.number_of_tokens)
         return S
 
+    def pos_check_function(self, l):
+        return [self.is_part_of_speech(s) for s in l]
+
+    def is_part_of_speech(self, pos):
+        pos_feature = getattr(self, QUERY_ITEM_POS, None)
+        if pos_feature:
+            current_token = tokens.COCAToken(pos)
+            _, table, _ = self.split_resource_feature(pos_feature)
+            S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
+                getattr(self, "{}_id".format(table)),
+                getattr(self, "{}_table".format(table)),
+                pos_feature,
+                self.get_operator(current_token),
+                pos)
+            engine = self.get_engine()
+            df = pd.read_sql(S.replace("%", "%%"), engine)
+            engine.dispose()
+            return len(df.index) > 0
+        else:
+            return False
+
     def get_context(self, token_id, origin_id, number_of_tokens,
                     db_connection, sentence_id=None, left=None, right=None):
         def get_orth(word_id):
@@ -1594,13 +1586,13 @@ class SQLResource(BaseResource):
                             word_feature = getattr(self, QUERY_ITEM_WORD)
                         _, table, feature = self.split_resource_feature(word_feature)
 
-                        self.lexicon.joined_tables = []
-                        self.lexicon.table_list = [self.word_table]
-                        self.lexicon.add_table_path("word_id", word_feature)
+                        self.joined_tables = []
+                        self.table_list = [self.word_table]
+                        self.add_table_path("word_id", word_feature)
 
                         self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
                             getattr(self, word_feature),
-                            " ".join(self.lexicon.table_list),
+                            " ".join(self.table_list),
                             self.word_table,
                             self.word_id)
                     try:
@@ -1732,7 +1724,6 @@ class CorpusClass(object):
 
     def __init__(self):
         super(CorpusClass, self).__init__()
-        self.lexicon = None
         self.resource = None
 
     def get_file_data(self, token_id, features):
@@ -1747,10 +1738,10 @@ class CorpusClass(object):
         else:
             tokens = list(token_id)
 
-        self.lexicon.joined_tables = ["corpus"]
-        self.lexicon.table_list = [self.resource.corpus_table]
+        self.resource.joined_tables = ["corpus"]
+        self.resource.table_list = [self.resource.corpus_table]
 
-        self.lexicon.add_table_path("corpus_id", "file_id")
+        self.resource.add_table_path("corpus_id", "file_id")
 
         feature_list = ["{}.{}".format(
                                     self.resource.file_table,
@@ -1762,7 +1753,7 @@ class CorpusClass(object):
         token_ids = [str(x) for x in tokens]
         S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
                 features=", ".join(feature_list),
-                path=" ".join(self.lexicon.table_list),
+                path=" ".join(self.resource.table_list),
                 corpus=self.resource.corpus_table,
                 corpus_id=self.resource.corpus_id,
                 token_ids=", ".join(token_ids))
@@ -1886,12 +1877,12 @@ class CorpusClass(object):
         if not filters and getattr(self.resource, "number_of_tokens", None):
             return self.resource.number_of_tokens
 
-        self.lexicon.table_list = []
-        self.lexicon.joined_tables = []
+        self.resource.table_list = []
+        self.resource.joined_tables = []
         filter_strings = []
         for rc_feature, values in filters:
             _, tab, feat = self.resource.split_resource_feature(rc_feature)
-            self.lexicon.add_table_path("corpus_id", rc_feature)
+            self.resource.add_table_path("corpus_id", rc_feature)
 
             # FIXME: remove code replication with get_subcorpus_range()
             if len(values) == 1:
@@ -1916,7 +1907,7 @@ class CorpusClass(object):
 
         if filter_strings:
             from_str = "{} WHERE {}".format(
-                " ".join([self.resource.corpus_table] + self.lexicon.table_list),
+                " ".join([self.resource.corpus_table] + self.resource.table_list),
                 " AND ".join(filter_strings))
         else:
             from_str = self.resource.corpus_table
@@ -2007,8 +1998,8 @@ class CorpusClass(object):
         if len(row) == 0:
             val = 0, self.get_corpus_size()
         else:
-            self.lexicon.table_list = []
-            self.lexicon.joined_tables = []
+            self.resource.table_list = []
+            self.resource.joined_tables = []
             conditions = []
             for column in row.index:
                 try:
@@ -2017,7 +2008,7 @@ class CorpusClass(object):
                     print("couldn't split", column)
                     continue
                 _, tab, feat = self.resource.split_resource_feature(rc_feature)
-                self.lexicon.add_table_path("corpus_id", rc_feature)
+                self.resource.add_table_path("corpus_id", rc_feature)
 
                 # FIXME: remove code replication with get_corpus_size()
                 raw_values = self.reverse_substitution(column, row[column])
@@ -2033,7 +2024,7 @@ class CorpusClass(object):
                         ",".join(["'{}'".format(x) for x in raw_values]))
                 conditions.append(s)
 
-            tables = [self.resource.corpus_table] + self.lexicon.table_list
+            tables = [self.resource.corpus_table] + self.resource.table_list
             from_str = "{} WHERE {}".format(" ".join(tables),
                                             " AND ".join(conditions))
 
@@ -2244,9 +2235,9 @@ class CorpusClass(object):
         word_start = getattr(self.resource, "{}_starttime".format(tab), None)
         word_end = getattr(self.resource, "{}_endtime".format(tab), None)
 
-        self.lexicon.table_list = []
-        self.lexicon.joined_tables = []
-        self.lexicon.add_table_path("corpus_id", word_feature)
+        self.resource.table_list = []
+        self.resource.joined_tables = []
+        self.resource.add_table_path("corpus_id", word_feature)
 
         if hasattr(self.resource, "tag_table"):
             headers = ["coquery_invisible_corpus_id", "COQ_TAG_ID"]
@@ -2260,7 +2251,7 @@ class CorpusClass(object):
                 "word_table": word_table,
                 "word_id": word_id,
 
-                "joined_tables": " ".join(self.lexicon.table_list),
+                "joined_tables": " ".join(self.resource.table_list),
 
                 "tag_table": self.resource.tag_table,
                 "tag": self.resource.tag_label,
@@ -2307,7 +2298,7 @@ class CorpusClass(object):
                 "word_table": word_table,
                 "word_id": word_id,
 
-                "joined_tables": " ".join(self.lexicon.table_list),
+                "joined_tables": " ".join(self.resource.table_list),
 
                 "current_source_id": source_id,
                 "start": max(0, token_id - 1000),

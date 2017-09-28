@@ -144,12 +144,6 @@ class Resource(SQLResource):
 {resource_code}
 
 
-class Lexicon(LexiconClass):
-    '''
-    Corpus-specific code
-    '''
-{lexicon_code}
-
 class Corpus(CorpusClass):
     '''
     Corpus-specific code
@@ -665,16 +659,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
             "word" if the resource feature to be exposed is "word_id".
         """
         cls.exposed_ids.append("{}_id".format(table_name))
-
-    def get_lexicon_code(self):
-        """ return a text string containing the Python source code from
-        the class attribute self._lexicon_code. This function is needed
-        to add lexicon-specific code the Python corpus module."""
-        try:
-            lines = [x for x in inspect.getsourcelines(self._lexicon_code)[0] if not x.strip().startswith("class")]
-        except AttributeError:
-            lines = []
-        return "".join(lines)
 
     def get_resource_code(self):
         """ return a text string containing the Python source code from
@@ -1652,7 +1636,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 url=utf8(self.get_url()),
                 variables=utf8(variable_code),
                 corpus_code=utf8(self.get_corpus_code()),
-                lexicon_code=utf8(self.get_lexicon_code()),
                 resource_code=utf8(self.get_resource_code()))
         self.module_content = self.module_content.replace("\\", "\\\\")
         # write module code:

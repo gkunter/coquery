@@ -17,9 +17,10 @@ from .mockmodule import setup_module, MockOptions
 
 setup_module("sqlalchemy")
 
-from coquery.corpus import CorpusClass, LexiconClass, BaseResource
+from coquery.corpus import CorpusClass, SQLResource
 from coquery import textgrids
 from coquery import options
+from coquery.defines import QUERY_MODE_TOKENS
 
 options.cfg = MockOptions()
 
@@ -28,18 +29,12 @@ options.cfg.current_resources = collections.defaultdict(
 
 
 class MockSession(object):
-    def __init__(self, resource):
-        self.lexicon = LexiconClass()
+    def __init__(self):
         self.corpus = CorpusClass()
-        self.Resource = resource
+        self.Resource = TextgridResource(None, self.corpus)
 
-        self.corpus.lexicon = self.lexicon
-        self.corpus.resource = resource
-        self.lexicon.corpus = self.corpus
-        self.lexicon.resource = resource
-
-        resource.corpus = self.corpus
-        resource.lexicon = self.lexicon
+        self.corpus.resource = self.Resource
+        self.Resource.corpus = self.corpus
 
 
 def _get_file_data(_, token_id, features):
@@ -52,7 +47,7 @@ def _get_file_data(_, token_id, features):
 
 CorpusClass.get_file_data = _get_file_data
 
-class TextgridResource(BaseResource):
+class TextgridResource(SQLResource):
     corpus_table = "Corpus"
     corpus_id = "ID"
     corpus_word_id = "WordId"
@@ -79,8 +74,19 @@ class TextgridResource(BaseResource):
 
 class TestTextGridModuleMethods(unittest.TestCase):
     def setUp(self):
-        self.resource = TextgridResource()
-        self.session = MockSession(self.resource)
+        options.cfg = argparse.Namespace()
+        options.cfg.corpus = None
+        options.cfg.MODE = QUERY_MODE_TOKENS
+        options.cfg.current_server = "MockConnection"
+        options.cfg.current_resources = {"MockConnection": "MockCorpus"}
+        options.cfg.input_separator = ","
+        options.cfg.quote_char = '"'
+        options.cfg.input_encoding = "utf-8"
+        options.cfg.csv_restrict = None
+        options.cfg.server_configuration = {}
+
+        self.session = MockSession()
+        self.resource = self.session.Resource
 
         self.selected_features1 = [
             "corpus_starttime", "corpus_endtime"]

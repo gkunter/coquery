@@ -126,7 +126,7 @@ class LinkSelect(QtWidgets.QDialog):
         if not corpus:
             return
 
-        resource, _, _ = options.get_resource(corpus)
+        resource, _ = options.get_resource(corpus)
         self.ui.tree_external.setup_resource(resource,
                                              skip=("coquery"),
                                              checkable=False,

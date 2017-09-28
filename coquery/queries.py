@@ -111,7 +111,7 @@ class TokenQuery(object):
             self._max_number_of_tokens = max(self._max_number_of_tokens, len(x))
 
         tokens.QueryToken.set_pos_check_function(
-            self.Resource.lexicon.pos_check_function)
+            self.Resource.pos_check_function)
 
         for i, self._sub_query in enumerate(self.query_list):
             self._current_number_of_tokens = len([x for _, x in self._sub_query if x])

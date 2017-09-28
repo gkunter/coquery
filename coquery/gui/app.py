@@ -1460,7 +1460,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if self.ui.combo_corpus.count():
             corpus_name = utf8(self.ui.combo_corpus.currentText())
             tup = options.cfg.current_resources[corpus_name]
-            self.resource, self.corpus, self.lexicon, self.path = tup
+            self.resource, self.corpus, self.path = tup
             self.column_tree.setup_resource(self.resource)
         else:
             self.column_tree.clear()
@@ -3017,7 +3017,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import linkselect
 
         current_corpus = utf8(self.ui.combo_corpus.currentText())
-        resource, _, _ = options.get_resource(current_corpus)
+        resource, _ = options.get_resource(current_corpus)
 
         if item:
             rc_from = utf8(item.objectName())

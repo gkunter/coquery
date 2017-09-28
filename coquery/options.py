@@ -497,7 +497,7 @@ class Options(object):
                 # values the features provided by each of the tables defined in
                 # the resource. The features are included as tuples, with first,
                 # the display name and second, the resource feature name.
-                resource, _, _ = get_resource(self.args.corpus, self.args.current_server)
+                resource, _ = get_resource(self.args.corpus, self.args.current_server)
                 corpus_features = resource.get_corpus_features()
                 lexicon_features = resource.get_lexicon_features()
                 for rc_feature, column in corpus_features + lexicon_features:
@@ -1487,8 +1487,8 @@ def get_available_resources(configuration):
 
     This method scans the content of the sub-directory 'corpora' for valid
     corpus modules. This directory has additional subdirectories for each
-    MySQL configuration. If a corpus module is found, the three resource
-    classes Resource, Corpus, and Lexicon are retrieved from the module.
+    MySQL configuration. If a corpus module is found, the resource classes
+    Resource and Corpus are retrieved from the module.
 
     Parameters
     ----------
@@ -1501,7 +1501,7 @@ def get_available_resources(configuration):
     d : dict
         A dictionary with resource names as keys, and tuples of resource
         classes as values:
-        (module.Resource, module.Corpus, module.Lexicon, module_name)
+        (module.Resource, module.Corpus, module_name)
     """
 
     def ensure_init_file(path):
@@ -1529,7 +1529,7 @@ def get_available_resources(configuration):
         #try:
             #validate_module(
                 #module_name,
-                #expected_classes = ["Resource", "Corpus", "Lexicon"],
+                #expected_classes = ["Resource", "Corpus"],
                 #whitelisted_modules = ["corpus", "__future__"],
                 #allow_if = False,
                 #hash = False)
@@ -1553,7 +1553,9 @@ def get_available_resources(configuration):
             logger.warn(s)
         else:
             try:
-                d[module.Resource.name] = (module.Resource, module.Corpus, module.Lexicon, module_name)
+                d[module.Resource.name] = (module.Resource,
+                                           module.Corpus,
+                                           module_name)
             except (AttributeError, ImportError) as e:
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
@@ -1561,8 +1563,8 @@ def get_available_resources(configuration):
 
 def get_resource(name, connection=None):
     """
-    Return a tuple containing the Resource, Corpus, and Lexicon of the
-    corpus module specified by 'name'.
+    Return a tuple containing the Resource and the Corpus of the corpus module
+    specified by 'name'.
 
     Arguments
     ---------
@@ -1575,13 +1577,13 @@ def get_resource(name, connection=None):
     Returns
     -------
     res : tuple
-        A tuple consisting of the Resource class, Corpus class, and Lexicon
-        class defined in the corpus module
+        A tuple consisting of the Resource class and the Corpus class defined
+        in the corpus module
     """
     if not connection:
         connection = cfg.current_server
-    Resource, Corpus, Lexicon, _ = get_available_resources(connection)[name]
-    return Resource, Corpus, Lexicon
+    Resource, Corpus, path = get_available_resources(connection)[name]
+    return Resource, Corpus
 
 
 def decode_query_string(s):

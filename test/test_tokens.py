@@ -10,13 +10,9 @@ from .mockmodule import setup_module
 setup_module("sqlalchemy")
 setup_module("options")
 
-from coquery.corpus import LexiconClass, BaseResource
+from coquery.corpus import BaseResource
 from coquery import tokens
 from coquery import defines
-
-class TestLexicon(LexiconClass):
-    def is_part_of_speech(self, pos):
-        return pos in ["N", "V"]
 
 
 class TestTokensModuleMethods(unittest.TestCase):
@@ -218,7 +214,6 @@ class TestTokensModuleMethods(unittest.TestCase):
     def test_preprocess_string_literal(self):
         S = r"\? \* \_ \%"
         L = [[(1, "\\?"), (2, "\\*"), (3, "\\_"), (4, "\\%")]]
-        print(tokens.preprocess_query(S, literal=True))
         try:
             self.assertItemsEqual(tokens.preprocess_query(S, literal=True), L)
         except AttributeError:
@@ -226,15 +221,11 @@ class TestTokensModuleMethods(unittest.TestCase):
 
     def test_preprocess_string_not_literal(self):
         S = r"\? \* \_ \% ? * _ %"
-        L = [[(1, "?"), (2, "*"), (3, "_"), (4, "%")]]
-        print(tokens.preprocess_query(S, literal=True))
+        L = [[(1, "\\?"), (2, "\\*"), (3, "\\_"), (4, "\\%")]]
         try:
             self.assertItemsEqual(tokens.preprocess_query(S), L)
         except AttributeError:
             self.assertCountEqual(tokens.preprocess_query(S), L)
-
-
-
 
 
 class TestQueryTokenCOCA(unittest.TestCase):
@@ -249,7 +240,6 @@ class TestQueryTokenCOCA(unittest.TestCase):
 
     def setUp(self):
         self.token_type.set_pos_check_function(self.pos_check_function)
-        self.lexicon = TestLexicon()
 
     def test_unicode_1(self):
         token = self.token_type(b"word")
@@ -1224,10 +1214,6 @@ class TestQuantification(unittest.TestCase):
 
     #def runTest(self):
         #super(TestQueryToken, self).runTest()
-
-    #def setUp(self):
-        #import corpus
-        #self.lexicon = corpus.TestLexicon(corpus.BaseResource())
 
     #def test_word_only(self):
         #token = self.token_type('[word="teapot"]')

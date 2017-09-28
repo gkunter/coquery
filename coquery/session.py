@@ -53,19 +53,13 @@ class Session(object):
         # i.e. the corpus specified as an argumment:
         if options.cfg.corpus:
 
-            ResourceClass, CorpusClass, LexiconClass, Path = options.cfg.current_resources[options.cfg.corpus]
+            ResourceClass, CorpusClass, Path = options.cfg.current_resources[options.cfg.corpus]
 
-            current_lexicon = LexiconClass()
             current_corpus = CorpusClass()
-            current_resource = ResourceClass(current_lexicon, current_corpus)
+            current_resource = ResourceClass(None, current_corpus)
 
             self.Corpus = current_corpus
-            self.Corpus.lexicon = current_lexicon
             self.Corpus.resource = current_resource
-
-            self.Lexicon = current_lexicon
-            self.Lexicon.corpus = current_corpus
-            self.Lexicon.resource = current_resource
 
             self.Resource = current_resource
 
@@ -82,7 +76,6 @@ class Session(object):
         else:
             self.Corpus = None
             self.Resource = None
-            self.Lexicon = None
             self.db_engine = None
             warnings.warn("No corpus available on connection '{}'".format(
                 options.cfg.current_server))
