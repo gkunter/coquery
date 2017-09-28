@@ -221,7 +221,8 @@ class TestTokensModuleMethods(unittest.TestCase):
 
     def test_preprocess_string_not_literal(self):
         S = r"\? \* \_ \% ? * _ %"
-        L = [[(1, "\\?"), (2, "\\*"), (3, "\\_"), (4, "\\%")]]
+        L = [[(1, "\\?"), (2, "\\*"), (3, "\\_"), (4, "\\%"),
+              (5, "?"), (6, "*"), (7, "_"), (8, "%")]]
         try:
             self.assertItemsEqual(tokens.preprocess_query(S), L)
         except AttributeError:
