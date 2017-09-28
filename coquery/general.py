@@ -19,6 +19,7 @@ import os
 import tempfile
 import itertools
 import pandas as pd
+import io
 
 from .unicode import utf8
 from .defines import LANGUAGES
@@ -275,6 +276,21 @@ def code_by_language(code):
     ix = dict(zip(LANGUAGES["Language name"].values(),
                   LANGUAGES["Language name"].keys()))[code]
     return LANGUAGES["639-1"][ix]
+
+
+def sha1sum(path, chunk_size=io.DEFAULT_BUFFER_SIZE):
+    """
+    Calculate a SHA1 checksum for the given file.
+
+    This function is based on https://stackoverflow.com/a/40961519/5215507 by
+    Laurent LAPORTE.
+    """
+    sha1 = hashlib.sha1()
+    with io.open(path, mode="rb") as input_file:
+        for chunk in iter(lambda: input_file.read(chunk_size), b''):
+            sha1.update(chunk)
+    return sha1
+
 
 
 def get_chunk(iterable, chunk_size=250000):
