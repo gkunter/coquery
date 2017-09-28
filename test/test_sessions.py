@@ -32,6 +32,7 @@ class TestSessionInputFile(unittest.TestCase):
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
         options.cfg.summary_group = [Summary("summary")]
+        options.cfg.csv_restrict = None
 
         self.temp_file = tempfile.NamedTemporaryFile("w")
         options.cfg.input_path = self.temp_file.name
