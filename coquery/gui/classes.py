@@ -1018,7 +1018,10 @@ class CoqSpinner(QtWidgets.QWidget):
         sizes = [24, 32, 64, 96, 128]
         distances = [abs(x - size) for x in sizes]
         opt_size = sizes[distances.index(min(distances))]
-        anim = QtGui.QMovie(os.path.join(options.cfg.base_path, "icons", "progress_{0}x{0}.gif".format(opt_size)))
+        path = os.path.join(options.cfg.base_path,
+                            "icons",
+                            "progress_{0}x{0}.gif".format(opt_size))
+        anim = QtGui.QMovie(path)
         anim.setScaledSize(QtCore.QSize(size, size))
         return anim
 
@@ -1830,8 +1833,8 @@ class CoqTagBox(QtWidgets.QWidget):
         self.setAcceptDrops(True)
 
         col = options.cfg.app.palette().color(QtGui.QPalette.Light)
-        color = "{ background-color: rgb(%s, %s, %s) ; }" % (col.red(), col.green(), col.blue())
-        S = 'QScrollArea {}'.format(color)
+        S = "QScrollArea {{ background-color: rgb({}, {}, {}); }}".format(
+            col.red(), col.green(), col.blue())
         self.scroll_content.setStyleSheet(S)
 
     def dragEnterEvent(self, e):
@@ -2024,7 +2027,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         self._manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
         self._align = []
         self._dtypes = []
-        self._hidden_columns = []
 
         columns = self.header
         if len(columns) != len(columns.unique()):
@@ -2034,10 +2036,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         # prepare look-up lists that speed up data retrieval:
         for i, col in enumerate(columns):
-            # remember hidden columns:
-            if col in self._manager.hidden_columns:
-                self._hidden_columns.append(i)
-
             # remember dtype of columns:
             self._dtypes.append(df[col].dtype)
 
@@ -2158,19 +2156,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         df = df.fillna(options.cfg.na_string)
         return df
 
-    def is_visible(self, index):
-        try:
-            return index.column() not in self._hidden_columns
-
-            row_vis = self._session.row_visibility[session.query_type]
-            ix = self.content.index[index.row()]
-
-            return (not self._manager.is_hidden_column(index.column()) and
-                    row_vis[ix])
-        except Exception as e:
-            print("is_visible():", e)
-            return False
-
     def data(self, index, role):
         """
         Return a representation of the data cell indexed by 'index', using
@@ -2185,10 +2170,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # for QHTML:
         ix = index.column()
         if role == QtCore.Qt.DisplayRole:
-            if ix not in self._hidden_columns:
-                return self.formatted.values[index.row()][ix]
-            else:
-                return "[hidden]"
+            return self.formatted.values[index.row()][ix]
 
         elif role == QtCore.Qt.EditRole:
             return self.formatted.values[index.row()][ix]
@@ -2256,10 +2238,6 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
         # Get header decoration (i.e. the sorting arrows)?
         elif role == QtCore.Qt.DecorationRole:
-            # no decorator for hidden columns:
-            if column in self._manager.hidden_columns:
-                return None
-
             sorter = self._manager.get_sorter(column)
             if sorter:
                 icon = {(False, False): "Descending Sorting",
@@ -2297,6 +2275,64 @@ class CoqHiddenTableModel(CoqTableModel):
             return self.formatted.values[index.row()][index.column()]
         else:
             return super(CoqHiddenTableModel, self).data(index, role)
+
+class CoqWidgetListView(QtWidgets.QListView):
+    """
+    Define a QListView class that conveniently handles widgets as
+    representations of the items.
+
+    Specifically, it passes changes in the view selection on to the widgets
+    so that they can react to the changes, and vice versa. The slots
+    toggleSelect() and changeSelect() are used for this.
+    """
+    def changeSelect(self, selected, deselected):
+        """
+        Pass changes in the selection to the widgets in the list.
+
+        Specifically, the check state of widgets that have a setCheckState()
+        method will be set to Checked if the widget is in the selection, and
+        to Unchecked if the widget is not in the selection.
+        """
+        self.selectionModel().blockSignals(True)
+        for selection_range in selected:
+            for index in selection_range.indexes():
+                widget = self.indexWidget(index)
+                try:
+                    widget.setCheckState(QtCore.Qt.Checked)
+                except AttributeError:
+                    pass
+        for selection_range in deselected:
+            for index in selection_range.indexes():
+                widget = self.indexWidget(index)
+                try:
+                    widget.setCheckState(QtCore.Qt.Unchecked)
+                except AttributeError:
+                    pass
+        self.selectionModel().blockSignals(False)
+
+    def toggleSelect(self, item):
+        """
+        Toggle the selection state of the item.
+
+        This slot can be used to react to signals emitted by the widgets in
+        the list.
+        """
+        selection_model = self.selectionModel()
+        index = item.index()
+        if index:
+            selection_model.select(index, selection_model.Toggle)
+
+    def setModel(self, model):
+        """
+        Set the current model.
+
+        This method connects the selectionChanged signal from the model to
+        the changeSelect slot of the view. Also, for each item in the model
+        that has a widget in its UserRole, that widget is set to be used in
+        the view.
+        """
+        super(CoqWidgetListView, self).setModel(model)
+        self.selectionModel().selectionChanged.connect(self.changeSelect)
 
 
 class CoqFlowLayout(QtWidgets.QLayout):
