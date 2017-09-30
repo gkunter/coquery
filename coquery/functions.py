@@ -234,7 +234,6 @@ class Function(CoqObject):
 
 
 class StringFunction(Function):
-
     @staticmethod
     def get_description():
         return "Strings"
@@ -686,40 +685,24 @@ class IfAny(If, Or):
         #return cols.apply(lambda x: not bool(x))
 
 
-#class IsNotMissing(LogicFunction):
-    #_name = "ISNOTMISSING"
-    #parameters = 0
+class Missing(LogicFunction):
+    _name = "MISSING"
+    arguments = {}
 
-    #def evaluate(self, df, **kwargs):
-        #columns = self.columns(df, **kwargs)
-        #val = df[columns].notnull()
-        #return val
-
-
-#class IsMissing(IsNotMissing):
-    #_name = "ISMISSING"
-    #parameters = 0
-
-    #def evaluate(self, df, **kwargs):
-        #return ~super(IsMissing, self).evaluate(df, **kwargs)
+    def evaluate(self, df, **kwargs):
+        val = ~df[self.columns].notnull()
+        return val
 
 
-#class IsNotEmpty(LogicFunction):
-    #_name = "ISNOTEMPTY"
-    #parameters = 0
+class Empty(LogicFunction):
+    _name = "EMPTY"
+    arguments = {}
 
-    #def evaluate(self, df, **kwargs):
-        #columns = self.columns(df, **kwargs)
-        #val = df[columns].apply(lambda x: x.notnull() &
-                                 #x.index.isin(x.nonzero()[0]))
-        #return val
-
-
-#class IsEmpty(IsNotEmpty):
-    #_name = "ISEMPTY"
-
-    #def evaluate(self, df, **kwargs):
-        #return ~super(IsEmpty, self).evaluate(df, **kwargs)
+    def evaluate(self, df, **kwargs):
+        val = (~df[self.columns].notnull() |
+               df[self.columns].apply(
+                   lambda x: ~x.index.isin(x.nonzero()[0])))
+        return val
 
 
 #############################################################################

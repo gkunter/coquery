@@ -30,7 +30,7 @@ from coquery.functions import (
     Min, Max, Mean, Median, StandardDeviation, InterquartileRange,
     Percentile,
     Equal, NotEqual, GreaterThan, GreaterEqual, LessThan, LessEqual,
-    And, Or, Xor, If, IfAny,
+    And, Or, Xor, If, IfAny, Empty, Missing,
     )
 from coquery.functionlist import FunctionList
 from coquery import options
@@ -659,6 +659,7 @@ class TestLogicalFunctions(unittest.TestCase):
              "str_1": ["aaa", "bbb", "ccc", "ddd", "eee", "fff"],
              "str_2": ["ccc", "ccc", "ccc", "ddd", "ddd", "ddd"],
              "str_3": ["aaa", None, "ccc", None, "eee", None],
+             "str_4": ["X", ""] * 3,
              })
 
         options.cfg = MockOptions()
@@ -893,6 +894,18 @@ class TestLogicalFunctions(unittest.TestCase):
         func = If
         self.assert_result(func, self.df, columns, expected,
                            value1="one", value2="zero")
+
+    def test_missing(self):
+        columns = ["str_3", "str_4"]
+        val = Missing(columns=columns).evaluate(self.df)
+        npt.assert_equal(val["str_3"].values, [False, True] * 3)
+        npt.assert_equal(val["str_4"].values, [False, False] * 3)
+
+    def test_empty(self):
+        columns = ["str_3", "str_4"]
+        val = Empty(columns=columns).evaluate(self.df)
+        npt.assert_equal(val["str_3"].values, [False, True] * 3)
+        npt.assert_equal(val["str_4"].values, [False, True] * 3)
 
 
 class TestDistributionalFunctions(unittest.TestCase):
