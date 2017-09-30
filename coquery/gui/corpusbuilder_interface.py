@@ -460,6 +460,7 @@ class BuilderGui(InstallerGui):
             self.ui.radio_only_module.hide()
             self.ui.label_only_module.hide()
             self.ui.radio_read_files.setChecked(True)
+            self.ui.groupBox.hide()
         else:
             self.ui.label_read_files.setText("Build new corpus from text files")
             self.ui.label_input_path.setText("Path to text files:")
