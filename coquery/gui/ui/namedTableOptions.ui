@@ -289,15 +289,8 @@
           </property>
           <item>
            <layout class="QGridLayout" name="layout_name_buttons">
-            <item row="0" column="0">
-             <widget class="QPushButton" name="button_word">
-              <property name="text">
-               <string>Word</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="edit_word">
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="edit_gloss">
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -310,10 +303,17 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="edit_lemma">
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="edit_word">
               <property name="readOnly">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QPushButton" name="button_word">
+              <property name="text">
+               <string>Word</string>
               </property>
              </widget>
             </item>
@@ -324,22 +324,8 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="1">
-             <widget class="QLineEdit" name="edit_pos">
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QLineEdit" name="edit_transcript">
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QLineEdit" name="edit_gloss">
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="edit_lemma">
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -359,23 +345,37 @@
               </property>
              </widget>
             </item>
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="edit_transcript">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="edit_pos">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <spacer name="verticalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
            </layout>
           </item>
          </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>0</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </item>
