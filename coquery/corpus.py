@@ -23,6 +23,7 @@ import pandas as pd
 import os
 import tempfile
 import zipfile
+import json
 
 from .errors import UnsupportedQueryItemError
 from .defines import (
@@ -614,6 +615,42 @@ class SQLResource(BaseResource):
             sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
             *args, **kwargs)
 
+    @classmethod
+    def _str_table_desc_mysql(cls, table):
+        S = "SHOW CREATE TABLE {}.{}".format(
+            cls.db_name, getattr(cls, "{}_table".format(table)))
+        return S
+
+    @classmethod
+    def _str_table_desc_sqlite(cls, table):
+        S = "SELECT `sql` FROM sqlite_master WHERE tbl_name = '{}'".format(
+            getattr(cls, "{}_table".format(table)))
+        return S
+
+    def get_table_descriptions(self):
+        engine = self.get_engine()
+        d = {}
+        with engine.connect() as connection:
+            for tab in self.get_table_tree("corpus"):
+                table_name = getattr(self, "{}_table".format(tab))
+                if self.db_type == SQL_MYSQL:
+                    S = "SHOW FIELDS FROM {}"
+                    columns = "name", "type", "null", "key", "default", "ex"
+                else:
+                    S = "PRAGMA table_info({})"
+                    columns = "cid", "name", "type", "null", "default", "key"
+                rows = [dict(zip(columns, x)) for
+                        x in connection.execute(S.format(table_name))]
+                d[table_name] = dict(Fields={}, Primary=None)
+                for row in rows:
+                    if row["key"] in ["PRI", 1]:
+                        d[table_name]["Primary"] = row["name"]
+                    d[table_name]["Fields"][row["name"]] = {
+                        "Type": row["type"],
+                        "Null": "no" if row["null"] in ["NO", 1] else "yes"}
+        engine.dispose()
+        return d
+
     def dump_table(self, path, rc_table):
         engine = self.get_engine()
         table = getattr(self, "{}_table".format(rc_table))
@@ -627,23 +664,59 @@ class SQLResource(BaseResource):
         d = options.get_available_resources(options.cfg.current_server)
         return d[self.name][-1]
 
-    def pack_corpus(self, name):
+    @classmethod
+    def get_pack_steps(cls):
+        return 2 + len(cls.get_table_tree("corpus")) * 2
+
+    def pack_corpus(self, name, file_signal=None, chunk_signal=None):
         """
         Creates a self-contained corpus package.
 
         The corpus package is in essence a zip file containing a dump of each
         table in the data base alongside a corpus module.
+
+        Parameters
+        ----------
+        name : str
+            Name of the package file
+        file_signal : Signal or None
+            If not None, this Qt signal is emitted at the beginning of each
+            new file that is packed. A tuple consisting of the current file
+            name and a string describing the packing stage for the current
+            file is passed as an argument to the signal.
+        chunk_signal : Signal or None
+            If not None, this Qt signal is emitted for each chunk that is
+            written to the current file. A tuple consisting of the current
+            chunk number and the total number of chunks is passed as an
+            argument to the signal.
         """
         zf = zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED)
         for tab in self.get_table_tree("corpus"):
+            tab_name = "{}.csv".format(tab)
+            if file_signal:
+                file_signal.emit((tab_name, "Extracting"))
             temp_file = tempfile.NamedTemporaryFile()
             temp_name = temp_file.name
             try:
                 self.dump_table(temp_name, tab)
-                zf.write(temp_name, arcname="{}.csv".format(tab))
+                if file_signal:
+                    file_signal.emit((tab_name, "Packaging"))
+                zf.write(temp_name, arcname=tab_name)
             finally:
                 temp_file.close()
 
+        temp_file = tempfile.NamedTemporaryFile()
+        temp_name = temp_file.name
+        temp_file.close()
+        if file_signal:
+            file_signal.emit(("tables.json", "Packaging"))
+        with open(temp_name, mode="w", encoding="utf-8") as temp_file:
+            json.dump(self.get_table_descriptions(), temp_file,
+                      ensure_ascii=False)
+        zf.write(temp_name, arcname="tables.json")
+        if file_signal:
+            file_signal.emit((os.path.basename(self.get_module_path()),
+                              "Packaging"))
         zf.write(self.get_module_path(),
                  arcname=os.path.basename(self.get_module_path()))
         zf.close()
@@ -1451,6 +1524,12 @@ class SQLResource(BaseResource):
                     if s not in columns:
                         columns.append(s)
 
+        if not _first_item:
+            _first_item = 1
+
+        # FIXME: It's not fully clear why we go through the selected features
+        # a second time. The first time for lexical features, and the second
+        # for corpus features?
         for rc_feature in selected:
             if rc_feature in corpus_features:
                 _, tab, feat = cls.split_resource_feature(rc_feature)
@@ -1586,7 +1665,7 @@ class SQLResource(BaseResource):
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
                 getattr(self, "{}_id".format(table)),
                 getattr(self, "{}_table".format(table)),
-                pos_feature,
+                getattr(self, pos_feature),
                 self.get_operator(current_token),
                 pos)
             engine = self.get_engine()

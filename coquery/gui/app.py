@@ -143,6 +143,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     useContextConnection = QtCore.Signal(object)
     closeContextConnection = QtCore.Signal(object)
     dataChanged = QtCore.Signal()
+    updatePackStage = QtCore.Signal(tuple)
 
     def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -2606,8 +2607,23 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             self.change_corpus()
 
+    def finalize_export(self):
+        entry, file_name = self._export_data
+        S = "Exported corpus {} to {}.".format(entry, file_name)
+        logging.info(S)
+        self.showMessage(S)
+        self.export_dialog.hide()
+        del self.export_dialog
+
     def export_corpus(self, entry):
-        resource_class, corpus_class, _ = options.cfg.current_resources[entry.name]
+        def progress(pb, tup):
+            file_name, stage = tup
+            val = pb.value()
+            pb.setValue(val + 1)
+            pb.setFormat("{} {}...".format(stage, file_name))
+
+        tup = options.cfg.current_resources[entry.name]
+        resource_class, corpus_class, _ = tup
         corpus = corpus_class()
         resource = resource_class(_, corpus)
 
@@ -2622,15 +2638,27 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if not name:
             return
 
-        # FIXME: this has to be packed into a thread!
-        try:
-            resource.pack_corpus(name)
-        except Exception as e:
-            raise e
-        else:
-            S = "Exported corpus {} to {}.".format(entry.name, name)
-            logging.info(S)
-            self.showMessage(S)
+        from .ui import packageDialogUi
+        self.export_dialog = QtWidgets.QDialog(self)
+        self._export_data = (entry.name, name)
+        self.export_dialog.ui = packageDialogUi.Ui_PackageDialog()
+        self.export_dialog.ui.setupUi(self.export_dialog)
+        self.export_dialog.show()
+        self.export_dialog.ui.progress_stage.setMaximum(
+            resource.get_pack_steps())
+        self.export_dialog.ui.progress_stage.setValue(0)
+        self.export_dialog.ui.progress_stage.setFormat("")
+        self.export_dialog.ui.label.setText(
+            utf8(self.export_dialog.ui.label.text()).format(
+                entry.name, name))
+        self.updatePackStage.connect(
+            lambda tup: progress(self.export_dialog.ui.progress_stage, tup))
+
+        self.export_thread= classes.CoqThread(
+            lambda: resource.pack_corpus(name, self.updatePackStage),
+            parent=self)
+        self.export_thread.taskFinished.connect(self.finalize_export)
+        self.export_thread.start()
 
     def build_corpus(self):
         from coquery. installer import coq_install_generic
