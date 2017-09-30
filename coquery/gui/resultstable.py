@@ -29,17 +29,11 @@ class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
         CoqResultCellDelegate._app = options.cfg.app
         CoqResultCellDelegate._table = get_toplevel_window().table_model
-        CoqResultCellDelegate.standard_bg = {
-            True: [
+        CoqResultCellDelegate.alternating_bg = [
                 CoqResultCellDelegate._app.palette().color(
                     QtGui.QPalette.Normal, QtGui.QPalette.AlternateBase),
                 CoqResultCellDelegate._app.palette().color(
-                    QtGui.QPalette.Normal, QtGui.QPalette.Base)],
-            False: [
-                CoqResultCellDelegate._app.palette().color(
-                    QtGui.QPalette.Disabled, QtGui.QPalette.AlternateBase),
-                CoqResultCellDelegate._app.palette().color(
-                    QtGui.QPalette.Disabled, QtGui.QPalette.Base)]}
+                    QtGui.QPalette.Normal, QtGui.QPalette.Base)]
 
         if not hasattr(CoqResultCellDelegate, "fg_color"):
             CoqResultCellDelegate.fg_color = None
@@ -52,27 +46,23 @@ class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
         elif option.state & QtWidgets.QStyle.State_Selected:
             return self._app.palette().color(QtGui.QPalette().HighlightedText)
         else:
-            if self._table.is_visible(index):
-                try:
-                    return QtGui.QColor(options.cfg.row_color[self._table.content.index[index.row()]])
-                except KeyError:
-                    pass
-                # return column color if specified:
-                try:
-                    return QtGui.QColor(options.cfg.column_color[self._table.header[index.column()]])
-                except KeyError:
-                    # return default color
-                    return self.fg_color
-            else:
-                # return light grey for hidden cells:
-                return self._app.palette().color(QtGui.QPalette.Disabled, QtGui.QPalette.Text)
+            try:
+                return QtGui.QColor(options.cfg.row_color[self._table.content.index[index.row()]])
+            except KeyError:
+                pass
+            # return column color if specified:
+            try:
+                return QtGui.QColor(options.cfg.column_color[self._table.header[index.column()]])
+            except KeyError:
+                # return default color
+                return self.fg_color
 
     def get_background(self, option, index):
         if option.state & QtWidgets.QStyle.State_Selected:
             return self._app.palette().color(QtGui.QPalette().Highlight)
         else:
             if not self.bg_color:
-                return self.standard_bg[self._table.is_visible(index)][index.row() & 1]
+                return self.alternating_bg[index.row() & 1]
             else:
                 return self.bg_color
 
