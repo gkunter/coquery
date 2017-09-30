@@ -19,11 +19,16 @@ from numpy import testing as npt
 from .mockmodule import MockOptions, MockSettings
 
 from coquery.functions import (
+    get_base_func,
+    Function,
+    BaseProportion, TypeTokenRatio,
+    BaseReferenceCorpus, ReferenceCorpusFrequencyPTW,
     Freq,
     StringCount, StringLength, StringChain, StringMatch, StringExtract,
     StringUpper, StringLower, StringReplace,
     Add, Sub, Mul, Div, Log,
-    Min, Max, Mean, Median, StandardDeviation, InterquartileRange, Percentile,
+    Min, Max, Mean, Median, StandardDeviation, InterquartileRange,
+    Percentile,
     Equal, NotEqual, GreaterThan, GreaterEqual, LessThan, LessEqual,
     And, Or, Xor, If, IfAny,
     )
@@ -55,6 +60,21 @@ df2 = pd.DataFrame({
         STRING_COLUMN: ['abc', "Peter's", 'xxx', None],
         INT_COLUMN: [1, 2, 3, 7],
         FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan]})
+
+
+class TestModuleFunctions(unittest.TestCase):
+    def test_get_base_func_1(self):
+        func = Function()
+        self.assertEqual(Function, get_base_func(func))
+        self.assertEqual(Function, get_base_func(Function))
+
+    def test_get_base_func_2(self):
+        self.assertEqual(BaseProportion, get_base_func(TypeTokenRatio))
+
+    def test_get_base_func_3(self):
+        self.assertEqual(BaseReferenceCorpus,
+                         get_base_func(ReferenceCorpusFrequencyPTW))
+
 
 
 class TestFrequencyFunctions(unittest.TestCase):
@@ -919,6 +939,7 @@ provided_tests = (
                   TestMathFunctions,
                   TestLogicalFunctions,
                   TestDistributionalFunctions,
+                  TestModuleFunctions,
                   )
 
 
