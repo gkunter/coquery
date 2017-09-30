@@ -32,6 +32,7 @@ class CoqLinkedLists(QtWidgets.QAbstractItemView):
         self.models = []
         self.ui.list_classes.currentRowChanged.connect(
             self.setCurrentCategoryRow)
+        self.ui.list_functions.activated.connect(self.setCurrentListRow)
 
     def verticalOffset(self):
         return 0
@@ -46,8 +47,8 @@ class CoqLinkedLists(QtWidgets.QAbstractItemView):
 
     def addList(self, left_item, right_items):
         self.ui.list_classes.addItem(left_item)
-        self._set_left_width(max(self._width_left,
-                                 QtWidgets.QLabel(left_item.text()).sizeHint().width()))
+        w = QtWidgets.QLabel(left_item.text()).sizeHint().width()
+        self._set_left_width(max(self._width_left, w))
 
         new_model = QtGui.QStandardItemModel()
         for item in right_items:
@@ -68,22 +69,18 @@ class CoqLinkedLists(QtWidgets.QAbstractItemView):
         return len(self.models)
 
     def setCurrentListRow(self, i):
-        index = self.ui.list_functions.model().index(i, 0)
-        selection_model = self.ui.list_functions.selectionModel()
-        selection_model.select(index, selection_model.Select)
+        if type(i) == int:
+            index = self.ui.list_functions.model().index(i, 0)
+        else:
+            index = i
+        self.ui.list_functions.edit(index)
 
     def setAlternatingRowColors(self, value):
         self.ui.list_functions.setAlternatingRowColors(value)
 
     def setCurrentCategoryRow(self, i):
-        self.blockSignals(True)
-        self.ui.list_classes.blockSignals(True)
-
         self.ui.list_functions.setModel(self.models[i])
         self.ui.list_classes.setCurrentRow(i)
-
-        self.blockSignals(False)
-        self.ui.list_classes.blockSignals(False)
 
     def setListDelegate(self, delegate):
         delegate.setParent(self.ui.list_functions)
@@ -96,18 +93,17 @@ class CoqLinkedLists(QtWidgets.QAbstractItemView):
     def setEditTriggers(self, *args, **kwargs):
         self.ui.list_functions.setEditTriggers(*args, **kwargs)
 
+    def event(self, ev, *args, **kwargs):
+        if ev.type() == ev.UpdateRequest:
+            self.ui.list_functions.update()
+        return super(CoqLinkedLists, self).event(ev, *args, **kwargs)
+
 
 def main():
     import sys
-    from .groups import GroupFunctionWidget
     from .groups import GroupFunctionDelegate
 
     from ..functions import (
-                        Function,
-                        get_base_func,
-                        #FilteredRows, PassingRows,
-                        Entropy,
-                        #SuperCondProb, ExternalCondProb,
                         Min, Max, Mean, Median, StandardDeviation,
                         InterquartileRange,
                         Freq, FreqNorm,
@@ -118,8 +114,6 @@ def main():
                         ReferenceCorpusFrequencyPMW,
                         ReferenceCorpusLLKeyness,
                         ReferenceCorpusDiffKeyness,
-                        RowNumber,
-                        Percent, Proportion,
                         Tokens, Types,
                         TypeTokenRatio,
                         CorpusSize, SubcorpusSize)
@@ -140,7 +134,6 @@ def main():
              ReferenceCorpusLLKeyness]),
          )
 
-
     app = QtWidgets.QApplication(sys.argv)
 
     l = CoqLinkedLists()
@@ -154,7 +147,8 @@ def main():
         function_items = []
         for fnc in lst:
             list_item = QtGui.QStandardItem(str(fnc))
-            list_item.setData([fnc, [], [], False], QtCore.Qt.UserRole)
+            list_item.setData([fnc, ["abcdefg"] * 10, [], False],
+                              QtCore.Qt.UserRole)
             function_items.append(list_item)
 
         l.addList(group_item, function_items)
@@ -167,7 +161,6 @@ def main():
         for row in range(sublist.rowCount()):
             item = sublist.item(row, 0)
             print(item.data(QtCore.Qt.UserRole))
-
 
 
 if __name__ == "__main__":
