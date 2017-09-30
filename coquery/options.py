@@ -875,8 +875,11 @@ class Options(object):
                 self.args.show_log_messages = [x.strip() for x in s.split(",") if x]
             except:
                 s = defaults["show_log_messages"]
-            self.args.digits = config_file.int("gui", "decimal_digits", d=defaults)
-            self.args.float_format = config_file.str("gui", "float_format", fallback="{:.%if}" % self.args.digits)
+            self.args.digits = config_file.int(
+                "gui", "decimal_digits", d=defaults)
+            self.args.float_format = config_file.str(
+                "gui", "float_format",
+                fallback="{:.%if}" % self.args.digits)
 
             # read FILTER section
 
@@ -1187,6 +1190,7 @@ def save_configuration():
         config.set("gui", "show_output_columns", cfg.show_output_columns)
         config.set("gui", "last_toolbox", cfg.last_toolbox)
         config.set("gui", "drop_duplicates", cfg.drop_duplicates)
+        config.set("gui", "decimal_digits", cfg.digits)
 
         try:
             config.set("gui", "select_radio_query_file", cfg.select_radio_query_file)
@@ -1480,7 +1484,7 @@ def get_resource_of_database(db_name):
     Get the resource that uses the database.
     """
     for name in cfg.current_resources:
-        resource, _, _, _ = cfg.current_resources[name]
+        resource, _, _ = cfg.current_resources[name]
         if resource.db_name == db_name:
             return resource
     return None
