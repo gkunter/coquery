@@ -17,13 +17,15 @@ import pandas as pd
 import os
 import logging
 
-from coquery import options, NAME
+from coquery import options
 from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.corpusbuilder import (Column, Identifier, Link)
 from coquery.documents import (pdf_to_str, docx_to_str, odt_to_str,
                                html_to_str, plain_to_str,
                                detect_file_type,
                                FT_PDF, FT_DOCX, FT_ODT, FT_HTML, FT_PLAIN)
+
+re_punct = re.compile("[.!?'\"]")
 
 
 class BuilderClass(BaseCorpusBuilder):
@@ -286,7 +288,6 @@ class BuilderClass(BaseCorpusBuilder):
         self._meta_table = df
         self._meta_file = file_name
 
-
     def has_metadata(self, file_name):
         if self._meta_table is None:
             return False
@@ -302,7 +303,7 @@ class BuilderClass(BaseCorpusBuilder):
         if self.arguments.metadata:
             basename = os.path.basename(file_name)
             if (basename not in self.special_files and
-                self.has_metadata(basename)):
+                    self.has_metadata(basename)):
                 self._file_id = self._meta_table[
                     self._meta_table[
                         self.file_name] == basename].index[0]
@@ -425,9 +426,9 @@ class BuilderClass(BaseCorpusBuilder):
                 # (c) the next word starts with a captial letter
 
                 if (token and
-                    final_punctuation and
-                    not re.sub("[.!?'\"]", "", "".join(final_punctuation)) and
-                    token[0] == token[0].upper()):
+                        final_punctuation and
+                        not re_punct.sub("", "".join(final_punctuation)) and
+                        token[0] == token[0].upper()):
                     self._sentence_id += 1
 
                 # next, detect any word-final punctuation:
@@ -458,5 +459,3 @@ class BuilderClass(BaseCorpusBuilder):
                 # add final punctuation:
                 for p in final_punctuation:
                     self.add_token(p, "PUNCT")
-
-
