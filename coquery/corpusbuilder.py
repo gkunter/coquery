@@ -302,13 +302,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
     def check_arguments(self):
         """ Check the command line arguments. Add defaults if necessary."""
         return
-        if not self._widget:
-            self.arguments, unknown = self.parser.parse_known_args()
-            if not options.use_nltk:
-                self.arguments.use_nltk = False
-            if not self.arguments.db_name:
-                self.arguments.db_name = self.arguments.name
-            self.name = self.arguments.name
 
     def additional_arguments(self):
         """ Use this function if your corpus installer requires additional
@@ -1743,8 +1736,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         logging.info("--- Starting ---")
         logging.info("Building corpus %s" % self.name)
         logging.info("Command line arguments: %s" % " ".join(sys.argv[1:]))
-        if not self._widget:
-            print("\n%s\n" % textwrap.TextWrapper(width=79).fill(" ".join(self.get_description())))
 
         # Corpus installers may require additional modules. For example,
         # Gabra is currently distributed as MongoDB files, which are read by
@@ -1784,7 +1775,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                                     self.arguments.db_name)
         except:
             pass
-
         path = self.get_module_path(self.arguments.name)
         try:
             os.remove(path)
@@ -1843,12 +1833,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
         self.setup_db()
 
         if self._widget:
-            steps = 1 + (int(self.arguments.l) +
-                         int(self.arguments.lookup_ngram) +
+            steps = 3 + (int(self.arguments.lookup_ngram) +
                          int(self.additional_stages != []) +
-                         (int(self.arguments.o)
-                          if self.DB.db_type == SQL_MYSQL else 0) +
-                         int(self.arguments.i))
+                         int(self.DB.db_type == SQL_MYSQL))
             self._widget.ui.progress_bar.setMaximum(steps)
 
         current = 0
@@ -1859,12 +1846,14 @@ class BaseCorpusBuilder(corpus.SQLResource):
             progress_done()
 
             try:
+                # create tables
                 if not self.interrupted:
                     if self.arguments.metadata:
                         self.add_metadata(self.arguments.metadata)
                     self.build_create_tables()
                     progress_done()
 
+                # read files
                 if not self.interrupted:
                     current = progress_next(current)
                     if self.arguments.metadata:
@@ -1873,6 +1862,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                     self.commit_data()
                     progress_done()
 
+                # any additional stage
                 if not self.interrupted:
                     current = progress_next(current)
                     for stage in self.additional_stages:
@@ -1880,11 +1870,13 @@ class BaseCorpusBuilder(corpus.SQLResource):
                             stage()
                     progress_done()
 
+                # optimize
                 if (not self.interrupted and self.DB.db_type == SQL_MYSQL):
                     current = progress_next(current)
                     self.build_optimize()
                     progress_done()
 
+                # lookup table
                 try:
                     if self.arguments.lookup_ngram and not self.interrupted:
                         current = progress_next(current)
@@ -1895,11 +1887,13 @@ class BaseCorpusBuilder(corpus.SQLResource):
                     print(e)
                     raise e
 
+                # build indexes
                 if not self.interrupted:
                     current = progress_next(current)
                     self.build_create_indices()
                     progress_done()
 
+                # write module
                 if not self.interrupted:
                     current = progress_next(current)
                     self.build_write_module()
