@@ -18,6 +18,7 @@ import re
 import logging
 import os
 import sys
+import zipfile
 
 from coquery import options
 from coquery import sqlhelper
@@ -33,6 +34,7 @@ from . import errorbox
 from . import csvoptions
 from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
+from .ui.readPackageUi import Ui_PackageInstaller
 
 
 class InstallerGui(QtWidgets.QDialog):
@@ -63,8 +65,9 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.use_pos_tagging.hide()
         self.ui.progress_box.hide()
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setText(self.button_label)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).clicked.connect(self.start_install)
+        yes_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
+        yes_button.setText(self.button_label)
+        yes_button.clicked.connect(self.start_install)
 
         self.ui.corpus_name.setText(builder_class.get_name())
         self.ui.corpus_name.setReadOnly(True)
@@ -111,6 +114,24 @@ class InstallerGui(QtWidgets.QDialog):
         self.progressUpdate.connect(self.update_progress)
 
         self.generalUpdate.connect(self.general_update)
+
+    def progress(self, pb, tup):
+        if pb == self.ui.progress_bar:
+            i, n = tup
+            if n is None:
+                pb.setMaximum(i)
+                pb.setValue(i)
+                pb.setFormat("Chunk %v")
+            else:
+                pb.setMaximum(n)
+                pb.setValue(i)
+                pb.setFormat("%p%")
+        else:
+            self.ui.progress_general.setFormat("")
+            file_name, stage = tup
+            val = pb.value()
+            pb.setValue(val + 1)
+            pb.setFormat("{} {}...".format(stage, file_name))
 
     def restore_settings(self):
         self.ui.radio_read_files.blockSignals(True)
@@ -180,7 +201,7 @@ class InstallerGui(QtWidgets.QDialog):
                 self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
                 return
             if ((self._onefile and not os.path.isfile(path)) or
-                (not self._onefile and not os.path.isdir(path))):
+                    (not self._onefile and not os.path.isdir(path))):
                 self.ui.issue_label.setText("Illegal data source path.")
                 self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
                 self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
@@ -231,10 +252,11 @@ class InstallerGui(QtWidgets.QDialog):
             name = name[0]
         if name:
             if not self.builder_class.probe_metadata(name):
-                QtWidgets.QMessageBox.critical(self,
-                                           "Invalid meta data file – Coquery",
-                                           msg_invalid_metadata,
-                                           QtWidgets.QMessageBox.Yes)
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Invalid meta data file – Coquery",
+                    msg_invalid_metadata,
+                    QtWidgets.QMessageBox.Yes)
             else:
                 self.ui.label_metafile.setText(name)
                 self.ui.check_use_metafile.setChecked(True)
@@ -271,10 +293,14 @@ class InstallerGui(QtWidgets.QDialog):
         self.builder.build()
 
     def finish_install(self):
+        yes = QtWidgets.QDialogButtonBox.Yes
+        cancel = QtWidgets.QDialogButtonBox.Cancel
+        ok = QtWidgets.QDialogButtonBox.Ok
+
         if self.state == "failed":
             S = "Installation of {} failed.".format(self.builder.name)
             self.ui.progress_box.hide()
-            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(True)
+            self.ui.buttonBox.button(yes).setEnabled(True)
             self.ui.widget_options.setEnabled(True)
         else:
             self.state = "finished"
@@ -282,10 +308,12 @@ class InstallerGui(QtWidgets.QDialog):
             self.ui.label.setText("Installation complete.")
             self.ui.progress_bar.hide()
             self.ui.progress_general.hide()
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes))
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel))
-            self.ui.buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
-            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.accept)
+
+            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(yes))
+            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(cancel))
+            self.ui.buttonBox.addButton(ok)
+            self.ui.buttonBox.button(ok).clicked.connect(self.accept)
+
             self.parent().showMessage(S)
             self.accept()
         self.parent().showMessage(S)
@@ -293,11 +321,11 @@ class InstallerGui(QtWidgets.QDialog):
     def install_exception(self):
         self.state = "failed"
         if isinstance(self.exception, RuntimeError):
-            QtWidgets.QMessageBox.critical(self, "Installation error – Coquery",
-                                        str(self.exception))
+            QtWidgets.QMessageBox.critical(
+                self, "Installation error – Coquery", str(self.exception))
         elif isinstance(self.exception, DependencyError):
-            QtWidgets.QMessageBox.critical(self, "Missing Python module – Coquery",
-                                        str(self.exception))
+            QtWidgets.QMessageBox.critical(
+                self, "Missing Python module – Coquery", str(self.exception))
         else:
             errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
 
@@ -306,10 +334,12 @@ class InstallerGui(QtWidgets.QDialog):
             if self.state == "finished":
                 self.accept()
             elif self.install_thread:
-                response = QtWidgets.QMessageBox.warning(self,
+                response = QtWidgets.QMessageBox.warning(
+                    self,
                     "Aborting installation",
                     msg_install_abort,
-                    QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.Yes)
+                    QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.Yes)
                 if response:
                     self.install_thread.quit()
                     super(InstallerGui, self).reject()
@@ -511,7 +541,6 @@ class BuilderGui(InstallerGui):
             if self.ui.use_pos_tagging.isChecked():
                 self.pos_check()
 
-
         if self._onefile:
             self.ui.input_path.setText(options.cfg.corpus_table_source_path)
         else:
@@ -635,34 +664,42 @@ class BuilderGui(InstallerGui):
         self.validate_dialog()
 
     def validate_dialog(self, check_path=False):
-        def validate_name_not_empty():
+        style_warn = "QLineEdit {background-color: lightyellow; }"
+
+        def validate_name_not_empty(button):
             if not utf8(self.ui.corpus_name.text()):
-                self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                self.ui.issue_label.setText("The corpus name cannot be empty.")
+                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.issue_label.setText(
+                    "The corpus name cannot be empty.")
                 button.setEnabled(False)
 
-        def validate_name_is_unique():
-            if utf8(self.ui.corpus_name.text()) in options.cfg.current_resources:
-                self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                self.ui.issue_label.setText("There is already another corpus with this name..")
+        def validate_name_is_unique(button):
+            if (utf8(self.ui.corpus_name.text())
+                    in options.cfg.current_resources):
+                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.issue_label.setText(
+                    "There is already another corpus with this name..")
                 button.setEnabled(False)
 
-        def validate_db_does_not_exist():
+        def validate_db_does_not_exist(button):
             db_exists = sqlhelper.has_database(
                 options.cfg.current_server,
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if db_exists:
-                self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                self.ui.issue_label.setText("There is already another corpus that uses a database with this name.")
+                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.issue_label.setText(
+                    "There is already another corpus that uses a database "
+                    "with this name.")
                 button.setEnabled(False)
 
-        def validate_db_does_exist():
+        def validate_db_does_exist(button):
             db_exists = sqlhelper.has_database(
                 options.cfg.current_server,
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if not db_exists:
-                self.ui.corpus_name.setStyleSheet('QLineEdit {background-color: lightyellow; }')
-                self.ui.issue_label.setText("There is no database that uses this name.")
+                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.issue_label.setText(
+                    "There is no database that uses this name.")
                 button.setEnabled(False)
 
         super(BuilderGui, self).validate_dialog(check_path)
@@ -672,14 +709,12 @@ class BuilderGui(InstallerGui):
         self.ui.issue_label.setText("")
         if hasattr(self.ui, "corpus_name"):
             self.ui.corpus_name.setStyleSheet("")
-
-        if hasattr(self.ui, "corpus_name"):
-            validate_name_not_empty()
+            validate_name_not_empty(button)
             if self.ui.radio_only_module.isChecked():
-                validate_db_does_exist()
+                validate_db_does_exist(button)
             else:
-                validate_name_is_unique()
-                validate_db_does_not_exist()
+                validate_name_is_unique(button)
+                validate_db_does_not_exist(button)
 
     def select_path(self):
         if self._onefile:
@@ -689,7 +724,8 @@ class BuilderGui(InstallerGui):
                 path = os.path.split(options.cfg.corpus_table_source_path)[0]
             name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
         else:
-            name = QtWidgets.QFileDialog.getExistingDirectory(directory=options.cfg.text_source_path)
+            name = QtWidgets.QFileDialog.getExistingDirectory(
+                directory=options.cfg.text_source_path)
 
         if type(name) == tuple:
             name = name[0]
@@ -703,25 +739,29 @@ class BuilderGui(InstallerGui):
     def install_exception(self):
         self.state = "failed"
         if type(self.exception) == RuntimeError:
-            QtWidgets.QMessageBox.critical(self, "Corpus building error – Coquery",
-                                        str(self.exception))
+            QtWidgets.QMessageBox.critical(
+                self, "Corpus building error – Coquery", str(self.exception))
         else:
             errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
+
+    def write_adhoc(self):
+        # Create an installer in the adhoc directory:
+        path = os.path.join(
+            options.cfg.adhoc_path, "coq_install_{}.py".format(
+                self.builder.arguments.db_name))
+        with codecs.open(path, "w", encoding="utf-8") as output_file:
+            for line in self.builder.create_installer_module():
+                output_file.write(utf8(line))
 
     def finish_install(self, *args, **kwargs):
         super(BuilderGui, self).finish_install(*args, **kwargs)
 
         options.settings.setValue("corpusbuilder_size", self.size())
-        options.settings.setValue("corpusbuilder_nltk", str(self.ui.use_pos_tagging.isChecked()))
+        options.settings.setValue("corpusbuilder_nltk",
+                                  str(self.ui.use_pos_tagging.isChecked()))
 
         if self.state == "finished":
-            # Create an installer in the adhoc directory:
-            path = os.path.join(
-                options.cfg.adhoc_path, "coq_install_{}.py".format(
-                    self.builder.arguments.db_name))
-            with codecs.open(path, "w", encoding="utf-8") as output_file:
-                for line in self.builder.create_installer_module():
-                    output_file.write(utf8(line))
+            self.write_adhoc()
 
     def get_arguments_from_gui(self):
         namespace = super(BuilderGui, self).get_arguments_from_gui()
@@ -731,4 +771,210 @@ class BuilderGui(InstallerGui):
         namespace.use_meta = self.ui.check_use_metafile.checkState()
         namespace.db_name = "coq_{}".format(namespace.name).lower()
         namespace.one_file = self._onefile
+        return namespace
+
+
+class PackageGui(BuilderGui):
+    button_label = "Read package"
+
+    chunkProgress = QtCore.Signal(int, int)
+    fileProgress = QtCore.Signal(str, str)
+
+    def __init__(self, builder_class, parent=None):
+        QtWidgets.QDialog.__init__(self, parent)
+        self.builder_class = builder_class
+        self.ngram_width = None
+        self.state = None
+
+        self.ui = Ui_PackageInstaller()
+        self.ui.setupUi(self)
+        self.ui.yes_button = self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.Yes)
+
+        self.ui.yes_button.setText(self.button_label)
+
+        self.ui.yes_button.clicked.connect(self.start_install)
+        self.ui.button_input_path.clicked.connect(self.select_file)
+        self.ui.input_path.clicked.connect(self.select_file)
+        self.ui.corpus_name.textChanged.connect(self.validate_dialog)
+        self.validate_dialog()
+
+    def select_file(self):
+        """
+        Set the path to the package file.
+        """
+        name = QtWidgets.QFileDialog.getOpenFileName(
+            directory=options.cfg.export_file_path,
+            caption="Select corpus package file",
+            filter="Coquery package files (*.coq);;Any file (*.*)")
+
+        if type(name) == tuple:
+            name = name[0]
+        name = utf8(name)
+        if name:
+            try:
+                corpus_name, license, ngram_width = self.validate_file(name)
+            except RuntimeError as e:
+                QtWidgets.QMessageBox.critical(
+                    self, "Invalid package file", str(e))
+            else:
+                self.file_name = name
+                self.ngram_width = ngram_width
+                options.cfg.export_file_path = os.path.dirname(name)
+                self.ui.corpus_name.setText(corpus_name)
+                self.ui.text_license.setText(license)
+                self.ui.input_path.setText(name)
+                self.validate_dialog()
+
+    def validate_file(self, file_name):
+        """
+        Check if the file is a valid package file.
+
+        A file is considered a package file if
+        - it is a valid ZIP file
+        - contains a table file 'tables.json'
+        - contains a license file 'LICENSE'
+        - contains a file named 'corpus.csv'
+        - contains exactly one file that ends in '.py'
+
+        If any of these conditions is not met, a RuntimeError is raised.
+        """
+        err = "The file does not appear to be a valid package file: {}"
+        try:
+            zf = zipfile.ZipFile(file_name, "r")
+            packaged_files = zf.namelist()
+        except zipfile.BadZipFile:
+            raise RuntimeError(err.format("Illegal file format"))
+
+        check_tables_file = [os.path.basename(x) == "tables.json"
+                             for x in packaged_files]
+        check_license_file = [os.path.basename(x) == "LICENSE"
+                              for x in packaged_files]
+        check_module_file = [x for x in packaged_files if
+                             os.path.basename(x).endswith(".py")]
+        check_corpus_file = [os.path.basename(x) == "corpus.csv"
+                             for x in packaged_files]
+
+        if not any(check_tables_file):
+            raise RuntimeError(
+                err.format("Missing <code>tables.json</code>"))
+        if not any(check_license_file):
+            raise RuntimeError(err.format("Missing <code>LICENSE</code>"))
+        if not any(check_corpus_file):
+            raise RuntimeError(err.format("Missing <code>corpus.csv</code>"))
+        if len(check_module_file) == 0:
+            raise RuntimeError(err.format("Missing corpus module"))
+        if len(check_module_file) > 1:
+            raise RuntimeError(err.format("Too many corpus modules"))
+
+        license = utf8(zf.read("LICENSE"))
+
+        corpus_name = None
+        corpusngram_width = None
+        module = utf8(zf.read(check_module_file[0])).split("\n")
+        for line in module:
+            line = line.strip()
+            match = re.match("name = '(.*)'", line)
+            if match:
+                corpus_name = match.group(1)
+            match = re.match("corpusngram_width = '(.*)'", line)
+            if match:
+                corpusngram_width = int(match.group(1))
+        return (corpus_name, license, corpusngram_width)
+
+    def validate_dialog(self):
+        """
+        Enable or disable widgets according to the current state of the
+        interface.
+        """
+        self.ui.input_path.setStyleSheet("")
+        self.ui.issue_label.setText("")
+        self.ui.yes_button.setEnabled(True)
+        self.ui.group_options.show()
+        self.ui.progress_box.hide()
+
+        path = utf8(self.ui.input_path.text())
+        if not path or not os.path.isfile(path):
+            if path and not os.path.isfile(path):
+                self.ui.input_path.setStyleSheet(
+                    'QLineEdit {background-color: lightyellow; }')
+            self.ui.yes_button.setDisabled(True)
+            self.ui.group_options.hide()
+        else:
+            super(PackageGui, self).validate_dialog(check_path=False)
+
+    def start_install(self):
+        self.ui.progress_box.show()
+        self.ui.group_options.hide()
+
+        self.installStarted.emit()
+        self.builder = self.builder_class(
+            gui=self, package=utf8(self.ui.input_path.text()))
+
+        self.builder.setChunkSignal(self.chunkProgress)
+        self.builder.setFileSignal(self.fileProgress)
+        self.chunkProgress.connect(
+            lambda *tup: self.progress(self.ui.progress_bar, tup))
+        self.fileProgress.connect(
+            lambda *tup: self.progress(self.ui.progress_general, tup))
+
+        self.builder.name = utf8(self.ui.corpus_name.text())
+        self.builder.arguments = self.get_arguments_from_gui()
+
+        self.ui.yes_button.setDisabled(True)
+
+        self.install_thread = classes.CoqThread(self.do_install, self)
+        self.install_thread.setInterrupt(self.builder.interrupt)
+        self.install_thread.taskFinished.connect(self.finish_install)
+        self.install_thread.taskException.connect(self.install_exception)
+        self.install_thread.start()
+
+    def finish_install(self):
+        self.ui.progress_box.hide()
+
+        if self.state == "failed":
+            S = "Installation of {} failed.".format(self.builder.name)
+            self.ui.yes_button.setEnabled(True)
+            self.ui.group_options.show()
+        else:
+            self.state = "finished"
+            self.write_adhoc()
+            S = "Finished installing {}.".format(self.builder.name)
+            self.ui.label.setText("Installation complete.")
+            self.ui.buttonBox.removeButton(self.ui.yes_button)
+            self.ui.buttonBox.removeButton(
+                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel))
+            self.ui.buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
+            self.ui.buttonBox.button(
+                QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.accept)
+            self.parent().showMessage(S)
+            self.accept()
+
+        self.parent().showMessage(S)
+
+    def accept(self):
+        super(InstallerGui, self).accept()
+
+    def get_arguments_from_gui(self):
+        namespace = argparse.Namespace()
+        namespace.only_module = self.ui.radio_only_module.isChecked()
+        if self.ngram_width is not None:
+            namespace.lookup_ngram = True
+            namespace.ngram_width = self.ngram_width
+        else:
+            namespace.lookup_ngram = False
+
+        namespace.name = self.builder.name
+        namespace.encoding = "utf-8"
+        namespace.db_name = "coq_{}".format(self.builder.name.lower())
+        namespace.metadata = False
+        try:
+            (namespace.db_host,
+             namespace.db_port,
+             namespace.db_type,
+             namespace.db_user,
+             namespace.db_password) = options.get_con_configuration()
+        except ValueError:
+            raise SQLNoConfigurationError
+        namespace.current_server = options.cfg.current_server
         return namespace
