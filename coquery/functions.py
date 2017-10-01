@@ -661,7 +661,7 @@ class If(And):
         # True, see e.g. https://stackoverflow.com/q/17273312/)
         if _null.any():
             recode = recode.astype(object)
-            recode[_null] = None
+            recode[val.index[_null]] = None
         return pd.Series(data=recode, index=val.index)
 
 
