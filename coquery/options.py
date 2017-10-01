@@ -413,32 +413,6 @@ class Options(object):
         only the database settings from the configuration file are used.
         """
 
-        def add_shorthand(group, d, shorthand, resource_list, description):
-            """
-            Add the suitable shorthand from the resource list to the group.
-            """
-            for rc_feature in resource_list:
-                if rc_feature.startswith("query_item_"):
-                    # special treatment of query item mappings:
-                    try:
-                        d[shorthand] = getattr(resource, rc_feature)
-                    except AttributeError:
-                        continue
-                    else:
-                        break
-                elif hasattr(resource, rc_feature):
-                    d[shorthand] = rc_feature
-                    break
-            if shorthand in d:
-                _, tab, _ = resource.split_resource_feature(d[shorthand])
-                table = getattr(resource, "{}_table".format(tab))
-                feature = getattr(resource, d[shorthand])
-                group.add_argument(
-                    shorthand,
-                    help="{}, equivalent to '-{} {}'".format(
-                        description, table, feature),
-                    action="store_true")
-
         self.setup_parser()
 
         # Do a first argument parse to get the corpus to be used, and
@@ -528,35 +502,6 @@ class Options(object):
                     group_help = "This option will include the data column '{1}' from the table '{0}' in the output.".format(table, list(D[rc_table])[0][0])
                 group = self.parser.add_argument_group(group_name, group_help)
                 group.add_argument("--{}".format(table), choices=sorted([x for x, _ in D[rc_table]]), dest=rc_table, action="append")
-
-            # add output column shorthand options
-            group = self.parser.add_argument_group("Output column shorthands", "These options are shorthand forms that select some commonly used output columns. The equivalent shows the corresponding longer output option.")
-
-            add_shorthand(group, shorthands, "-U", ["corpus_id"], "show the corpus ID of each token")
-
-            add_shorthand(group, shorthands, "-O",
-                          ["query_item_word", "word_label", "corpus_word"],
-                          "show the orthographic form of each token")
-
-            add_shorthand(group, shorthands, "-L",
-                          ["query_item_lemma", "lemma_label", "word_lemma", "corpus_lemma"],
-                          "show the lemma of each token")
-
-            add_shorthand(group, shorthands, "-P",
-                          ["query_item_pos", "pos_label", "word_pos", "corpus_pos"],
-                          "show the part-of-speech tag of each token")
-
-            add_shorthand(group, shorthands, "-T",
-                          ["query_item_transcript", "transcript_label", "word_transcript", "corpus_transcript"],
-                          "show the transcription of each token")
-
-            add_shorthand(group, shorthands, "-G",
-                          ["query_item_gloss", "gloss_label", "word_gloss", "corpus_gloss"],
-                          "show the gloss of each token")
-
-            add_shorthand(group, shorthands, "-F",
-                          ["file_name", "file_label", "corpus_file"],
-                          "show the name of the file containing each token")
 
         self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
 
@@ -1567,6 +1512,7 @@ def get_available_resources(configuration):
                                            module.Corpus,
                                            module_name)
             except (AttributeError, ImportError) as e:
+                print(e)
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
 
