@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>107</height>
+    <height>144</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,8 +22,17 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="text">
-      <string>Packaging corpus {} into file {}...</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Packaging &amp;lt;b&amp;gt;'{}'&amp;lt;/b&amp;gt; into &lt;/p&gt;&lt;p&gt;&amp;lt;code&amp;gt;{}&amp;lt;/code&amp;gt;...&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
     </widget>
    </item>

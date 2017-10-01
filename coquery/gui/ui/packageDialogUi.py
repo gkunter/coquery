@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_PackageDialog(object):
     def setupUi(self, PackageDialog):
         PackageDialog.setObjectName("PackageDialog")
-        PackageDialog.resize(640, 107)
+        PackageDialog.resize(640, 144)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -20,6 +20,12 @@ class Ui_PackageDialog(object):
         self.verticalLayout = QtWidgets.QVBoxLayout(PackageDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QtWidgets.QLabel(PackageDialog)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setWordWrap(True)
         self.label.setObjectName("label")
         self.verticalLayout.addWidget(self.label)
         self.progress_stage = QtWidgets.QProgressBar(PackageDialog)
@@ -40,6 +46,6 @@ class Ui_PackageDialog(object):
     def retranslateUi(self, PackageDialog):
         _translate = QtCore.QCoreApplication.translate
         PackageDialog.setWindowTitle(_translate("PackageDialog", "Packaging corpus – Coquery"))
-        self.label.setText(_translate("PackageDialog", "Packaging corpus {} into file {}..."))
+        self.label.setText(_translate("PackageDialog", "<html><head/><body><p>Packaging &lt;b&gt;\'{}\'&lt;/b&gt; into </p><p>&lt;code&gt;{}&lt;/code&gt;...</p></body></html>"))
 
 
