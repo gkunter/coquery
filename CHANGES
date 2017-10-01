@@ -3,7 +3,7 @@
 * API change: disposed of obsolete LexiconClass
 * API change: Table.get_create_string() expects list of existing tables as
   second argument
-* corpora can be exported and imported
+* Packaging: corpora can be packaged, and packaged corpora can be installed
 * can restrict query files to a number of rows
 * New corpora: Old Bailey Corpus 2.0, Korpus Malti
 * New function dialog with better handling of function arguments
