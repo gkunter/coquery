@@ -452,7 +452,32 @@ automatically lemmatize and POS-tag your new corpus.</p>"""
 
 msg_adhoc_builder_table = """
 <p>You can build a new corpus by storing the rows from a table in a database
-that can be queried by Coquery.</p>"""
+that can be queried by Coquery.</p>
+<p>The table has to be available in a text format (e.g. CSV).</p>
+<p>You can map the columns in the table to a query item type. For instance,
+you can specify that Word query items are matched against a column in the
+table that contains the orthographic representations of the tokens.
+Corresponding mappings are available for Lemma, Transcript, POS, and Gloss
+query item types.</p>"""
+
+msg_adhoc_builder_package = """
+<p>You can read a Coquery corpus package into a database so that the corpus
+is available for queries in Coquery.</p>
+<p>A corpus package is a file with the file extionsion <code>.coq</code> that
+has been created by using the 'Package' button in the Corpus manager for any
+installed corpus. The package file contains all data that is required to
+replicate the installed corpus.</p>
+<p>Using corpus packages can increase the replicability of corpus-linguistic
+research. For instance, a custom corpus can be made available as a package to
+the academic community so that corpus queries can be replicated.</p>
+<p>Corpus modules may also be helpful in classroom settings as an easy way to
+to deploying identical copies of a corpus on different computers.</p>
+<p><b>Please note:</b> It is the user's responsibility to protect the
+copyright of the corpus that is packaged by the user. The license terms of
+the corpus must not be violated by packaging and/or distributing a corpus.
+The Coquery developers cannot be held liable for any copyright infringement
+or license violations that is caused by packaging and/or distributing a
+corpus.</p>"""
 
 msg_invalid_filter = """
 <p><b>The corpus filter '{}' is not valid.</b></p>
