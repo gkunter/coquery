@@ -1468,7 +1468,6 @@ class TestCorpusWithExternal(unittest.TestCase):
              "FileId1 AS coquery_invisible_origin_id"])
 
 
-
 class TestNGramCorpus(unittest.TestCase):
     resource = NGramResource
 
@@ -1654,13 +1653,13 @@ class TestNGramCorpus(unittest.TestCase):
                          simple(target_string))
 
 
+provided_tests = (TestCorpus, TestSuperFlat, TestCorpusWithExternal,
+                  TestNGramCorpus)
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestCorpus),
-        unittest.TestLoader().loadTestsFromTestCase(TestSuperFlat),
-        unittest.TestLoader().loadTestsFromTestCase(TestCorpusWithExternal),
-        unittest.TestLoader().loadTestsFromTestCase(TestNGramCorpus)
-        ])
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(x)
+         for x in provided_tests])
     unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
