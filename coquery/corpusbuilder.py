@@ -23,7 +23,6 @@ import pandas as pd
 import argparse
 import re
 import sys
-import textwrap
 import fnmatch
 import inspect
 from lxml import etree as ET
@@ -1089,42 +1088,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         S = S.replace("\\", "\\\\")
         return pd.read_sql(S, self.DB.engine)
 
-    def build_create_frequency_table(self):
-        """
-        Create a frequency table for all combinations of corpus features.
-
-        This method creates a database table named 'coq_frequency_count' with
-        all corpus features as columns, and a row for each comination of
-        corpus features that occur in the corpus. The last column 'Count'
-        gives the number of tokens in the corpus that occur in the corpus.
-
-        The frequency table can be used to look up quickly the size of a
-        subcorpus as well as the overall corpus. This is important for
-        reporting frequency counts as per-million-word frequencies.
-        """
-        #print(options.cfg.current_resources)
-        #print(self.get_name())
-        #resource = options.cfg.current_resources[self.name][0]
-        #print(resource.get_corpus_features())
-        pass
-        #print(self.module_content)
-        #print(self.name)
-
-        #module = importlib.import_module("..{}".format(self.name), "installer.{}".format(self.name))
-
-        #exec self.resource_content
-        ##print(self.resource_content)
-
-        #module_path = os.path.join(self.arguments.corpus_path, "{}.py".format(self.name))
-        #module_path = os.path.join(os.path.expandhome("~"),
-                                    #"Dev/coquery/coquery/corpora/ice_ng.py")
-        #print(module_path)
-        #print(sys.modules.keys())
-        #module = imp.load_source(self.name, module_path)
-        #print(module, dir(module))
-        ##resource = module.Resource
-        ##print(resource)
-
     def build_lookup_get_ngram_table(self):
         """
         Return the Table object that can be used to create the N-gram lookup
@@ -1897,11 +1860,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 if not self.interrupted:
                     current = progress_next(current)
                     self.build_write_module()
-
-                #if not self.interrupted:
-                    #current = progress_next(current)
-                    #self.build_create_frequency_table()
-                    #progress_done()
 
                 self.build_finalize()
             except Exception as e:
