@@ -166,6 +166,7 @@ COLUMN_NAMES = {
     "statistics_tokens": "Number of matches",
     "statistics_types": "Number of unique matches",
     "statistics_ttr": "Type-token ratio",
+    "statistics_rank": "Rank",
     #"statistics_passing_rows": "Passing rows",
     #"statistics_filtered_rows": "Filtered rows",
     "statistics_column_total": "ALL",
@@ -208,6 +209,7 @@ FUNCTION_DESC = {
 
     "statistics_proportion": "Calculate the proportion for each match",
     "statistics_percent": "Calculate the percentage for each match",
+    "statistics_rank": "Return the rank of each match if the column is sorted",
     "statistics_tokens": "Count the number of tokens",
     "statistics_types": "Count the number of types",
     "statistics_ttr": "Calculate the type-token ratio",
@@ -222,6 +224,10 @@ FUNCTION_DESC = {
     "COUNT": "Count the number of occurrences of <i>Argument</i> (regexp)",
     "MATCH": "Test whether the columns match <i>Argument</i> (regexp)",
     "EXTRACT": "Extract from the columns the string that matches <i>Argument</i> (regexp)",
+    "UPPER": "Change the matches to upper-case",
+    "LOWER": "Change the matches to lower-case",
+    "REPLACE": "Replace all occurrences of the 'Find:' string by the 'Replace:' string (regexp)",
+
 
     "EQUAL": "'yes' if values are equal, or 'false' otherwise",
     "GREATER": "'yes' if values are greater, or 'false' otherwise",
