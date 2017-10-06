@@ -19,8 +19,9 @@ import scipy
 from coquery import options
 from coquery.unicode import utf8
 
-from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
+from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
 from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
+from .classes import CoqWidgetFader
 
 
 class IndependenceTestViewer(QtWidgets.QDialog):
@@ -187,7 +188,9 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             odds_explain = "The high value of <span style=' font-style:italic;'>p</span> suggests that the odds of encountering tokens which match the query in the subcorpus '<code>{label_1}</code>' is not significantly different from the odds of encountering matching tokens in the subcorpus '<code>{label_2}</code>'.".format(
                 label_1=label_1, label_2=label_2)
 
-        corpus = utf8(get_toplevel_window().ui.combo_corpus.currentText())
+        corpus = utf8(get_toplevel_window().
+                      ui.combo_corpus.currentText())
+
         self._html = utf8(self.html_template.format(
             corpus=corpus,
             label_1=label_1, label_2=label_2,
@@ -203,7 +206,8 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             chi2=str_flt.format(chi2),
             p_chi2=str_flt.format(p_chi2),
             chi2_op=chi2_op.replace("<", "&lt;"),
-            phi=str_flt.format(phi), strength=estimate_strength(phi),
+            phi=str_flt.format(phi),
+            strength=estimate_strength(phi),
             odds_ratio=str_flt.format(odds_ratio),
             odds_ci_lower=str_flt.format(odds_ci_lower),
             odds_ci_upper=str_flt.format(odds_ci_upper),
@@ -228,13 +232,17 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             chi2=str_flt.format(chi2),
             p_chi2=str_flt.format(p_chi2),
             chi2_op=chi2_op,
-            phi=str_flt.format(phi), strength=estimate_strength(phi),
+            phi=str_flt.format(phi),
+            strength=estimate_strength(phi),
             odds_ratio=str_flt.format(odds_ratio),
             odds_ci_lower=str_flt.format(odds_ci_lower),
             odds_ci_upper=str_flt.format(odds_ci_upper),
-            odds_prose=str_flt.format(
-                odds_ratio if odds_ratio > 1 else 1/odds_ratio),
-            odds_relation="higher" if odds_ratio > 1 else "lower",
+            odds_prose=str_flt.format(odds_ratio
+                                      if odds_ratio > 1
+                                      else 1/odds_ratio),
+            odds_relation=("higher"
+                           if odds_ratio > 1
+                           else "lower"),
             odds_z=str_flt.format(odds_z),
             odds_op=odds_op,
             p_odds=str_flt.format(p_odds),
@@ -249,6 +257,22 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             lambda: self.copy_to_clipboard("html"))
         self.ui.button_copy_latex.clicked.connect(
             lambda: self.copy_to_clipboard("latex"))
+
+
+        highlight = QtWidgets.QApplication.instance().palette().color(
+            QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
+        window = QtWidgets.QApplication.instance().palette().color(
+            QtGui.QPalette.Normal, QtGui.QPalette.Window)
+
+        self._button_pal = []
+
+        for i in range(16):
+            blended = (
+                (15 - i) / 15 * highlight.red() + i / 15 * window.red(),
+                (15 - i) / 15 * highlight.green() + i / 15 * window.green(),
+                (15 - i) / 15 * highlight.blue() + i / 15 * window.blue())
+            self._button_pal.append("#{:02x}{:02x}{:02x}".format(
+                *[int(f) for f in blended]))
 
         try:
             self.resize(options.settings.value(
@@ -269,7 +293,12 @@ class IndependenceTestViewer(QtWidgets.QDialog):
         cb.clear(mode=cb.Clipboard)
         if mode == "text":
             cb.setText(self.ui.textBrowser.toPlainText())
+            button = self.ui.button_copy_text
         elif mode == "html":
             cb.setText(self._html)
+            button = self.ui.button_copy_html
         elif mode == "latex":
             cb.setText(self._latex)
+            button = self.ui.button_copy_latex
+
+        CoqWidgetFader(button, 125).fade()
