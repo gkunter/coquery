@@ -27,6 +27,8 @@ class CoqFindWidget(QtWidgets.QWidget):
         self.ui.button_find_close.clicked.connect(lambda: self.hide())
         self.table_view = None
         self.reset()
+        self._find_timer = QtCore.QTimer()
+        self._find_timer.setSingleShot(True)
 
     def setTableView(self, table_view):
         self.table_view = table_view
@@ -87,7 +89,19 @@ class CoqFindWidget(QtWidgets.QWidget):
         self.table_view.scrollTo(match)
         self.current_match = match
 
-    def find(self, text, options=QtCore.Qt.MatchContains):
+    def find(self, text, options=QtCore.Qt.MatchContains, no_timeout=False):
+        # Start the search if the length of the text is longer than two
+        # characters, or if at least two seconds have passed since the last
+        # change of the text:
+
+        if len(text) < 3 and not no_timeout:
+            if self._find_timer.isActive():
+                self._find_timer.stop()
+            self._find_timer.timeout.connect(
+                lambda: self.find(text, no_timeout=True))
+            self._find_timer.start(2000)
+            return
+
         self.matches = []
         for col in range(self.table_view.model().columnCount()):
             start_index = self.table_view.model().index(0, col)
