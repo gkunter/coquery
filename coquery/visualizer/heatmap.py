@@ -9,11 +9,15 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from coquery.visualizer import visualizer as vis
+
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+
+from coquery.visualizer import visualizer as vis
+from coquery.gui.pyqt_compat import QtWidgets
+
 
 def _annotate_heatmap(self, ax, mesh):
     import numpy as np
@@ -34,8 +38,10 @@ def _annotate_heatmap(self, ax, mesh):
         print(e)
         raise e
 
+
 if sns.__version__ < "0.7.0":
     sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
+
 
 class Visualizer(vis.BaseVisualizer):
     dimensionality=2
@@ -108,6 +114,8 @@ class Visualizer(vis.BaseVisualizer):
         self.map_data(plot_facet)
 
 class Heatmap(vis.Visualizer):
+    normalization = 0
+
     def plot_facet(self, data, color, **kwargs):
 
         def get_crosstab(data, row_fact, col_fact, row_names, col_names):
@@ -187,14 +195,66 @@ class Heatmap(vis.Visualizer):
             self._ylab = y
             self._xlab = "Frequency"
 
+        fmt = "g"
+
+        if Heatmap.normalization == 1:
+            ct = ct.apply(lambda row: 100 * row / sum(row),
+                          axis="rows").astype(int)
+            fmt = "d"
+        elif Heatmap.normalization == 2:
+            ct = ct.apply(lambda col: 100 * col / sum(col),
+                          axis="columns").astype(int)
+            fmt = "d"
+
         sns.heatmap(ct.fillna(0),
             robust=True,
             annot=True,
             cbar=False,
             cmap=cmap,
-            fmt="g",
+            fmt=fmt,
             #vmax=vmax,
             linewidths=1)
+
+    def get_custom_widgets(self):
+        layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QApplication.instance().translate(
+                    "HeatMap", "Normalization", None)
+        rowwise = QtWidgets.QApplication.instance().translate(
+                    "HeatMap", "By row", None)
+        columnwise = QtWidgets.QApplication.instance().translate(
+                    "HeatMap", "By column", None)
+        tablewise = QtWidgets.QApplication.instance().translate(
+                    "HeatMap", "Across all cells", None)
+        no_normalization = QtWidgets.QApplication.instance().translate(
+                    "HeatMap", "No normalization", None)
+        button = QtWidgets.QApplication.instance().translate(
+                    "HeatMap", "Apply", None)
+
+        Heatmap.label_normalization = QtWidgets.QLabel(label)
+        Heatmap.combo_normalize = QtWidgets.QComboBox()
+        Heatmap.combo_normalize.addItems([rowwise, columnwise, no_normalization])
+        Heatmap.combo_normalize.setCurrentIndex(2)
+        Heatmap.button_apply = QtWidgets.QPushButton(button)
+        Heatmap.button_apply.setDisabled(True)
+        Heatmap.button_apply.clicked.connect(
+            lambda: Heatmap.update_figure(
+                self, Heatmap.combo_normalize.currentIndex()))
+        Heatmap.combo_normalize.currentIndexChanged.connect(
+            lambda x: Heatmap.button_apply.setEnabled(True))
+        layout.addWidget(Heatmap.label_normalization)
+        layout.addWidget(Heatmap.combo_normalize)
+        layout.addWidget(Heatmap.button_apply)
+        layout.setStretch(0, 1)
+        layout.setStretch(1, 0)
+        layout.setStretch(2, 0)
+        return [layout]
+
+
+    @classmethod
+    def update_figure(cls, self, i):
+        cls.normalization = i
+        Heatmap.button_apply.setDisabled(True)
+        self.updateRequested.emit()
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
