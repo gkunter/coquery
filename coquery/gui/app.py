@@ -21,7 +21,6 @@ import pandas as pd
 import datetime
 import re
 import warnings
-import zipfile
 
 from coquery import managers
 from coquery import sqlhelper
@@ -59,6 +58,8 @@ from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui import coqueryUi
 from .resourcetree import CoqResourceTree
 from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
+from .orphanageddatabases import OrphanagedDatabasesDialog
+
 
 # add path required for visualizers::
 if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
@@ -203,7 +204,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.cfg.context_font = QtWidgets.QLabel().font()
 
         self.ui = coqueryUi.Ui_MainWindow()
-
         self.ui.setupUi(self)
         self.setMenuBar(self.ui.menubar)
         self.setup_app()
@@ -2548,11 +2548,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         response = removecorpus.RemoveCorpusDialog.select(
             entry, options.cfg.current_server)
-        if response and QtWidgets.QMessageBox.question(
-            self,
-            "Remove corpus – Coquery",
-            "Do you really want to remove the selected corpus components?",
-            QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel) == QtWidgets.QMessageBox.Ok:
+        if (response and QtWidgets.QMessageBox.question(
+                self,
+                "Remove corpus – Coquery",
+                "Do you really want to remove the selected corpus components?",
+                (QtWidgets.QMessageBox.Ok |
+                 QtWidgets.QMessageBox.Cancel)) == QtWidgets.QMessageBox.Ok):
             rm_module, rm_database, rm_installer = response
             success = True
 
@@ -2889,6 +2890,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.fill_combo_corpus()
         self.change_corpus()
+        OrphanagedDatabasesDialog.display()
 
     def test_mysql_connection(self):
         """
@@ -2951,9 +2953,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             if active_widget:
                 active_widget.setFocus()
-
-        #from .orphanageddatabases import OrphanagedDatabasesDialog
-        #OrphanagedDatabasesDialog.display(self)
 
         return state
 
@@ -3250,6 +3249,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.update_columns()
 
+
 def _translate(x, text, y):
     return utf8(options.cfg.app.translate(x, text, y))
-
