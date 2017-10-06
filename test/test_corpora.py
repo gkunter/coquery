@@ -3,10 +3,11 @@
 from __future__ import print_function
 import unittest
 import argparse
+import os
 
 from .mockmodule import MockOptions
 
-from coquery.corpus import SQLResource
+from coquery.corpus import SQLResource, CorpusClass
 from coquery.coquery import options
 from coquery.defines import SQL_MYSQL
 from coquery.queries import TokenQuery
@@ -50,6 +51,10 @@ class CorpusResource(SQLResource):
     query_item_transcript = "word_transcript"
 
     annotations = {"segment": "word"}
+
+    def dump_table(self, path, rc_table):
+        with open(path, "w") as dump_file:
+            dump_file.write(rc_table)
 
 
 def simple(s):
@@ -1654,13 +1659,21 @@ class TestNGramCorpus(unittest.TestCase):
                          simple(target_string))
 
 
+def mock_get_available_resources(configuration):
+    return {CorpusResource.name:
+                [SQLResource,
+                 CorpusClass,
+                 os.path.join(os.path.expanduser("~"),
+                              "{}.py".format(CorpusResource.db_name))]}
+
+
+provided_tests = [TestCorpus, TestSuperFlat, TestCorpusWithExternal,
+                  TestNGramCorpus]
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestCorpus),
-        unittest.TestLoader().loadTestsFromTestCase(TestSuperFlat),
-        unittest.TestLoader().loadTestsFromTestCase(TestCorpusWithExternal),
-        unittest.TestLoader().loadTestsFromTestCase(TestNGramCorpus)
-        ])
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(x)
+         for x in provided_tests])
     unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
