@@ -632,7 +632,7 @@ def preprocess_query(S, literal=False):
             val = None
         elif re.match("~?_PUNCT", val):
             neg = val.startswith("~")
-            val = "|".join(list(".,;!-+") + ["\\?"])
+            val = "|".join(list(".,;!:-+") + ["\\?"])
             # FIXME: negation doesn't work
             if neg:
                 val = "~{}".format(val)
