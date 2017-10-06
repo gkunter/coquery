@@ -13,9 +13,11 @@ from __future__ import unicode_literals
 
 import os
 import glob
+from datetime import datetime
 
 from coquery import options
-from coquery.defines import *
+from coquery.defines import SQL_SQLITE, msg_orphanaged_databases
+from coquery.general import format_file_size
 from coquery.unicode import utf8
 from coquery.sqlhelper import sqlite_path
 
@@ -23,6 +25,7 @@ from . import classes
 
 from .pyqt_compat import QtCore, QtWidgets
 from .ui.orphanagedDatabasesUi import Ui_OrphanagedDatabases
+
 
 class OrphanagedDatabasesDialog(QtWidgets.QDialog):
     def __init__(self, orphans=[], parent=None):
@@ -44,10 +47,20 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
         self.ui.detail_box.box.setLayout(self.ui.box_layout)
         self.ui.verticalLayout.insertWidget(2, self.ui.detail_box)
 
-        for x in orphans:
-            item = QtWidgets.QListWidgetItem(x)
-            item.setCheckState(QtCore.Qt.Unchecked)
-            self.ui.listWidget.addItem(item)
+        self.ui.tableWidget.setRowCount(len(orphans))
+        for i, tup in enumerate(orphans):
+            name, date, size = tup
+            name_item = QtWidgets.QTableWidgetItem(name)
+            size_item = QtWidgets.QTableWidgetItem(format_file_size(size))
+            date_item = QtWidgets.QTableWidgetItem(date)
+            size_item.setData(QtCore.Qt.UserRole, size)
+
+            self.ui.tableWidget.setItem(i, 0, name_item)
+            self.ui.tableWidget.setItem(i, 1, size_item)
+            self.ui.tableWidget.setItem(i, 2, date_item)
+
+            name_item.setCheckState(QtCore.Qt.Unchecked)
+        self.ui.tableWidget.resizeColumnsToContents()
 
     @staticmethod
     def remove_orphans(orphans):
@@ -58,13 +71,18 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
             path = sqlite_path(options.cfg.current_server)
         except AttributeError:
             path = ""
+        count = 0
+        total = 0
         if path:
-            for x in orphans:
-                file_path = os.path.join(path, x)
-                try:
-                    os.remove(file_path)
-                except:
-                    pass
+            for name, size in orphans:
+                file_path = os.path.join(path, name)
+                os.remove(file_path)
+                count += 1
+                total += size
+        QtWidgets.QMessageBox.information(
+            None, "Orphanaged databases – Coquery",
+            "{} orphanaged database{} deleted ({})".format(
+                count, "s" if count > 1 else "", format_file_size(total)))
 
     @staticmethod
     def display(parent=None):
@@ -74,12 +92,15 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
             dialog = OrphanagedDatabasesDialog(orphans=l, parent=None)
             result = dialog.exec_()
             if result == QtWidgets.QDialog.Accepted:
-                for x in range(dialog.ui.listWidget.count()):
-                    item = dialog.ui.listWidget.item(x)
+                for x in range(dialog.ui.tableWidget.rowCount()):
+                    item = dialog.ui.tableWidget.item(x, 0)
+                    size = dialog.ui.tableWidget.item(x, 1)
                     if item.checkState() == QtCore.Qt.Checked:
-                        selected.append(utf8(item.text()))
+                        selected.append((utf8(item.text()),
+                                         int(size.data(QtCore.Qt.UserRole))))
             if selected:
                 OrphanagedDatabasesDialog.remove_orphans(selected)
+
 
 def check_orphans():
     """
@@ -91,9 +112,14 @@ def check_orphans():
     except AttributeError:
         path = ""
     l = []
-    if path:
+    if options.get_configuration_type() == SQL_SQLITE:
         for x in glob.glob(os.path.join(path, "*.db")):
             file_name, _ = os.path.splitext(os.path.basename(x))
-            if not options.get_resource_of_database(file_name):
-                l.append(os.path.basename(x))
+            db_name = options.get_resource_of_database(file_name)
+            if not db_name:
+                timestamp = os.path.getmtime(x)
+                date = (datetime.fromtimestamp(timestamp).strftime(
+                    '%Y-%m-%d, %H:%M:%S'))
+                size = os.path.getsize(x)
+                l.append((os.path.basename(x), date, size))
     return l
