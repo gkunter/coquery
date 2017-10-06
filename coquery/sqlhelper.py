@@ -198,7 +198,9 @@ def sqlite_path(configuration, db_name=None):
         if configuration == DEFAULT_CONFIGURATION:
             S = options.cfg.database_path
         else:
-            S = d["path"] or options.cfg.database_path
+            S = d.get("path")
+            if S is None:
+                S = options.cfg.database_path
     return S
 
 
