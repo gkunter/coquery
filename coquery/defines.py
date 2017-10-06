@@ -355,6 +355,18 @@ except NameError:
     unicode = str
     long = int
 
+msg_not_enough_space = """
+<p><b>Not enough space available.</b><p>
+<p>You have decided to enter a new database directory <code>{path}</code>
+for configuration '{name}', but the new directory cannot store all corpus
+files: </p>
+<p>Required space: {required:0.1f} MiB<br>
+Available space: {available:0.1f} MiB<br>
+Missing: <span text-color="red";>{missing:0.1f} MiB</span></p>
+<p>The configuration will not be moved to the new database directory. Please
+select a different directory the next time you attempt to change the
+directory for this configuration.<&p>"""
+
 msg_runtime_error_function = """
 <p>Error during the evaluation of function</p>
 <code style='color: #aa0000'>{}</code>:<br>{}</p>
