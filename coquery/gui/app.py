@@ -32,7 +32,7 @@ from coquery.defines import (
     AUTO_SUBSTITUTE, AUTO_VISIBILITY,
     QUERY_ITEM_GLOSS, QUERY_ITEM_LEMMA, QUERY_ITEM_POS, QUERY_ITEM_WORD,
     QUERY_ITEM_TRANSCRIPT,
-    QUERY_MODE_CONTINGENCY, QUERY_MODE_TOKENS,
+    QUERY_MODE_CONTINGENCY, QUERY_MODE_TOKENS, QUERY_MODE_COLLOCATIONS,
     CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_NONE, CONTEXT_SENTENCE,
     CONTEXT_STRING,
     TOOLBOX_AGGREGATE, TOOLBOX_CONTEXT, TOOLBOX_GROUPING, TOOLBOX_ORDER,
@@ -260,10 +260,22 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for label in SUMMARY_MODES:
             radio = QtWidgets.QRadioButton(label)
             radio.toggled.connect(self.enable_apply_button)
+            radio.toggled.connect(self.check_transformation)
             self.ui.layout_aggregate.addWidget(radio)
             if label == QUERY_MODE_TOKENS:
                 self.ui.layout_aggregate.addWidget(separator)
             self.ui.aggregate_radio_list.append(radio)
+            if label == QUERY_MODE_COLLOCATIONS:
+                self.ui.spin_collo_left = QtWidgets.QSpinBox()
+                self.ui.spin_collo_left.setPrefix("Left: ")
+                self.ui.spin_collo_right = QtWidgets.QSpinBox()
+                self.ui.spin_collo_right.setPrefix("Right: ")
+                layout = QtWidgets.QHBoxLayout()
+                layout.addWidget(self.ui.spin_collo_left)
+                layout.addWidget(self.ui.spin_collo_right)
+                layout.setStretch(0, 1)
+                layout.setStretch(1, 1)
+                self.ui.layout_aggregate.addLayout(layout)
 
         if options.cfg.current_resources:
             # add available resources to corpus dropdown box:
@@ -591,6 +603,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                        self.ui.radio_context_mode_columns.toggled,
                        self.ui.context_left_span.valueChanged,
                        self.ui.context_right_span.valueChanged,
+                       self.ui.spin_collo_left.valueChanged,
+                       self.ui.spin_collo_right.valueChanged,
                        self.ui.tree_groups.groupAdded,
                        self.ui.tree_groups.groupRemoved,
                        self.ui.tree_groups.groupModified,
@@ -739,6 +753,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.column_tree.show()
         else:
             self.column_tree.hide()
+
+    def check_transformation(self):
+        for i in range(self.ui.layout_aggregate.count()):
+            widget = self.ui.layout_aggregate.itemAt(i).widget()
+            try:
+                if widget.isChecked():
+                    is_collocations = (utf8(widget.text()) ==
+                                       QUERY_MODE_COLLOCATIONS)
+                    self.ui.spin_collo_left.setEnabled(is_collocations)
+                    self.ui.spin_collo_right.setEnabled(is_collocations)
+                    break
+            except AttributeError:
+                pass
 
     def toggle_limit_matches(self):
         options.cfg.limit_matches = not options.cfg.limit_matches
@@ -1051,6 +1078,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         context_radio.setChecked(True)
         self.ui.context_left_span.setValue(options.cfg.context_left)
         self.ui.context_right_span.setValue(options.cfg.context_right)
+        self.ui.spin_collo_left.setValue(options.cfg.collo_left)
+        self.ui.spin_collo_right.setValue(options.cfg.collo_right)
         self.ui.check_restrict.setChecked(options.cfg.context_restrict)
         self.ui.widget_context.blockSignals(False)
         self.ui.tool_widget.blockSignals(False)
@@ -1070,6 +1099,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         options.cfg.context_left = self.ui.context_left_span.value()
         options.cfg.context_right = self.ui.context_right_span.value()
         options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+        options.cfg.collo_left = self.ui.spin_collo_left.value()
+        options.cfg.collo_right = self.ui.spin_collo_right.value()
 
     def get_selected_functions(self):
         columns = []

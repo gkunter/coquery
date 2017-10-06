@@ -631,6 +631,8 @@ class Options(object):
             "context_mode": CONTEXT_NONE,
             "context_left": 3,
             "context_right": 3,
+            "collo_left": 3,
+            "collo_right": 3,
             "context_restrict": False,
             "show_log_messages": "ERROR,WARNING,INFO",
             "decimal_digits": 3,
@@ -758,6 +760,8 @@ class Options(object):
             self.args.context_right = config_file.int("context", "context_right", d=defaults)
             self.args.context_mode = config_file.str("context", "context_mode", d=defaults)
             self.args.context_restrict = config_file.bool("context", "context_restrict", d=defaults)
+            self.args.collo_left = config_file.int("context", "collo_left", d=defaults)
+            self.args.collo_right = config_file.int("context", "collo_right", d=defaults)
 
             # read OUTPUT section:
             for variable, value in config_file.items("output"):
@@ -1118,6 +1122,8 @@ def save_configuration():
     if cfg.context_left or cfg.context_right:
         config.set("context", "context_left", cfg.context_left)
         config.set("context", "context_right", cfg.context_right)
+        config.set("context", "collo_left", cfg.collo_left)
+        config.set("context", "collo_right", cfg.collo_right)
 
     if cfg.gui:
         for x in cfg.column_width:

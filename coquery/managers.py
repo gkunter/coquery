@@ -255,9 +255,14 @@ class Manager(CoqObject):
 
         # only apply context functions during the first stage:
         if stage == "first" and fnc_contexts:
-            context_key = (options.cfg.context_mode,
-                           options.cfg.context_left,
-                           options.cfg.context_right)
+            if isinstance(self, Collocations):
+                context_key = (CONTEXT_COLUMNS,
+                               options.cfg.collo_left,
+                               options.cfg.collo_right)
+            else:
+                context_key = (options.cfg.context_mode,
+                               options.cfg.context_left,
+                               options.cfg.context_right)
             if context_key in self._context_cache:
                 # use the cached context columns if available:
                 df = pd.concat([df,
@@ -897,7 +902,8 @@ class Collocations(Manager):
         # FIXME:
         # If the context span is zero (i.e. neither a left nor a right
         # context, the program should alert the user somehow.
-        return [ContextColumns()]
+        return [ContextColumns(left=options.cfg.collo_left,
+                               right=options.cfg.collo_right)]
 
     def summarize(self, df, session):
         """
@@ -920,20 +926,20 @@ class Collocations(Manager):
         corpus_size = session.Resource.corpus.get_corpus_size()
 
         left_cols = ["coq_context_lc{}".format(x + 1)
-                     for x in range(options.cfg.context_left)]
+                     for x in range(options.cfg.collo_left)]
         right_cols = ["coq_context_rc{}".format(x + 1)
-                      for x in range(options.cfg.context_right)]
+                      for x in range(options.cfg.collo_right)]
 
         try:
             left_context_span = df[left_cols]
             right_context_span = df[right_cols]
         except KeyError:
             left_context_span = pd.DataFrame(
-                data=[[None] * options.cfg.context_left],
+                data=[[None] * options.cfg.collo_left],
                 columns=left_cols)
             right_context_span = pd.DataFrame(
-                data=[[None] * options.cfg.context_right],
-                columns=left_cols)
+                data=[[None] * options.cfg.collo_right],
+                columns=right_cols)
         else:
             # convert all context columns to upper or lower case unless
             # the current setting says otherwise
