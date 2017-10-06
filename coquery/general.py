@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 from __future__ import division
 from __future__ import print_function
 
+import math
 import hashlib
 import sys
 import os
@@ -332,7 +333,15 @@ def get_available_space(path):
         st = os.statvfs(path)
         return st.f_bavail * st.f_frsize
 
+
+def format_file_size(size):
+    power = math.floor(math.log2(size) / 10)
+    unit = ['B','KiB','MiB','GiB','TiB','PiB'][power]
+    return "{:0.1f} {}".format(size / 1024 ** power, unit)
+
+
 # Memory status functions:
+
 
 def memory_dump():
     import gc
@@ -354,6 +363,7 @@ def memory_dump():
                       "ref": len(referents)})
             if len(referents) < 2000:
                 print(obj)
+
 
 try:
     from pympler import summary, muppy
