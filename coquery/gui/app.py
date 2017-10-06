@@ -1748,25 +1748,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 return
             options.cfg.results_file_path = os.path.dirname(name)
         try:
-            header = self.ui.data_preview.horizontalHeader()
-            ordered_headers = [self.table_model.header[header.logicalIndex(i)] for i in range(header.count())]
-            # FIXME: use manager instead
-            #ordered_headers = [x for x in ordered_headers if options.cfg.column_visibility.get(x, True)]
-            tab = self.table_model.content[ordered_headers]
-
-            ## restrict to visible rows:
-            # FIXME: reimplement row visibility
-            #tab = tab[self.Session.row_visibility[self.Session.query_type]]
+            tab = self.table_model.content
 
             # restrict to selection?
             if selection or clipboard:
-                select_range = self.ui.data_preview.selectionModel().selection()
+                select_range = (self.ui.data_preview.selectionModel()
+                                                    .selection())
                 selected_rows = set([])
                 selected_columns = set([])
                 for x in select_range.indexes():
                     selected_rows.add(x.row())
                     selected_columns.add(x.column())
-                tab = tab.iloc[list(selected_rows)][list(selected_columns)]
+
+                tab = tab.ix[selected_rows, selected_columns]
 
             if clipboard:
                 cb = QtWidgets.QApplication.clipboard()
@@ -1776,12 +1770,17 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                index=False,
                                header=[self.Session.translate_header(x) for x in tab.columns],
                                encoding=options.cfg.output_encoding), mode=cb.Clipboard)
+                self.showMessage("{} copied to clipboard.".format(
+                    "Selection" if selection else "Results table"))
             else:
                 tab.to_csv(name,
                            sep=options.cfg.output_separator,
                            index=False,
                            header=[self.Session.translate_header(x) for x in tab.columns],
                            encoding=options.cfg.output_encoding)
+                self.showMessage("{} saved to file {}.".format(
+                    "Selection" if selection else "Results table",
+                    name))
         except IOError:
             QtWidgets.QMessageBox.critical(self, "Disk error", msg_disk_error)
         except (UnicodeEncodeError, UnicodeDecodeError):
