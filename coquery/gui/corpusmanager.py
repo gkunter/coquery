@@ -42,7 +42,6 @@ from . import classes
 from .pyqt_compat import (QtCore, QtWidgets, QtGui, frameShadow, frameShape,
                           get_toplevel_window)
 from .ui.corpusManagerUi import Ui_corpusManager
-from . import orphanageddatabases
 
 
 class CoqAccordionEntry(QtWidgets.QWidget):
@@ -393,6 +392,7 @@ class CorpusManager(QtWidgets.QDialog):
 
         self.update()
 
+
     def built_in(self, path):
         """
         Check if the path points to a built-in installer, i.e. one that is
@@ -506,7 +506,7 @@ class CorpusManager(QtWidgets.QDialog):
                     try:
                         # load the module:
                         module = imp.load_source(basename, module_path)
-                    except (ImportError, SyntaxError) as e:
+                    except (ImportError, SyntaxError):
                         msg = msg_corpus_broken.format(
                             name=basename,
                             type=sys.exc_info()[0],
@@ -514,7 +514,8 @@ class CorpusManager(QtWidgets.QDialog):
                         logging.error(msg)
                         QtWidgets.QMessageBox.critical(
                             None, "Corpus error – Coquery",
-                            msg, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                            msg, QtWidgets.QMessageBox.Ok,
+                            QtWidgets.QMessageBox.Ok)
                         continue
                     try:
                         builder_class = module.BuilderClass
@@ -608,7 +609,3 @@ class CorpusManager(QtWidgets.QDialog):
     def closeEvent(self, event):
         options.settings.setValue("corpusmanager_size", self.size())
         options.set_current_server(options.cfg.current_server)
-
-    def check_orphans(self):
-        dialog = orphanageddatabases.OrphanagedDatabasesDialog()
-        dialog.exec_()
