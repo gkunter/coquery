@@ -20,26 +20,37 @@ from coquery.gui.pyqt_compat import QtWidgets
 
 
 def _annotate_heatmap(self, ax, mesh):
-    import numpy as np
     import colorsys
+
     """Add textual labels with the value in each cell."""
     try:
+
         mesh.update_scalarmappable()
-        xpos, ypos = np.meshgrid(ax.get_xticks(), ax.get_yticks())
-        for x, y, val, color in zip(xpos.flat, ypos.flat,
-                                    mesh.get_array(), mesh.get_facecolors()):
-            if val is not np.ma.masked:
+        height, width = self.annot_data.shape
+        xpos, ypos = pd.np.meshgrid(pd.np.arange(width) + 0.5,
+                                    pd.np.arange(height) + 0.5)
+        print(xpos, ypos, mesh, self.annot_data)
+        for x, y, m, color, val in zip(xpos.flat, ypos.flat,
+                                       mesh.get_array(),
+                                       mesh.get_facecolors(),
+                                       self.annot_data.flat):
+            print(m, pd.np.ma.masked)
+            if m is not pd.np.ma.masked:
+                print(1)
                 _, l, _ = colorsys.rgb_to_hls(*color[:3])
-                text_color = ".15" if l > .5 else "w"
-                val = ("{:" + self.fmt + "}").format(val)
-                ax.text(x, y, val, color=text_color,
-                        ha="center", va="center", **self.annot_kws)
+                text_color = ".15" if l > .408 else "w"
+                print(l, text_color)
+                annotation = ("{:" + self.fmt + "}").format(val)
+                print(annotation)
+                text_kwargs = dict(color=text_color, ha="center", va="center")
+                text_kwargs.update(self.annot_kws)
+                print(text_kwargs)
+                ax.text(x, y, annotation, **text_kwargs)
     except Exception as e:
         print(e)
         raise e
 
-
-if sns.__version__ < "0.7.0":
+if sns.__version__ < "0.7.0" or True:
     sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
 
 
@@ -195,16 +206,16 @@ class Heatmap(vis.Visualizer):
             self._ylab = y
             self._xlab = "Frequency"
 
-        fmt = "g"
-
+        fmt = ".1%"
         if Heatmap.normalization == 1:
-            ct = ct.apply(lambda row: 100 * row / sum(row),
-                          axis="rows").astype(int)
-            fmt = "d"
+            ct = ct.apply(lambda col: col / sum(col), axis="columns")
         elif Heatmap.normalization == 2:
-            ct = ct.apply(lambda col: 100 * col / sum(col),
-                          axis="columns").astype(int)
-            fmt = "d"
+            ct = ct.apply(lambda row: row / sum(row), axis="rows")
+        elif Heatmap.normalization == 3:
+            ct = pd.DataFrame(ct.values / ct.values.sum(),
+                              columns=ct.columns, index=ct.index)
+        else:
+            fmt = "g"
 
         sns.heatmap(ct.fillna(0),
             robust=True,
@@ -232,8 +243,9 @@ class Heatmap(vis.Visualizer):
 
         Heatmap.label_normalization = QtWidgets.QLabel(label)
         Heatmap.combo_normalize = QtWidgets.QComboBox()
-        Heatmap.combo_normalize.addItems([rowwise, columnwise, no_normalization])
-        Heatmap.combo_normalize.setCurrentIndex(2)
+        Heatmap.combo_normalize.addItems(
+            [no_normalization, rowwise, columnwise, tablewise])
+        Heatmap.combo_normalize.setCurrentIndex(0)
         Heatmap.button_apply = QtWidgets.QPushButton(button)
         Heatmap.button_apply.setDisabled(True)
         Heatmap.button_apply.clicked.connect(
