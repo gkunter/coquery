@@ -39,8 +39,8 @@ class CoqListSelect(QtWidgets.QWidget):
         icon_getter = get_toplevel_window().get_icon
         self.ui.button_up.setIcon(icon_getter("Circled Chevron Up"))
         self.ui.button_down.setIcon(icon_getter("Circled Chevron Down"))
-        self.ui.button_add.setIcon(icon_getter("Circled Chevron Left"))
-        self.ui.button_remove.setIcon(icon_getter("Circled Chevron Right"))
+        self.ui.button_add.setIcon(icon_getter("Circled Chevron Right"))
+        self.ui.button_remove.setIcon(icon_getter("Circled Chevron Left"))
 
         self.ui.list_selected.itemSelectionChanged.connect(self.check_buttons)
         self.ui.list_selected.itemSelectionChanged.connect(
@@ -203,8 +203,11 @@ class CoqListSelect(QtWidgets.QWidget):
         self.move_selected(up=False)
 
     def move_selected(self, up):
-        pos_first = min([self.ui.list_selected.row(x) for x
-                         in self.ui.list_selected.selectedItems()])
+        try:
+            pos_first = min([self.ui.list_selected.row(x) for x
+                             in self.ui.list_selected.selectedItems()])
+        except ValueError:
+            return
         if up:
             new_pos = pos_first - 1
         else:
@@ -230,9 +233,9 @@ class CoqListSelect(QtWidgets.QWidget):
             available_count > 0 and self.ui.list_available.currentRow() > -1)
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Left:
+        if event.key() == QtCore.Qt.Key_Right:
             self.add_selected()
-        elif event.key() == QtCore.Qt.Key_Right:
+        elif event.key() == QtCore.Qt.Key_Left:
             self.remove_selected()
         elif event.key() == QtCore.Qt.Key_Up:
             if event.modifiers() == QtCore.Qt.ShiftModifier:

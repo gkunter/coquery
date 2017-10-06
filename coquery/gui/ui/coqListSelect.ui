@@ -21,7 +21,7 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QGridLayout" name="layout" columnstretch="1,0,1">
+    <layout class="QGridLayout" name="layout" columnstretch="1,0,1,0">
      <item row="1" column="1">
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <item>
@@ -40,7 +40,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_6">
          <item>
-          <widget class="QToolButton" name="button_add">
+          <widget class="QToolButton" name="button_remove">
            <property name="text">
             <string/>
            </property>
@@ -64,8 +64,8 @@
            </item>
           </layout>
          </item>
-         <item alignment="Qt::AlignVCenter">
-          <widget class="QToolButton" name="button_remove">
+         <item>
+          <widget class="QToolButton" name="button_add">
            <property name="text">
             <string/>
            </property>
@@ -89,6 +89,19 @@
       </layout>
      </item>
      <item row="1" column="2">
+      <widget class="QListWidget" name="list_selected">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="dragDropMode">
+        <enum>QAbstractItemView::InternalMove</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
       <widget class="QListWidget" name="list_available">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
@@ -102,16 +115,6 @@
       </widget>
      </item>
      <item row="0" column="2">
-      <widget class="QLabel" name="label_available">
-       <property name="text">
-        <string>&amp;Available:</string>
-       </property>
-       <property name="buddy">
-        <cstring>list_available</cstring>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
       <widget class="QLabel" name="label_select_list">
        <property name="text">
         <string>Se&amp;lected:</string>
@@ -121,16 +124,13 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QListWidget" name="list_selected">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_available">
+       <property name="text">
+        <string>&amp;Available:</string>
        </property>
-       <property name="dragDropMode">
-        <enum>QAbstractItemView::InternalMove</enum>
+       <property name="buddy">
+        <cstring>list_available</cstring>
        </property>
       </widget>
      </item>
@@ -140,11 +140,7 @@
   <zorder></zorder>
  </widget>
  <tabstops>
-  <tabstop>list_selected</tabstop>
-  <tabstop>list_available</tabstop>
   <tabstop>button_up</tabstop>
-  <tabstop>button_add</tabstop>
-  <tabstop>button_remove</tabstop>
   <tabstop>button_down</tabstop>
  </tabstops>
  <resources/>
