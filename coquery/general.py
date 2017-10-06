@@ -20,6 +20,8 @@ import tempfile
 import itertools
 import pandas as pd
 import io
+import ctypes
+import platform
 
 from .unicode import utf8
 from .defines import LANGUAGES
@@ -306,6 +308,29 @@ def get_chunk(iterable, chunk_size=250000):
             [next(iterable)],
             itertools.islice(iterable, chunk_size - 1))
 
+
+def get_directory_size(path):
+    size = 0
+    for dirpath, _, files in os.walk(path):
+        size += sum(
+            [os.path.getsize(os.path.join(dirpath, x)) for x in files])
+    return size
+
+
+def get_available_space(path):
+    """
+    Return available folder/drive space.
+
+    This function is based on https://stackoverflow.com/a/2372171
+    """
+    if sys.platform == "win32":
+        free_bytes = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+            ctypes.c_wchar_p(path), None, None, ctypes.pointer(free_bytes))
+        return free_bytes.value
+    else:
+        st = os.statvfs(path)
+        return st.f_bavail * st.f_frsize
 
 # Memory status functions:
 

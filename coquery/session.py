@@ -52,8 +52,12 @@ class Session(object):
         # load current corpus module depending on the value of options.cfg.corpus,
         # i.e. the corpus specified as an argumment:
         if options.cfg.corpus:
-
-            ResourceClass, CorpusClass, Path = options.cfg.current_resources[options.cfg.corpus]
+            try:
+                tup = options.cfg.current_resources[options.cfg.corpus]
+            except KeyError:
+                tup = options.cfg.current_resources[
+                    list(options.cfg.current_resources.keys())[0]]
+            ResourceClass, CorpusClass, Path = tup
 
             current_corpus = CorpusClass()
             current_resource = ResourceClass(None, current_corpus)

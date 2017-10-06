@@ -143,6 +143,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     useContextConnection = QtCore.Signal(object)
     closeContextConnection = QtCore.Signal(object)
     dataChanged = QtCore.Signal()
+    updatePackStage = QtCore.Signal(tuple)
+    updateFileChunk = QtCore.Signal(tuple)
 
     def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -1846,6 +1848,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def showConnectionStatus(self, S):
         self.ui.status_server.setText(S)
 
+    def exception_in_thread(self):
+        errorbox.ErrorBox.show(self.exc_info, self.exception)
+        self.showMessage("Last command failed.")
+        self.stop_progress_indicator()
+
     def exception_during_query(self):
         if not self.terminating:
             if isinstance(self.exception, RuntimeError):
@@ -2605,34 +2612,81 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             self.change_corpus()
 
+    def finalize_export(self):
+        entry, file_name = self._export_data
+        S = "Exported corpus {} to {}.".format(entry, file_name)
+        logging.info(S)
+        self.showMessage(S)
+        self.export_dialog.hide()
+        del self.export_dialog
+
     def export_corpus(self, entry):
-        resource_class, corpus_class, _ = options.cfg.current_resources[entry.name]
+        def progress(pb, tup):
+            if pb == self.export_dialog.ui.progress_chunk:
+                i, n = tup
+                pb.setMaximum(n)
+                pb.setValue(i)
+                pb.setFormat("%p%")
+            else:
+                self.export_dialog.ui.progress_chunk.setFormat("")
+                #self.export_dialog.ui.progress_chunk.setMaximum(0)
+                file_name, stage = tup
+                val = pb.value()
+                pb.setValue(val + 1)
+                pb.setFormat("{} {}...".format(stage, file_name))
+
+        tup = options.cfg.current_resources[entry.name]
+        resource_class, corpus_class, _ = tup
         corpus = corpus_class()
         resource = resource_class(_, corpus)
+        try:
+            license = entry._license.replace("License", "Original license")
+        except AttributeError:
+            license = "(unknown license)"
 
         caption = "Choose export file name"
         path = os.path.join(options.cfg.export_file_path,
                             "{}.coq".format(resource.name))
 
-        name = QtWidgets.QFileDialog.getSaveFileName(caption=caption,
-                                                     directory=path)
+        name = QtWidgets.QFileDialog.getSaveFileName(
+            caption=caption,
+            directory=path,
+            filter="Coquery package files (*.coq)")
         if type(name) == tuple:
             name = name[0]
         if not name:
             return
 
-        # FIXME: this has to be packed into a thread!
-        try:
-            resource.pack_corpus(name)
-        except Exception as e:
-            raise e
-        else:
-            S = "Exported corpus {} to {}.".format(entry.name, name)
-            logging.info(S)
-            self.showMessage(S)
+        from .ui import packageDialogUi
+        self.export_dialog = QtWidgets.QDialog(self)
+        self._export_data = (entry.name, name)
+        self.export_dialog.ui = packageDialogUi.Ui_PackageDialog()
+        self.export_dialog.ui.setupUi(self.export_dialog)
+        self.export_dialog.show()
+        self.export_dialog.ui.progress_stage.setMaximum(
+            resource.get_pack_steps())
+        self.export_dialog.ui.progress_stage.setValue(0)
+        self.export_dialog.ui.progress_stage.setFormat("")
+        self.export_dialog.ui.label.setText(
+            utf8(self.export_dialog.ui.label.text()).format(
+                entry.name, name))
+        self.updatePackStage.connect(
+            lambda tup: progress(self.export_dialog.ui.progress_stage, tup))
+        self.updateFileChunk.connect(
+            lambda tup: progress(self.export_dialog.ui.progress_chunk, tup))
+
+        self.export_thread = classes.CoqThread(
+            lambda: resource.pack_corpus(name, license,
+                                         self.updatePackStage,
+                                         self.updateFileChunk),
+            parent=self)
+        self.export_thread.taskFinished.connect(self.finalize_export)
+        self.export_thread.taskException.connect(self.exception_in_thread)
+
+        self.export_thread.start()
 
     def build_corpus(self):
-        from coquery. installer import coq_install_generic
+        from coquery.installer import coq_install_generic
         from .corpusbuilder_interface import BuilderGui
 
         builder = BuilderGui(coq_install_generic.BuilderClass, parent=self)
@@ -2647,7 +2701,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.corpusListUpdated.emit()
 
     def build_corpus_from_table(self):
-        from coquery. installer import coq_install_generic_table
+        from coquery.installer import coq_install_generic_table
         from .corpusbuilder_interface import BuilderGui
         builder = BuilderGui(coq_install_generic_table.BuilderClass, onefile=True, parent=self)
         try:
@@ -2688,6 +2742,22 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.change_corpus()
         self.corpusListUpdated.emit()
 
+    def launch_builder(self, manager_entry):
+        if manager_entry is None:
+            return
+
+        builder = manager_entry.get_builder_interface()
+        try:
+            result = builder.display()
+        except Exception:
+            errorbox.ErrorBox.show(sys.exc_info())
+        if result:
+            options.set_current_server(options.cfg.current_server)
+
+        self.fill_combo_corpus()
+        self.change_corpus()
+        self.corpusListUpdated.emit()
+
     def manage_corpus(self):
         from . import corpusmanager
         if self.corpus_manager:
@@ -2705,6 +2775,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.corpus_manager.buildCorpus.connect(self.build_corpus)
             self.corpus_manager.buildCorpusFromTable.connect(
                 self.build_corpus_from_table)
+            self.corpus_manager.launchBuilder.connect(self.launch_builder)
             self.corpusListUpdated.connect(self.corpus_manager.update)
             #self.corpus_manager.check_orphans()
 

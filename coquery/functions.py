@@ -38,6 +38,31 @@ except (ImportError):
     pass
 assert reduce
 
+
+def get_base_func(fun):
+    """
+    Returns the base function class for `fun`, which may either be a function
+    instance or a function class.
+
+    A base function class is defined as a function class that has name other
+    than "virtual".
+    """
+    if type(fun) is not type:
+        fun_class = type(fun)
+    else:
+        fun_class = fun
+
+    if fun_class._name == "virtual":
+        return fun_class
+
+    for parent in fun_class.__bases__:
+        try:
+            return get_base_func(parent)
+        except AttributeError:
+            return fun_class
+    return fun_class
+
+
 #############################################################################
 ## Base function
 #############################################################################
@@ -209,10 +234,9 @@ class Function(CoqObject):
 
 
 class StringFunction(Function):
-
     @staticmethod
     def get_description():
-        return "String functions"
+        return "Strings"
 
     @classmethod
     def validate_regex(cls, value):
@@ -371,7 +395,7 @@ class NumFunction(Function):
 
     @staticmethod
     def get_description():
-        return "Mathematical functions"
+        return "Mathematics"
 
     def coerce_value(self, df, value):
         """
@@ -431,7 +455,7 @@ class OperatorFunction(CalcFunction):
 
     @staticmethod
     def get_description():
-        return "Mathematical operations"
+        return "Calculations"
 
 
 class Add(OperatorFunction):
@@ -487,7 +511,7 @@ class StatisticalFunction(CalcFunction):
 
     @staticmethod
     def get_description():
-        return "Statistical functions"
+        return "Statistics"
 
     def evaluate(self, df, **kwargs):
         _df = df[self.columns]
@@ -600,7 +624,7 @@ class LogicFunction(CalcFunction):
 
     @staticmethod
     def get_description():
-        return "Logical functions"
+        return "Logic"
 
 
 class And(LogicFunction):
@@ -637,7 +661,7 @@ class If(And):
         # True, see e.g. https://stackoverflow.com/q/17273312/)
         if _null.any():
             recode = recode.astype(object)
-            recode[_null] = None
+            recode[val.index[_null]] = None
         return pd.Series(data=recode, index=val.index)
 
 
@@ -661,40 +685,24 @@ class IfAny(If, Or):
         #return cols.apply(lambda x: not bool(x))
 
 
-#class IsNotMissing(LogicFunction):
-    #_name = "ISNOTMISSING"
-    #parameters = 0
+class Missing(LogicFunction):
+    _name = "MISSING"
+    arguments = {}
 
-    #def evaluate(self, df, **kwargs):
-        #columns = self.columns(df, **kwargs)
-        #val = df[columns].notnull()
-        #return val
-
-
-#class IsMissing(IsNotMissing):
-    #_name = "ISMISSING"
-    #parameters = 0
-
-    #def evaluate(self, df, **kwargs):
-        #return ~super(IsMissing, self).evaluate(df, **kwargs)
+    def evaluate(self, df, **kwargs):
+        val = ~df[self.columns].notnull()
+        return val
 
 
-#class IsNotEmpty(LogicFunction):
-    #_name = "ISNOTEMPTY"
-    #parameters = 0
+class Empty(LogicFunction):
+    _name = "EMPTY"
+    arguments = {}
 
-    #def evaluate(self, df, **kwargs):
-        #columns = self.columns(df, **kwargs)
-        #val = df[columns].apply(lambda x: x.notnull() &
-                                 #x.index.isin(x.nonzero()[0]))
-        #return val
-
-
-#class IsEmpty(IsNotEmpty):
-    #_name = "ISEMPTY"
-
-    #def evaluate(self, df, **kwargs):
-        #return ~super(IsEmpty, self).evaluate(df, **kwargs)
+    def evaluate(self, df, **kwargs):
+        val = (~df[self.columns].notnull() |
+               df[self.columns].apply(
+                   lambda x: ~x.index.isin(x.nonzero()[0])))
+        return val
 
 
 #############################################################################
@@ -706,7 +714,7 @@ class BaseFreq(Function):
 
     @staticmethod
     def get_description():
-        return "Frequency functions"
+        return "Frequencies"
 
 
 class Freq(BaseFreq):
@@ -871,6 +879,10 @@ class Rank(Freq):
 
 class BaseReferenceCorpus(Function):
     _name = "virtual"
+
+    @staticmethod
+    def get_description():
+        return "Reference corpus functions"
 
 
 class ReferenceCorpusFrequency(BaseReferenceCorpus):
@@ -1056,7 +1068,39 @@ class BaseProportion(Function):
 
     @staticmethod
     def get_description():
-        return "Distribution functions"
+        return "Distribution statistics"
+
+
+class Tokens(BaseProportion):
+    _name = "statistics_tokens"
+    no_column_labels = True
+    maximum_columns = 0
+
+    def evaluate(self, df, **kwargs):
+        val = self.constant(df, len(df.dropna(how="all")))
+        return val
+
+
+class Types(BaseProportion):
+    _name = "statistics_types"
+    no_column_labels = True
+
+    def evaluate(self, df, **kwargs):
+        val = self.constant(df, len(df[self.columns].drop_duplicates()))
+        return val
+
+
+class TypeTokenRatio(Types):
+    _name = "statistics_ttr"
+    no_column_labels = True
+
+    def evaluate(self, df, **kwargs):
+        types = super(TypeTokenRatio, self).evaluate(df, **kwargs)
+        tokens = Tokens(group=self.group,
+                        columns=self.columns).evaluate(df, **kwargs)
+        val = pd.Series(data=types.values / tokens.values,
+                        index=df.index)
+        return val
 
 
 class Proportion(BaseProportion):
@@ -1111,39 +1155,6 @@ class Entropy(Proportion):
         else:
             entropy = -sum(props * np.log2(props))
         val = self.constant(df, entropy)
-        return val
-
-
-class Tokens(Function):
-    _name = "statistics_tokens"
-    no_column_labels = True
-    maximum_columns = 0
-
-    def evaluate(self, df, **kwargs):
-        val = self.constant(df, len(df.dropna(how="all")))
-        return val
-
-
-class Types(Function):
-    _name = "statistics_types"
-    no_column_labels = True
-
-    def evaluate(self, df, **kwargs):
-        val = self.constant(df, len(df[self.columns].drop_duplicates()))
-        return val
-
-
-class TypeTokenRatio(Types):
-    _name = "statistics_ttr"
-    no_column_labels = True
-
-    def evaluate(self, df, **kwargs):
-        types = super(TypeTokenRatio, self).evaluate(df, **kwargs)
-        tokens = Tokens(group=self.group,
-                        columns=self.columns).evaluate(df, **kwargs)
-        df = pd.DataFrame(data={"types": types, "tokens": tokens},
-                          index=df.index)
-        val = df.apply(lambda row: row.types / row.tokens, axis="columns")
         return val
 
 
@@ -1250,7 +1261,15 @@ class MutualInformation(Proportion):
 ## Corpus functions
 #############################################################################
 
-class CorpusSize(Function):
+class BaseCorpusFunction(Function):
+    _name = "virtual"
+
+    @staticmethod
+    def get_description():
+        return "Corpus statistics"
+
+
+class CorpusSize(BaseCorpusFunction):
     _name = "statistics_corpus_size"
     no_column_labels = True
 

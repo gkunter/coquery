@@ -620,7 +620,8 @@ class TestCorpus(unittest.TestCase):
     #def test_feature_joins_8(self):
         ## words and segments
         ## this test is still not operational
-        #l1, l2 = self.resource.get_feature_joins(0, ["word_label", "segment_label"])
+        #l1, l2 = self.resource.get_feature_joins(
+        #   0, ["word_label", "segment_label"])
         #print(l1, l2)
 
     def test_get_token_conditions_1(self):
@@ -1126,7 +1127,8 @@ class TestCorpus(unittest.TestCase):
             INNER JOIN Lexicon AS COQ_WORD_2
                     ON COQ_WORD_2.WordId = WordId2
 
-            WHERE NOT ((COQ_WORD_1.Word LIKE 'a%' OR COQ_WORD_1.Word LIKE 'b%'))
+            WHERE NOT ((COQ_WORD_1.Word LIKE 'a%' OR
+                        COQ_WORD_1.Word LIKE 'b%'))
                   AND
                   NOT ((COQ_WORD_2.Word LIKE 'b%'))"""
         self.assertEqual(simple(query_string),
@@ -1473,7 +1475,6 @@ class TestCorpusWithExternal(unittest.TestCase):
              "FileId1 AS coquery_invisible_origin_id"])
 
 
-
 class TestNGramCorpus(unittest.TestCase):
     resource = NGramResource
 
@@ -1660,15 +1661,16 @@ class TestNGramCorpus(unittest.TestCase):
 
 
 def mock_get_available_resources(configuration):
-    return {CorpusResource.name:
-                [SQLResource,
-                 CorpusClass,
-                 os.path.join(os.path.expanduser("~"),
-                              "{}.py".format(CorpusResource.db_name))]}
+    path = os.path.join(os.path.expanduser("~"),
+                        "{}.py".format(CorpusResource.db_name))
+    return {CorpusResource.name: [SQLResource,
+                                  CorpusClass,
+                                  path]}
 
 
 provided_tests = [TestCorpus, TestSuperFlat, TestCorpusWithExternal,
                   TestNGramCorpus]
+
 
 def main():
     suite = unittest.TestSuite(

@@ -149,7 +149,7 @@ class LinkSelect(QtWidgets.QDialog):
         self.ui.tree_external.clear()
 
     def insert_data(self):
-        corpora = sorted([resource.name for _, (resource, _, _, _)
+        corpora = sorted([resource.name for _, (resource, _, _)
                           in options.cfg.current_resources.items()
                           if resource.name != self.corpus_name])
         self.ui.combo_corpus.addItems(corpora)

@@ -163,8 +163,8 @@ COLUMN_NAMES = {
     "statistics_frequency_pmw": "Frequency pmw",
     "statistics_frequency_ptw": "Frequency ptw",
     "statistics_frequency_normalized": "Frequency (normalized)",
-    "statistics_tokens": "Number of matches",
-    "statistics_types": "Number of unique matches",
+    "statistics_tokens": "Tokens (=number of matches)",
+    "statistics_types": "Types (=number of distinct matches)",
     "statistics_ttr": "Type-token ratio",
     "statistics_rank": "Rank",
     #"statistics_passing_rows": "Passing rows",
@@ -211,7 +211,7 @@ FUNCTION_DESC = {
     "statistics_percent": "Calculate the percentage for each match",
     "statistics_rank": "Return the rank of each match if the column is sorted",
     "statistics_tokens": "Count the number of tokens",
-    "statistics_types": "Count the number of types",
+    "statistics_types": "Count the number of unique matches",
     "statistics_ttr": "Calculate the type-token ratio",
     "reference_frequency": "Count the frequeny of the match in the reference corpus",
     "reference_frequency_ptw": "Calculate the frequency per million words in the reference corpus",
@@ -361,6 +361,18 @@ except NameError:
     unicode = str
     long = int
 
+msg_not_enough_space = """
+<p><b>Not enough space available.</b><p>
+<p>You have decided to enter a new database directory <code>{path}</code>
+for configuration '{name}', but the new directory cannot store all corpus
+files: </p>
+<p>Required space: {required:0.1f} MiB<br>
+Available space: {available:0.1f} MiB<br>
+Missing: <span text-color="red";>{missing:0.1f} MiB</span></p>
+<p>The configuration will not be moved to the new database directory. Please
+select a different directory the next time you attempt to change the
+directory for this configuration.<&p>"""
+
 msg_runtime_error_function = """
 <p>Error during the evaluation of function</p>
 <code style='color: #aa0000'>{}</code>:<br>{}</p>
@@ -458,7 +470,32 @@ automatically lemmatize and POS-tag your new corpus.</p>"""
 
 msg_adhoc_builder_table = """
 <p>You can build a new corpus by storing the rows from a table in a database
-that can be queried by Coquery.</p>"""
+that can be queried by Coquery.</p>
+<p>The table has to be available in a text format (e.g. CSV).</p>
+<p>You can map the columns in the table to a query item type. For instance,
+you can specify that Word query items are matched against a column in the
+table that contains the orthographic representations of the tokens.
+Corresponding mappings are available for Lemma, Transcript, POS, and Gloss
+query item types.</p>"""
+
+msg_adhoc_builder_package = """
+<p>You can read a Coquery corpus package into a database so that the corpus
+is available for queries in Coquery.</p>
+<p>A corpus package is a file with the file extionsion <code>.coq</code> that
+has been created by using the 'Package' button in the Corpus manager for any
+installed corpus. The package file contains all data that is required to
+replicate the installed corpus.</p>
+<p>Using corpus packages can increase the replicability of corpus-linguistic
+research. For instance, a custom corpus can be made available as a package to
+the academic community so that corpus queries can be replicated.</p>
+<p>Corpus modules may also be helpful in classroom settings as an easy way to
+to deploying identical copies of a corpus on different computers.</p>
+<p><b>Please note:</b> It is the user's responsibility to protect the
+copyright of the corpus that is packaged by the user. The license terms of
+the corpus must not be violated by packaging and/or distributing a corpus.
+The Coquery developers cannot be held liable for any copyright infringement
+or license violations that is caused by packaging and/or distributing a
+corpus.</p>"""
 
 msg_invalid_filter = """
 <p><b>The corpus filter '{}' is not valid.</b></p>

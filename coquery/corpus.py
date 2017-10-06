@@ -23,6 +23,8 @@ import pandas as pd
 import os
 import tempfile
 import zipfile
+import json
+from csv import QUOTE_NONNUMERIC
 
 from .errors import UnsupportedQueryItemError
 from .defines import (
@@ -49,7 +51,6 @@ class BaseResource(CoqObject):
     """
     # add internal table that can be used to access frequency information:
     coquery_query_string = "Query string"
-    #coquery_expanded_query_string = "Expanded query string"
     coquery_query_token = "Query item"
 
     special_table_list = ["coquery", "tag"]
@@ -247,9 +248,6 @@ class BaseResource(CoqObject):
         for x in cls.get_resource_features():
             table, _, _ = x.partition("_")
             table_dict[table].add(x)
-        #for x in list(table_dict.keys()):
-            #if x not in cls.special_table_list and not "{}_table".format(x) in table_dict[x]:
-                #table_dict.pop(x)
         try:
             table_dict.pop("tag")
         except (AttributeError, KeyError):
@@ -261,7 +259,7 @@ class BaseResource(CoqObject):
         table_dict = cls.get_table_dict()
         L = []
         for x in table_dict[table]:
-            if x.endswith("_id") and x.count("_") == 2:
+            if cls.is_foreign_key(x):
                 _, linked, _ = x.split("_")
                 L.append(linked)
         return L
@@ -346,16 +344,20 @@ class BaseResource(CoqObject):
                     available_features.append(rc_feature)
                     if rc_feature in rc_feature_list:
                         requested_features.append(rc_feature)
-                if rc_feature.endswith("_id") and rc_feature.count("_") == 2:
+                if cls.is_foreign_key(rc_feature):
                     children.append(
                         cls.get_table_structure(
                             "{}_table".format(rc_feature.split("_")[1]),
-                                rc_feature_list))
+                            rc_feature_list))
         D["rc_table_name"] = rc_table
         D["children"] = children
         D["rc_features"] = sorted(available_features)
         D["rc_requested_features"] = sorted(requested_features)
         return D
+
+    @staticmethod
+    def is_foreign_key(s):
+        return s.endswith("_id") and s.count("_") == 2
 
     @classmethod
     def get_feature_from_name(cls, name):
@@ -441,8 +443,9 @@ class BaseResource(CoqObject):
                                 QUERY_ITEM_WORD]:
             query_item_col = getattr(cls, query_item_type, None)
             if query_item_col and query_item_col not in lexicon_variables:
-                label = getattr(cls, query_item_col)
-                lexicon_variables.append((query_item_col, label))
+                label = getattr(cls, query_item_col, None)
+                if label:
+                    lexicon_variables.append((query_item_col, label))
         return lexicon_variables
 
     @classmethod
@@ -614,38 +617,177 @@ class SQLResource(BaseResource):
             sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
             *args, **kwargs)
 
-    def dump_table(self, path, rc_table):
+    @classmethod
+    def _str_table_desc_mysql(cls, table):
+        S = "SHOW CREATE TABLE {}.{}".format(
+            cls.db_name, getattr(cls, "{}_table".format(table)))
+        return S
+
+    @classmethod
+    def _str_table_desc_sqlite(cls, table):
+        S = "SELECT `sql` FROM sqlite_master WHERE tbl_name = '{}'".format(
+            getattr(cls, "{}_table".format(table)))
+        return S
+
+    def get_table_descriptor(self):
+        d = {}
+        feature_map = [(x, getattr(self, x))
+                       for x in self.get_resource_features()]
+
+        for tab in self.get_table_tree("corpus") + ["tag"]:
+            table_name = getattr(self, "{}_table".format(tab))
+
+            d[tab] = dict(Fields={}, Primary=None, Name=table_name)
+            for row in self.get_table_names(tab):
+                field_name = row["name"]
+                rc_feature = None
+                for rc_feature, name in feature_map:
+                    tup = self.split_resource_feature(rc_feature)
+                    _, table, feature = tup
+                    if table == tab and name == field_name:
+                        break
+
+                if row["key"] in ["PRI", 1]:
+                    d[tab]["Primary"] = rc_feature
+
+                d[tab]["Fields"][rc_feature] = {
+                    "Type": row["type"],
+                    "Null": ("NOT NULL" if row["null"] in ["NO", 1] else ""),
+                    "Name": field_name}
+        return d
+
+    def get_table_size(self, rc_table):
         engine = self.get_engine()
         table = getattr(self, "{}_table".format(rc_table))
-        S = "SELECT * FROM {}".format(table)
-        for chunk in pd.read_sql(S, con=engine, chunksize=100000):
-            chunk.to_csv(path, header=False, index=False, mode="a",
-                         encoding="utf-8")
+        S = "SELECT COUNT(*) FROM {}".format(table)
+        size = pd.read_sql(S, con=engine).iloc[0][0]
+        engine.dispose()
+        return size
+
+    def get_primary_key(self, rc_table):
+        for row in self.get_table_names(rc_table):
+            if row["key"] in ("PRI", 1):
+                return row["name"]
+        return None
+
+    def get_table_names(self, rc_table):
+        engine = self.get_engine()
+        table_name = getattr(self, "{}_table".format(rc_table))
+        if self.db_type == SQL_MYSQL:
+            S = "SHOW FIELDS FROM {}"
+            columns = "name", "type", "null", "key", "default", "ex"
+        else:
+            S = "PRAGMA table_info({})"
+            columns = "cid", "name", "type", "null", "default", "key"
+
+        with engine.connect() as connection:
+            rows = [dict(zip(columns, x)) for
+                    x in connection.execute(S.format(table_name))]
+        return rows
+
+    def dump_table(self, path, rc_table, table_size, chunk_signal,
+                   chunksize=250000):
+        engine = self.get_engine()
+        table = getattr(self, "{}_table".format(rc_table))
+        primary = self.get_primary_key(rc_table)
+        S = "SELECT * FROM {} WHERE {} BETWEEN {{}} AND {{}}".format(
+            table, primary)
+        first = True
+
+        chunks = table_size // chunksize
+        for i in range(chunks + 1):
+            if chunk_signal:
+                chunk_signal.emit((i, chunks + 1))
+            sql_query = S.format(i * chunksize, (i + 1) * chunksize - 1)
+            chunk = pd.read_sql(sql_query, engine)
+            chunk.to_csv(path, header=first, index=False, mode="a",
+                         encoding="utf-8",
+                         quoting=QUOTE_NONNUMERIC)
+            first = False
+        if chunk_signal:
+            chunk_signal.emit((chunks + 1, chunks + 1))
         engine.dispose()
 
     def get_module_path(self):
         d = options.get_available_resources(options.cfg.current_server)
         return d[self.name][-1]
 
-    def pack_corpus(self, name):
+    @classmethod
+    def get_pack_steps(cls):
+        return 3 + len(cls.get_table_tree("corpus")) * 3
+
+    def pack_corpus(self, name, license,
+                    file_signal=None, chunk_signal=None):
         """
         Creates a self-contained corpus package.
 
         The corpus package is in essence a zip file containing a dump of each
         table in the data base alongside a corpus module.
+
+        Parameters
+        ----------
+        name : str
+            Name of the package file
+        license : str
+            A string that is stored into the file LICENSE
+        file_signal : Signal or None
+            If not None, this Qt signal is emitted at the beginning of each
+            new file that is packed. A tuple consisting of the current file
+            name and a string describing the packing stage for the current
+            file is passed as an argument to the signal.
+        chunk_signal : Signal or None
+            If not None, this Qt signal is emitted for each chunk that is
+            written to the current file. A tuple consisting of the current
+            chunk number and the total number of chunks is passed as an
+            argument to the signal.
         """
         zf = zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED)
-        for tab in self.get_table_tree("corpus"):
+
+        # write CSV files
+        for tab in self.get_table_tree("corpus") + ["tag"]:
+            tab_name = "{}.csv".format(tab)
+            if file_signal:
+                file_signal.emit((tab_name, "Determining size of "))
+            size = self.get_table_size(tab)
+            if file_signal:
+                file_signal.emit((tab_name, "Extracting"))
             temp_file = tempfile.NamedTemporaryFile()
             temp_name = temp_file.name
             try:
-                self.dump_table(temp_name, tab)
-                zf.write(temp_name, arcname="{}.csv".format(tab))
+                self.dump_table(temp_name, tab, size, chunk_signal)
+                if file_signal:
+                    file_signal.emit((tab_name, "Packaging"))
+                zf.write(temp_name, arcname=tab_name)
             finally:
                 temp_file.close()
 
-        zf.write(self.get_module_path(),
-                 arcname=os.path.basename(self.get_module_path()))
+        # get temp file name:
+        temp_file = tempfile.NamedTemporaryFile()
+        temp_name = temp_file.name
+        temp_file.close()
+
+        # write tables.json
+        if file_signal:
+            file_signal.emit(("tables.json", "Packaging"))
+        with open(temp_name, mode="w", encoding="utf-8") as temp_file:
+            json.dump(self.get_table_descriptor(), temp_file,
+                      ensure_ascii=False)
+        zf.write(temp_name, arcname="tables.json")
+
+        # write LICENSE
+        if file_signal:
+            file_signal.emit(("LICENSE", "Packaging"))
+
+        with open(temp_name, mode="w", encoding="utf-8") as temp_file:
+            temp_file.write(license)
+        zf.write(temp_name, arcname="LICENSE")
+
+        # write module file
+        module_name = os.path.basename(self.get_module_path())
+        if file_signal:
+            file_signal.emit((module_name, "Packaging"))
+        zf.write(self.get_module_path(), arcname=module_name)
+
         zf.close()
 
     def get_statistics(self, db_connection, signal=None, s=None):
@@ -734,7 +876,7 @@ class SQLResource(BaseResource):
                 field_name = getattr(cls, x)
                 alias = "{field}{N}".format(field=field_name, N=N)
                 S = "{field} AS {alias}".format(field=field_name, alias=alias)
-                if not alias in aliases:
+                if alias not in aliases:
                     fields.append(S)
                     aliases.append(alias)
         return template.format(fields=", ".join(sorted(fields)),
@@ -769,7 +911,6 @@ class SQLResource(BaseResource):
 
         """
         _MAX_ENTROPY = 10
-
 
         any_char = -0.001
         wildcard_q = 13/26 * math.log2(13/26)
@@ -1014,7 +1155,6 @@ class SQLResource(BaseResource):
     def has_ngram(cls):
         return (hasattr(cls, "corpusngram_table") and
                 not options.cfg.no_ngram)
-
 
     @staticmethod
     def alias_external_table(n, link, res):
@@ -1308,7 +1448,6 @@ class SQLResource(BaseResource):
             if token.lemmatize and label == QUERY_ITEM_POS:
                 pos_spec = s
 
-
         if token.lemmatize:
             # rewrite token conditions so that the specifications are used to
             # obtain the matching lemmas in a subquery:
@@ -1355,8 +1494,8 @@ class SQLResource(BaseResource):
             "parent_alias": "COQ_CORPUS_{}".format(length),
             "parent_start": cls.corpus_starttime,
             "parent_end": cls.corpus_endtime,
-            "parent_origin": getattr(cls, "corpus_source_id", "") or
-                             getattr(cls, "corpus_file_id", "")}
+            "parent_origin": (getattr(cls, "corpus_source_id", "") or
+                              getattr(cls, "corpus_file_id", ""))}
         where_str = sql_template.format(**kwargs)
 
         table_str = "{} ON {}".format(table_str, where_str)
@@ -1388,7 +1527,6 @@ class SQLResource(BaseResource):
             if pos is None and token:
                 pos = i
         return pos or 0
-
 
     @classmethod
     def get_required_columns(cls, token_list, selected, to_file=False):
@@ -1451,6 +1589,12 @@ class SQLResource(BaseResource):
                     if s not in columns:
                         columns.append(s)
 
+        if not _first_item:
+            _first_item = 1
+
+        # FIXME: It's not fully clear why we go through the selected features
+        # a second time. The first time for lexical features, and the second
+        # for corpus features?
         for rc_feature in selected:
             if rc_feature in corpus_features:
                 _, tab, feat = cls.split_resource_feature(rc_feature)
@@ -1586,7 +1730,7 @@ class SQLResource(BaseResource):
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
                 getattr(self, "{}_id".format(table)),
                 getattr(self, "{}_table".format(table)),
-                pos_feature,
+                getattr(self, pos_feature),
                 self.get_operator(current_token),
                 pos)
             engine = self.get_engine()
@@ -2345,15 +2489,16 @@ class CorpusClass(object):
 
         if word_start and word_end:
             column_string = """{},
-                    {{word_table}}.{{start_time}} AS coq_word_starttime_1,
-                    {{word_table}}.{{end_time}} AS coq_word_endtime_1""".format(
-                        column_string)
+                {{word_table}}.{{start_time}} AS coq_word_starttime_1,
+                {{word_table}}.{{end_time}} AS coq_word_endtime_1""".format(
+                    column_string)
             kwargs.update({"start_time": word_start, "end_time": word_end})
 
         kwargs["columns"] = column_string.format(**kwargs)
 
         if origin_id:
-            format_string += "    AND {corpus}.{source_id} = '{current_source_id}'"
+            format_string += (
+                "    AND {corpus}.{source_id} = '{current_source_id}'")
         S = format_string.format(**kwargs)
 
         if options.cfg.verbose:
@@ -2392,7 +2537,8 @@ class CorpusClass(object):
             df = df.sort(columns=headers)
         self._context_cache[(token_id, source_id, token_width)] = (df, tags)
 
-    def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
+    def get_rendered_context(self, token_id, source_id, token_width,
+                             context_width, widget):
         """
         Return a dictionary with the context data.
 
@@ -2437,7 +2583,8 @@ class CorpusClass(object):
             if word:
                 # highlight words that are in the results table:
                 if word_id in self.id_list:
-                    l.append("<span style='{};'>".format(self.resource.render_token_style))
+                    l.append("<span style='{};'>".format(
+                        self.resource.render_token_style))
                 # additional highlight if the word is the target word:
                 if token_id <= word_id < token_id + token_width:
                     l.append("<b>")

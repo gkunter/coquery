@@ -15,9 +15,8 @@ import os
 import logging
 import sqlalchemy
 
-from .defines import SQL_MYSQL, SQL_SQLITE
+from .defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
 from . import options
-from . import NAME
 
 
 def _conf_dict(configuration):
@@ -191,10 +190,15 @@ def sqlite_path(configuration, db_name=None):
         The path pointing either directly to the database, or to the
         directory in which databases are stored.
     """
+    d = _conf_dict(configuration)
+
     if db_name:
         S = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
     else:
-        S = options.cfg.database_path
+        if configuration == DEFAULT_CONFIGURATION:
+            S = options.cfg.database_path
+        else:
+            S = d["path"] or options.cfg.database_path
     return S
 
 
@@ -356,12 +360,10 @@ def get_index_length(engine, table, column, coverage=0.95):
             max_c = x
         if x[3] >= coverage:
             print("{}.{}: index length {}".format(table, column, x[0]))
-            logger.info("{}.{}: index length {}".format(table, column, x[0]))
+            logging.info("{}.{}: index length {}".format(table, column, x[0]))
             return int(x[0])
     if max_c:
         print("{}.{}: index length {}".format(table, column, max_c[0]))
-        logger.info("{}.{}: index length {}".format(table, column, max_c[0]))
+        logging.info("{}.{}: index length {}".format(table, column, max_c[0]))
         return int(max_c[0])
     return None
-
-logger = logging.getLogger(NAME)

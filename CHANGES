@@ -1,15 +1,16 @@
 (0.10.1dev, unreleased)
+* New interface for Group and Summary functions
 * API change: disposed of obsolete LexiconClass
 * API change: Table.get_create_string() expects list of existing tables as
   second argument
 * Provide more visual feedback on actions that don't have a visible effect
 * Column selection: Switch order of available and selected
 * corpora can be exported and imported
+* Packaging: corpora can be packaged, and packaged corpora can be installed
 * can restrict query files to a number of rows
-* New corpus: Old Bailey Corpus 2.0
+* New corpora: Old Bailey Corpus 2.0, Korpus Malti
 * New function dialog with better handling of function arguments
-* New functions: IF, IFANY, Percentile, Log, Replace
-* Rank function can use ascending or descending order
+* New functions: IF, IFANY, EMPTY, MISSING, Percentile, Log, Replace
 * mathematical functions can now be applied column-wise
 * experimental support for N-gram lookup tables
 * bring time series visualization to the visualization designer

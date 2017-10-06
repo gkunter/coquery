@@ -92,7 +92,8 @@ class Argument(QtWidgets.QWidget):
 class FunctionWidget(QtWidgets.QWidget):
     argumentsChanged = QtCore.Signal()
 
-    def __init__(self, func, checkable=True, *args, **kwargs):
+    def __init__(self, func, checkable=True, is_checked=False,
+                 *args, **kwargs):
         super(FunctionWidget, self).__init__(*args, **kwargs)
         self.checkable = checkable
         self.argument_list = []
@@ -145,9 +146,11 @@ class FunctionWidget(QtWidgets.QWidget):
             self.outerLayout.insertWidget(0, self.checkbox)
             self._arguments_shown = True
         else:
-
             self.arguments.hide()
             self._arguments_shown = False
+
+        self.setCheckState(QtCore.Qt.Checked if is_checked else
+                           QtCore.Qt.Unchecked)
 
         self.outerLayout.addLayout(self.innerLayout)
         self.outerLayout.setStretch(1, 1)
@@ -228,8 +231,8 @@ class FunctionList(QtWidgets.QListWidget):
                                         QtGui.QPalette.Button)
 
         self.setStyleSheet(("""
-            QListWidget::item {{ border-bottom: 1px solid {border}; }}
-            QListWidget::item:selected {{ background: {selected};
+            FunctionList::item {{ border-bottom: 1px solid {border}; }}
+            FunctionList::item:selected {{ background: {selected};
                                           color: {selected_text}; }}
             """).format(
                 border=border.name(),
@@ -315,7 +318,7 @@ class FunctionDialog(QtWidgets.QDialog):
             pass
 
     def select_columns(self):
-        selected = SelectionDialog.show(
+        selected, available = SelectionDialog.show(
             "Column selection – Coquery",
             self.columns, self.available_columns,
             minimum=1,

@@ -322,7 +322,7 @@ class SqlDB(object):
                   index_label=index_label)
 
     def load_file(self, file_name, encoding, table, index,
-                  if_exists="append", skip=None, **kwargs):
+                  if_exists="append", skip=None, chunksize=250000, **kwargs):
         """
         Load the file content into the SQL table.
 
@@ -346,11 +346,14 @@ class SqlDB(object):
             The number of lines that have been loaded into the table.
         """
         count = 0
+        chunk_signal = kwargs.pop("chunksignal", None)
 
         with codecs.open(file_name, "r", encoding=encoding) as big_file:
 
             # Iterate the chunks:
-            for i, lines in enumerate(get_chunk(big_file)):
+            for i, lines in enumerate(get_chunk(big_file, chunksize)):
+                if chunk_signal:
+                    chunk_signal.emit(i, None)
                 content = list(lines)
                 count += len(content)
 
@@ -366,12 +369,15 @@ class SqlDB(object):
                 temp_file.write(buffer)
                 temp_file.close()
 
-                self.load_infile(temp_file.name,
-                                 table_name=table,
-                                 if_exists=if_exists,
-                                 index=index,
-                                 **kwargs)
-                kwargs["header"] = None
+                columns = self.load_infile(temp_file.name,
+                                           table_name=table,
+                                           if_exists=if_exists,
+                                           index=index,
+                                           keep_default_na=False,
+                                           **kwargs).columns
+                if i == 0:
+                    kwargs["names"] = columns
+                    kwargs["header"] = None
                 kwargs["skiprows"] = None
 
                 # load the temporary file containing a chunk from the big
@@ -407,6 +413,7 @@ class SqlDB(object):
                             table_name,
                             index_label=index,
                             if_exists=if_exists)
+        return df
 
     def get_field_type(self, table_name, column_name):
         """

@@ -36,18 +36,21 @@ class CoqListSelect(QtWidgets.QWidget):
         self.ui.button_up.clicked.connect(self.selected_up)
         self.ui.button_down.clicked.connect(self.selected_down)
 
-        icon_getter = get_toplevel_window().get_icon
-        self.ui.button_up.setIcon(icon_getter("Circled Chevron Up"))
-        self.ui.button_down.setIcon(icon_getter("Circled Chevron Down"))
-        self.ui.button_add.setIcon(icon_getter("Circled Chevron Right"))
-        self.ui.button_remove.setIcon(icon_getter("Circled Chevron Left"))
+        try:
+            icon_getter = get_toplevel_window().get_icon
+            for button, icon in (
+                    (self.ui.button_up, "Circled Chevron Up"),
+                    (self.ui.button_down, "Circled Chevron Down"),
+                    (self.ui.button_add, "Circled Chevron Right"),
+                    (self.ui.button_remove, "Circled Chevron Left")):
+                button.setIcon(icon_getter(icon))
+        except AttributeError:
+            pass
 
         self.ui.list_selected.itemSelectionChanged.connect(self.check_buttons)
         self.ui.list_selected.itemSelectionChanged.connect(
             lambda: self.currentItemChanged.emit(self.currentItem()))
         self.ui.list_available.itemSelectionChanged.connect(self.check_buttons)
-        #self.ui.list_available.itemSelectionChanged.connect(
-            #lambda: self.currentItemChanged.emit(self.currentItem()))
 
         self._minimum = 0
         self._move_available = True
@@ -125,6 +128,10 @@ class CoqListSelect(QtWidgets.QWidget):
         return [self.ui.list_selected.item(i) for i
                 in range(self.ui.list_selected.count())]
 
+    def availableItems(self):
+        return [self.ui.list_available.item(i) for i
+                in range(self.ui.list_available.count())]
+
     def setAvailableList(self, l, translate=None, *args, **kwargs):
         self._fill_list_widget(self.ui.list_available, l,
                                translate, *args, **kwargs)
@@ -172,7 +179,6 @@ class CoqListSelect(QtWidgets.QWidget):
         for i in range(self.ui.list_selected.count()):
             item = self.ui.list_selected.item(i)
             if utf8(item.data(QtCore.Qt.UserRole)) == x:
-                _last_selected_row = item
                 self.ui.list_selected.setCurrentItem(item)
                 return
 
@@ -180,7 +186,6 @@ class CoqListSelect(QtWidgets.QWidget):
         for i in range(self.ui.list_available.count()):
             item = self.ui.list_available.item(i)
             if utf8(item.data(QtCore.Qt.UserRole)) == x:
-                _last_available_row = item
                 self.ui.list_available.setCurrentItem(item)
                 return
 
@@ -286,6 +291,7 @@ class SelectionDialog(QtWidgets.QDialog):
     def __init__(self, title, selected, available, text="", minimum=None,
                  translator=None, *args, **kwargs):
         super(SelectionDialog, self).__init__(*args, **kwargs)
+        translator = translator or (lambda x: x)
         self.setWindowTitle(title)
         self.main_layout = QtWidgets.QVBoxLayout(self)
         self.list_select = CoqListSelect()
@@ -302,5 +308,8 @@ class SelectionDialog(QtWidgets.QDialog):
     def show(*args, **kwargs):
         dialog = SelectionDialog(*args, **kwargs)
         dialog.exec_()
-        return [x.data(QtCore.Qt.UserRole)
-                for x in dialog.list_select.selectedItems()]
+        selected = [x.data(QtCore.Qt.UserRole)
+                    for x in dialog.list_select.selectedItems()]
+        available = [x.data(QtCore.Qt.UserRole)
+                     for x in dialog.list_select.availableItems()]
+        return selected, available
