@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'addFilter.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -127,9 +127,9 @@ class Ui_FiltersDialog(object):
         self.radio_OP_EQ.setText(_translate("FiltersDialog", "equals"))
         self.radio_OP_NE.setText(_translate("FiltersDialog", "does not equal"))
         self.radio_OP_LT.setText(_translate("FiltersDialog", "is less than"))
-        self.radio_OP_LE.setText(_translate("FiltersDialog", "is less or equal than"))
+        self.radio_OP_LE.setText(_translate("FiltersDialog", "is less or equal to"))
         self.radio_OP_GT.setText(_translate("FiltersDialog", "is greater than"))
-        self.radio_OP_GE.setText(_translate("FiltersDialog", "is greater or equal than"))
+        self.radio_OP_GE.setText(_translate("FiltersDialog", "is greater or equal to"))
         self.radio_OP_MATCH.setText(_translate("FiltersDialog", "matches"))
         self.radio_OP_NMATCH.setText(_translate("FiltersDialog", "does not match"))
         self.label.setText(_translate("FiltersDialog", "&Value:"))

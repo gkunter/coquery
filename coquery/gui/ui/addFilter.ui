@@ -17,16 +17,7 @@
    <item>
     <widget class="QWidget" name="widget_filters" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>0</number>
       </property>
       <item>
@@ -121,7 +112,7 @@
           <item>
            <widget class="QRadioButton" name="radio_OP_LE">
             <property name="text">
-             <string>is less or equal than</string>
+             <string>is less or equal to</string>
             </property>
            </widget>
           </item>
@@ -135,7 +126,7 @@
           <item>
            <widget class="QRadioButton" name="radio_OP_GE">
             <property name="text">
-             <string>is greater or equal than</string>
+             <string>is greater or equal to</string>
             </property>
            </widget>
           </item>
