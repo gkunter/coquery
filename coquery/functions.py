@@ -851,9 +851,14 @@ class RowNumber(Freq):
 class Rank(Freq):
     _name = "statistics_rank"
 
+    arguments = {"choose": [("direction", "Direction:", "Ascending",
+                             ("Ascending", "Descending"))]}
+
     def evaluate(self, df, **kwargs):
         rank_df = df[self.columns].drop_duplicates().reset_index(drop=True)
-        rank_df[self._name] = rank_df.sort_values(by=rank_df.columns.tolist()).index.tolist()
+        rank_df[self._name] = rank_df.sort_values(
+            by=rank_df.columns.tolist(),
+            ascending=kwargs["direction"] == "Ascending").index.tolist()
         val = df.merge(rank_df, how="left")[self._name]
         val = val + 1
         val.index = df.index
