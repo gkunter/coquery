@@ -133,26 +133,9 @@ class BuilderClass(BaseCorpusBuilder):
         return True
 
     def build_load_files(self):
-        if self._table_options is not None:
-            kwargs = {
-                "encoding": self._table_options.encoding,
-                "header": 0 if self._table_options.header else None,
-                "sep": self._table_options.sep,
-                "skiprows": self._table_options.skip_lines,
-                "quotechar": self._table_options.quote_char}
-        else:
-            kwargs = {"encoding": "utf-8"}
-
-        kwargs.update({"low_memory": False, "error_bad_lines": False})
-
         capt = Capturer(stderr=True)
         with capt:
-            try:
-                df = pd.read_csv(self.arguments.path, **kwargs)
-            except Exception as e:
-                logging.error(e)
-                print(e)
-                raise e
+            df = self._table_options.read_file(self.arguments.path)
         for x in capt:
             s = "File {} – {}".format(self.arguments.path, x)
             logging.warn(s)
@@ -164,6 +147,7 @@ class BuilderClass(BaseCorpusBuilder):
             df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x) for x in df.columns]
         df[self.corpus_file_id] = 1
         self.DB.load_dataframe(df, self.corpus_table, self.corpus_id)
+        self.store_filename(self.arguments.path)
 
     @classmethod
     def get_file_list(cls, path, file_filter, sort=True):
