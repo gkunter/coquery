@@ -715,8 +715,6 @@ class BuilderGui(InstallerGui):
                 button.setEnabled(False)
 
         def validate_metadata(button):
-            if self._onefile:
-                return True
             if (self.ui.check_use_metafile.isChecked() and
                     self._metafile_column is None):
                 self.ui.label_metafile.setStyleSheet(
@@ -740,7 +738,8 @@ class BuilderGui(InstallerGui):
             else:
                 validate_name_is_unique(button)
                 validate_db_does_not_exist(button)
-                validate_metadata(button)
+                if not self._onefile:
+                    validate_metadata(button)
 
     def select_path(self):
         if self._onefile:
@@ -820,6 +819,7 @@ class PackageGui(BuilderGui):
         self.builder_class = builder_class
         self.ngram_width = None
         self.state = None
+        self._onefile = True
 
         self.ui = Ui_PackageInstaller()
         self.ui.setupUi(self)
