@@ -1425,9 +1425,9 @@ def set_current_server(name):
         os.makedirs(cfg.adhoc_path)
 
     if cfg.server_configuration[name]["type"] == SQL_SQLITE:
-        # FIXME: custom-set database paths are not working
-        logging
-        cfg.database_path = os.path.join(path, "databases")
+        cfg.database_path = cfg.server_configuration[name]["path"]
+        if not cfg.database_path:
+            cfg.database_path = os.path.join(path, "databases")
         if not os.path.exists(cfg.database_path):
             os.makedirs(cfg.database_path)
 
@@ -1630,6 +1630,7 @@ def has_module(name):
     else:
         import pkgutil
         return pkgutil.find_loader(name) is not None
+
 
 _recent_python = sys.version_info < (2, 7)
 use_xlrd = has_module("xlrd")
