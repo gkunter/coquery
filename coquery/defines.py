@@ -365,17 +365,31 @@ except NameError:
     unicode = str
     long = int
 
+msg_completely_remove = """
+<p><b>There are corpora associated with a removed connection.</b></p>
+<p>You have chosen to remove the connection named '<b>{name}</b>'. The
+following {corpora} {are} available on that connection:</p>
+<p>{list}</p>
+<p>If you want to remove the connection together with the listed corpora,
+press <b>Yes</b>. This will free approximately {size} of drive space.</p>
+<p>If you do not want to remove the connection and keep all listed 
+corpora, press <b>No</b>."""
+
 msg_not_enough_space = """
 <p><b>Not enough space available.</b><p>
-<p>You have decided to enter a new database directory <code>{path}</code>
-for configuration '{name}', but the new directory cannot store all corpus
-files: </p>
-<p>Required space: {required:0.1f} MiB<br>
-Available space: {available:0.1f} MiB<br>
-Missing: <span text-color="red";>{missing:0.1f} MiB</span></p>
+<p>You have decided to move the database directory for configuration
+'<b>{name}</b>' from <br><br>
+<code>{from_path}</code><br>
+to<br>
+<code>{to_path}</code>,<br><br>
+but the new directory cannot store all corpus
+files.</p>
+<p>Required space: {required}<br>
+Available space: {available}<br>
+Missing: <span color="darkred">{missing}</span></p>
 <p>The configuration will not be moved to the new database directory. Please
 select a different directory the next time you attempt to change the
-directory for this configuration.<&p>"""
+directory for this configuration.</p>"""
 
 msg_runtime_error_function = """
 <p>Error during the evaluation of function</p>
