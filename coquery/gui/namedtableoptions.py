@@ -36,6 +36,8 @@ class NamedTableOptionsDialog(CSVOptionDialog):
             parent=parent,
             icon=icon,
             ui=Ui_NamedTableOptions)
+        self.ui.edit_file_name.setText(filename)
+
         self.ui.button_map_word.clicked.connect(
             lambda: self.map_query_item_type("word"))
         self.ui.button_map_lemma.clicked.connect(
@@ -179,7 +181,8 @@ class NamedTableOptionsDialog(CSVOptionDialog):
                 encoding=utf8(self.ui.combo_encoding.currentText()),
                 quote_char=quote,
                 mapping=self.map,
-                dtypes=self.file_table.dtypes)
+                dtypes=self.file_table.dtypes,
+                excel=self._read_from_xls)
         else:
             return None
 

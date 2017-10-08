@@ -13,6 +13,7 @@ import codecs
 import os
 import re
 import pandas as pd
+import logging
 
 from coquery import options
 from coquery.unicode import utf8
@@ -27,7 +28,7 @@ from .ui.csvOptionsUi import Ui_FileOptions
 class CSVOptions(object):
     def __init__(self, file_name="", sep=",", header=True, quote_char='"',
                  skip_lines=0, encoding="utf-8", selected_column=None,
-                 mapping=None, dtypes=None, nrows=None):
+                 mapping=None, dtypes=None, nrows=None, excel=False):
         self.sep = sep
         self.header = header
         self.quote_char = quote_char
@@ -38,14 +39,54 @@ class CSVOptions(object):
         self.dtypes = dtypes
         self.file_name = file_name
         self.nrows = nrows
+        self.excel = excel
 
     def __repr__(self):
         return ("CSVOptions(sep='{}', header={}, quote_char='{}', "
                 "skip_lines={}, encoding='{}', selected_column={}, "
-                "nrows={}, mapping={}, dtypes={})".format(
+                "nrows={}, mapping={}, dtypes={}, excel={})".format(
                     self.sep, self.header, self.quote_char.replace("'", "\'"),
                     self.skip_lines, self.encoding, self.selected_column,
-                    self.nrows, self.mapping, self.dtypes))
+                    self.nrows, self.mapping, self.dtypes, self.excel))
+
+    def read_file(self, path):
+        if options.use_xlrd and self.excel:
+            df = self.read_excel_file(path)
+        else:
+            df = self.read_csv_file(path)
+        return df
+
+    def read_csv_file(self, path):
+        kwargs = {
+            "encoding": self.encoding,
+            "header": 0 if self.header else None,
+            "sep": self.sep,
+            "skiprows": self.skip_lines,
+            "quotechar": self.quote_char,
+            "low_memory": False,
+            "error_bad_lines": False}
+        try:
+            df = pd.read_csv(path, **kwargs)
+        except Exception as e:
+            print(path)
+            from pprint import pprint
+            pprint(kwargs)
+            logging.error(e)
+            print(e)
+            raise e
+        return df
+
+    def read_excel_file(self, path):
+        try:
+            df = pd.read_excel(
+                path,
+                header=0 if self.header else None,
+                skiprows=self.skip_lines)
+        except Exception as e:
+            logging.error(e)
+            print(e)
+            raise e
+        return df
 
 
 class MyTableModel(QtCore.QAbstractTableModel):
@@ -120,6 +161,7 @@ class MyTableModel(QtCore.QAbstractTableModel):
 
         return None
 
+
 quote_chars = {
     '"': 'Double quote (")',
     "'": "Single quote (')",
@@ -147,6 +189,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
 
         self.ui.query_column.setValue(1)
         self._col_select = 0
+        self._read_from_xls = False
 
         #sep, col, head, skip, quotechar = default
         if default.sep == "\t":
@@ -226,7 +269,8 @@ class CSVOptionDialog(QtWidgets.QDialog):
                 nrows=nrows,
                 quote_char=quote,
                 file_name=utf8(self.ui.edit_file_name.text()),
-                dtypes=self.file_table.dtypes)
+                dtypes=self.file_table.dtypes,
+                excel=self._read_from_xls)
 
     @staticmethod
     def getOptions(default=None, parent=None, icon=None):
@@ -272,75 +316,86 @@ class CSVOptionDialog(QtWidgets.QDialog):
         if header:
             nrows = nrows + 1
 
-        try:
-            df = pd.read_table(
-                    file_name,
-                    header=header,
-                    sep=utf8(self.separator),
-                    quoting=3 if not quote else 0,
-                    quotechar=quote if quote else "#",
-                    nrows=nrows,
-                    error_bad_lines=False,
-                    encoding=encoding)
-        except (ValueError, pd.parser.CParserError) as e:
-            # this is most likely due to an encoding error.
+        self._read_from_xls = False
+        if options.use_xlrd:
+            try:
+                df = pd.read_excel(file_name,
+                                header=header)
+            except Exception as e:
+                print(e)
+            else:
+                self._read_from_xls = True
 
-            if not hasattr(self, "_last_encoding"):
-                # this happened the first time the file content was split.
-                # This is probably due to a wrong encoding setting, so we try
-                # to autodetect the encoding:
+        if not self._read_from_xls:
+            try:
+                df = pd.read_table(
+                        file_name,
+                        header=header,
+                        sep=utf8(self.separator),
+                        quoting=3 if not quote else 0,
+                        quotechar=quote if quote else "#",
+                        nrows=nrows,
+                        error_bad_lines=False,
+                        encoding=encoding)
+            except (ValueError, pd.parser.CParserError) as e:
+                # this is most likely due to an encoding error.
 
-                if options.use_chardet:
-                    # detect character encoding using chardet
-                    import chardet
-                    content = open(file_name, "rb").read()
-                    detection = chardet.detect(content[:32000])
-                    encoding = detection["encoding"]
-                else:
-                    # dumb detection. First try utf-8, then latin-1.
-                    try:
-                        codecs.open(file_name, "rb",
-                                    encoding="utf-8").read()
-                    except UnicodeDecodeError:
-                        encoding = "latin-1"
+                if not hasattr(self, "_last_encoding"):
+                    # this happened the first time the file content was split.
+                    # This is probably due to a wrong encoding setting, so we try
+                    # to autodetect the encoding:
+
+                    if options.use_chardet:
+                        # detect character encoding using chardet
+                        import chardet
+                        content = open(file_name, "rb").read()
+                        detection = chardet.detect(content[:32000])
+                        encoding = detection["encoding"]
                     else:
-                        encoding = "utf-8"
-                try:
-                    df = pd.read_table(
-                            file_name,
-                            header=header,
-                            sep=utf8(self.separator),
-                            quoting=3 if not quote else 0,
-                            quotechar=quote if quote else "#",
-                            na_filter=False,
-                            nrows=100,
-                            error_bad_lines=False,
-                            encoding=encoding)
-                except (ValueError, pd.parser.CParserError) as e:
-                    # the table could still not be read. Raise an error.
+                        # dumb detection. First try utf-8, then latin-1.
+                        try:
+                            codecs.open(file_name, "rb",
+                                        encoding="utf-8").read()
+                        except UnicodeDecodeError:
+                            encoding = "latin-1"
+                        else:
+                            encoding = "utf-8"
+                    try:
+                        df = pd.read_table(
+                                file_name,
+                                header=header,
+                                sep=utf8(self.separator),
+                                quoting=3 if not quote else 0,
+                                quotechar=quote if quote else "#",
+                                na_filter=False,
+                                nrows=100,
+                                error_bad_lines=False,
+                                encoding=encoding)
+                    except (ValueError, pd.parser.CParserError) as e:
+                        # the table could still not be read. Raise an error.
+                        QtWidgets.QMessageBox.critical(
+                            self.parent(), "Query file error",
+                            msg_csv_file_error.format(file_name))
+                        raise e
+                    else:
+                        # we have found a working encoding
+                        self.set_encoding_selection(encoding)
+
+                elif self._last_encoding != encoding:
+                    # we should alert the user that they should use a different
+                    # encoding.
+                    QtWidgets.QMessageBox.critical(
+                        self.parent(), "Query file error",
+                        msg_csv_encoding_error.format(file=file_name,
+                                                    encoding=encoding))
+                    # return to the last encoding, which was hopefully working:
+                    self.set_encoding_selection(self._last_encoding)
+                    encoding = self._last_encoding
+                else:
                     QtWidgets.QMessageBox.critical(
                         self.parent(), "Query file error",
                         msg_csv_file_error.format(file_name))
                     raise e
-                else:
-                    # we have found a working encoding
-                    self.set_encoding_selection(encoding)
-
-            elif self._last_encoding != encoding:
-                # we should alert the user that they should use a different
-                # encoding.
-                QtWidgets.QMessageBox.critical(
-                    self.parent(), "Query file error",
-                    msg_csv_encoding_error.format(file=file_name,
-                                                  encoding=encoding))
-                # return to the last encoding, which was hopefully working:
-                self.set_encoding_selection(self._last_encoding)
-                encoding = self._last_encoding
-            else:
-                QtWidgets.QMessageBox.critical(
-                    self.parent(), "Query file error",
-                    msg_csv_file_error.format(file_name))
-                raise e
         # ascii encoding is always replaced by utf-8
         if encoding == "ascii":
             encoding = "utf-8"
@@ -432,3 +487,4 @@ class CSVOptionDialog(QtWidgets.QDialog):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
+
