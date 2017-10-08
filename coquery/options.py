@@ -592,7 +592,7 @@ class Options(object):
                 self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
             except AttributeError:
                 pass
-        logger.info("Command line parameters: " + self.args.parameter_string)
+        logging.info("Command line parameters: " + self.args.parameter_string)
 
     def setup_default_connection(self):
         """
@@ -655,7 +655,7 @@ class Options(object):
         config_file = CoqConfigParser()
 
         if os.path.exists(self.cfg.config_path) and read_file:
-            logger.info("Using configuration file %s" % self.cfg.config_path)
+            logging.info("Using configuration file %s" % self.cfg.config_path)
             try:
                 config_file.read(self.cfg.config_path)
             except (IOError, TypeError, ParsingError) as e:
@@ -1379,7 +1379,7 @@ def validate_module(path, expected_classes, whitelisted_modules, allow_if=False,
             for node in tree.body:
                 validate_node(node, None)
     except Exception as e:
-        logger.error(e)
+        logging.error(e)
 
     if expected_classes:
         raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
@@ -1425,6 +1425,8 @@ def set_current_server(name):
         os.makedirs(cfg.adhoc_path)
 
     if cfg.server_configuration[name]["type"] == SQL_SQLITE:
+        # FIXME: custom-set database paths are not working
+        logging
         cfg.database_path = os.path.join(path, "databases")
         if not os.path.exists(cfg.database_path):
             os.makedirs(cfg.database_path)
@@ -1511,7 +1513,7 @@ def get_available_resources(configuration):
         except Exception as e:
             s = "There is an error in corpus module '{}': {}\nThe corpus is not available for queries.".format(corpus_name, str(e))
             print(s)
-            logger.warn(s)
+            logging.warn(s)
         else:
             try:
                 d[module.Resource.name] = (module.Resource,
@@ -1651,5 +1653,3 @@ missing_modules = []
 for mod in ["sqlalchemy", "pandas", "scipy", "PyQt5", "lxml"]:
     if not has_module(mod):
         missing_modules.append(mod)
-
-logger = logging.getLogger(NAME)
