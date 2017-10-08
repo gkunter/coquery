@@ -195,12 +195,17 @@ def sqlite_path(configuration, db_name=None):
     if db_name:
         S = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
     else:
-        if configuration == DEFAULT_CONFIGURATION:
-            S = options.cfg.database_path
-        else:
-            S = d.get("path")
-            if S is None:
+        try:
+            if configuration == DEFAULT_CONFIGURATION:
                 S = options.cfg.database_path
+            else:
+                S = d.get("path")
+                if S is None:
+                    S = options.cfg.database_path
+            S = options.cfg.database_path
+        except Exception as e:
+            print(e)
+            raise e
     return S
 
 
