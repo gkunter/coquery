@@ -24,6 +24,7 @@ from coquery.documents import (pdf_to_str, docx_to_str, odt_to_str,
                                html_to_str, plain_to_str,
                                detect_file_type,
                                FT_PDF, FT_DOCX, FT_ODT, FT_HTML, FT_PLAIN)
+from coquery.capturer import Capturer
 
 re_punct = re.compile("[.!?'\"]")
 
@@ -247,8 +248,13 @@ class BuilderClass(BaseCorpusBuilder):
              self.corpus_file_id: self._file_id})
 
     def add_metadata(self, file_name, column):
-        df = pd.read_csv(file_name)
-
+        capt = Capturer(stderr=True)
+        with capt:
+            df = self.arguments.metaoptions.read_file(self.arguments.metadata)
+        for x in capt:
+            s = "File {} – {}".format(self.arguments.path, x)
+            logging.warn(s)
+            print(s)
         meta_columns = []
         for i, col in enumerate(df.columns):
             if i == column:
@@ -355,7 +361,9 @@ class BuilderClass(BaseCorpusBuilder):
 
             # the WordNet lemmatizer will be used to obtain the lemma for a
             # given word:
-            self._lemmatize = lambda x, y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(x, pos=y)
+            self._lemmatize = (
+                lambda x, y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(
+                    x, pos=y))
 
             # The NLTK POS tagger produces some labels that are different from
             # the labels used in WordNet. In order to use the WordNet
