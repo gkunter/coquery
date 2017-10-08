@@ -12,9 +12,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 from coquery import __version__, DATE
-from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets
 from .ui.citeUi import Ui_CiteDialog
+from .classes import CoqWidgetFader
 
 
 class CiteDialog(QtWidgets.QDialog):
@@ -47,27 +47,22 @@ class CiteDialog(QtWidgets.QDialog):
             widget.installEventFilter(self)
 
         self.last_select = None
-        #self.ui.button_copy.setEnabled(False)
         self.ui.button_copy.clicked.connect(self.copy_to_clipboard)
 
     def eventFilter(self, widget, event):
         if event.type() == QtCore.QEvent.FocusIn:
-            #widget.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse |
-                                           #QtCore.Qt.TextSelectableByKeyboard)
             # select text in new widget
             self.last_select = widget
             cursor = widget.textCursor()
             widget.selectAll()
-            #widget.setTextCursor(cursor)
             widget.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
+            selected = bytes(widget.toPlainText() + "\n", "utf-8")
+            self.mime = QtCore.QMimeData()
+            self.mime.setData("text/plain", selected)
+            self._widget = widget
             if hasattr(widget, "toHtml"):
                 selected = bytes(widget.toHtml(), "utf-8")
-                self.mime = QtCore.QMimeData()
                 self.mime.setData("text/html", selected)
-            else:
-                selected = bytes(widget.toPlainText() + "\n", "utf-8")
-                self.mime = QtCore.QMimeData()
-                self.mime.setData("text/plain", selected)
 
         elif event.type() == QtCore.QEvent.FocusOut:
             cursor = widget.textCursor()
@@ -80,8 +75,11 @@ class CiteDialog(QtWidgets.QDialog):
 
     def copy_to_clipboard(self):
         cb = QtWidgets.QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setMimeData(self.mime, cb.Clipboard)
+        try:
+            cb.setMimeData(self.mime, cb.Clipboard)
+            CoqWidgetFader(self._widget).fade()
+        except RuntimeError:
+            pass
 
     @staticmethod
     def view(parent=None):
