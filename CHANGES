@@ -1,8 +1,13 @@
 (0.10.1dev, unreleased)
+* The database paths of custom connections can now be changed
+* Allow Excel files as input format for metadata files and as corpus input
+  files
 * New interface for Group and Summary functions
 * API change: disposed of obsolete LexiconClass
 * API change: Table.get_create_string() expects list of existing tables as
   second argument
+* Use new file option dialog for more flexible metadata files
+* Provide POS tag helper dialog via the 'Help' menu
 * Provide more visual feedback on actions that don't have a visible effect
 * Column selection: Switch order of available and selected
 * corpora can be exported and imported
