@@ -246,12 +246,12 @@ class BuilderClass(BaseCorpusBuilder):
              self.corpus_sentence: self._sentence_id,
              self.corpus_file_id: self._file_id})
 
-    def add_metadata(self, file_name):
+    def add_metadata(self, file_name, column):
         df = pd.read_csv(file_name)
 
         meta_columns = []
-        for col in df.columns:
-            if col.lower() in set(["file", "filename"]):
+        for i, col in enumerate(df.columns):
+            if i == column:
                 self.file_name = col
             else:
                 meta_columns.append(col)
@@ -310,18 +310,6 @@ class BuilderClass(BaseCorpusBuilder):
         else:
             return super(BuilderClass, self).store_filename(file_name)
 
-    @classmethod
-    def probe_metadata(cls, file_name):
-        try:
-            df = pd.read_csv(file_name, nrows=2)
-            for col in df.columns:
-                if col.lower() in set(["file", "filename"]):
-                    return True
-            return False
-        except Exception as e:
-            print("can't read", str(e))
-            return False
-
     def process_file(self, file_name):
         """
         Process a text file.
@@ -356,7 +344,6 @@ class BuilderClass(BaseCorpusBuilder):
             s = "{} not in meta data.".format(basename)
             print(s)
             logging.warn(s)
-            return
 
         raw_text = self._read_text(file_name)
 

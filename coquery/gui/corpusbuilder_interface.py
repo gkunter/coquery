@@ -35,6 +35,7 @@ from . import csvoptions
 from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
 from .ui.readPackageUi import Ui_PackageInstaller
+from .namedtableoptions import NamedTableOptionsDialog
 
 
 class InstallerGui(QtWidgets.QDialog):
@@ -230,10 +231,9 @@ class InstallerGui(QtWidgets.QDialog):
         if not path:
             path = os.path.join(options.cfg.base_path, "texts", "alice")
         name = QtWidgets.QFileDialog.getExistingDirectory(
-            directory=path,
-            options=(QtWidgets.QFileDialog.ReadOnly |
-                     QtWidgets.QFileDialog.ShowDirsOnly |
-                     QtWidgets.QFileDialog.HideNameFilterDetails))
+                directory=path,
+                options=(QtWidgets.QFileDialog.DontUseNativeDialog |
+                         QtWidgets.QFileDialog.ReadOnly))
         if type(name) == tuple:
             name = name[0]
         if name:
@@ -247,19 +247,21 @@ class InstallerGui(QtWidgets.QDialog):
         if not path:
             path = os.path.expanduser("~")
 
-        name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
-        if type(name) is tuple:
-            name = name[0]
-        if name:
-            if not self.builder_class.probe_metadata(name):
-                QtWidgets.QMessageBox.critical(
-                    self,
-                    "Invalid meta data file – Coquery",
-                    msg_invalid_metadata,
-                    QtWidgets.QMessageBox.Yes)
-            else:
-                self.ui.label_metafile.setText(name)
-                self.ui.check_use_metafile.setChecked(True)
+        dialog = NamedTableOptionsDialog(
+            filename=utf8(self.ui.input_path.text()),
+            default=self._meta_options,
+            parent=self,
+            icon=options.cfg.icon)
+
+        dialog.ui.group_mappings.setTitle("Set filename column")
+        dialog.add_required_mapping("filename")
+        dialog.set_mappings([("Filename", "filename")])
+        result = dialog.exec_()
+
+        if result:
+            self._meta_options = result
+            self.ui.label_metafile.setText(result.file_name)
+            self.ui.check_use_metafile.setChecked(True)
 
     def toggle_use_metafile(self):
         self.ui.check_use_metafile.blockSignals(True)
@@ -419,6 +421,7 @@ class InstallerGui(QtWidgets.QDialog):
         namespace.use_nltk = False
         namespace.use_meta = False
         namespace.metadata = utf8(self.ui.label_metafile.text())
+        namespace.metadata_column = self._meta_options.mapping["filename"]
 
         if self.ui.radio_only_module.isChecked():
             namespace.o = False
@@ -478,6 +481,14 @@ class BuilderGui(InstallerGui):
             encoding=options.cfg.input_encoding,
             selected_column=None)
 
+        self._meta_options = csvoptions.CSVOptions(
+            sep=options.cfg.input_separator,
+            header=options.cfg.file_has_headers,
+            quote_char=options.cfg.quote_char,
+            skip_lines=options.cfg.skip_lines,
+            encoding=options.cfg.input_encoding,
+            selected_column=None)
+
         if self._onefile:
             self.ui.label_read_files.setText("Build new corpus from data table")
             self.ui.label_input_path.setText("Use table file:")
@@ -491,6 +502,7 @@ class BuilderGui(InstallerGui):
             self.ui.label_only_module.hide()
             self.ui.radio_read_files.setChecked(True)
             self.ui.groupBox.hide()
+
         else:
             self.ui.label_read_files.setText("Build new corpus from text files")
             self.ui.label_input_path.setText("Path to text files:")
@@ -653,10 +665,14 @@ class BuilderGui(InstallerGui):
     def file_options(self):
         """ Get CSV file options for current query input file. """
         from .namedtableoptions import NamedTableOptionsDialog
+        dialog = NamedTableOptionsDialog(
+            filename=utf8(self.ui.input_path.text()),
+            default=self._table_options,
+            parent=self,
+            icon=options.cfg.icon)
+        dialog.add_required_mapping("word")
 
-        result = NamedTableOptionsDialog.getOptions(
-            utf8(self.ui.input_path.text()), [],
-            self._table_options, self, options.cfg.icon)
+        result = dialog.exec_()
         if result:
             self._table_options = result
             self.ui.input_path.setText(result.file_name)
@@ -725,7 +741,9 @@ class BuilderGui(InstallerGui):
             name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
         else:
             name = QtWidgets.QFileDialog.getExistingDirectory(
-                directory=options.cfg.text_source_path)
+                directory=options.cfg.text_source_path,
+                options=(QtWidgets.QFileDialog.DontUseNativeDialog |
+                         QtWidgets.QFileDialog.ReadOnly))
 
         if type(name) == tuple:
             name = name[0]

@@ -330,18 +330,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                       index=False)
             self._corpus_buffer = []
 
-    @classmethod
-    def probe_metadata(cls, path):
-        """
-        Check whether the file 'path' is a meta data file.
-
-        Parameters
-        ----------
-        path : str
-            The path to a file that is to be probed.
-        """
-        return os.path.basename(path) == cls.meta_data
-
     def create_table_description(self, table_name, column_list):
         """
         Create the description of a MySQL table. The MySQL table described
@@ -1621,7 +1609,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
         self.DB.use_database(self.arguments.db_name)
 
-    def add_metadata(self, file_name):
+    def add_metadata(self, file_name, column):
         pass
 
     def add_building_stage(self, stage):
@@ -1812,7 +1800,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 # create tables
                 if not self.interrupted:
                     if self.arguments.metadata:
-                        self.add_metadata(self.arguments.metadata)
+                        self.add_metadata(self.arguments.metadata,
+                                          self.arguments.metadata_column)
                     self.build_create_tables()
                     progress_done()
 
