@@ -23,8 +23,7 @@ import zipfile
 from coquery import options
 from coquery import sqlhelper
 from coquery import NAME
-from coquery.defines import (msg_invalid_metadata,
-                             msg_install_abort,
+from coquery.defines import (msg_install_abort,
                              msg_corpus_path_not_valid)
 from coquery.errors import SQLNoConfigurationError, DependencyError
 from coquery.unicode import utf8
@@ -32,7 +31,7 @@ from coquery.unicode import utf8
 from . import classes
 from . import errorbox
 from . import csvoptions
-from .pyqt_compat import QtCore, QtWidgets, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui, STYLE_WARN
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
 from .ui.readPackageUi import Ui_PackageInstaller
 from .namedtableoptions import NamedTableOptionsDialog
@@ -160,6 +159,9 @@ class InstallerGui(QtWidgets.QDialog):
             self.ui.check_use_metafile.setChecked(val == "true" or
                                                   val is True)
             self.ui.label_metafile.setText(utf8(meta))
+            val = options.settings.value("corpusinstaller_metafile_column",
+                                         None)
+            self._metafile_column = val
 
         val = options.settings.value("corpusinstaller_use_nltk", "false")
         self.ui.use_pos_tagging.setChecked(val == "true" or val is True)
@@ -180,8 +182,6 @@ class InstallerGui(QtWidgets.QDialog):
         options.settings.setValue(target, utf8(self.ui.input_path.text()))
         options.settings.setValue("corpusinstaller_read_files",
                                   self.ui.radio_read_files.isChecked())
-        options.settings.setValue("corpusinstaller_metafile",
-                                  utf8(self.ui.label_metafile.text()))
         options.settings.setValue("corpusinstaller_use_metafile",
                                   self.ui.check_use_metafile.isChecked())
         options.settings.setValue("corpusinstaller_use_nltk",
@@ -204,7 +204,7 @@ class InstallerGui(QtWidgets.QDialog):
             if ((self._onefile and not os.path.isfile(path)) or
                     (not self._onefile and not os.path.isdir(path))):
                 self.ui.issue_label.setText("Illegal data source path.")
-                self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                self.ui.input_path.setStyleSheet(STYLE_WARN)
                 self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
                 return
 
@@ -241,14 +241,8 @@ class InstallerGui(QtWidgets.QDialog):
             self.validate_dialog()
 
     def select_metafile(self):
-        path = os.path.split(utf8(self.ui.label_metafile.text()))[0]
-        if not path:
-            path = utf8(self.ui.input_path.text())
-        if not path:
-            path = os.path.expanduser("~")
-
         dialog = NamedTableOptionsDialog(
-            filename=utf8(self.ui.input_path.text()),
+            filename=utf8(self.ui.label_metafile.text()),
             default=self._meta_options,
             parent=self,
             icon=options.cfg.icon)
@@ -260,8 +254,10 @@ class InstallerGui(QtWidgets.QDialog):
 
         if result:
             self._meta_options = result
+            self._metafile_column = result.mapping["filename"]
             self.ui.label_metafile.setText(result.file_name)
             self.ui.check_use_metafile.setChecked(True)
+            self.validate_dialog()
 
     def toggle_use_metafile(self):
         self.ui.check_use_metafile.blockSignals(True)
@@ -359,7 +355,7 @@ class InstallerGui(QtWidgets.QDialog):
                 self.ui.input_path.setStyleSheet('')
                 button.setEnabled(True)
             else:
-                self.ui.input_path.setStyleSheet('QLineEdit {background-color: lightyellow; }')
+                self.ui.input_path.setStyleSheet(STYLE_WARN)
                 button.setEnabled(False)
 
     def start_install(self):
@@ -421,8 +417,9 @@ class InstallerGui(QtWidgets.QDialog):
         namespace.use_nltk = False
         namespace.use_meta = False
         namespace.metadata = utf8(self.ui.label_metafile.text())
-        namespace.metadata_column = self._meta_options.mapping["filename"]
-
+        namespace.metadata_column = self._metafile_column
+        namespace.metaoptions = self._meta_options
+        print(self._meta_options)
         if self.ui.radio_only_module.isChecked():
             namespace.o = False
             namespace.i = False
@@ -488,6 +485,7 @@ class BuilderGui(InstallerGui):
             skip_lines=options.cfg.skip_lines,
             encoding=options.cfg.input_encoding,
             selected_column=None)
+        self._metafile_column = None
 
         if self._onefile:
             self.ui.label_read_files.setText("Build new corpus from data table")
@@ -680,11 +678,9 @@ class BuilderGui(InstallerGui):
         self.validate_dialog()
 
     def validate_dialog(self, check_path=False):
-        style_warn = "QLineEdit {background-color: lightyellow; }"
-
         def validate_name_not_empty(button):
             if not utf8(self.ui.corpus_name.text()):
-                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
                 self.ui.issue_label.setText(
                     "The corpus name cannot be empty.")
                 button.setEnabled(False)
@@ -692,7 +688,7 @@ class BuilderGui(InstallerGui):
         def validate_name_is_unique(button):
             if (utf8(self.ui.corpus_name.text())
                     in options.cfg.current_resources):
-                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
                 self.ui.issue_label.setText(
                     "There is already another corpus with this name..")
                 button.setEnabled(False)
@@ -702,7 +698,7 @@ class BuilderGui(InstallerGui):
                 options.cfg.current_server,
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if db_exists:
-                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
                 self.ui.issue_label.setText(
                     "There is already another corpus that uses a database "
                     "with this name.")
@@ -713,10 +709,23 @@ class BuilderGui(InstallerGui):
                 options.cfg.current_server,
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if not db_exists:
-                self.ui.corpus_name.setStyleSheet(style_warn)
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
                 self.ui.issue_label.setText(
                     "There is no database that uses this name.")
                 button.setEnabled(False)
+
+        def validate_metadata(button):
+            if self._onefile:
+                return True
+            if (self.ui.check_use_metafile.isChecked() and
+                    self._metafile_column is None):
+                self.ui.label_metafile.setStyleSheet(
+                    STYLE_WARN.replace("QLineEdit", "CoqClickableLabel"))
+                self.ui.issue_label.setText(
+                    "No file name colum is set for the metadata file.")
+                button.setEnabled(False)
+            else:
+                self.ui.label_metafile.setStyleSheet("")
 
         super(BuilderGui, self).validate_dialog(check_path)
 
@@ -731,6 +740,7 @@ class BuilderGui(InstallerGui):
             else:
                 validate_name_is_unique(button)
                 validate_db_does_not_exist(button)
+                validate_metadata(button)
 
     def select_path(self):
         if self._onefile:
@@ -777,6 +787,10 @@ class BuilderGui(InstallerGui):
         options.settings.setValue("corpusbuilder_size", self.size())
         options.settings.setValue("corpusbuilder_nltk",
                                   str(self.ui.use_pos_tagging.isChecked()))
+        options.settings.setValue("corpusbuilder_metafile",
+                                  utf8(self.ui.label_metafile.text()))
+        options.settings.setValue("corpusbuilder_metafile_column",
+                                  self._metafile_column)
 
         if self.state == "finished":
             self.write_adhoc()
@@ -787,6 +801,9 @@ class BuilderGui(InstallerGui):
         namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
         namespace.use_meta = self.ui.check_use_metafile.checkState()
+        namespace.metadata = utf8(self.ui.label_metafile.text())
+        namespace.metadata_column = self._metafile_column
+        namespace.metaoptions = self._meta_options
         namespace.db_name = "coq_{}".format(namespace.name).lower()
         namespace.one_file = self._onefile
         return namespace
@@ -914,8 +931,7 @@ class PackageGui(BuilderGui):
         path = utf8(self.ui.input_path.text())
         if not path or not os.path.isfile(path):
             if path and not os.path.isfile(path):
-                self.ui.input_path.setStyleSheet(
-                    'QLineEdit {background-color: lightyellow; }')
+                self.ui.input_path.setStyleSheet(STYLE_WARN)
             self.ui.yes_button.setDisabled(True)
             self.ui.group_options.hide()
         else:
