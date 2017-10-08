@@ -29,37 +29,51 @@ class NamedTableOptionsDialog(CSVOptionDialog):
 
         fields : dictionary
         """
+        self._required = set()
         self._last_header = None
         super(NamedTableOptionsDialog, self).__init__(
             default=default,
             parent=parent,
             icon=icon,
             ui=Ui_NamedTableOptions)
-
-        self.ui.button_word.clicked.connect(
+        self.ui.button_map_word.clicked.connect(
             lambda: self.map_query_item_type("word"))
-        self.ui.button_lemma.clicked.connect(
+        self.ui.button_map_lemma.clicked.connect(
             lambda: self.map_query_item_type("lemma"))
-        self.ui.button_pos.clicked.connect(
+        self.ui.button_map_pos.clicked.connect(
             lambda: self.map_query_item_type("pos"))
-        self.ui.button_transcript.clicked.connect(
+        self.ui.button_map_transcript.clicked.connect(
             lambda: self.map_query_item_type("transcript"))
-        self.ui.button_gloss.clicked.connect(
+        self.ui.button_map_gloss.clicked.connect(
             lambda: self.map_query_item_type("gloss"))
-
         self._selected = 0
         self.map = default.mapping
 
         if fields:
             for key, value in fields:
-                button_name = "button_{}".format(value.lower())
-                edit_name = "edit_{}".format(value.lower())
+                button_name = "button_map_{}".format(value.lower())
+                edit_name = "edit_map_{}".format(value.lower())
                 setattr(self.ui, button_name, QtWidgets.QPushButton(key))
                 setattr(self.ui, edit_name, QtWidgets.QLineEdit())
 
                 getattr(self.ui, button_name).clicked.connect(
                     lambda: self.map_query_item_type(value))
 
+        self.resize_widgets()
+
+        for x in default.mapping:
+            try:
+                getattr(self.ui, "edit_map_{}".format(x)).setText(self.map[x])
+            except TypeError:
+                # Ignore mappings if there is a type error:
+                pass
+
+        try:
+            self.resize(options.settings.value("namedtableoptions_size"))
+        except TypeError:
+            pass
+
+    def resize_widgets(self):
         # make all buttons the same size:
         max_height = 0
         for name in [x for x in dir(self.ui)
@@ -71,25 +85,46 @@ class NamedTableOptionsDialog(CSVOptionDialog):
             widget = getattr(self.ui, name)
             widget.setMinimumHeight(max_height)
 
-        for x in default.mapping:
-            try:
-                getattr(self.ui, "edit_{}".format(x)).setText(self.map[x])
-            except TypeError:
-                # Ignore mappings if there is a type error:
-                pass
+    def set_mappings(self, tuple_list):
+        """
+        Set the mappings of the current dialog.
 
-        try:
-            self.resize(options.settings.value("namedtableoptions_size"))
-        except TypeError:
-            pass
+        Each tuple in the tuple list consists of the display name and the
+        internal name of the mapping.
+        """
+        for name in [x for x in dir(self.ui)
+                     if x.startswith(("button_map_", "edit_map_"))]:
+            widget = getattr(self.ui, name)
+            self.ui.layout_name_buttons.removeWidget(widget)
+            widget.setParent(None)
+            #widget.deleteLater()
+            del widget
+
+        for i, (label, name) in enumerate(tuple_list):
+            button = QtWidgets.QPushButton(label)
+            button.clicked.connect(lambda: self.map_query_item_type(name))
+            edit = QtWidgets.QLineEdit()
+            button_name = "button_map_{}".format(name.lower())
+            edit_name = "edit_map_{}".format(name.lower())
+            setattr(self.ui, button_name, button)
+            setattr(self.ui, edit_name, edit)
+            self.ui.layout_name_buttons.addWidget(button, i, 0, 1, 1)
+            self.ui.layout_name_buttons.addWidget(edit, i, 1, 1, 1)
+        self.resize_widgets()
+
+    def add_required_mapping(self, required):
+        self._required.add(required)
 
     def validate_dialog(self):
         current_file = utf8(self.ui.edit_file_name.text())
-        self.ui.groupBox.setEnabled(os.path.exists(current_file))
-        try:
-            has_word = "word" in self.map
-        except:
-            has_word = False
+        self.ui.group_mappings.setEnabled(os.path.exists(current_file))
+
+        has_word = True
+        for required in self._required:
+            if required not in self.map:
+                has_word = False
+                break
+
         ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
         ok_button.setEnabled(has_word)
 
@@ -102,11 +137,9 @@ class NamedTableOptionsDialog(CSVOptionDialog):
 
     def reset_mapping(self):
         self.map = dict()
-        self.ui.edit_word.setText("")
-        self.ui.edit_lemma.setText("")
-        self.ui.edit_pos.setText("")
-        self.ui.edit_transcript.setText("")
-        self.ui.edit_gloss.setText("")
+        for name in [x for x in dir(self.ui)
+                     if x.startswith("edit_map_")]:
+            getattr(self.ui, name).setText("")
 
     def update_content(self):
         super(NamedTableOptionsDialog, self).update_content()
@@ -122,32 +155,35 @@ class NamedTableOptionsDialog(CSVOptionDialog):
         header = self.file_table.columns[self._col_select]
         for key, value in list(self.map.items()):
             if value == self._col_select:
-                line_edit = getattr(self.ui, "edit_{}".format(key))
+                line_edit = getattr(self.ui, "edit_map_{}".format(key))
                 line_edit.setText("")
                 self.map.pop(key)
 
         self.map[label] = self._col_select
-        line_edit = getattr(self.ui, "edit_{}".format(label))
+        line_edit = getattr(self.ui, "edit_map_{}".format(label))
         line_edit.setText(header)
         self.validate_dialog()
+
+    def exec_(self):
+        result = super(NamedTableOptionsDialog, self).exec_()
+        if isinstance(result, CSVOptions):
+            quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
+                utf8(self.ui.quote_char.currentText())]
+
+            return CSVOptions(
+                file_name=utf8(self.ui.edit_file_name.text()),
+                sep=self.separator,
+                selected_column=self.ui.query_column.value(),
+                header=self.ui.file_has_headers.isChecked(),
+                skip_lines=self.ui.ignore_lines.value(),
+                encoding=utf8(self.ui.combo_encoding.currentText()),
+                quote_char=quote,
+                mapping=self.map,
+                dtypes=self.file_table.dtypes)
+        else:
+            return None
 
     @staticmethod
     def getOptions(path, fields=[], default=None, parent=None, icon=None):
         dialog = NamedTableOptionsDialog(path, fields, default, parent, icon)
-        result = dialog.exec_()
-        if isinstance(result, CSVOptions):
-            quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
-                utf8(dialog.ui.quote_char.currentText())]
-
-            return CSVOptions(
-                file_name=utf8(dialog.ui.edit_file_name.text()),
-                sep=dialog.separator,
-                selected_column=dialog.ui.query_column.value(),
-                header=dialog.ui.file_has_headers.isChecked(),
-                skip_lines=dialog.ui.ignore_lines.value(),
-                encoding=utf8(dialog.ui.combo_encoding.currentText()),
-                quote_char=quote,
-                mapping=dialog.map,
-                dtypes=dialog.file_table.dtypes)
-        else:
-            return None
+        return dialog.exec_()

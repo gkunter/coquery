@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>480</height>
+    <height>489</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -292,7 +292,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QGroupBox" name="groupBox">
+        <widget class="QGroupBox" name="group_mappings">
          <property name="title">
           <string>Query type mappings</string>
          </property>
@@ -303,70 +303,70 @@
           <item>
            <layout class="QGridLayout" name="layout_name_buttons">
             <item row="4" column="1">
-             <widget class="QLineEdit" name="edit_gloss">
+             <widget class="QLineEdit" name="edit_map_gloss">
               <property name="readOnly">
                <bool>true</bool>
               </property>
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QPushButton" name="button_lemma">
+             <widget class="QPushButton" name="button_map_lemma">
               <property name="text">
                <string>Lemma</string>
               </property>
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QLineEdit" name="edit_word">
+             <widget class="QLineEdit" name="edit_map_word">
               <property name="readOnly">
                <bool>true</bool>
               </property>
              </widget>
             </item>
             <item row="0" column="0">
-             <widget class="QPushButton" name="button_word">
+             <widget class="QPushButton" name="button_map_word">
               <property name="text">
                <string>Word</string>
               </property>
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QPushButton" name="button_pos">
+             <widget class="QPushButton" name="button_map_pos">
               <property name="text">
                <string>POS</string>
               </property>
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QLineEdit" name="edit_lemma">
+             <widget class="QLineEdit" name="edit_map_lemma">
               <property name="readOnly">
                <bool>true</bool>
               </property>
              </widget>
             </item>
             <item row="3" column="0">
-             <widget class="QPushButton" name="button_transcript">
+             <widget class="QPushButton" name="button_map_transcript">
               <property name="text">
                <string>Transcript</string>
               </property>
              </widget>
             </item>
             <item row="4" column="0">
-             <widget class="QPushButton" name="button_gloss">
+             <widget class="QPushButton" name="button_map_gloss">
               <property name="text">
                <string>Gloss</string>
               </property>
              </widget>
             </item>
             <item row="3" column="1">
-             <widget class="QLineEdit" name="edit_transcript">
+             <widget class="QLineEdit" name="edit_map_transcript">
               <property name="readOnly">
                <bool>true</bool>
               </property>
              </widget>
             </item>
             <item row="2" column="1">
-             <widget class="QLineEdit" name="edit_pos">
+             <widget class="QLineEdit" name="edit_map_pos">
               <property name="readOnly">
                <bool>true</bool>
               </property>
