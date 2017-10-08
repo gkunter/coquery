@@ -456,6 +456,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_about_coquery.triggered.connect(self.show_about)
         self.ui.action_how_to_cite.triggered.connect(self.how_to_cite)
         self.ui.action_regex_tester.triggered.connect(self.regex_tester)
+        self.ui.action_pos_helper.triggered.connect(self.pos_helper)
         self.ui.action_help.triggered.connect(self.help)
         self.ui.action_view_log.triggered.connect(self.show_log)
         self.ui.action_mysql_server_help.triggered.connect(self.show_mysql_guide)
@@ -2303,7 +2304,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_stop_query.setEnabled(state)
 
     def stop_query(self):
-        response = QtWidgets.QMessageBox.warning(self, "Unfinished query", msg_query_running, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+        response = QtWidgets.QMessageBox.warning(self,
+                                                 "Unfinished query",
+                                                 msg_query_running,
+                                                 QtWidgets.QMessageBox.Yes,
+                                                 QtWidgets.QMessageBox.No)
         if response == QtWidgets.QMessageBox.Yes:
             # FIXME: This isn't working well at all. A possible solution
             # using SQLAlchemy may be found here:
@@ -2988,9 +2993,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         return state
 
     def connection_settings(self):
-        from . import connectionconfiguration
+        from .connectionconfiguration import ConnectionConfiguration
         try:
-            config_dict, name = connectionconfiguration.ConnectionConfiguration.choose(options.cfg.current_server, options.cfg.server_configuration)
+            config_dict, name = ConnectionConfiguration.choose(
+                options.cfg.current_server, options.cfg.server_configuration)
         except TypeError:
             return
         else:
@@ -3077,6 +3083,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def regex_tester(self):
         from . import regextester
         regex_dialog = regextester.RegexDialog(parent=self)
+        regex_dialog.show()
+
+    def pos_helper(self):
+        from . import poshelper
+        regex_dialog = poshelper.PosHelperDialog(parent=self)
         regex_dialog.show()
 
     def show_available_modules(self):
