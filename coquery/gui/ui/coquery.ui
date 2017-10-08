@@ -272,7 +272,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>5</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tool_widget_column_order">
               <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -909,7 +909,7 @@ p, li { white-space: pre-wrap; }
     <addaction name="separator"/>
     <addaction name="action_quit"/>
    </widget>
-   <widget class="QMenu" name="menuHilfe">
+   <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>&amp;Help</string>
     </property>
@@ -918,7 +918,9 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_available_modules"/>
     <addaction name="action_about_coquery"/>
     <addaction name="action_how_to_cite"/>
+    <addaction name="separator"/>
     <addaction name="action_regex_tester"/>
+    <addaction name="action_pos_helper"/>
    </widget>
    <widget class="QMenu" name="menuCorpus">
     <property name="title">
@@ -1013,7 +1015,7 @@ p, li { white-space: pre-wrap; }
    <addaction name="menu_Results"/>
    <addaction name="menuAnalyse"/>
    <addaction name="menuSettings"/>
-   <addaction name="menuHilfe"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="sizePolicy">
@@ -1567,6 +1569,11 @@ p, li { white-space: pre-wrap; }
   <action name="action_regex_tester">
    <property name="text">
     <string>Regular &amp;expression tester...</string>
+   </property>
+  </action>
+  <action name="action_pos_helper">
+   <property name="text">
+    <string>POS Tag helper..</string>
    </property>
   </action>
  </widget>
