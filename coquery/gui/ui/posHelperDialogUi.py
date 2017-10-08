@@ -23,8 +23,17 @@ class Ui_PosHelperDialog(object):
         self.combo_tagset = QtWidgets.QComboBox(PosHelperDialog)
         self.combo_tagset.setObjectName("combo_tagset")
         self.horizontalLayout.addWidget(self.combo_tagset)
-        spacerItem = QtWidgets.QSpacerItem(256, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
+        self.label_2 = QtWidgets.QLabel(PosHelperDialog)
+        self.label_2.setObjectName("label_2")
+        self.horizontalLayout.addWidget(self.label_2)
+        self.edit_search = QtWidgets.QLineEdit(PosHelperDialog)
+        self.edit_search.setObjectName("edit_search")
+        self.horizontalLayout.addWidget(self.edit_search)
+        self.horizontalLayout.setStretch(1, 2)
+        self.horizontalLayout.setStretch(2, 1)
+        self.horizontalLayout.setStretch(4, 4)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.table_mappings = QtWidgets.QTableWidget(PosHelperDialog)
         self.table_mappings.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -56,6 +65,8 @@ class Ui_PosHelperDialog(object):
         self.horizontalLayout_2.addWidget(self.button_insert)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.verticalLayout.setStretch(1, 1)
+        self.label.setBuddy(self.combo_tagset)
+        self.label_2.setBuddy(self.edit_search)
 
         self.retranslateUi(PosHelperDialog)
         QtCore.QMetaObject.connectSlotsByName(PosHelperDialog)
@@ -63,11 +74,12 @@ class Ui_PosHelperDialog(object):
     def retranslateUi(self, PosHelperDialog):
         _translate = QtCore.QCoreApplication.translate
         PosHelperDialog.setWindowTitle(_translate("PosHelperDialog", "POS tag set helper – Coquery"))
-        self.label.setText(_translate("PosHelperDialog", "POS tag set:"))
+        self.label.setText(_translate("PosHelperDialog", "POS &tag set:"))
+        self.label_2.setText(_translate("PosHelperDialog", "&Search"))
         item = self.table_mappings.horizontalHeaderItem(0)
         item.setText(_translate("PosHelperDialog", "Tag"))
         item = self.table_mappings.horizontalHeaderItem(1)
         item.setText(_translate("PosHelperDialog", "Description"))
-        self.button_insert.setText(_translate("PosHelperDialog", "Insert"))
+        self.button_insert.setText(_translate("PosHelperDialog", "&Insert"))
 
 
