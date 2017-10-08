@@ -1089,6 +1089,33 @@ class CoqSpinner(QtWidgets.QWidget):
         self._anim.stop()
 
 
+class CoqProgressDialog(QtWidgets.QDialog):
+    def __init__(self, title="", parent=None):
+        super(CoqProgressDialog, self).__init__(parent)
+        from .ui.progressDialogUi import Ui_ProgressDialog
+        self.ui = Ui_ProgressDialog()
+        self.ui.setupUi(self)
+        self.setWindowTitle(title)
+
+    def setMaximum(self, val):
+        self.ui.progressBar.setMaximum(val)
+
+    def maximum(self):
+        return self.ui.progressBar.maximum()
+
+    def setValue(self, val):
+        self.ui.progressBar.setValue(val)
+
+    def value(self):
+        return self.ui.progressBar.value()
+
+    def setFormat(self, s):
+        self.ui.progressBar.setFormat(s)
+
+    def format(self):
+        self.ui.progressBar.format()
+
+
 class CoqTableItem(QtWidgets.QTableWidgetItem):
     def __init__(self, *args, **kwargs):
         super(CoqTableItem, self).__init__(*args, **kwargs)
