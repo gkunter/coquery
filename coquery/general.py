@@ -311,11 +311,16 @@ def get_chunk(iterable, chunk_size=250000):
 
 
 def get_directory_size(path):
-    size = 0
-    for dirpath, _, files in os.walk(path):
-        size += sum(
-            [os.path.getsize(os.path.join(dirpath, x)) for x in files])
-    return size
+    total_size = 0
+    for dir_path, _, files in os.walk(path):
+        for file_name in files:
+            try:
+                size = os.path.getsize(os.path.join(dir_path, file_name))
+            except Exception as e:
+                print(e)
+            else:
+                total_size += size
+    return total_size
 
 
 def get_available_space(path):
@@ -335,7 +340,10 @@ def get_available_space(path):
 
 
 def format_file_size(size):
-    power = math.floor(math.log2(size) / 10)
+    if size == 0:
+        power = 0
+    else:
+        power = math.floor(math.log2(abs(size)) / 10)
     unit = ['B','KiB','MiB','GiB','TiB','PiB'][power]
     return "{:0.1f} {}".format(size / 1024 ** power, unit)
 
