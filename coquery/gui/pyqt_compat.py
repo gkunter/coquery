@@ -68,3 +68,5 @@ def close_toplevel_widgets():
             widget.hide()
             widget.close()
             del widget
+
+STYLE_WARN = 'QLineEdit {background-color: lightyellow; }'
