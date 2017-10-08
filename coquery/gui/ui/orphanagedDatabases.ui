@@ -26,7 +26,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Coquery has detected the following orphanaged databases:</string>
+      <string>The database directory {path} owned by the connection '{name}' contains the following orphanaged files:</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

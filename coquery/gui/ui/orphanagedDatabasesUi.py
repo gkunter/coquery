@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'orphanagedDatabases.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -67,7 +67,7 @@ class Ui_OrphanagedDatabases(object):
     def retranslateUi(self, OrphanagedDatabases):
         _translate = QtCore.QCoreApplication.translate
         OrphanagedDatabases.setWindowTitle(_translate("OrphanagedDatabases", "Orphanaged databases – Coquery"))
-        self.label.setText(_translate("OrphanagedDatabases", "Coquery has detected the following orphanaged databases:"))
+        self.label.setText(_translate("OrphanagedDatabases", "The database directory {path} owned by the connection \'{name}\' contains the following orphanaged files:"))
         item = self.tableWidget.horizontalHeaderItem(0)
         item.setText(_translate("OrphanagedDatabases", "Database"))
         item = self.tableWidget.horizontalHeaderItem(1)

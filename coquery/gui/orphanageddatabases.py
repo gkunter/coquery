@@ -87,9 +87,15 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
     @staticmethod
     def display(parent=None):
         selected = []
-        l = check_orphans()
+        try:
+            path = sqlite_path(options.cfg.current_server)
+        except AttributeError:
+            path = ""
+        l = check_orphans(path)
         if l:
             dialog = OrphanagedDatabasesDialog(orphans=l, parent=None)
+            dialog.ui.label.setText(utf8(dialog.ui.label.text()).format(
+                path=path, name=options.cfg.current_server))
             result = dialog.exec_()
             if result == QtWidgets.QDialog.Accepted:
                 for x in range(dialog.ui.tableWidget.rowCount()):
@@ -102,15 +108,11 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
                 OrphanagedDatabasesDialog.remove_orphans(selected)
 
 
-def check_orphans():
+def check_orphans(path):
     """
     Get a list of orphanaged databases in the database directory for the
     current connetion.
     """
-    try:
-        path = sqlite_path(options.cfg.current_server)
-    except AttributeError:
-        path = ""
     l = []
     if options.get_configuration_type() == SQL_SQLITE:
         for x in glob.glob(os.path.join(path, "*.db")):
