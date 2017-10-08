@@ -1425,9 +1425,8 @@ def set_current_server(name):
         os.makedirs(cfg.adhoc_path)
 
     if cfg.server_configuration[name]["type"] == SQL_SQLITE:
-        cfg.database_path = cfg.server_configuration[name]["path"]
-        if not cfg.database_path:
-            cfg.database_path = os.path.join(path, "databases")
+        cfg.database_path = (cfg.server_configuration[name]["path"] or
+                             os.path.join(path, "databases"))
         if not os.path.exists(cfg.database_path):
             os.makedirs(cfg.database_path)
 
