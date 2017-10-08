@@ -1630,6 +1630,7 @@ def has_module(name):
         return pkgutil.find_loader(name) is not None
 
 _recent_python = sys.version_info < (2, 7)
+use_xlrd = has_module("xlrd")
 use_nltk = has_module("nltk")
 use_mysql = has_module("pymysql")
 use_seaborn = has_module("seaborn")

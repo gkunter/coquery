@@ -350,7 +350,11 @@ MODULE_INFORMATION = {
     "alsaaudio": ("alsaaudio – A package containing wrappers for accessing the ALSA API from Python",
             "0.8.2",
             "Audio support under Linux",
-            "https://github.com/larsimmisch/pyalsaaudio/")
+            "https://github.com/larsimmisch/pyalsaaudio/"),
+    "xlrd": ("xlrd – Working with Excel Files in Python",
+             "1.0",
+             "Data input from Microsoft Excel files",
+             "http://www.python-excel.org/"),
     }
 
 # for Python 3 compatibility:
