@@ -20,6 +20,11 @@ import tempfile
 import sys
 import pandas as pd
 
+try:
+    from cStringIO import StringIO as IO_Stream
+except ImportError:
+    from io import BytesIO as IO_Stream
+
 from .errors import DependencyError, SQLProgrammingError
 from .defines import SQL_MYSQL, SQL_SQLITE
 from .general import get_chunk
@@ -347,7 +352,6 @@ class SqlDB(object):
         """
         count = 0
         chunk_signal = kwargs.pop("chunksignal", None)
-
         with codecs.open(file_name, "r", encoding=encoding) as big_file:
 
             # Iterate the chunks:
@@ -357,19 +361,20 @@ class SqlDB(object):
                 content = list(lines)
                 count += len(content)
 
-                # create and fill temporary file:
-                temp_file = tempfile.NamedTemporaryFile("w", delete=False)
+                # create IO stream for chunk:
                 if sys.version_info < (3, 0):
                     buffer = (u"\n".join([x.strip() for x in content])
                                    .replace("\x00", "")
                                    .encode("utf-8"))
+                    stream = IO_Stream(buffer)
                 else:
                     buffer = ("\n".join([x.strip() for x in content])
                                   .replace("\x00", ""))
-                temp_file.write(buffer)
-                temp_file.close()
+                    stream = IO_Stream(bytes(buffer, encoding="utf-8"))
 
-                columns = self.load_infile(temp_file.name,
+                # load the IO stream containing a chunk from the big
+                # file into the matching table name:
+                columns = self.load_infile(stream,
                                            table_name=table,
                                            if_exists=if_exists,
                                            index=index,
@@ -380,9 +385,6 @@ class SqlDB(object):
                     kwargs["header"] = None
                 kwargs["skiprows"] = None
 
-                # load the temporary file containing a chunk from the big
-                # file into the matching table name:
-                os.remove(temp_file.name)
 
         return count
 
