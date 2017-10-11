@@ -57,6 +57,7 @@ class InstallerGui(QtWidgets.QDialog):
         self.state = None
         self._testing = False
         self._onefile = False
+        self._meta_options = None
         self.builder_class = builder_class
 
         self.ui = Ui_CorpusInstaller()
@@ -65,9 +66,9 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.use_pos_tagging.hide()
         self.ui.progress_box.hide()
 
-        yes_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
-        yes_button.setText(self.button_label)
-        yes_button.clicked.connect(self.start_install)
+        self.ui.yes_button = self.ui.buttonBox.button(self.ui.buttonBox.Yes)
+        self.ui.yes_button.setText(self.button_label)
+        self.ui.yes_button.clicked.connect(self.start_install)
 
         self.ui.corpus_name.setText(builder_class.get_name())
         self.ui.corpus_name.setReadOnly(True)
@@ -193,19 +194,19 @@ class InstallerGui(QtWidgets.QDialog):
 
     def validate_dialog(self, check_path=True):
         self.ui.input_path.setStyleSheet("")
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(True)
+        self.ui.yes_button.setEnabled(True)
         self.ui.issue_label.setText("")
 
         if self.ui.radio_read_files.isChecked() and check_path:
             path = utf8(self.ui.input_path.text())
             if not path:
-                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
+                self.ui.yes_button.setEnabled(False)
                 return
             if ((self._onefile and not os.path.isfile(path)) or
                     (not self._onefile and not os.path.isdir(path))):
                 self.ui.issue_label.setText("Illegal data source path.")
                 self.ui.input_path.setStyleSheet(STYLE_WARN)
-                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
+                self.ui.yes_button.setEnabled(False)
                 return
 
     def display(self):
@@ -345,18 +346,17 @@ class InstallerGui(QtWidgets.QDialog):
             super(InstallerGui, self).reject()
 
     def check_input(self):
-        button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
         if self.ui.radio_only_module.isChecked():
             self.ui.input_path.setStyleSheet('')
-            button.setEnabled(True)
+            self.ui.yes_button.setEnabled(True)
         else:
             path = str(self.ui.input_path.text())
             if os.path.isdir(path):
                 self.ui.input_path.setStyleSheet('')
-                button.setEnabled(True)
+                self.ui.yes_button.setEnabled(True)
             else:
                 self.ui.input_path.setStyleSheet(STYLE_WARN)
-                button.setEnabled(False)
+                self.ui.yes_button.setEnabled(False)
 
     def start_install(self):
         """
@@ -402,7 +402,7 @@ class InstallerGui(QtWidgets.QDialog):
         self.builder.arguments = self.get_arguments_from_gui()
         self.builder.name = self.builder.arguments.name
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
+        self.ui.yes_button.setEnabled(False)
         self.ui.widget_options.setEnabled(False)
 
         self.install_thread = classes.CoqThread(self.do_install, self)
@@ -559,7 +559,7 @@ class BuilderGui(InstallerGui):
             else:
                 self.ui.input_path.setText("")
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
+        self.ui.yes_button.setEnabled(False)
         self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
         self.ui.corpus_name.setFocus()
         try:
@@ -583,17 +583,19 @@ class BuilderGui(InstallerGui):
 
         if options.use_nltk:
             self._testing = True
-            self.test_thread = classes.CoqThread(self.test_nltk_core, parent=self)
+            self.test_thread = classes.CoqThread(self.test_nltk_core,
+                                                 parent=self)
             self.test_thread.taskFinished.connect(self.test_nltk_results)
             self.test_thread.taskException.connect(self.test_nltk_exception)
             self._label_text = str(self.ui.label_pos_tagging.text())
 
             self.ui.icon_nltk_check.start()
-            self.ui.label_pos_tagging.setText("Testing NLTK components, please wait...")
+            self.ui.label_pos_tagging.setText(
+                "Testing NLTK components, please wait...")
             self.ui.label_pos_tagging.setDisabled(True)
             self.ui.use_pos_tagging.setDisabled(True)
-            self._old_button_state = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).isEnabled()
-            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(False)
+            self._old_button_state = self.ui.yes_button.isEnabled()
+            self.ui.yes_button.setEnabled(False)
             self.test_thread.start()
 
     def test_nltk_exception(self):
@@ -646,11 +648,12 @@ class BuilderGui(InstallerGui):
 
     def test_nltk_results(self):
         def pass_check():
-            return self._nltk_lemmatize and self._nltk_tokenize and self._nltk_tagging
+            return (self._nltk_lemmatize and
+                    self._nltk_tokenize and
+                    self._nltk_tagging)
 
         self.ui.icon_nltk_check.stop()
-        self.ui.label_pos_tagging.setText(self._label_text)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setEnabled(self._old_button_state)
+        self.ui.yes_button.setEnabled(self._old_button_state)
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
             self.ui.use_pos_tagging.setChecked(False)
             from . import nltkdatafiles
@@ -659,6 +662,7 @@ class BuilderGui(InstallerGui):
         self._testing = False
         self.ui.label_pos_tagging.setDisabled(False)
         self.ui.use_pos_tagging.setDisabled(False)
+        self.validate_dialog()
 
     def file_options(self):
         """ Get CSV file options for current query input file. """
@@ -690,7 +694,7 @@ class BuilderGui(InstallerGui):
                     in options.cfg.current_resources):
                 self.ui.corpus_name.setStyleSheet(STYLE_WARN)
                 self.ui.issue_label.setText(
-                    "There is already another corpus with this name..")
+                    "There is already another corpus with this name.")
                 button.setEnabled(False)
 
         def validate_db_does_not_exist(button):
@@ -727,19 +731,18 @@ class BuilderGui(InstallerGui):
 
         super(BuilderGui, self).validate_dialog(check_path)
 
-        button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes)
-        button.setEnabled(True)
+        self.ui.yes_button.setEnabled(True)
         self.ui.issue_label.setText("")
         if hasattr(self.ui, "corpus_name"):
             self.ui.corpus_name.setStyleSheet("")
-            validate_name_not_empty(button)
+            validate_name_not_empty(self.ui.yes_button)
             if self.ui.radio_only_module.isChecked():
-                validate_db_does_exist(button)
+                validate_db_does_exist(self.ui.yes_button)
             else:
-                validate_name_is_unique(button)
-                validate_db_does_not_exist(button)
+                validate_name_is_unique(self.ui.yes_button)
+                validate_db_does_not_exist(self.ui.yes_button)
                 if not self._onefile:
-                    validate_metadata(button)
+                    validate_metadata(self.ui.yes_button)
 
     def select_path(self):
         if self._onefile:
