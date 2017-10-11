@@ -26,7 +26,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>The database directory {path} owned by the connection '{name}' contains the following orphanaged files:</string>
+      <string>There are orphanaged files for the connection '{name}':</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -51,7 +51,7 @@
       <enum>QAbstractItemView::ScrollPerPixel</enum>
      </property>
      <property name="columnCount">
-      <number>3</number>
+      <number>5</number>
      </property>
      <attribute name="horizontalHeaderHighlightSections">
       <bool>false</bool>
@@ -61,7 +61,12 @@
      </attribute>
      <column>
       <property name="text">
-       <string>Database</string>
+       <string>File</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Corpus</string>
       </property>
      </column>
      <column>
@@ -74,20 +79,12 @@
        <string>Last modified</string>
       </property>
      </column>
+     <column>
+      <property name="text">
+       <string>Issue</string>
+      </property>
+     </column>
     </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>0</height>
-      </size>
-     </property>
-    </spacer>
    </item>
    <item>
     <widget class="QLabel" name="label_3">
@@ -98,7 +95,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color: 'red';&quot;&gt;Do you want to delete the selected databases?&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ff0000;&quot;&gt;Do you want to delete the selected orphanaged files?&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

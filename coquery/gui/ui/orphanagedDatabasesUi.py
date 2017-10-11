@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'orphanagedDatabases.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -30,7 +30,7 @@ class Ui_OrphanagedDatabases(object):
         self.tableWidget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tableWidget.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.tableWidget.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
-        self.tableWidget.setColumnCount(3)
+        self.tableWidget.setColumnCount(5)
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setRowCount(0)
         item = QtWidgets.QTableWidgetItem()
@@ -39,11 +39,13 @@ class Ui_OrphanagedDatabases(object):
         self.tableWidget.setHorizontalHeaderItem(1, item)
         item = QtWidgets.QTableWidgetItem()
         self.tableWidget.setHorizontalHeaderItem(2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(3, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(4, item)
         self.tableWidget.horizontalHeader().setHighlightSections(False)
         self.tableWidget.horizontalHeader().setStretchLastSection(True)
         self.verticalLayout.addWidget(self.tableWidget)
-        spacerItem = QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem)
         self.label_3 = QtWidgets.QLabel(OrphanagedDatabases)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
@@ -67,13 +69,17 @@ class Ui_OrphanagedDatabases(object):
     def retranslateUi(self, OrphanagedDatabases):
         _translate = QtCore.QCoreApplication.translate
         OrphanagedDatabases.setWindowTitle(_translate("OrphanagedDatabases", "Orphanaged databases – Coquery"))
-        self.label.setText(_translate("OrphanagedDatabases", "The database directory {path} owned by the connection \'{name}\' contains the following orphanaged files:"))
+        self.label.setText(_translate("OrphanagedDatabases", "There are orphanaged files for the connection \'{name}\':"))
         item = self.tableWidget.horizontalHeaderItem(0)
-        item.setText(_translate("OrphanagedDatabases", "Database"))
+        item.setText(_translate("OrphanagedDatabases", "File"))
         item = self.tableWidget.horizontalHeaderItem(1)
-        item.setText(_translate("OrphanagedDatabases", "Size"))
+        item.setText(_translate("OrphanagedDatabases", "Corpus"))
         item = self.tableWidget.horizontalHeaderItem(2)
+        item.setText(_translate("OrphanagedDatabases", "Size"))
+        item = self.tableWidget.horizontalHeaderItem(3)
         item.setText(_translate("OrphanagedDatabases", "Last modified"))
-        self.label_3.setText(_translate("OrphanagedDatabases", "<html><head/><body><p><span style=\" font-weight:600; color: \'red\';\">Do you want to delete the selected databases?</span></p></body></html>"))
+        item = self.tableWidget.horizontalHeaderItem(4)
+        item.setText(_translate("OrphanagedDatabases", "Issue"))
+        self.label_3.setText(_translate("OrphanagedDatabases", "<html><head/><body><p><span style=\" font-weight:600; color:#ff0000;\">Do you want to delete the selected orphanaged files?</span></p></body></html>"))
 
 
