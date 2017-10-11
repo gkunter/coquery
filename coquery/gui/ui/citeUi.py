@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'cite.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_CiteDialog(object):
     def setupUi(self, CiteDialog):
         CiteDialog.setObjectName("CiteDialog")
-        CiteDialog.resize(640, 492)
+        CiteDialog.resize(640, 650)
         self.verticalLayout = QtWidgets.QVBoxLayout(CiteDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.formLayout = QtWidgets.QFormLayout()
@@ -94,20 +94,20 @@ class Ui_CiteDialog(object):
         self.edit_unified.setHtml(_translate("CiteDialog", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans UI\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Kunter, Gero. {date}. <span style=\" font-style:italic;\">Coquery: a free corpus query tool</span>. Version {version}, http://www.coquery.org. ([INSERT ACCESS DATE].)</p></body></html>"))
+"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Noto Sans UI\'; font-size:10pt;\">Kunter, Gero. {date}. </span><span style=\" font-family:\'Noto Sans UI\'; font-size:10pt; font-style:italic;\">Coquery: a free corpus query tool</span><span style=\" font-family:\'Noto Sans UI\'; font-size:10pt;\">. Version {version}, http://www.coquery.org. ([INSERT ACCESS DATE].)</span></p></body></html>"))
         self.label_3.setText(_translate("CiteDialog", "&APA"))
         self.edit_apa.setHtml(_translate("CiteDialog", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans UI\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Kunter, G. ({date}). Coquery: a free corpus query tool (version {version}) [Computer program]. Retrieved from &lt;http://www.coquery.org&gt;</p></body></html>"))
+"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Noto Sans UI\'; font-size:10pt;\">Kunter, G. ({date}). Coquery: a free corpus query tool (version {version}) [Computer program]. Retrieved from &lt;http://www.coquery.org&gt;</span></p></body></html>"))
         self.label_2.setText(_translate("CiteDialog", "&MLA"))
         self.edit_mla.setHtml(_translate("CiteDialog", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans UI\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Kunter, Gero. <span style=\" font-style:italic;\">Coquery: a free corpus query tool</span>. Computer Software. Version {version}. {date}. Web. [INSERT ACCESS DATE]. &lt;http://www.coquery.org&gt;.</p></body></html>"))
+"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Noto Sans UI\'; font-size:10pt;\">Kunter, Gero. </span><span style=\" font-family:\'Noto Sans UI\'; font-size:10pt; font-style:italic;\">Coquery: a free corpus query tool</span><span style=\" font-family:\'Noto Sans UI\'; font-size:10pt;\">. Computer Software. Version {version}. {date}. Web. [INSERT ACCESS DATE]. &lt;http://www.coquery.org&gt;.</span></p></body></html>"))
         self.label_5.setText(_translate("CiteDialog", "E&ndnote"))
         self.edit_endnote.setPlainText(_translate("CiteDialog", "%0 Computer Program\n"
 "%A Kunter, Gero\n"
@@ -121,7 +121,7 @@ class Ui_CiteDialog(object):
 "  Author       = {{Kunter, Gero}},\n"
 "  Note         = {{Version {version}}},\n"
 "  HowPublished = {{http://www.coquery.org}},\n"
-"  Year         = {{{year}}}\n"
+"  Year         = {{{date}}}\n"
 "}\n"
 ""))
         self.label_6.setText(_translate("CiteDialog", "&RIS"))

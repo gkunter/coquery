@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>492</height>
+    <height>650</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,8 +35,8 @@
         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Kunter, Gero. {date}. &lt;span style=&quot; font-style:italic;&quot;&gt;Coquery: a free corpus query tool&lt;/span&gt;. Version {version}, http://www.coquery.org. ([INSERT ACCESS DATE].)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Noto Sans UI'; font-size:10pt;&quot;&gt;Kunter, Gero. {date}. &lt;/span&gt;&lt;span style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-style:italic;&quot;&gt;Coquery: a free corpus query tool&lt;/span&gt;&lt;span style=&quot; font-family:'Noto Sans UI'; font-size:10pt;&quot;&gt;. Version {version}, http://www.coquery.org. ([INSERT ACCESS DATE].)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="textInteractionFlags">
         <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -62,8 +62,8 @@ p, li { white-space: pre-wrap; }
         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Kunter, G. ({date}). Coquery: a free corpus query tool (version {version}) [Computer program]. Retrieved from &amp;lt;http://www.coquery.org&amp;gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Noto Sans UI'; font-size:10pt;&quot;&gt;Kunter, G. ({date}). Coquery: a free corpus query tool (version {version}) [Computer program]. Retrieved from &amp;lt;http://www.coquery.org&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="textInteractionFlags">
         <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -89,8 +89,8 @@ p, li { white-space: pre-wrap; }
         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Kunter, Gero. &lt;span style=&quot; font-style:italic;&quot;&gt;Coquery: a free corpus query tool&lt;/span&gt;. Computer Software. Version {version}. {date}. Web. [INSERT ACCESS DATE]. &amp;lt;http://www.coquery.org&amp;gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Noto Sans UI'; font-size:10pt;&quot;&gt;Kunter, Gero. &lt;/span&gt;&lt;span style=&quot; font-family:'Noto Sans UI'; font-size:10pt; font-style:italic;&quot;&gt;Coquery: a free corpus query tool&lt;/span&gt;&lt;span style=&quot; font-family:'Noto Sans UI'; font-size:10pt;&quot;&gt;. Computer Software. Version {version}. {date}. Web. [INSERT ACCESS DATE]. &amp;lt;http://www.coquery.org&amp;gt;.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="textInteractionFlags">
         <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -156,7 +156,7 @@ p, li { white-space: pre-wrap; }
   Author       = {{Kunter, Gero}},
   Note         = {{Version {version}}},
   HowPublished = {{http://www.coquery.org}},
-  Year         = {{{year}}}
+  Year         = {{{date}}}
 }
 </string>
        </property>
