@@ -642,6 +642,11 @@ class Xor(LogicFunction):
     _func = pd.np.logical_xor
 
 
+class Not(LogicFunction):
+    _name = "NOT"
+    _func = pd.np.logical_not
+
+
 class If(And):
     _name = "IF"
     arguments = {"string": [("value1", "Then:", ""),
