@@ -1797,53 +1797,56 @@ class BaseCorpusBuilder(corpus.SQLResource):
             progress_done()
 
             try:
-                # create tables
-                if not self.interrupted:
-                    if self.arguments.metadata:
-                        self.add_metadata(self.arguments.metadata,
-                                          self.arguments.metadata_column)
-                    self.build_create_tables()
-                    progress_done()
-
-                # read files
-                if not self.interrupted:
-                    current = progress_next(current)
-                    if self.arguments.metadata:
-                        self.store_metadata()
-                    self.build_load_files()
-                    self.commit_data()
-                    progress_done()
-
-                # any additional stage
-                if not self.interrupted:
-                    current = progress_next(current)
-                    for stage in self.additional_stages:
-                        if not self.interrupted:
-                            stage()
-                    progress_done()
-
-                # optimize
-                if (not self.interrupted and self.DB.db_type == SQL_MYSQL):
-                    current = progress_next(current)
-                    self.build_optimize()
-                    progress_done()
-
-                # lookup table
-                try:
-                    if self.arguments.lookup_ngram and not self.interrupted:
-                        current = progress_next(current)
-                        self.build_lookup_ngram()
+                if not self.arguments.only_module:
+                    # create tables
+                    if not self.interrupted:
+                        if self.arguments.metadata:
+                            self.add_metadata(self.arguments.metadata,
+                                              self.arguments.metadata_column)
+                        self.build_create_tables()
                         progress_done()
-                except Exception as e:
-                    logging.error("Error building ngram lookup: {}".format(e))
-                    print(e)
-                    raise e
 
-                # build indexes
-                if not self.interrupted:
-                    current = progress_next(current)
-                    self.build_create_indices()
-                    progress_done()
+                    # read files
+                    if not self.interrupted:
+                        current = progress_next(current)
+                        if self.arguments.metadata:
+                            self.store_metadata()
+                        self.build_load_files()
+                        self.commit_data()
+                        progress_done()
+
+                    # any additional stage
+                    if not self.interrupted:
+                        current = progress_next(current)
+                        for stage in self.additional_stages:
+                            if not self.interrupted:
+                                stage()
+                        progress_done()
+
+                    # optimize
+                    if (not self.interrupted and self.DB.db_type == SQL_MYSQL):
+                        current = progress_next(current)
+                        self.build_optimize()
+                        progress_done()
+
+                    # lookup table
+                    try:
+                        if (self.arguments.lookup_ngram and
+                                not self.interrupted):
+                            current = progress_next(current)
+                            self.build_lookup_ngram()
+                            progress_done()
+                    except Exception as e:
+                        S = "Error building ngram lookup table: {}".format(e)
+                        logging.error(S)
+                        print(S)
+                        raise e
+
+                    # build indexes
+                    if not self.interrupted:
+                        current = progress_next(current)
+                        self.build_create_indices()
+                        progress_done()
 
                 # write module
                 if not self.interrupted:
