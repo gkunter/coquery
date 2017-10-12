@@ -13,8 +13,9 @@ from __future__ import division
 
 import re
 
-from .pyqt_compat import QtWidgets
+from .pyqt_compat import QtWidgets, get_toplevel_window
 from .ui.regexTesterUi import Ui_RegexDialog
+from .classes import CoqWidgetFader
 
 from coquery.unicode import utf8
 
@@ -279,6 +280,8 @@ p, li { white-space: pre-wrap; }
 
         self.ui.edit_regex.textChanged.connect(self.evaluate_regex)
         self.ui.edit_test_string.textChanged.connect(self.evaluate_regex)
+        self.ui.button_insert.clicked.connect(self.insert_regex)
+        self.ui.button_insert.setDisabled(True)
 
     def evaluate_regex(self):
         regex = utf8(self.ui.edit_regex.text())
@@ -310,6 +313,27 @@ p, li { white-space: pre-wrap; }
                 for i, grp in enumerate(match.groups()):
                     self.ui.table_groups.setItem(
                         i, 0, QtWidgets.QTableWidgetItem(str(grp)))
+
+        self.ui.button_insert.setEnabled(bool(regex))
+
+    def insert_regex(self):
+        s = utf8(self.ui.edit_regex.text())
+        widgets = QtWidgets.QApplication.instance().inputFocusWidgets()
+        widgets = [x for x in widgets
+                   if x not in (self.ui.edit_regex, self.ui.edit_test_string)]
+
+        if widgets:
+            for widget in widgets[::-1]:
+                if isinstance(widget, QtWidgets.QLineEdit):
+                    widget.insert(s)
+                    break
+                elif isinstance(widget, QtWidgets.QTextEdit):
+                    widget.textCursor().insertText(s)
+                    break
+        else:
+            widget = get_toplevel_window().ui.edit_query_string
+            widget.textCursor().insertText(s)
+        CoqWidgetFader(widget).fade()
 
     @staticmethod
     def show(parent=None):
