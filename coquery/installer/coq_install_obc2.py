@@ -42,6 +42,7 @@ class BuilderClass(TEICorpusBuilder):
     speaker_label = "Speaker"
     speaker_sex = "Sex"
     speaker_age = "Age"
+    speaker_role = "Role"
     speaker_hiscolabel = "HISCO_Occupation"
     speaker_hisclass = "HISCLASS"
     speaker_class = "Class"
@@ -51,10 +52,27 @@ class BuilderClass(TEICorpusBuilder):
         Column(speaker_label, "VARCHAR(15) NOT NULL"),
         Column(speaker_sex, "ENUM('m','f','?') NOT NULL"),
         Column(speaker_age, "VARCHAR(6) NOT NULL"),
+        Column(speaker_role, "VARCHAR(20) NOT NULL"),
         Column(speaker_hiscolabel, "VARCHAR(135) NOT NULL"),
         Column(speaker_hisclass, "TINYINT UNSIGNED"),
         Column(speaker_class,
                "ENUM('?','upper (1-5)','lower (6-13)') NOT NULL")]
+
+    event_table = "Event"
+    event_id = "EventId"
+    event_label = "Event"
+    event_scribe = "Scribe"
+    event_publisher = "Publisher"
+    event_printer = "Printer"
+    event_length = "Length"
+    event_columns = [
+        Identifier(event_id, "MEDIUMINT(13) UNSIGNED NOT NULL"),
+        Column(event_label, "VARCHAR(15) NOT NULL"),
+        Column(event_scribe, "VARCHAR(128) NOT NULL"),
+        Column(event_publisher, "VARCHAR(128) NOT NULL"),
+        Column(event_printer, "VARCHAR(128) NOT NULL"),
+        Column(event_length, "SMALLINT UNSIGNED NOT NULL")]
+
 
     source_table = "Trials"
     source_id = "TrialId"
@@ -88,7 +106,7 @@ class BuilderClass(TEICorpusBuilder):
     corpus_id = "ID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
-    corpus_sentence = "Utterance"
+    corpus_event_id = "UtteranceId"
     corpus_speaker_id = "SpeakerId"
     corpus_source_id = "SourceId"
 
@@ -98,9 +116,9 @@ class BuilderClass(TEICorpusBuilder):
         Link(corpus_word_id, word_table),
         Link(corpus_speaker_id, speaker_table),
         Link(corpus_source_id, source_table),
-        Column(corpus_sentence, "VARCHAR(13) NOT NULL")]
+        Link(corpus_event_id, event_table)]
 
-    auto_create = ["word", "file", "speaker", "offence", "source", "corpus"]
+    auto_create = ["word", "file", "speaker", "event", "offence", "source", "corpus"]
 
     #_source_map = {
         #"offenceDescription": source_offence,
@@ -444,7 +462,6 @@ class BuilderClass(TEICorpusBuilder):
             age = u.attrib.get("age", None)
             speaker = u.attrib.get("speaker", None)
             sex = u.attrib.get("sex", None) or "?"
-            self._event = u.attrib.get("event")
 
             label = u.attrib.get("hiscoLabel", None) or ""
             role = u.attrib.get("role", None) or "?"
@@ -460,6 +477,7 @@ class BuilderClass(TEICorpusBuilder):
 
             d_speaker = {self.speaker_age: age,
                          self.speaker_sex: sex,
+                         self.speaker_role: role,
                          self.speaker_hiscolabel: label,
                          self.speaker_hisclass: hisclass,
                          self.speaker_class: class_cat,
@@ -481,6 +499,25 @@ class BuilderClass(TEICorpusBuilder):
                 d_speaker[self.speaker_id] = self._speaker_id
                 self._new_people[speaker] = d_speaker
 
+
+            printer = u.attrib.get("printer", None) or "?"
+            publisher = u.attrib.get("publisher", None) or "?"
+            scribe = u.attrib.get("scribe", None) or "?"
+            self._event = u.attrib.get("event")
+            try:
+                length = int(u.attrib.get("wc", None))
+            except (TypeError, ValueError):
+                length = 0
+
+            d_event = {self.event_label: self._event,
+                       self.event_printer: printer,
+                       self.event_publisher: publisher,
+                       self.event_scribe: scribe,
+                       self.event_length: length}
+
+            self._event_id = self.table(self.event_table).get_or_insert(
+                d_event)
+
             for word, pos in zip(*self._split_words(text)):
                 d_word = {self.word_label: word,
                           self.word_pos: pos}
@@ -491,7 +528,7 @@ class BuilderClass(TEICorpusBuilder):
                     {self.corpus_word_id: self._word_id,
                      self.corpus_file_id: self._file_id,
                      self.corpus_speaker_id: self._speaker_id,
-                     self.corpus_sentence: self._event,
+                     self.corpus_event_id: self._event_id,
                      self.corpus_source_id: self._source_id})
 
         for speaker in self._new_people:
