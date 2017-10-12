@@ -88,7 +88,6 @@ class GroupFunctionWidget(QtWidgets.QWidget):
 
     def setContent(self, data):
         cls, columns, available, checkstate = data
-        print(cls, cls.maximum_columns)
         if (cls.maximum_columns == 0):
             self.ui.button_columns.hide()
             self.ui.label_columns.hide()
@@ -344,7 +343,6 @@ class GroupDialog(QtWidgets.QDialog):
                 item = sublist.item(row, 0)
                 data = item.data(QtCore.Qt.UserRole)
                 cls, columns, available, checkstate = data
-                print(cls, checkstate)
                 if checkstate == QtCore.Qt.Checked:
                     selected.append((cls, columns))
         return selected
