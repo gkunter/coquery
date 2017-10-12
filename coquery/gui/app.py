@@ -76,7 +76,6 @@ class focusFilter(QtCore.QObject):
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.FocusIn:
             self.focus.emit()
-            return super(focusFilter, self).eventFilter(obj, event)
         return super(focusFilter, self).eventFilter(obj, event)
 
 
@@ -90,7 +89,6 @@ class clickFilter(QtCore.QObject):
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonRelease:
             self.clicked.emit()
-            return super(clickFilter, self).eventFilter(obj, event)
         return super(clickFilter, self).eventFilter(obj, event)
 
 
@@ -560,11 +558,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.close_find_widget = keyFilter(QtCore.Qt.Key_Escape)
         self.ui.widget_find.installEventFilter(self.close_find_widget)
-        self.close_find_widget.keyPressed.connect(lambda: self.ui.widget_find.hide())
-        self.close_find_widget.keyPressed.connect(lambda: self.ui.data_preview.setFocus())
+        self.close_find_widget.keyPressed.connect(
+            lambda: self.ui.widget_find.hide())
+        self.close_find_widget.keyPressed.connect(
+            lambda: self.ui.data_preview.setFocus())
 
         # bind Enter and Return keys within the find edit to 'Find next':
-        self.next_find = keyFilter([QtCore.Qt.Key_Enter, QtCore.Qt.Key_Return])
+        self.next_find = keyFilter([QtCore.Qt.Key_Enter,
+                                    QtCore.Qt.Key_Return])
         self.ui.widget_find.installEventFilter(self.next_find)
         self.next_find.keyPressed.connect(self.ui.widget_find.go_to_next)
 
@@ -627,7 +628,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             lambda x: self.show_header_menu(point=x, hidden=True))
 
         self.corpusListUpdated.connect(self.check_corpus_widgets)
-        self.columnVisibilityChanged.connect(lambda: self.reaggregate(start=True))
+        self.columnVisibilityChanged.connect(
+            lambda: self.reaggregate(start=True))
 
         self.column_tree.itemChanged.connect(self.toggle_selected_feature)
 
@@ -675,7 +677,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         # leave if the results table is empty:
         if (not self.ui.data_preview.isEnabled() or
-            len(self.table_model.content) == 0):
+                len(self.table_model.content) == 0):
             # disable the result-related menu entries:
             self.ui.action_save_selection.setDisabled(True)
             self.ui.action_save_results.setDisabled(True)
@@ -689,7 +691,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         # enable "Save selection" and "Copy selection to clipboard" if there
         # is a selection:
-        if self.ui.data_preview.selectionModel() and self.ui.data_preview.selectionModel().selection():
+        if (self.ui.data_preview.selectionModel() and
+                self.ui.data_preview.selectionModel().selection()):
             self.ui.action_save_selection.setEnabled(True)
             self.ui.action_copy_to_clipboard.setEnabled(True)
 
