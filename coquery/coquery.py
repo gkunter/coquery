@@ -38,6 +38,7 @@ from . import options
 from .defines import *
 from .unicode import utf8
 
+from .gui.classes import CoqApplication
 
 def set_logger(log_file_path):
     fstr = "%(asctime)s %(levelname)-8s %(message)s"
@@ -143,7 +144,7 @@ def main():
         from .gui.pyqt_compat import (
             QtWidgets, QtGui, QtCore, close_toplevel_widgets)
 
-        options.cfg.app = QtWidgets.QApplication(sys.argv)
+        options.cfg.app = CoqApplication(sys.argv)
         if configuration_error:
             if read_config_file:
                 s = msg_options_error.format(configuration_error)

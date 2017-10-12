@@ -19,6 +19,7 @@ import os
 import sys
 import random
 import pandas as pd
+from collections import deque
 
 from coquery import general, NAME
 from coquery import options
@@ -34,6 +35,35 @@ from xml.sax.saxutils import escape
 
 _left_align = int(QtCore.Qt.AlignLeft) | int(QtCore.Qt.AlignVCenter)
 _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)
+
+
+class inputFocusFilter(QtCore.QObject):
+    focusIn = QtCore.Signal(object)
+
+    def eventFilter(self, widget, event):
+        input_widgets = (QtWidgets.QTextEdit, QtWidgets.QLineEdit)
+        if (event.type() == QtCore.QEvent.FocusIn and
+                isinstance(widget, input_widgets)):
+            self.focusIn.emit(widget)
+        return super(inputFocusFilter, self).eventFilter(widget, event)
+
+
+class CoqApplication(QtWidgets.QApplication):
+    def __init__(self, *arg, **kwarg):
+        super(CoqApplication, self).__init__(*arg, **kwarg)
+
+        # remember the last 10 input widgets that had focus:
+        self._input_focus_widgets = deque(maxlen=10)
+
+        self.event_filter = inputFocusFilter()
+        self.event_filter.focusIn.connect(self.addInputFocusWidget)
+        self.installEventFilter(self.event_filter)
+
+    def addInputFocusWidget(self, widget):
+        self._input_focus_widgets.append(widget)
+
+    def inputFocusWidgets(self):
+        return self._input_focus_widgets
 
 
 class CoqThread(QtCore.QThread):
@@ -420,8 +450,6 @@ class CoqWidgetFader(QtCore.QObject):
         start = app.palette().color(QtGui.QPalette.Normal,
                                     QtGui.QPalette.Highlight)
         end = widget.palette().color(widget.backgroundRole())
-        print(widget, end.name())
-        print(widget.styleSheet())
         self._pal = []
 
         steps = 128
