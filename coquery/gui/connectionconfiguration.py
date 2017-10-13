@@ -223,7 +223,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 self.ui.list_config.count() - 1)
 
     def add_connection(self, conf):
-        name = utf8(conf["name"])
+        name = utf8(conf.name)
         item = QtWidgets.QListWidgetItem(name)
         item.setData(QtCore.Qt.UserRole, conf)
         item.setData(QtCore.Qt.UserRole + 1, conf)
@@ -235,8 +235,9 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
     def remove_connection(self):
         name = utf8(self.ui.list_config.currentItem().text())
+        connection = options.cfg.connections[name]
         confirm_remove = False
-        if options.cfg.server_configuration[name]["type"] == SQL_MYSQL:
+        if connection.db_type() == SQL_MYSQL:
             confirm_remove = True
         else:
             db_paths = self.files_from_connection(name)
@@ -613,19 +614,20 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             return None
 
     def files_from_connection(self, name):
-        resources = options.get_available_resources(name)
-        from_path = options.cfg.server_configuration[name]["path"]
+        connection = options.cfg.connections[name]
+        resources = connection.resources()
+        from_path = connection.db_path()
         db_paths = [os.path.join(from_path,
                                  "{}.db".format(resources[x][0].db_name))
                     for x in resources]
         return db_paths
 
     @staticmethod
-    def choose(connection_name, connection_dict, parent=None):
+    def choose(connection_name, connections, parent=None):
         try:
             dialog = ConnectionConfiguration(parent=parent)
-            for config in connection_dict:
-                dialog.add_connection(connection_dict[config])
+            for connections in connections:
+                dialog.add_connection(connections[connection])
             dialog.select_item(connection_name)
             dialog.show()
             result = dialog.exec_()
@@ -718,6 +720,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info(), e)
         logging.info("Completely removed connection '{}'".format(name))
+        options.cfg.connections.pop(name)
 
     def move_connection(self, name, from_path, to_path):
         db_paths = self.files_from_connection(name)

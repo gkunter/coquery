@@ -14,11 +14,12 @@ import unittest
 import os
 import argparse
 
-from coquery.defines import SQL_SQLITE, SQL_MYSQL
+from coquery.defines import SQL_SQLITE, SQL_MYSQL, DEFAULT_CONFIGURATIION
 from coquery.sqlwrap import SqlDB
 from coquery.coquery import options
 from coquery.installer.coq_install_generic_package import BuilderClass
 from coquery.tables import Table
+from coquery.connections import SQLiteConnection, MySQLConnection
 
 from .mockmodule import MockOptions
 
@@ -39,17 +40,15 @@ class TestGenericPackage(unittest.TestCase):
         options.cfg = MockOptions()
         db_type = SQL_SQLITE
 
-        options.cfg.current_server = "Default"
         options.cfg.verbose = False
-        options.cfg.server_configuration = {}
-        options.cfg.server_configuration["Default"] = {"type": SQL_SQLITE}
-        options.cfg.server_configuration[SQL_MYSQL] = {
-            "type": SQL_MYSQL,
-            "host": "127.0.0.1",
-            "port": 3306,
-            "user": "coquery",
-            "password": "coquery",
-            }
+        default = SQLiteConnection(DEFAULT_CONFIGURATIION)
+        mysql = MySQLConnection(name=SQL_MYSQL,
+                                host="127.0.0.1",
+                                port=3306,
+                                user="coquery", password="coquery")
+        options.cfg.connections = {}
+        options.cfg.connections[DEFAULT_CONFIGURATIION] = default
+        options.cfg.conenctions[SQL_MYSQL] = mysql
 
         options.cfg.database_path = os.path.expanduser("~/tmp")
         options.cfg.corpora_path = os.path.expanduser("~/tmp")

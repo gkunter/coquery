@@ -112,11 +112,15 @@ def get_by_hash(hashed, link_list=None):
         as the second element.
     """
     from . import options
+
+    current_connection = options.cfg.current_connection
+
     if not link_list:
-        link_list = options.cfg.table_links[options.cfg.current_server]
+        link_list = options.cfg.table_links[current_connection.name]
 
     link = get_link_by_hash(link_list, hashed)
     if not link:
         raise ValueError(hashed, link_list)
-    res = options.get_resource(link.res_to)[0]
+
+    res = current_connection.resources()[link.res_to][0]
     return (link, res)

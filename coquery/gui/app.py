@@ -180,7 +180,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._groups = {}
 
         self._first_corpus = False
-        if options.cfg.first_run and not options.cfg.current_resources:
+
+        if options.cfg.first_run and not len(options.cfg.current_connection):
             self._first_corpus = True
 
         # Retrieve font and metrics for the CoqItemDelegates
@@ -275,10 +276,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 layout.setStretch(1, 1)
                 self.ui.layout_aggregate.addLayout(layout)
 
-        if options.cfg.current_resources:
-            # add available resources to corpus dropdown box:
-            corpora = sorted(list(options.cfg.current_resources.keys()))
-            self.ui.combo_corpus.addItems(corpora)
+        # add available resources to corpus dropdown box:
+        corpora = sorted(list(
+            options.cfg.current_connection.resources().keys()))
+        self.ui.combo_corpus.addItems(corpora)
 
         index = self.ui.combo_corpus.findText(options.cfg.corpus)
         if index > -1:
@@ -387,7 +388,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.ui.combo_config)
         statusbar.addPermanentWidget(frame)
 
-        self.change_mysql_configuration(options.cfg.current_server)
+        self.fill_combo_connections(connections=options.cfg.connections)
+        self.change_connection(options.cfg.current_connection.name)
         self.ui.combo_config.currentIndexChanged.connect(
             self.switch_configuration)
 
@@ -704,8 +706,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_statistics.setEnabled(enabled)
 
         ref_corpus = options.cfg.reference_corpus.get(
-                        options.cfg.current_server, "")
-        if ref_corpus and ref_corpus in options.cfg.current_resources:
+            options.cfg.current_connection.name, "")
+
+        if (ref_corpus and
+                ref_corpus in options.cfg.current_connection.resources()):
             s = "Change &reference corpus... ({})".format(ref_corpus)
         else:
             s = "Set &reference corpus..."
@@ -824,7 +828,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_remove_corpus.setEnabled(False)
 
     def check_corpus_widgets(self):
-        if options.cfg.current_resources:
+        if options.cfg.current_connection.resources():
             self.enable_corpus_widgets()
         else:
             self.disable_corpus_widgets()
@@ -1255,15 +1259,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def set_reference_corpus(self):
         from . import linkselect
         #title = _translate("MainWindow", "Select reference corpus – Coquery", None)
+        current_connection = options.cfg.current_connection.name
         title = "Select reference corpus"
         subtitle = "&Available corpora"
-        ref_corpus = options.cfg.reference_corpus.get(
-                        options.cfg.current_server, "")
+        ref_corpus = options.cfg.reference_corpus.get(current_connection, "")
         corpus = linkselect.CorpusSelect.pick(
             current=ref_corpus, exclude_corpus=[],
             title=title, subtitle=subtitle)
         if corpus:
-            options.cfg.reference_corpus[options.cfg.current_server] = corpus
+            options.cfg.reference_corpus[current_connection] = corpus
 
     ###
     ### slots
@@ -1473,7 +1477,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         area and some menu entries. If any corpus is available, these widgets
         are enabled again.
         """
-        if not options.cfg.current_resources:
+        if not options.cfg.current_connection.resources():
             self.disable_corpus_widgets()
             self.ui.centralwidget.setEnabled(False)
         else:
@@ -1497,7 +1501,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         if self.ui.combo_corpus.count():
             corpus_name = utf8(self.ui.combo_corpus.currentText())
-            tup = options.cfg.current_resources[corpus_name]
+            tup = options.cfg.current_connection.resources()[corpus_name]
             self.resource, self.corpus, self.path = tup
             self.column_tree.setup_resource(self.resource)
         else:
@@ -1564,7 +1568,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems(sorted(list(options.cfg.current_resources.keys())))
+        self.ui.combo_corpus.addItems(
+            sorted(list(options.cfg.current_connection.resources().keys())))
 
         # try to return to last corpus name:
         new_index = self.ui.combo_corpus.findText(last_corpus)
@@ -2551,12 +2556,17 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def open_corpus_help(self):
         if self.ui.combo_corpus.isEnabled():
-            current_corpus = utf8(self.ui.combo_corpus.currentText())
-            resource, _, _ = options.cfg.current_resources[current_corpus]
+            corpus = utf8(self.ui.combo_corpus.currentText())
+            res, _, _ = options.cfg.current_connection.resources()[corpus]
+
             try:
-                url = resource.url
+                url = res.url
             except AttributeError:
-                QtWidgets.QMessageBox.critical(None, "Documentation error – Coquery", msg_corpus_no_documentation.format(corpus=current_corpus), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                QtWidgets.QMessageBox.critical(
+                    None,
+                    "Documentation error – Coquery",
+                    msg_corpus_no_documentation.format(corpus=corpus),
+                    QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             else:
                 import webbrowser
                 webbrowser.open(url)
@@ -2575,7 +2585,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from . import removecorpus
 
         try:
-            resource, _, module = options.cfg.current_resources[entry.name]
+
+            resource, _, module = (options.cfg.current_connection
+                                              .resources())[entry.name]
         except KeyError:
             if entry.adhoc:
                 database = "coq_{}".format(entry.name.lower())
@@ -2586,7 +2598,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             database = resource.db_name
 
         response = removecorpus.RemoveCorpusDialog.select(
-            entry, options.cfg.current_server)
+            entry, options.cfg.current_connection.name)
         if (response and QtWidgets.QMessageBox.question(
                 self,
                 "Remove corpus – Coquery",
@@ -2596,7 +2608,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             rm_module, rm_database, rm_installer = response
             success = True
 
-            if rm_database and database and sqlhelper.has_database(options.cfg.current_server, database):
+            if rm_database and database and sqlhelper.has_database(
+                    options.cfg.current_connection.name, database):
                 try:
                     self.Session.db_connection.close()
                 except AttributeError:
@@ -2605,7 +2618,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     print(e)
                     warnings.warn(e)
                 try:
-                    sqlhelper.drop_database(options.cfg.current_server, database)
+                    sqlhelper.drop_database(
+                        options.cfg.current_connection.name, database)
                 except Exception as e:
                     raise e
                     QtWidgets.QMessageBox.critical(
@@ -2635,7 +2649,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # text files:
             if rm_installer and success:
                 try:
-                    res, _, _ = options.cfg.current_resources[entry.name]
+                    res, _, _ = (options.cfg.current_connection
+                                            .resources())[entry.name]
                     path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(res.db_name))
                     os.remove(path)
                 except Exception as e:
@@ -2643,13 +2658,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 else:
                     success = True
 
-            options.set_current_server(options.cfg.current_server)
             self.fill_combo_corpus()
             if success and (rm_installer or rm_database or rm_module):
                 logging.warning("Removed corpus {}.".format(entry.name))
                 self.showMessage("Removed corpus {}.".format(entry.name))
                 self.corpusListUpdated.emit()
-
             self.change_corpus()
 
     def finalize_export(self):
@@ -2675,7 +2688,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 pb.setValue(val + 1)
                 pb.setFormat("{} {}...".format(stage, file_name))
 
-        tup = options.cfg.current_resources[entry.name]
+        tup = options.cfg.current_connection.resources()[entry.name]
         resource_class, corpus_class, _ = tup
         corpus = corpus_class()
         resource = resource_class(_, corpus)
@@ -2731,11 +2744,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         builder = BuilderGui(coq_install_generic.BuilderClass, parent=self)
         try:
-            result = builder.display()
+            builder.display()
         except Exception:
             errorbox.ErrorBox.show(sys.exc_info())
-        if result:
-            options.set_current_server(options.cfg.current_server)
         self.fill_combo_corpus()
         self.change_corpus()
         self.corpusListUpdated.emit()
@@ -2745,12 +2756,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from .corpusbuilder_interface import BuilderGui
         builder = BuilderGui(coq_install_generic_table.BuilderClass, onefile=True, parent=self)
         try:
-            result = builder.display()
+            builder.display()
         except Exception:
             errorbox.ErrorBox.show(sys.exc_info())
-        if result:
-            options.set_current_server(options.cfg.current_server)
-
         self.fill_combo_corpus()
         self.change_corpus()
         self.corpusListUpdated.emit()
@@ -2769,12 +2777,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         builder = InstallerGui(builder_class, self)
         try:
-            result = builder.display()
+            builder.display()
         except Exception:
             errorbox.ErrorBox.show(sys.exc_info())
-        if result:
-            options.set_current_server(options.cfg.current_server)
-
         if connected:
             self.Session.db_connection = self.Session.db_engine.connect()
 
@@ -2788,12 +2793,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         builder = manager_entry.get_builder_interface()
         try:
-            result = builder.display()
+            builder.display()
         except Exception:
             errorbox.ErrorBox.show(sys.exc_info())
-        if result:
-            options.set_current_server(options.cfg.current_server)
-
         self.fill_combo_corpus()
         self.change_corpus()
         self.corpusListUpdated.emit()
@@ -2893,43 +2895,38 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             if (old_drop_on_na != options.cfg.drop_on_na):
                 self.reaggregate(start=True)
 
-    def change_current_server(self):
-        name = self.ui.combo_config.currentText()
-        if name:
-            name = utf8(name)
-            self.change_mysql_configuration(name)
-
-    def switch_configuration(self, x):
-        name = utf8(self.ui.combo_config.itemText(int(x)))
-        self.change_mysql_configuration(name)
-
-    def change_mysql_configuration(self, name=None):
-        """
-        Change the current connection to the configuration 'name'. If 'name'
-        is empty, take the configuration name from the connection combo box.
-        """
-
-        if not name:
-            name = utf8(self.ui.combo_config.currentText())
-
-        try:
-            self.ui.combo_config.currentIndexChanged.disconnect()
-        except (RuntimeError, TypeError):
-            pass
-
+    def fill_combo_connections(self, connections):
+        self.ui.combo_config.blockSignals(True)
         self.ui.combo_config.clear()
-        self.ui.combo_config.addItems(sorted(options.cfg.server_configuration))
-        if name:
-            options.set_current_server(str(name))
-            index = self.ui.combo_config.findText(name)
-            self.ui.combo_config.setCurrentIndex(index)
-            self.test_mysql_connection()
+        self.ui.combo_config.addItems(sorted(connections))
+        self.ui.combo_config.blockSignals(False)
 
-        self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
+    def switch_configuration(self, index):
+        name = utf8(self.ui.combo_config.currentText())
+        self.change_connection(name)
 
+    def change_connection(self, name):
+        """
+        Change the current connection to the configuration 'name'.
+        """
+        self.ui.combo_config.blockSignals(True)
+        # remove an icon from the previous connection (if any):
+        try:
+            prev = self.ui.combo_config.findText(self._prev_con)
+            self.ui.combo_config.setItemIcon(prev, QtGui.QIcon())
+        except AttributeError:
+            pass
+        index = self.ui.combo_config.findText(name)
+        self.ui.combo_config.setCurrentIndex(index)
+        self.ui.combo_config.blockSignals(False)
+
+        options.set_current_server(name)
+        self.test_mysql_connection()
+        OrphanagedDatabasesDialog.display()
         self.fill_combo_corpus()
         self.change_corpus()
-        OrphanagedDatabasesDialog.display()
+
+        self._prev_con = name
 
     def test_mysql_connection(self):
         """
@@ -2948,15 +2945,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
-        if not options.cfg.current_server:
+        if not options.cfg.current_connection.name:
             return False
         else:
             try:
-                state, _ = sqlhelper.test_configuration(options.cfg.current_server)
+                state, _ = sqlhelper.test_configuration(
+                    options.cfg.current_connection.name)
             except ImportError:
                 state = False
+
+        current_connection = options.cfg.current_connection.name
         # Only do something if the current connection status has changed:
-        if state != self.last_connection_state or options.cfg.current_server != self.last_connection:
+        if (state != self.last_connection_state or
+                current_connection != self.last_connection):
             # Remember the item that has focus:
             active_widget = options.cfg.app.focusWidget()
 
@@ -2966,23 +2967,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             else:
                 icon = self.get_icon("Error")
 
-            # Disconnect the currentIndexChanged signal to avoid infinite
-            # recursive loop:
-            try:
-                self.ui.combo_config.currentIndexChanged.disconnect()
-            except (TypeError, RuntimeError):
-                pass
+            self.ui.combo_config.blockSignals(True)
             # add new entry with suitable icon, remove old icon and reset index:
-            index = self.ui.combo_config.findText(options.cfg.current_server)
-            self.ui.combo_config.insertItem(index + 1, icon, options.cfg.current_server)
+            index = self.ui.combo_config.findText(current_connection)
+            self.ui.combo_config.insertItem(
+                index + 1, icon, current_connection)
             self.ui.combo_config.setCurrentIndex(index + 1)
             self.ui.combo_config.removeItem(index)
             self.ui.combo_config.setCurrentIndex(index)
             self.last_connection_state = state
-            self.last_connection = options.cfg.current_server
+            self.last_connection = current_connection
             self.last_index = index
             # reconnect currentIndexChanged signal:
-            self.ui.combo_config.currentIndexChanged.connect(self.switch_configuration)
+            self.ui.combo_config.blockSignals(False)
 
             self.ui.options_area.setDisabled(True)
             if state:
@@ -2999,12 +2996,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from .connectionconfiguration import ConnectionConfiguration
         try:
             config_dict, name = ConnectionConfiguration.choose(
-                options.cfg.current_server, options.cfg.server_configuration)
+                options.cfg.current_connection.name,
+                options.cfg.connections)
         except TypeError:
             return
         else:
-            options.cfg.server_configuration = config_dict
-            self.change_mysql_configuration(name)
+            options.cfg.connections = [
+                connections.get_connection(name, **kwargs)
+                for name, kwargs in config_dict.values()]
+            self.change_connection(name)
 
     def show_mysql_guide(self):
         from . import mysql_guide
@@ -3158,9 +3158,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             An entry in the output column list
         """
         from . import linkselect
+        current_connection = options.cfg.current_connection
 
-        current_corpus = utf8(self.ui.combo_corpus.currentText())
-        resource, _ = options.get_resource(current_corpus)
+        corpus = utf8(self.ui.combo_corpus.currentText())
+        resource = current_connection.resources()[corpus][0]
 
         if item:
             rc_from = utf8(item.objectName())
@@ -3170,12 +3171,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                           rc_from=rc_from,
                                           parent=self)
         if link:
-            options.cfg.table_links[options.cfg.current_server].append(link)
+            options.cfg.table_links[current_connection.name].append(link)
             self.column_tree.add_external_link(link)
 
     def remove_link(self, item):
         self.column_tree.remove_external_link(item)
-        options.cfg.table_links[options.cfg.current_server].remove(item.link)
+        options.cfg.table_links[options.cfg.current_connection.name].remove(item.link)
 
     def set_button_labels(self):
         def get_str(l):

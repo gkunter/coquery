@@ -146,7 +146,7 @@ class TokenQuery(object):
                         logger.info(query_string)
 
                     # SQLite: attach external databases
-                    if self.Resource.db_type == SQL_SQLITE:
+                    if options.cfg.current_connection.db_type() == SQL_SQLITE:
                         attach_list = self.Resource.get_attach_list(
                             options.cfg.selected_features)
                         for db_name in attach_list:

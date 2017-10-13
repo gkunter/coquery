@@ -49,14 +49,15 @@ class Session(object):
         self.to_file = False
         options.cfg.query_label = ""
 
-        # load current corpus module depending on the value of options.cfg.corpus,
-        # i.e. the corpus specified as an argumment:
-        if options.cfg.corpus:
+        available_resources = options.cfg.current_connection.resources()
+        current_connection = options.cfg.current_connection.name
+        # load current corpus module depending on the value of
+        # options.cfg.corpus, i.e. the corpus specified as an argumment:
+        if len(available_resources) and options.cfg.corpus:
             try:
-                tup = options.cfg.current_resources[options.cfg.corpus]
+                tup = available_resources[options.cfg.corpus]
             except KeyError:
-                tup = options.cfg.current_resources[
-                    list(options.cfg.current_resources.keys())[0]]
+                tup = available_resources[list(available_resources.keys())[0]]
             ResourceClass, CorpusClass, Path = tup
 
             current_corpus = CorpusClass()
@@ -69,20 +70,20 @@ class Session(object):
 
             try:
                 self.db_engine = sqlalchemy.create_engine(
-                    sqlhelper.sql_url(options.cfg.current_server,
+                    sqlhelper.sql_url(current_connection,
                                       self.Resource.db_name))
-            except ImportError as e:
+            except ImportError:
                 self.db_engine = None
 
             logging.info("Corpus '{}' on connection '{}'".format(
-                self.Resource.name, options.cfg.current_server))
+                self.Resource.name, current_connection))
 
         else:
             self.Corpus = None
             self.Resource = None
             self.db_engine = None
             warnings.warn("No corpus available on connection '{}'".format(
-                options.cfg.current_server))
+                current_connection))
 
         self.query_type = queries.get_query_type(options.cfg.MODE)
 
@@ -173,7 +174,7 @@ class Session(object):
             return match is not None
 
         self.db_connection = self.db_engine.connect()
-        if self.Resource.db_type == SQL_SQLITE:
+        if options.cfg.current_connection.db_type() == SQL_SQLITE:
             self.db_connection.connection.create_function("REGEXP", 2,
                                                           _sqlite_regexp)
 

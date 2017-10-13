@@ -13,12 +13,14 @@ import pandas as pd
 
 from coquery.coquery import options
 from coquery.session import SessionInputFile, SessionCommandLine
-from coquery.defines import QUERY_MODE_TOKENS, CONTEXT_NONE
+from coquery.defines import (QUERY_MODE_TOKENS, CONTEXT_NONE,
+                             DEFAULT_CONFIGURATION)
 from coquery.errors import TokenParseError
 from coquery.functions import StringExtract
 from coquery.functionlist import FunctionList
 from coquery.corpus import SQLResource, CorpusClass
 from coquery.managers import Manager, Summary
+from coquery.connections import SQLiteConnection
 
 
 class TestSessionInputFile(unittest.TestCase):
@@ -26,13 +28,13 @@ class TestSessionInputFile(unittest.TestCase):
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
         options.cfg.MODE = QUERY_MODE_TOKENS
-        options.cfg.current_server = "MockConnection"
-        options.cfg.current_resources = {"MockConnection": "MockCorpus"}
         options.cfg.input_separator = ","
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
         options.cfg.summary_group = [Summary("summary")]
         options.cfg.csv_restrict = None
+        default = SQLiteConnection(DEFAULT_CONFIGURATION)
+        options.cfg.current_connection = default
 
         self.temp_file = tempfile.NamedTemporaryFile("w")
         options.cfg.input_path = self.temp_file.name
@@ -197,8 +199,6 @@ class TestSessionMethods(unittest.TestCase):
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
         options.cfg.MODE = QUERY_MODE_TOKENS
-        options.cfg.current_server = "MockConnection"
-        options.cfg.server_configuration = {}
         options.cfg.input_separator = ","
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
@@ -212,6 +212,8 @@ class TestSessionMethods(unittest.TestCase):
         options.cfg.context_left = 3
         options.cfg.context_right = 5
         options.cfg.summary_group = [Summary("summary")]
+        default = SQLiteConnection(DEFAULT_CONFIGURATION)
+        options.cfg.current_connection = default
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")

@@ -457,7 +457,6 @@ class CorpusManager(QtWidgets.QDialog):
         Read the installers from the path, and add a widget for each to the
         installer list.
         """
-        options.cfg.current_resources = options.get_available_resources(options.cfg.current_server)
         # clear existing installer list:
         QtWidgets.QWidget().setLayout(self.ui.list_content.layout())
 
@@ -562,7 +561,9 @@ class CorpusManager(QtWidgets.QDialog):
                         if builder_class.get_modules():
                             entry.setModules(builder_class.get_modules())
 
-                        entry.setup_buttons(name in options.cfg.current_resources, entry_widget=self.detail_box)
+                        resources = options.cfg.current_connection.resources()
+                        entry.setup_buttons(name in resources,
+                                            entry_widget=self.detail_box)
                         entry.setBuilderClass(builder_class)
 
                         self.detail_box.clicked.connect(lambda x: self.update_accordion(x))
@@ -608,4 +609,3 @@ class CorpusManager(QtWidgets.QDialog):
 
     def closeEvent(self, event):
         options.settings.setValue("corpusmanager_size", self.size())
-        options.set_current_server(options.cfg.current_server)

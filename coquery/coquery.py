@@ -112,14 +112,15 @@ def main():
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):
         if not (options.cfg.gui):
-            if not options.cfg.current_resources:
+            if not options.cfg.current_connection.resources():
                 raise NoCorpusError
 
             if not options.cfg.corpus:
                 raise NoCorpusSpecifiedError
 
             options.cfg.corpus = utf8(options.cfg.corpus)
-            if options.cfg.corpus not in options.cfg.current_resources:
+            if (options.cfg.corpus not in
+                    options.cfg.current_connection.resources()):
                 raise CorpusUnavailableError(options.cfg.corpus)
     except Exception as e:
         print_exception(e)
@@ -137,7 +138,7 @@ def main():
     if options.cfg.comment:
         logger.info(options.cfg.comment)
 
-    options.set_current_server(options.cfg.current_server)
+    options.set_current_server(options.cfg.current_connection.name)
 
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:

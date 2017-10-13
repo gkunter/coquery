@@ -41,6 +41,7 @@ from .errors import (
     ConfigurationError, ModuleIncompleteError,
     add_source_path)
 from .defines import (
+    DEFAULT_CONFIGURATION,
     SQL_SQLITE, SQL_MYSQL,
     DEFAULT_MISSING_VALUE,
     QUERY_MODES, QUERY_MODE_TOKENS,
@@ -48,7 +49,7 @@ from .defines import (
 from .unicode import utf8
 from .links import parse_link_text
 from .filters import parse_filter_text
-
+from .connections import get_connection, SQLiteConnection
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -281,12 +282,9 @@ class Options(object):
 
         self.args.config_path = os.path.join(self.args.coquery_home,
                                              self.config_name)
-        self.args.current_server = "Default"
-        self.args.server_configuration = {
-            self.args.current_server: {
-                "name": self.args.current_server,
-                "type": SQL_SQLITE,
-                "path": ""}}
+        connection = SQLiteConnection(DEFAULT_CONFIGURATION)
+        self.args.connections = dict(Default=connection)
+        self.args.current_connection = connection
 
         self.args.reference_corpus = {}
         self.args.main_window = None
@@ -336,7 +334,6 @@ class Options(object):
 
         self.args.managers = {}
         self.args.summary_group = []
-        self.args.current_resources = get_available_resources(self.args.current_server)
 
     @property
     def cfg(self):
@@ -356,7 +353,6 @@ class Options(object):
         group.add_argument("-i", "--inputfile", help="read query strings from INPUTFILE", type=str, dest="input_path")
         group.add_argument("-q", "--query", help="use QUERY for search, ignoring any INPUTFILE", dest="query_list")
         self.parser.add_argument("-f", "--filter", help="use FILTER to query only a selection of texts", type=str, default="", dest="source_filter")
-        self.parser.add_argument("--connection", help="use dabase connection named CURRENT_SERVER", type=str, dest="current_server")
 
         # File options:
         group = self.parser.add_argument_group("File options")
@@ -423,28 +419,8 @@ class Options(object):
         self.args.gui = args.gui
         self.args.to_file = False
 
-        match = re.search("--connection\s+(.+)", self.args.parameter_string)
-        if match:
-            self.args.current_server = match.group(1)
-
         self.read_configuration(read_file)
-        self.setup_default_connection()
 
-        # create a dictionary that contains the corpora available for the
-        # current connection:
-        if sys.version_info < (3, 0):
-            self.corpus_argument_dict = {
-                "help": "specify the corpus to use",
-                "choices": sorted([x.encode("utf-8") for x in get_available_resources(self.args.current_server).keys()]),
-                "type": type(str(""))}
-        else:
-            self.corpus_argument_dict = {
-                "help": "specify the corpus to use",
-                "choices": sorted([utf8(x) for x in get_available_resources(self.args.current_server).keys()]),
-                "type": type(str(""))}
-
-        # add the corpus names as possible values for the argument parser:
-        self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
         args, unknown = self.parser.parse_known_args()
 
         try:
@@ -461,47 +437,6 @@ class Options(object):
         if not self.args.corpus and not (self.args.gui):
             self.parser.print_help()
             sys.exit(1)
-        D = {}
-
-        shorthands = {}
-
-        if self.args.corpus:
-            try:
-                # build a dictionary D for the selected corpus that contains as
-                # values the features provided by each of the tables defined in
-                # the resource. The features are included as tuples, with first,
-                # the display name and second, the resource feature name.
-                resource, _ = get_resource(self.args.corpus, self.args.current_server)
-                corpus_features = resource.get_corpus_features()
-                lexicon_features = resource.get_lexicon_features()
-                for rc_feature, column in corpus_features + lexicon_features:
-                    if not rc_feature.startswith("corpusngram"):
-                        table = "{}_table".format(rc_feature.split("_")[0])
-                        if table not in D:
-                            D[table] = set([])
-                        D[table].add((column, rc_feature))
-
-                if self.args.corpus == "COCA":
-                    group = self.parser.add_argument_group("COCA compatibility", "These options apply only to the COCA corpus module, and are unsupported by any other corpus.")
-                    # COCA compatibility options
-                    group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
-                    group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
-            except (KeyError, TypeError, AttributeError) as e:
-                print(e)
-
-        if D:
-            # add choice arguments for the available table columns:
-            for rc_table in D.keys():
-                table = getattr(resource, utf8(rc_table))
-                if len(D[rc_table]) > 1:
-                    D[rc_table].add(("ALL", None))
-                    group_help = "These options specify which data columns from the table '{0}' will be included in the output. You can either repeat the option for every column that you wish to add, or you can use --{0} ALL if you wish to include all columns from the table in the output.".format(table)
-                    group_name = "Output options for table '{}'".format(table)
-                else:
-                    group_name = "Output option for table '{}'".format(table)
-                    group_help = "This option will include the data column '{1}' from the table '{0}' in the output.".format(table, list(D[rc_table])[0][0])
-                group = self.parser.add_argument_group(group_name, group_help)
-                group.add_argument("--{}".format(table), choices=sorted([x for x, _ in D[rc_table]]), dest=rc_table, action="append")
 
         self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
 
@@ -539,32 +474,6 @@ class Options(object):
             if self.args.MODE not in QUERY_MODES.values():
                 self.args.MODE = QUERY_MODE_TOKENS
 
-        # evaluate the shorthand options. If set, add the corresponding
-        # resource feature to the list of selected features
-        for key in shorthands:
-            if vars(self.args)[key.strip("-")]:
-                self.args.selected_features.add(shorthands[key])
-
-        # Go through the table dictionary D, and add the resource features
-        # to the list of selected features if the corresponding choice
-        # parameter was set:
-        for rc_table in D:
-            argument_list = vars(self.args)[rc_table]
-            if argument_list:
-                # if ALL was selected, all resource features for the current
-                # table are added to the list of selected features:
-                if "ALL" in argument_list:
-                    self.args.selected_features += [x for _, x in D[rc_table] if x]
-                else:
-                    # otherwise, go through each argument, and find the
-                    # resource feature for which the display name matches
-                    # the argument:
-                    for arg in argument_list:
-                        for column, rc_feature in D[rc_table]:
-                            if column == arg:
-                                self.args.selected_features.add(rc_feature)
-
-        self.args.selected_features = set(self.args.selected_features)
 
         # the following lines are deprecated and should be removed once
         # feature selection is fully implemented:
@@ -593,17 +502,6 @@ class Options(object):
             except AttributeError:
                 pass
         logging.info("Command line parameters: " + self.args.parameter_string)
-
-    def setup_default_connection(self):
-        """
-        Create the default SQLite connection.
-        """
-        if (not self.args.current_server or
-                "Default" not in self.args.server_configuration):
-            d = {"name": "Default", "type": SQL_SQLITE, "path": ""}
-            self.args.server_configuration[d["name"]] = d
-            self.args.current_server = d["name"]
-            self.args.current_resources = get_available_resources(self.args.current_server)
 
     def read_configuration(self, read_file):
         defaults = {
@@ -671,54 +569,46 @@ class Options(object):
                 config_file.add_section(x)
 
         # read SQL configuration:
-        server_configuration = defaultdict(dict)
+        connection_dict = defaultdict(dict)
         for name, value in config_file.items("sql"):
             if name.startswith("config_"):
-                try:
-                    _, number, variable = name.split("_")
-                except ValueError:
+                print(name)
+                fields = name.split("_")
+                if len(fields) != 3:
                     continue
                 else:
-                    if variable == "port":
-                        try:
-                            server_configuration[number][variable] = int(value)
-                        except ValueError:
-                            continue
-                    elif variable in ["name", "host", "type", "user", "password", "path"]:
-                        server_configuration[number][variable] = value
-        for i in server_configuration:
-            d = server_configuration[i]
-            if "type" not in d:
-                d["type"] = SQL_MYSQL
-            if d["type"] == SQL_MYSQL:
-                required_vars = ["name", "host", "port", "user", "password"]
-            elif d["type"] == SQL_SQLITE:
-                if "path" not in d:
-                    d["path"] = ""
-                required_vars = ["name", "path"]
-            try:
-                if all(var in d for var in required_vars):
-                    self.args.server_configuration[d["name"]] = d
-            except KeyError:
-                pass
+                    _, number, variable = fields
+                if variable == "port":
+                    try:
+                        connection_dict[number][variable] = int(value)
+                    except ValueError:
+                        continue
+                elif variable in set(("name", "host", "type",
+                                      "user", "password", "path")):
+                    connection_dict[number][variable] = value
+
+                    # for backward compatibility:
+                    if variable == "type":
+                        connection_dict[number]["dbtype"] = value
+
+        for i in connection_dict:
+            print(connection_dict[i])
+            connection = get_connection(**connection_dict[i])
+            self.args.connections[connection.name] = connection
+
+        # select active SQL configuration, or use Default as fallback
+        connection_name = DEFAULT_CONFIGURATION
+        try:
+            connection_name = config_file.str("sql", "active_configuration")
+        except Exception:
+            pass
+        self.args.current_connection = self.args.connections[connection_name]
 
         # read reference corpora
         for key, val in config_file.items("reference_corpora"):
             if re.match("reference\d+$", key):
                 configuration, corpus = val.split(",")
                 self.args.reference_corpus[configuration] = corpus
-        # select active SQL configuration, or use Default as fallback
-        try:
-            try:
-                self.args.current_server = config_file.str("sql",
-                                                           "active_configuration")
-            except Exception:
-                raise ValueError
-            if self.args.current_server not in self.args.server_configuration:
-                raise ValueError
-        except (NoOptionError, ValueError):
-            self.args.current_server = "Default"
-        self.args.current_resources = get_available_resources(self.args.current_server)
 
         # only use the other settings from the configuration file if a
         # GUI is used:
@@ -998,6 +888,9 @@ settings = None
 
 
 def save_configuration():
+
+    connection_name = cfg.current_connection.name
+
     config = UnicodeConfigParser()
     if os.path.exists(cfg.config_path):
         with codecs.open(cfg.config_path, "r", "utf-8") as input_file:
@@ -1041,19 +934,22 @@ def save_configuration():
 
     if "sql" not in config.sections():
         config.add_section("sql")
-    if cfg.current_server:
-        config.set("sql", "active_configuration", cfg.current_server)
 
-    for i, server in enumerate(cfg.server_configuration):
-        d = cfg.server_configuration[server]
-        if d["type"] == SQL_MYSQL:
-            required_vars = ["name", "host", "port", "user", "password", "type"]
-        elif d["type"] == SQL_SQLITE:
-            required_vars = ["name", "type", "path"]
+    config.set("sql", "active_configuration", connection_name)
+
+    for i, name in enumerate(cfg.connections):
+        connection = cfg.connections[name]
+        if connection.db_type() == SQL_MYSQL:
+            required_vars = ["name", "host", "port", "user", "password"]
         else:
-            required_vars = []
-        for x in required_vars:
-            config.set("sql", "config_{}_{}".format(i, x), d[x])
+            required_vars = ["name", "path"]
+
+        config.set("sql", "config_{}_type".format(i), connection.db_type())
+
+        for var in required_vars:
+            config.set("sql",
+                       "config_{}_{}".format(i, var),
+                       getattr(connection, var))
 
     if cfg.selected_features:
         if "output" not in config.sections():
@@ -1110,10 +1006,10 @@ def save_configuration():
     if cfg.table_links:
         if "links" not in config.sections():
             config.add_section("links")
-        for i, link in enumerate(cfg.table_links[cfg.current_server]):
+        for i, link in enumerate(cfg.table_links[connection_name]):
             config.set("links",
                        "link{}".format(i+1),
-                       '{},{}'.format(cfg.current_server, link))
+                       '{},{}'.format(connection_name, link))
 
     if "context" not in config.sections():
         config.add_section("context")
@@ -1227,49 +1123,6 @@ def save_configuration():
         config.write(output_file)
 
 
-def get_con_configuration():
-    """
-    Returns a tuple containing the currently active connection configuration.
-
-    The method uses the configuration name stored in the attribute
-    'current_server' to retrieve the configuration values from the
-    dictionary 'server_configuration'.
-
-    Returns
-    -------
-    tup : tuple or None
-        If there is a configuration for the currently selected server,
-        the method returns the tuple (db_host, db_port, db_name,
-        db_password). If no configuration is available, the method
-        returns None.
-    """
-    if cfg.current_server in cfg.server_configuration:
-        d = cfg.server_configuration[cfg.current_server]
-        if d["type"] == SQL_MYSQL:
-            return (d["host"], d["port"], d["type"], d["user"], d["password"])
-        elif d["type"] == SQL_SQLITE:
-            return (None, None, SQL_SQLITE, None, None)
-    else:
-        return None
-
-
-def get_configuration_type():
-    """
-    Return the type of the current configuration.
-
-    Returns
-    -------
-    s : str or None
-        Depending on the type of the currenct configuration, `s` equals
-        either the constant SQL_MYSQL or SQL_SQLITE from defines.py. If
-        no configuration is available, return None.
-    """
-    if cfg.current_server in cfg.server_configuration:
-        return cfg.server_configuration[cfg.current_server]["type"]
-    else:
-        return None
-
-
 def process_options(use_file=True):
     global cfg
     global settings
@@ -1295,108 +1148,10 @@ def process_options(use_file=True):
     add_source_path(cfg.custom_installer_path)
 
 
-def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
-    """
-    Read the Python code from path, and validate that it contains only
-    the required class definitions and whitelisted module imports.
-
-    The corpus modules are plain Python code, which opens an attack
-    vector for people who want to compromise the system: if an attacker
-    managed to plant a Python file in the corpus module directory, this
-    file wouldbe processed automatically, and without validation, the
-    content would also be executed.
-
-    This method raises an exception if the Python file in the specified
-    path contains unexpected code.
-    """
-
-    return hashlib.md5(utf8("Dummy").encode("utf-8"))
-
-    allowed_parents = (ast.If, ast.FunctionDef, ast.TryExcept, ast.TryFinally, ast.While, ast.For,
-                       ast.With)
-
-    if sys.version_info < (3, 0):
-        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign,
-                              ast.Return, ast.TryExcept, ast.TryFinally,
-                              ast.Pass, ast.Raise, ast.Assert, ast.Print)
-    else:
-        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign,
-                              ast.Return, ast.TryExcept, ast.TryFinally,
-                              ast.Pass, ast.Raise, ast.Assert)
-
-    def validate_node(node, parent):
-        if isinstance(node, ast.ClassDef):
-            if node.name in expected_classes:
-                expected_classes.remove(node.name)
-
-        elif isinstance(node, ast.ImportFrom):
-            if whitelisted_modules != "all" and node.module not in whitelisted_modules:
-                raise IllegalImportInModuleError(corpus_name, cfg.current_server, node.module, node.lineno)
-
-        elif isinstance(node, ast.Import):
-            for element in node.names:
-                if whitelisted_modules != "all" and element not in whitelisted_modules:
-                    raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
-
-        elif isinstance(node, allowed_statements):
-            pass
-
-        elif isinstance(node, ast.Expr):
-            if isinstance(node.value, ast.Str):
-                pass
-            else:
-                if not isinstance(parent, allowed_parents):
-                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-
-        elif isinstance(node, ast.If):
-            if parent is None:
-                if not allow_if:
-
-                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-            elif not isinstance(parent, allowed_parents):
-                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-
-        elif isinstance(node, (ast.While, ast.For, ast.With, ast.Continue, ast.Break)):
-            # these types are only allowed if the node is nested in
-            # a legal node type:
-            if not isinstance(parent, allowed_parents):
-                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-        else:
-            print(node)
-            raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-
-        # recursively validate the content of the node:
-        if hasattr(node, "body"):
-            for child in node.body:
-                validate_node(child, node)
-
-    corpus_name = os.path.splitext(os.path.basename(path))[0]
-    try:
-        with codecs.open(path, "r") as module_file:
-            content = module_file.read()
-            tree = ast.parse(content)
-
-            for node in tree.body:
-                validate_node(node, None)
-    except Exception as e:
-        logging.error(e)
-
-    if expected_classes:
-        raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
-    if hash:
-        #return hashlib.md5(content.encode("utf-8"))
-        return hashlib.md5(utf8("MD5 hash not available").encode("utf-8"))
-
-
 def set_current_server(name):
     """
-    Changes the current server name. Also, update the currently available
+    Changes the current server paths. Also, update the currently available
     resources.
-
-    This method changes the content of the configuration variable
-    'current_server' to the content of the argument 'name'. It also calls the
-    method get_available_resources() for this configuration, and stores the
-    result in the configuration variable 'current_resources'.
 
     Parameters
     ----------
@@ -1404,12 +1159,8 @@ def set_current_server(name):
         The name of the MySQL configuration
     """
     global cfg
-    cfg.current_server = name
+    cfg.current_connection = cfg.connections.get(name, None)
 
-    if name:
-        cfg.current_resources = get_available_resources(name)
-    else:
-        cfg.current_resources = None
     # make sure that a subdirectory exists in "connections" for the current
     # connection:
     path = os.path.join(cfg.connections_path, name)
@@ -1424,9 +1175,8 @@ def set_current_server(name):
     if not os.path.exists(cfg.adhoc_path):
         os.makedirs(cfg.adhoc_path)
 
-    if cfg.server_configuration[name]["type"] == SQL_SQLITE:
-        cfg.database_path = (cfg.server_configuration[name]["path"] or
-                             os.path.join(path, "databases"))
+    if cfg.current_connection.db_type() == SQL_SQLITE:
+        cfg.database_path = cfg.current_connection.path
         if not os.path.exists(cfg.database_path):
             os.makedirs(cfg.database_path)
 
@@ -1435,8 +1185,9 @@ def get_resource_of_database(db_name):
     """
     Get the resource that uses the database.
     """
-    for name in cfg.current_resources:
-        resource, _, _ = cfg.current_resources[name]
+    resources = cfg.current_connection.resources()
+    for name in resources:
+        resource, _, _ = resources[name]
         if resource.db_name == db_name:
             return resource
     return None
@@ -1466,45 +1217,20 @@ def get_available_resources(configuration):
         (module.Resource, module.Corpus, module_name)
     """
 
-    def ensure_init_file(path):
-        """
-        Creates an empty file __init__.py in the given path if necessary.
-        """
-        if not os.path.exists(path):
-            os.makedirs(path)
-        if not os.path.exists(os.path.join(path, "__init__.py")):
-            open(os.path.join(path, "__init__.py"), "a").close()
-
     d = {}
     if configuration is None:
         return d
 
     # add corpus_path to sys.path so that modules can be imported from
     # that location:
-    corpora_path = os.path.join(general.get_home_dir(), "connections", configuration, "corpora")
+    corpora_path = os.path.join(general.get_home_dir(),
+                                "connections", configuration, "corpora")
 
     # create the directory if it doesn't exist yet:
     # cycle through the modules in the corpus path:
     for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
         corpus_name, ext = os.path.splitext(os.path.basename(module_name))
         corpus_name = utf8(corpus_name)
-        #try:
-            #validate_module(
-                #module_name,
-                #expected_classes = ["Resource", "Corpus"],
-                #whitelisted_modules = ["corpus", "__future__"],
-                #allow_if = False,
-                #hash = False)
-        #except (ModuleIncompleteError,
-                #IllegalImportInModuleError, IllegalFunctionInModuleError,
-                #IllegalCodeInModuleError) as e:
-            #warnings.warn(str(e))
-        #except SyntaxError as e:
-            #warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            #continue
-        #except IndentationError as e:
-            #warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            #continue
 
         try:
             find = imp.find_module(corpus_name, [corpora_path])
@@ -1522,31 +1248,6 @@ def get_available_resources(configuration):
                 print(e)
                 warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
     return d
-
-
-def get_resource(name, connection=None):
-    """
-    Return a tuple containing the Resource and the Corpus of the corpus module
-    specified by 'name'.
-
-    Arguments
-    ---------
-    name : str
-        The name of the corpus module
-    connection : str or None
-        The name of the database connection. If None, the current connection
-        is used.
-
-    Returns
-    -------
-    res : tuple
-        A tuple consisting of the Resource class and the Corpus class defined
-        in the corpus module
-    """
-    if not connection:
-        connection = cfg.current_server
-    Resource, Corpus, path = get_available_resources(connection)[name]
-    return Resource, Corpus
 
 
 def decode_query_string(s):

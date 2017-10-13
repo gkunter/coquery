@@ -192,8 +192,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_installation_note():
-        _, _, db_type, _, _ = options.get_con_configuration()
-
+        db_type = options.cfg.current_connection.db_type()
         if db_type == SQL_MYSQL:
             return """
             <p><b>MySQL installation note</b><p>

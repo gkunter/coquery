@@ -20,7 +20,6 @@ from coquery import options
 from coquery.defines import SQL_SQLITE, msg_orphanaged_databases
 from coquery.general import format_file_size
 from coquery.unicode import utf8
-from coquery.sqlhelper import sqlite_path
 
 from . import classes
 
@@ -97,7 +96,8 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
     def display(parent=None):
         selected = []
         try:
-            path = sqlite_path(options.cfg.current_server)
+            path = options.cfg.current_connection.path
+            name = options.cfg.current_connection.name
         except AttributeError:
             l = []
         else:
@@ -106,7 +106,7 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
         if l:
             dialog = OrphanagedDatabasesDialog(orphans=l, parent=None)
             dialog.ui.label.setText(utf8(dialog.ui.label.text()).format(
-                path=path, name=options.cfg.current_server))
+                path=path, name=name))
             result = dialog.exec_()
             if result == QtWidgets.QDialog.Accepted:
                 for x in range(dialog.ui.tableWidget.rowCount()):
@@ -127,7 +127,7 @@ def check_orphans(path):
     """
 
     l = []
-    if options.get_configuration_type() == SQL_SQLITE:
+    if options.cfg.current_connection.db_type() == SQL_SQLITE:
         databases = glob.glob(os.path.join(path, "*.db"))
 
         # check for databases that are not linked to one of the existing
@@ -150,8 +150,7 @@ def check_orphans(path):
 
 
         # check for resources that have an issue with their databases:
-        resources = options.get_available_resources(
-                        options.cfg.current_server)
+        resources = options.cfg.current_connection.resources()
         for name in resources:
             resource, _, module_path = resources[name]
             db_name = os.path.join(path, "{}.db".format(resource.db_name))

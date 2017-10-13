@@ -19,67 +19,6 @@ from .defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
 from . import options
 
 
-def _conf_dict(configuration):
-    """
-    Either retrieves a dictionary containing a pre-defined connection
-    configuration from the options module if 'configuration' is the name of a
-    connection configuration, or return 'configuration' if it is a dictionary
-    containing the values for a valid connection configuration.
-
-    ValueError is raised if 'configuration' is a string, but if there is no
-    connection that has that name.
-
-    ValueError is also raised if 'configuration' is a dictionary, but if it
-    does not contain the required values for a configuration.
-
-    An SQLite configuration has to contain the following values:
-        type:       SQL_SQLITE
-
-    A MySQL configuration has to contain the following values:
-        type:       SQL_MYSQL
-        host:       str specifying the host name
-        port:       int specifying the port number
-        user:       str specifying the user name
-        password:   str specifying the password
-
-    Parameters
-    ----------
-    configuration : str or dict
-        Either the name of a configuration, or a dictionary containing
-        configuration values
-
-    Returns
-    -------
-    conf : dict
-        A dictionary containing configuration values
-    """
-    if isinstance(configuration, str):
-        try:
-            return options.cfg.server_configuration[configuration]
-        except KeyError:
-            raise ValueError
-    elif isinstance(configuration, tuple):
-        if len(configuration) != 5:
-            raise ValueError
-        return dict(zip(["host", "port", "type", "user", "password"],
-                        configuration))
-
-    elif isinstance(configuration, dict):
-        t = configuration.get("type")
-        if not t:
-            raise ValueError
-        if t == SQL_MYSQL:
-            if "host" not in configuration:
-                raise ValueError
-            if "port" not in configuration:
-                raise ValueError
-            if "user" not in configuration:
-                raise ValueError
-            if "password" not in configuration:
-                raise ValueError
-        return configuration
-
-
 def test_configuration(name):
     """
     Tests if the specified SQL configuration is available.
@@ -114,31 +53,8 @@ def test_configuration(name):
         the second element is the exception that was raised when testing
         the connection.
     """
-    d = _conf_dict(name)
-    if d["type"] == SQL_MYSQL:
-        if not options.use_mysql:
-            return (False, None)
-        try:
-            engine = sqlalchemy.create_engine(sql_url(name))
-            with engine.connect() as connection:
-                result = connection.execute("SELECT VERSION()")
-        except sqlalchemy.exc.SQLAlchemyError as e:
-            res = (False, e)
-        except Exception as e:
-            raise e
-        else:
-            res = (True, result.fetchall()[0][0])
-            result.close()
-            try:
-                engine.dispose()
-            except UnboundLocalError:
-                pass
-        return res
-    elif d["type"] == SQL_SQLITE:
-        if os.access(sqlite_path(name), os.X_OK | os.R_OK):
-            return (True, None)
-        else:
-            return (False, IOError)
+    connection = options.cfg.connections[name]
+    return connection.test()
 
 
 def sql_url(configuration, db_name=""):
@@ -160,15 +76,8 @@ def sql_url(configuration, db_name=""):
         A string containing a SQLAlchemy engine url that can be used to
         create a database engine using create_engine().
     """
-    d = _conf_dict(configuration)
-
-    if d["type"] == SQL_MYSQL:
-        S = ("mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}"
-             "?charset=utf8mb4&local_infile=1").format(db_name=db_name, **d)
-    elif d["type"] == SQL_SQLITE:
-        S = "sqlite+pysqlite:///{}".format(sqlite_path(configuration,
-                                                       db_name))
-    return S
+    connection = options.cfg.connections[configuration]
+    return connection.url(db_name)
 
 
 def sqlite_path(configuration, db_name=None):
@@ -190,23 +99,12 @@ def sqlite_path(configuration, db_name=None):
         The path pointing either directly to the database, or to the
         directory in which databases are stored.
     """
-    d = _conf_dict(configuration)
+    connection = options.cfg.connections[name]
 
     if db_name:
-        S = os.path.join(options.cfg.database_path, "{}.db".format(db_name))
+        return os.path.join(connection.path, "{}.db".format(db_name))
     else:
-        try:
-            if configuration == DEFAULT_CONFIGURATION:
-                S = options.cfg.database_path
-            else:
-                S = d.get("path")
-                if S is None:
-                    S = options.cfg.database_path
-            S = options.cfg.database_path
-        except Exception as e:
-            print(e)
-            raise e
-    return S
+        return connection.path
 
 
 def drop_database(configuration, db_name):

@@ -12,13 +12,14 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-import sys
 import pandas as pd
 import sqlalchemy
+import os
 
 from coquery import sqlhelper
 from coquery import options
 from coquery.unicode import utf8
+from coquery.defines import msg_disk_error, msg_encoding_error
 
 from . import errorbox
 from . import classes
@@ -95,7 +96,8 @@ class UniqueViewer(QtWidgets.QDialog):
     def get_unique(self):
         if not self.db_name:
             return
-        sql = sqlhelper.sql_url(options.cfg.current_server, self.db_name)
+        sql = sqlhelper.sql_url(options.cfg.current_connection.name,
+                                self.db_name)
         if self._uniques:
             S = "SELECT DISTINCT {} FROM {}".format(self.column, self.table)
             self.df = pd.read_sql(S, sqlalchemy.create_engine(sql))
@@ -179,7 +181,7 @@ class UniqueViewer(QtWidgets.QDialog):
                            index=False,
                            header=["{}.{}".format(self.table, self.column)],
                            encoding=options.cfg.output_encoding)
-            except IOError as e:
+            except IOError:
                 QtWidgets.QMessageBox.critical(
                     self, "Disk error", msg_disk_error)
             except (UnicodeEncodeError, UnicodeDecodeError):
@@ -208,11 +210,3 @@ class UniqueViewer(QtWidgets.QDialog):
         dialog.setVisible(True)
         dialog.get_uniques()
         get_toplevel_window().widget_list.append(dialog)
-
-
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    UniqueViewer.show(None, None)
-
-if __name__ == "__main__":
-    main()

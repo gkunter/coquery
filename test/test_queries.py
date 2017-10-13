@@ -16,7 +16,6 @@ class TestQueries(unittest.TestCase):
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
         options.cfg.MODE = QUERY_MODE_TOKENS
-        options.cfg.current_server = "MockConnection"
         options.cfg.align_quantified = True
         options.cfg.selected_features = ["word_label"]
 

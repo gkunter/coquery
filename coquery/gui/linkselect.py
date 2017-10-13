@@ -126,7 +126,7 @@ class LinkSelect(QtWidgets.QDialog):
         if not corpus:
             return
 
-        resource, _ = options.get_resource(corpus)
+        resource = options.cfg.current_connection.resources()[name][0]
         self.ui.tree_external.setup_resource(resource,
                                              skip=("coquery"),
                                              checkable=False,
@@ -149,9 +149,10 @@ class LinkSelect(QtWidgets.QDialog):
         self.ui.tree_external.clear()
 
     def insert_data(self):
-        corpora = sorted([resource.name for _, (resource, _, _)
-                          in options.cfg.current_resources.items()
-                          if resource.name != self.corpus_name])
+        corpora = sorted(
+            [resource.name for _, (resource, _, _)
+             in options.cfg.current_connection.resources().items()
+             if resource.name != self.corpus_name])
         self.ui.combo_corpus.addItems(corpora)
         min_width = self.ui.combo_corpus.sizeHint().width()
         self.ui.label_from_corpus.setMinimumWidth(min_width)

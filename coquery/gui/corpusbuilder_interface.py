@@ -25,7 +25,7 @@ from coquery import sqlhelper
 from coquery import NAME
 from coquery.defines import (msg_install_abort,
                              msg_corpus_path_not_valid)
-from coquery.errors import SQLNoConfigurationError, DependencyError
+from coquery.errors import DependencyError
 from coquery.unicode import utf8
 
 from . import classes
@@ -447,11 +447,6 @@ class InstallerGui(QtWidgets.QDialog):
         namespace.path = utf8(self.ui.input_path.text())
 
         namespace.db_name = self.builder_class.get_db_name()
-        try:
-            namespace.db_host, namespace.db_port, namespace.db_type, namespace.db_user, namespace.db_password = options.get_con_configuration()
-        except ValueError:
-            raise SQLNoConfigurationError
-        namespace.current_server = options.cfg.current_server
 
         return namespace
 
@@ -691,7 +686,7 @@ class BuilderGui(InstallerGui):
 
         def validate_name_is_unique(button):
             if (utf8(self.ui.corpus_name.text())
-                    in options.cfg.current_resources):
+                    in options.cfg.current_connection.resources()):
                 self.ui.corpus_name.setStyleSheet(STYLE_WARN)
                 self.ui.issue_label.setText(
                     "There is already another corpus with this name.")
@@ -699,7 +694,7 @@ class BuilderGui(InstallerGui):
 
         def validate_db_does_not_exist(button):
             db_exists = sqlhelper.has_database(
-                options.cfg.current_server,
+                options.cfg.current_connection.name,
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if db_exists:
                 self.ui.corpus_name.setStyleSheet(STYLE_WARN)
@@ -710,7 +705,7 @@ class BuilderGui(InstallerGui):
 
         def validate_db_does_exist(button):
             db_exists = sqlhelper.has_database(
-                options.cfg.current_server,
+                options.cfg.current_connection.name,
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if not db_exists:
                 self.ui.corpus_name.setStyleSheet(STYLE_WARN)
@@ -1005,13 +1000,5 @@ class PackageGui(BuilderGui):
         namespace.encoding = "utf-8"
         namespace.db_name = "coq_{}".format(self.builder.name.lower())
         namespace.metadata = False
-        try:
-            (namespace.db_host,
-             namespace.db_port,
-             namespace.db_type,
-             namespace.db_user,
-             namespace.db_password) = options.get_con_configuration()
-        except ValueError:
-            raise SQLNoConfigurationError
-        namespace.current_server = options.cfg.current_server
+
         return namespace

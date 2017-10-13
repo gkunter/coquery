@@ -217,10 +217,10 @@ class Function(CoqObject):
         Return an instance of the currently active reference corpus.
         """
         ref_corpus = options.cfg.reference_corpus.get(
-                         options.cfg.current_server, None)
+            options.cfg.current_connection.name, None)
         if ref_corpus is None:
             return None
-        res = options.cfg.current_resources[ref_corpus]
+        res = options.cfg.current_connection.resources()[ref_corpus]
         ResourceClass, CorpusClass, _ = res
         corpus = CorpusClass()
         resource = ResourceClass(None, corpus)
@@ -902,7 +902,7 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
 
         self._res = self.get_reference()
 
-        url = sqlhelper.sql_url(options.cfg.current_server,
+        url = sqlhelper.sql_url(options.cfg.current_connection.name,
                                 self._res.db_name)
         engine = sqlalchemy.create_engine(url)
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
@@ -1186,7 +1186,8 @@ class ConditionalProbability2(Proportion):
         if resource is None:
             return self.constant(df, None)
 
-        url = sqlhelper.sql_url(options.cfg.current_server, resource.db_name)
+        url = sqlhelper.sql_url(options.cfg.current_connection.name,
+                                resource.db_name)
         engine = sqlalchemy.create_engine(url)
         span = df[self.columns[0]] + " " + df[self.columns[1]]
         left = df[self.columns[0]]

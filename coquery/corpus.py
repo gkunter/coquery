@@ -589,7 +589,6 @@ class SQLResource(BaseResource):
         super(SQLResource, self).__init__()
         self._word_cache = {}
         self.corpus = corpus
-        self.db_type = options.get_configuration_type()
         self.attach_list = []
 
     @classmethod
@@ -614,7 +613,8 @@ class SQLResource(BaseResource):
     @classmethod
     def get_engine(cls, *args, **kwargs):
         return sqlalchemy.create_engine(
-            sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
+            sqlhelper.sql_url(options.cfg.current_connection.name,
+                              cls.db_name),
             *args, **kwargs)
 
     @classmethod
@@ -673,7 +673,8 @@ class SQLResource(BaseResource):
     def get_table_names(self, rc_table):
         engine = self.get_engine()
         table_name = getattr(self, "{}_table".format(rc_table))
-        if self.db_type == SQL_MYSQL:
+        db_type = options.cfg.current_connection.db_type()
+        if db_type == SQL_MYSQL:
             S = "SHOW FIELDS FROM {}"
             columns = "name", "type", "null", "key", "default", "ex"
         else:
@@ -709,8 +710,8 @@ class SQLResource(BaseResource):
         engine.dispose()
 
     def get_module_path(self):
-        d = options.get_available_resources(options.cfg.current_server)
-        return d[self.name][-1]
+        path = options.cfg.current_connection.resources()[self.name][-1]
+        return path
 
     @classmethod
     def get_pack_steps(cls):
@@ -1357,16 +1358,18 @@ class SQLResource(BaseResource):
         """
 
         def handle_case(s):
+            db_type = options.cfg.current_connection.db_type()
+
             # take care of case options:
             if (options.cfg.query_case_sensitive):
-                if (options.get_configuration_type() == SQL_MYSQL):
+                if (db_type == SQL_MYSQL):
                     return "BINARY {}".format(s)
-                elif options.get_configuration_type() == SQL_SQLITE:
+                elif db_type == SQL_SQLITE:
                     return "{} COLLATE BINARY".format(s)
             else:
-                if (options.get_configuration_type() == SQL_MYSQL):
+                if (db_type == SQL_MYSQL):
                     return s
-                elif options.get_configuration_type() == SQL_SQLITE:
+                elif db_type == SQL_SQLITE:
                     return "{} COLLATE NOCASE".format(s)
 
         def get_operator(S):
@@ -1977,8 +1980,8 @@ class CorpusClass(object):
             token_id)
 
         engine = sqlalchemy.create_engine(
-            sqlhelper.sql_url(
-                options.cfg.current_server, self.resource.db_name))
+            sqlhelper.sql_url(options.cfg.current_connection.name,
+                              self.resource.db_name))
         df = pd.read_sql(S, engine)
 
         # as each of the columns could potentially link to origin information,

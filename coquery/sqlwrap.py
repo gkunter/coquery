@@ -16,7 +16,6 @@ import logging
 import warnings
 import sqlalchemy
 import codecs
-import tempfile
 import sys
 import pandas as pd
 
@@ -58,10 +57,11 @@ class SqlDB(object):
         self.encoding = encoding
         self.local_infile = local_infile
 
-        current_server = options.cfg.current_server
-        self.sql_url = sqlhelper.sql_url(current_server, self.db_name)
+        self.sql_url = sqlhelper.sql_url(options.cfg.current_connection.name,
+                                         self.db_name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
-        test, version = sqlhelper.test_configuration(current_server)
+        test, version = sqlhelper.test_configuration(
+            options.cfg.current_connection.name)
         if test:
             self.version = version
         else:
@@ -69,7 +69,7 @@ class SqlDB(object):
         self.connection = None
 
     def create_database(self, db_name):
-        self.sql_url = sqlhelper.sql_url(options.cfg.current_server)
+        self.sql_url = sqlhelper.sql_url(options.cfg.current_connection.name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
         with self.engine.connect() as connection:
             if self.db_type == SQL_MYSQL:
@@ -83,7 +83,7 @@ class SqlDB(object):
 
     def use_database(self, db_name):
         self.db_name = db_name
-        self.sql_url = sqlhelper.sql_url(options.cfg.current_server,
+        self.sql_url = sqlhelper.sql_url(options.cfg.current_connection.name,
                                          self.db_name)
         self.engine = sqlalchemy.create_engine(self.sql_url)
 

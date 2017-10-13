@@ -7,9 +7,10 @@ import os
 
 from .mockmodule import MockOptions
 
+from coquery.defines import DEFAULT_CONFIGURATION
+from coquery.connections import MySQLConnection
 from coquery.corpus import SQLResource, CorpusClass
 from coquery.coquery import options
-from coquery.defines import SQL_MYSQL
 from coquery.queries import TokenQuery
 from coquery.tokens import COCAToken
 import coquery.links
@@ -128,6 +129,15 @@ class ExternalCorpus(SQLResource):
     name = "ExternalCorpus"
 
 
+class MockConnection(MySQLConnection):
+    def resources(self):
+        return self._resources
+
+default_connection = MockConnection(name=DEFAULT_CONFIGURATION,
+                                    host="127.0.0.1",
+                                    port=3306,
+                                    user="coquery", password="coquery")
+
 class TestCorpus(unittest.TestCase):
     flat_resource = FlatResource
 
@@ -143,10 +153,12 @@ class TestCorpus(unittest.TestCase):
         options.cfg.limit_matches = False
         options.cfg.regexp = False
         options.cfg.query_case_sensitive = False
-        options.get_configuration_type = lambda: SQL_MYSQL
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
+
+        options.cfg.connections = [default_connection]
+        options.cfg.current_connection = default_connection
 
         COCAToken.set_pos_check_function(self.pos_check_function)
 
@@ -1219,10 +1231,6 @@ class TestCorpus(unittest.TestCase):
                          simple(target_string))
 
 
-def _monkeypatch_get_resource(name):
-    return TestCorpusWithExternal.external, None, None
-
-
 class TestSuperFlat(unittest.TestCase):
     """
     This TestCase tests issues with a corpus that doesn't have a Lexicon
@@ -1242,8 +1250,6 @@ class TestSuperFlat(unittest.TestCase):
         options.cfg.limit_matches = False
         options.cfg.regexp = False
         options.cfg.query_case_sensitive = False
-        options.get_configuration_type = lambda: SQL_MYSQL
-        options.get_resource = _monkeypatch_get_resource
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
@@ -1252,9 +1258,17 @@ class TestSuperFlat(unittest.TestCase):
                         self.resource.name, "corpus_word",
                         self.external.name, "word_label",
                         join="LEFT JOIN")
-        options.cfg.current_server = "Default"
         options.cfg.table_links = {}
-        options.cfg.table_links[options.cfg.current_server] = [self.link]
+        options.cfg.table_links[DEFAULT_CONFIGURATION] = [self.link]
+
+        default = MockConnection(name=DEFAULT_CONFIGURATION,
+                                 host="127.0.0.1",
+                                 port=3306,
+                                 user="coquery", password="coquery")
+        default.add_resource(self.resource, None)
+        default.add_resource(self.external, None)
+        options.cfg.connections = [default]
+        options.cfg.current_connection = default
 
     def test_is_lexical_1(self):
         self.assertFalse(self.resource.is_lexical("file_path"))
@@ -1388,19 +1402,24 @@ class TestCorpusWithExternal(unittest.TestCase):
         options.cfg.regexp = False
         options.cfg.experimental = True
         options.cfg.query_case_sensitive = False
-        options.get_configuration_type = lambda: SQL_MYSQL
-        options.get_resource = _monkeypatch_get_resource
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
+        default = MockConnection(name=DEFAULT_CONFIGURATION,
+                                 host="127.0.0.1",
+                                 port=3306,
+                                 user="coquery", password="coquery")
+        default.add_resource(self.resource, None)
+        default.add_resource(self.external, None)
+        options.cfg.connections = [default]
+        options.cfg.current_connection = default
 
         self.link = coquery.links.Link(
                         self.resource.name, "word_label",
                         self.external.name, "word_label",
                         join="LEFT JOIN")
-        options.cfg.current_server = "Default"
         options.cfg.table_links = {}
-        options.cfg.table_links[options.cfg.current_server] = [self.link]
+        options.cfg.table_links[DEFAULT_CONFIGURATION] = [self.link]
 
     def test_is_lexical(self):
         self.assertTrue(self.resource.is_lexical("word_label"))
@@ -1486,12 +1505,12 @@ class TestNGramCorpus(unittest.TestCase):
         options.cfg.regexp = False
         options.cfg.query_case_sensitive = False
         options.cfg.experimental = False
-        options.get_configuration_type = lambda: SQL_MYSQL
-        options.get_resource = _monkeypatch_get_resource
         options.cfg.no_ngram = False
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
+
+        options.cfg.current_connection = default_connection
 
     def test_get_origin_rc(self):
         self.assertEqual(self.resource.get_origin_rc(), "corpus_source_id")

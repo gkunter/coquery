@@ -9,7 +9,9 @@ import pandas as pd
 
 from coquery.coquery import options
 from coquery.session import Session
-from coquery.defines import QUERY_MODE_TOKENS, CONTEXT_NONE
+from coquery.defines import (QUERY_MODE_TOKENS, CONTEXT_NONE,
+                             DEFAULT_CONFIGURATION)
+from coquery.connections import SQLiteConnection
 from coquery.corpus import BaseResource
 from coquery.managers import Manager, Group, Summary
 from coquery.functions import Freq, Tokens
@@ -39,7 +41,6 @@ class TestManager(unittest.TestCase):
     def setUp(self):
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
-        options.cfg.current_server = "MockConnection"
         options.cfg.MODE = QUERY_MODE_TOKENS
         options.cfg.stopword_list = []
         options.cfg.context_mode = CONTEXT_NONE
@@ -48,6 +49,8 @@ class TestManager(unittest.TestCase):
         options.cfg.benchmark = False
         options.cfg.verbose = False
         options.cfg.summary_group = [Summary("summary")]
+        default = SQLiteConnection(DEFAULT_CONFIGURATION)
+        options.cfg.current_connection = default
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")

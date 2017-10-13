@@ -27,6 +27,10 @@ def main():
         from test.test_celex import TestCELEX
         test_list += [TestCELEX]
 
+    if not args or "connections" in args:
+        from test.test_connections import provided_tests
+        test_list += provided_tests
+
     if not args or "corpus" in args:
         from test.test_corpora import provided_tests
         test_list += provided_tests

@@ -8,8 +8,6 @@ import pandas as pd
 from pandas.util.testing import assert_frame_equal
 
 import unittest
-import os.path
-import sys
 import argparse
 import collections
 
@@ -77,13 +75,11 @@ class TestTextGridModuleMethods(unittest.TestCase):
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
         options.cfg.MODE = QUERY_MODE_TOKENS
-        options.cfg.current_server = "MockConnection"
         options.cfg.current_resources = {"MockConnection": "MockCorpus"}
         options.cfg.input_separator = ","
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
         options.cfg.csv_restrict = None
-        options.cfg.server_configuration = {}
 
         self.session = MockSession()
         self.resource = self.session.Resource

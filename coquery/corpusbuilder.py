@@ -1592,7 +1592,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         Create a connection to the server, and creates the database if
         necessary.
         """
-        configuration = options.cfg.current_server
+        configuration = options.cfg.current_connection.name
 
         if sqlhelper.has_database(configuration, self.arguments.db_name):
             sqlhelper.drop_database(configuration, self.arguments.db_name)
@@ -1722,7 +1722,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         - the corpus installer in case of adhoc corpora
         """
         try:
-            sqlhelper.drop_database(options.cfg.current_server,
+            sqlhelper.drop_database(options.cfg.current_connection.name,
                                     self.arguments.db_name)
         except:
             pass
