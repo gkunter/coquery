@@ -372,7 +372,7 @@ following {corpora} {are} available on that connection:</p>
 <p>{list}</p>
 <p>If you want to remove the connection together with the listed corpora,
 press <b>Yes</b>. This will free approximately {size} of drive space.</p>
-<p>If you do not want to remove the connection and keep all listed 
+<p>If you do not want to remove the connection and keep all listed
 corpora, press <b>No</b>."""
 
 msg_not_enough_space = """
