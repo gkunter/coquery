@@ -302,7 +302,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.ui.connection_name.setText(name)
 
         is_default = (name == DEFAULT_CONFIGURATION)
-        self.ui.button_db_path.setDisabled(is_default)
+        self.ui.button_db_path.setHidden(is_default)
         self.ui.input_db_path.setReadOnly(is_default)
         self.ui.connection_name.setReadOnly(is_default)
 
