@@ -247,6 +247,11 @@ class Table(object):
         if self._max_cache and len(self._add_cache) > self._max_cache:
             self.commit()
 
+        # FIXME:
+        # this comparison may be optimized by increasing an int counter for
+        # each item that is added, and comparing the counter to
+        # self._max_cache instead of using len(self._add_cache)
+
         return self._current_id
 
     def add_with_id(self, values):
