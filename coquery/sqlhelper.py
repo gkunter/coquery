@@ -99,7 +99,7 @@ def sqlite_path(configuration, db_name=None):
         The path pointing either directly to the database, or to the
         directory in which databases are stored.
     """
-    connection = options.cfg.connections[name]
+    connection = options.cfg.connections[configuration]
 
     if db_name:
         return os.path.join(connection.path, "{}.db".format(db_name))
