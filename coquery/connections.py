@@ -13,6 +13,7 @@ import os
 import glob
 import sqlalchemy
 import imp
+import logging
 
 from .defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
 from .general import CoqObject, get_home_dir
@@ -56,8 +57,10 @@ class Connection(CoqObject):
                     tup = (module.Resource, module.Corpus, module_name)
                     self._resources[module.Resource.name] = tup
                 except AttributeError as e:
-                    print(e)
-                    warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+                    full_path = module_name
+                    s = "{} does not appear to be a valid corpus module."
+                    logging.warn(s.format(full_path))
+                    print(s.format(full_path))
         return self._resources
 
     def add_resource(self, resource, corpus):
