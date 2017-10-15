@@ -212,11 +212,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("name", help="name of the corpus", type=str)
         self.parser.add_argument("path", help="location of the text files", type=str)
-        self.parser.add_argument("--db_user", help="name of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_user")
-        self.parser.add_argument("--db_password", help="password of the MySQL user (default: coquery)", type=str, default="coquery", dest="db_password")
-        self.parser.add_argument("--db_host", help="name of the MySQL server (default: localhost)", type=str, default="127.0.0.1", dest="db_host")
-        self.parser.add_argument("--db_port", help="port of the MySQL server (default: 3306)", type=int, default=3306, dest="db_port")
-        self.parser.add_argument("--db_name", help="name of the MySQL database to be used (default: same as 'name')", type=str)
         self.parser.add_argument("-o", help="optimize field structure (can be slow)", action="store_true")
         self.parser.add_argument("-v", help="produce verbose output", action="store_true", dest="verbose")
         self.parser.add_argument("-i", help="create indices (can be slow)", action="store_true")
@@ -392,7 +387,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         for i, current_table in enumerate(self._new_tables):
             self._new_tables[current_table].setDB(self.DB)
             S = self._new_tables[current_table].get_create_string(
-                self.arguments.db_type,
+                options.cfg.current_connection.db_type(),
                 self._new_tables.values(),
                 index_gen=current_table == getattr(self, "corpus_table"))
             self.DB.create_table(current_table, S)
@@ -1598,15 +1593,17 @@ class BaseCorpusBuilder(corpus.SQLResource):
             sqlhelper.drop_database(configuration, self.arguments.db_name)
         sqlhelper.create_database(configuration, self.arguments.db_name)
 
-        self.DB = sqlwrap.SqlDB(
-            Host=self.arguments.db_host,
-            Port=self.arguments.db_port,
-            Type=self.arguments.db_type,
-            User=self.arguments.db_user,
-            Password=self.arguments.db_password,
-            db_name=self.arguments.db_name,
-            local_infile=1)
+        con = options.cfg.current_connection
+        kwargs = dict(Host=getattr(con, "host", None),
+                      Port=getattr(con, "port", None),
+                      User=getattr(con, "user", None),
+                      Password=getattr(con, "password", None),
+                      db_path=getattr(con, "path", None),
+                      Type=con.db_type(),
+                      db_name=self.arguments.db_name,
+                      local_infile=1)
 
+        self.DB = sqlwrap.SqlDB(**kwargs)
         self.DB.use_database(self.arguments.db_name)
 
     def add_metadata(self, file_name, column):
