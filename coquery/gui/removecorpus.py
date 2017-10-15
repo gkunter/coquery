@@ -31,7 +31,7 @@ class RemoveCorpusDialog(QtWidgets.QDialog):
             entry.name, configuration_name))
 
         ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
-        ok_button..clicked.connect(self.accept)
+        ok_button.clicked.connect(self.accept)
         cancel_button = self.ui.buttonBox.button(
             QtWidgets.QDialogButtonBox.Cancel)
         cancel_button.clicked.connect(self.reject)
