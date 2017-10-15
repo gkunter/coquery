@@ -120,10 +120,10 @@ class LinkSelect(QtWidgets.QDialog):
 
     def external_changed(self, index):
         if type(index) == int:
-            corpus = utf8(self.ui.combo_corpus.itemText(index))
+            name = utf8(self.ui.combo_corpus.itemText(index))
         else:
-            corpus = utf8(index)
-        if not corpus:
+            name = utf8(index)
+        if not name:
             return
 
         resource = options.cfg.current_connection.resources()[name][0]
