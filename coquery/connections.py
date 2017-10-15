@@ -31,9 +31,12 @@ class Connection(CoqObject):
     def db_type(self):
         return self._db_type
 
+    def base_path(self):
+        path = os.path.join(get_home_dir(), "connections", self.name)
+        return path
+
     def resource_path(self):
-        path = os.path.join(get_home_dir(),
-                            "connections", self.name, "corpora")
+        path = os.path.join(self.base_path(), "corpora")
         return path
 
     def resources(self):
@@ -180,7 +183,7 @@ class SQLiteConnection(Connection):
         super(SQLiteConnection, self).__init__(name, SQL_SQLITE)
 
         if name == DEFAULT_CONFIGURATION:
-            path = os.path.join(get_home_dir(), "connections", name)
+            path = os.path.join(self.base_path(), "databases")
 
         if path is None:
             raise TypeError
