@@ -76,7 +76,8 @@ class Connection(CoqObject):
 
     def remove_resource(self, name, flags=(MODULE | DATABASE | INSTALLER)):
         resource = self.resources()[name][0]
-
+        db_name = resource.db_name
+        
         # remove database:
         if flags & Connection.DATABASE:
             self.remove_database(db_name)
