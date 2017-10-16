@@ -22,11 +22,10 @@ import logging
 
 from coquery.general import (utf8,
                              get_available_space, format_file_size)
-from coquery import sqlhelper
 from coquery import options
 from coquery.defines import (DEFAULT_CONFIGURATION, SQL_MYSQL, SQL_SQLITE,
                              msg_not_enough_space, msg_completely_remove)
-from coquery.connections import MySQLConnection
+from coquery.connections import MySQLConnection, get_connection
 
 from .pyqt_compat import (QtCore, QtWidgets, QtGui,
                           get_toplevel_window, STYLE_WARN)
