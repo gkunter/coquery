@@ -15,7 +15,6 @@ from __future__ import unicode_literals
 import socket
 import re
 import string
-import sqlalchemy
 import os
 import shutil
 import sys
@@ -27,13 +26,13 @@ from coquery import sqlhelper
 from coquery import options
 from coquery.defines import (DEFAULT_CONFIGURATION, SQL_MYSQL, SQL_SQLITE,
                              msg_not_enough_space, msg_completely_remove)
+from coquery.connections import MySQLConnection
 
 from .pyqt_compat import (QtCore, QtWidgets, QtGui,
                           get_toplevel_window, STYLE_WARN)
 from . import errorbox
 from .classes import CoqProgressDialog, CoqThread
 from .ui.connectionConfigurationUi import Ui_ConnectionConfig
-
 
 def check_valid_host(s):
     """
@@ -229,9 +228,6 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         item.setData(QtCore.Qt.UserRole + 1, conf)
         self.ui.list_config.insertItem(
             self.ui.list_config.count() - 1, item)
-
-    def update_connection(self, d):
-        self.ui.list_config.currentItem().setData(QtCore.Qt.UserRole, d)
 
     def remove_connection(self):
         name = utf8(self.ui.list_config.currentItem().text())
@@ -626,7 +622,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
     def choose(connection_name, connections, parent=None):
         try:
             dialog = ConnectionConfiguration(parent=parent)
-            for connections in connections:
+            for connection in connections:
                 dialog.add_connection(connections[connection])
             dialog.select_item(connection_name)
             dialog.show()
@@ -643,37 +639,48 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         password = str(self.ui.password.text())
         create_data = createuser.CreateUser.get(name, password, self)
 
-        hostname = utf8(self.ui.hostname.text())
-
         if create_data:
             root_name, root_password, name, password = create_data
+            host = utf8(self.ui.hostname.text())
+            port = int(self.ui.port.value())
+            con = MySQLConnection(host=host, port=port,
+                                  user=root_name, password=root_password)
             try:
-                engine = sqlalchemy.create_engine(sqlhelper.sql_url((
-                    hostname,
-                    self.ui.port.value(),
-                    SQL_MYSQL,
-                    root_name,
-                    root_password)))
-            except sqlalchemy.exc.SQLAlchemyError as e:
-                QtWidgets.QMessageBox.critical(self, "Access as root failed", "<p>A root access to the MySQL server could not be established.</p><p>Please check the MySQL root name and the MySQL root password, and try again to create a user.")
+                engine = con.get_engine()
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Access as root failed",
+                    ("<p>A root access to the MySQL server could not be "
+                     "established.</p><p>Please check the MySQL root name "
+                     "and the MySQL root password, and try again to create "
+                     "a user."))
                 return
             S = """
-            CREATE USER '{user}'@'{hostname}' IDENTIFIED BY '{password}';
-            GRANT ALL PRIVILEGES ON * . * TO '{user}'@'{hostname}';
+            CREATE USER '{user}'@'{host}' IDENTIFIED BY '{password}';
+            GRANT ALL PRIVILEGES ON * . * TO '{user}'@'{host}';
             FLUSH PRIVILEGES;""".format(
-                user=name, password=password, hostname=hostname)
+                user=name, password=password, host=host)
 
             with engine.connect() as connection:
                 try:
                     connection.execute(S)
-                except sqlalchemy.exc.SQLAlchemyError:
-                    QtWidgets.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
+                except Exception as e:
+                    QtWidgets.QMessageBox.critical(
+                        self,
+                        "Error creating user",
+                        ("Apologies – the user named '{}' could not be "
+                         "created on the MySQL server.").format(name))
                     return
                 except Exception as e:
                     print(e)
                     raise e
                 else:
-                    QtWidgets.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
+                    QtWidgets.QMessageBox.information(
+                        self,
+                        "User created",
+                        ("The user named '{}' has successfully been created "
+                         "on the MySQL server.").format(name))
             engine.dispose()
             self.ui.user.setText(name)
             self.ui.password.setText(password)
