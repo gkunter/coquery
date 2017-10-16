@@ -15,6 +15,7 @@ import sys
 
 from coquery import options
 from coquery.unicode import utf8
+from coquery.connections import Connection
 from .pyqt_compat import QtCore, QtWidgets
 from .ui.removeCorpusUi import Ui_RemoveCorpus
 
@@ -83,12 +84,14 @@ class RemoveCorpusDialog(QtWidgets.QDialog):
             dialog.ui.check_rm_module.setChecked(False)
             dialog.ui.check_rm_module.setDisabled(True)
 
-
         result = dialog.exec_()
+        flags = 0
         if result == QtWidgets.QDialog.Accepted:
-            return (
-                dialog.ui.check_rm_module.isChecked(),
-                dialog.ui.check_rm_database.isChecked(),
-                dialog.ui.check_rm_installer.isChecked())
-        else:
-            return None
+            if dialog.ui.check_rm_database.isChecked():
+                flags += Connection.DATABASE
+            if dialog.ui.check_rm_module.isChecked():
+                flags += Connection.MODULE
+            if dialog.ui.check_rm_installer.isChecked():
+                flags += Connection.INSTALLER
+
+        return flags

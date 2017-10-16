@@ -650,10 +650,3 @@ class SqlDB(object):
             return self.connection.execute(sql_str).fetchone()[0]
         elif self.db_type == SQL_SQLITE:
             return os.path.getsize(self.sqlite_path(database_name))
-
-    def drop_database(self, database_name):
-        if self.db_type == SQL_MYSQL:
-            self.connection.execute("DROP DATABASE {}".format(
-                database_name.split()[0]))
-        elif self.db_type == SQL_SQLITE:
-            os.remove(self.sqlite_path(database_name))

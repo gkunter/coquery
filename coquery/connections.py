@@ -18,9 +18,12 @@ import logging
 from .defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
 from .general import CoqObject, get_home_dir
 from .unicode import utf8
-from . import options
 
 class Connection(CoqObject):
+    MODULE = 1 << 1
+    INSTALLER = 1 << 2
+    DATABASE = 1 << 3
+
     def __init__(self, name, db_type=None):
         if name is None:
             raise TypeError
@@ -39,7 +42,7 @@ class Connection(CoqObject):
         path = os.path.join(self.base_path(), "corpora")
         return path
 
-    def resources(self):
+    def find_resources(self):
         self._resources = {}
         path = os.path.join(self.resource_path(), "*.py")
         for module_name in glob.glob(path):
@@ -64,13 +67,38 @@ class Connection(CoqObject):
                     s = "{} does not appear to be a valid corpus module."
                     logging.warn(s.format(full_path))
                     print(s.format(full_path))
+
+    def resources(self):
         return self._resources
 
     def add_resource(self, resource, corpus):
         self._resources[resource.name] = (resource, corpus)
 
-    def remove_resource(self, name):
-        self._resources.pop(name)
+    def remove_resource(self, name, flags=(MODULE | DATABASE | INSTALLER)):
+        resource = self.resources()[name][0]
+
+        # remove database:
+        if flags & Connection.DATABASE:
+            self.remove_database(db_name)
+
+        # remove corpus module:
+        if flags & Connection.MODULE:
+            module_path = os.path.join(self.resource_path(),
+                                       "{}.py".format(db_name))
+            if os.path.exists(module_path):
+                os.remove(module_path)
+
+            # also remove the compiled python module:
+            os.remove("{}c".format(module_path))
+
+        # remove installer (only for adhoc corpora):
+        if flags & Connection.INSTALLER:
+            adhoc_path = os.path.join(self.base_path(),
+                                      "adhoc",
+                                      "coq_install_{}.py".format(db_name))
+            if os.path.exists(adhoc_path):
+                os.remove(adhoc_path)
+            self._resources.pop(name)
 
     def get_resource(self, name):
         return self._resources.get(name, None)
@@ -147,8 +175,6 @@ class MySQLConnection(Connection):
         return template.format(**kwargs)
 
     def test(self):
-        if not options.use_mysql:
-            return (False, None)
         try:
             engine = sqlalchemy.create_engine(self.url())
             with engine.connect() as connection:
@@ -165,6 +191,11 @@ class MySQLConnection(Connection):
             except UnboundLocalError:
                 pass
         return res
+
+    def remove_database(self, db_name):
+        sql_string = "DROP DATABASE {}".format(db_name)
+        with self.get_engine().connect() as connection:
+            connection.execute(sql_string)
 
 
 class SQLiteConnection(Connection):
@@ -190,22 +221,22 @@ class SQLiteConnection(Connection):
 
         self.path = path
 
-    def url(self, database):
-        template = "sqlite+pysqlite:///{path}"
-        path = os.path.join(self.path, "{}.db".format(database))
-        return template.format(path=path)
-
-    def remove_resource(self, name):
-        raise NotImplementedError
-
     def rename(self, new_name):
         raise NotImplementedError
+
+    def url(self, db_name):
+        template = "sqlite+pysqlite:///{path}"
+        path = os.path.join(self.path, "{}.db".format(db_name))
+        return template.format(path=path)
 
     def test(self):
         if os.access(self.path, os.X_OK | os.R_OK):
             return (True, None)
         else:
             return (False, IOError)
+
+    def remove_database(self, db_name):
+        os.remove(os.path.join(self.path, "{}.db".format(db_name)))
 
 
 def get_connection(name, dbtype,

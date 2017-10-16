@@ -1557,11 +1557,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         Add the available corpus names to the corpus selection combo box.
         """
-        try:
-            self.ui.combo_corpus.currentIndexChanged.disconnect()
-        except TypeError:
-            # ignore error if the combo box was not yet connected
-            pass
+        self.ui.combo_corpus.blockSignals(True)
 
         # remember last corpus name:
         last_corpus = utf8(self.ui.combo_corpus.currentText())
@@ -1578,7 +1574,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.combo_corpus.setCurrentIndex(new_index)
         self.ui.combo_corpus.setEnabled(True)
-        self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
+
+        self.ui.combo_corpus.blockSignals(False)
 
         self.check_corpus_widgets()
 
@@ -2584,85 +2581,24 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         from . import removecorpus
 
-        try:
+        con = options.cfg.current_connection
 
-            resource, _, module = (options.cfg.current_connection
-                                              .resources())[entry.name]
-        except KeyError:
-            if entry.adhoc:
-                database = "coq_{}".format(entry.name.lower())
-            else:
-                database = ""
-            module = ""
-        else:
-            database = resource.db_name
-
-        response = removecorpus.RemoveCorpusDialog.select(
-            entry, options.cfg.current_connection.name)
-        if (response and QtWidgets.QMessageBox.question(
+        flags = removecorpus.RemoveCorpusDialog.select(entry, con.name)
+        if (flags and QtWidgets.QMessageBox.question(
                 self,
                 "Remove corpus – Coquery",
                 "Do you really want to remove the selected corpus components?",
                 (QtWidgets.QMessageBox.Ok |
                  QtWidgets.QMessageBox.Cancel)) == QtWidgets.QMessageBox.Ok):
-            rm_module, rm_database, rm_installer = response
-            success = True
 
-            if rm_database and database and sqlhelper.has_database(
-                    options.cfg.current_connection.name, database):
-                try:
-                    self.Session.db_connection.close()
-                except AttributeError:
-                    pass
-                except Exception as e:
-                    print(e)
-                    warnings.warn(e)
-                try:
-                    sqlhelper.drop_database(
-                        options.cfg.current_connection.name, database)
-                except Exception as e:
-                    raise e
-                    QtWidgets.QMessageBox.critical(
-                        self,
-                        "Database error – Coquery",
-                        msg_remove_corpus_error.format(corpus=resource.name, code=e),
-                        QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
-                    success = False
+            con.remove_resource(entry.name, flags)
 
-            # Remove the corpus module:
-            if rm_module and success and module:
-                try:
-                    if os.path.exists(module):
-                        os.remove(module)
-                except IOError:
-                    QtWidgets.QMessageBox.critical(self, "Storage error – Coquery", msg_remove_corpus_disk_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
-                    success = False
-                else:
-                    success = True
-                    # also try to remove the compiled python module:
-                    try:
-                        os.remove("{}c".format(module))
-                    except (IOError, OSError):
-                        pass
-
-            # remove the corpus installer if the corpus was created from
-            # text files:
-            if rm_installer and success:
-                try:
-                    res, _, _ = (options.cfg.current_connection
-                                            .resources())[entry.name]
-                    path = os.path.join(options.cfg.adhoc_path, "coq_install_{}.py".format(res.db_name))
-                    os.remove(path)
-                except Exception as e:
-                    print(e)
-                else:
-                    success = True
-
-            self.fill_combo_corpus()
-            if success and (rm_installer or rm_database or rm_module):
+            if flags:
                 logging.warning("Removed corpus {}.".format(entry.name))
                 self.showMessage("Removed corpus {}.".format(entry.name))
                 self.corpusListUpdated.emit()
+
+            self.fill_combo_corpus()
             self.change_corpus()
 
     def finalize_export(self):

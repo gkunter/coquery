@@ -107,29 +107,6 @@ def sqlite_path(configuration, db_name=None):
         return connection.path
 
 
-def drop_database(configuration, db_name):
-    """
-    Drops the database 'db_name' from the given configuration.
-
-    Parameters
-    ----------
-    configuration : str
-        The name of the configuration to use.
-    db_name : str
-        The name of a database.
-    """
-    s = sql_url(configuration, db_name)
-    engine = sqlalchemy.create_engine(s)
-
-    if engine.dialect.name == SQL_MYSQL:
-        with engine.connect() as connection:
-            text = 'DROP DATABASE {}'.format(db_name)
-            connection.execute(text)
-    elif engine.dialect.name == SQL_SQLITE:
-        os.remove(sqlite_path(configuration, db_name))
-    engine.dispose()
-
-
 def create_database(configuration, db_name):
     s = sql_url(configuration)
     engine = sqlalchemy.create_engine(s)
