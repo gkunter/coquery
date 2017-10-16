@@ -14,7 +14,6 @@ from __future__ import unicode_literals
 import os
 import logging
 import warnings
-import sqlalchemy
 import codecs
 import sys
 import pandas as pd
@@ -28,7 +27,6 @@ from .errors import DependencyError, SQLProgrammingError
 from .defines import SQL_MYSQL, SQL_SQLITE
 from .general import get_chunk
 from . import options
-from . import sqlhelper
 from . import capturer
 
 if options.use_mysql:
@@ -57,21 +55,20 @@ class SqlDB(object):
         self.encoding = encoding
         self.local_infile = local_infile
 
-        self.sql_url = sqlhelper.sql_url(options.cfg.current_connection.name,
-                                         self.db_name)
-        self.engine = sqlalchemy.create_engine(self.sql_url)
-        test, version = sqlhelper.test_configuration(
-            options.cfg.current_connection.name)
+        self.sql_url = options.cfg.current_connection.url(db_name)
+        self.engine = options.cfg.current_connection.get_engine(db_name)
+
+        test, version = options.cfg.current_connection.test()
         if test:
             self.version = version
         else:
             self.version = ""
+        print(test, version)
         self.connection = None
 
     def create_database(self, db_name):
-        self.sql_url = sqlhelper.sql_url(options.cfg.current_connection.name)
-        self.engine = sqlalchemy.create_engine(self.sql_url)
-        with self.engine.connect() as connection:
+        engine = options.cfg.current_connection.get_engine()
+        with engine.connect() as connection:
             if self.db_type == SQL_MYSQL:
                 S = """
                     CREATE DATABASE {}
@@ -80,12 +77,12 @@ class SqlDB(object):
                     """.format(db_name)
                 connection.execute(S)
             self.use_database(db_name)
+        engine.dispose()
 
     def use_database(self, db_name):
         self.db_name = db_name
-        self.sql_url = sqlhelper.sql_url(options.cfg.current_connection.name,
-                                         self.db_name)
-        self.engine = sqlalchemy.create_engine(self.sql_url)
+        self.sql_url = options.cfg.current_connection.url(db_name)
+        self.engine = options.cfg.current_connection.get_engine(db_name)
 
     def has_database(self, db_name):
         """
@@ -113,7 +110,9 @@ class SqlDB(object):
                 raise ex
             return False
         elif self.db_type == SQL_SQLITE:
-            return os.path.exists(SqlDB.sqlite_path(db_name))
+            path = os.path.join(options.cfg.current_connection.path,
+                                db_name)
+            return os.path.exists(path)
 
     def has_table(self, table_name):
         """
