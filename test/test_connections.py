@@ -17,7 +17,7 @@ from coquery.connections import (Connection,
                                  MySQLConnection,
                                  SQLiteConnection)
 from coquery.defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
-from coquery.corpus import BaseResource, CorpusClass
+from coquery.corpus import BaseResource, SQLResource, CorpusClass
 from coquery.general import get_home_dir
 
 
@@ -136,6 +136,21 @@ class TestMySQLConnection(unittest.TestCase):
 
         self.assertEqual(url, con.url(self.db_name))
 
+    #def test_remove_resource(self):
+        #cor = CorpusClass()
+        #res_name = "TestCorpus"
+        #res = SQLResource(None, cor)
+        #res.name = res_name
+        #res.db_name = "coq_test"
+
+        #con = MySQLConnection(
+            #self.name, self.host, self.port, self.user, self.password,
+            #params=[])
+
+        #con.add_resource(res, cor)
+
+        #con.remove_resource(res_name, con.MODULE)
+
 
 class TestSQLiteConnection(unittest.TestCase):
     def setUp(self):
@@ -155,7 +170,8 @@ class TestSQLiteConnection(unittest.TestCase):
         self.assertEqual(con.path,
                          os.path.join(get_home_dir(),
                                       "connections",
-                                      DEFAULT_CONFIGURATION))
+                                      DEFAULT_CONFIGURATION,
+                                      "databases"))
 
     def test_url(self):
         con = SQLiteConnection(self.name, self.db_path)
