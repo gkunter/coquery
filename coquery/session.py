@@ -18,7 +18,6 @@ import datetime
 import fileinput
 import codecs
 import warnings
-import sqlalchemy
 import re
 import logging
 
@@ -30,7 +29,6 @@ from .errors import (
     EmptyInputFileError, CorpusUnavailableQueryTypeError)
 from .defines import SQL_SQLITE, COLUMN_NAMES
 from .general import set_preferred_order
-from . import sqlhelper
 from . import queries
 from . import managers
 from . import functionlist
@@ -68,12 +66,8 @@ class Session(object):
 
             self.Resource = current_resource
 
-            try:
-                self.db_engine = sqlalchemy.create_engine(
-                    sqlhelper.sql_url(current_connection,
-                                      self.Resource.db_name))
-            except ImportError:
-                self.db_engine = None
+            self.db_engine = current_connection.get_engine(
+                self.Resource.db_name)
 
             logging.info("Corpus '{}' on connection '{}'".format(
                 self.Resource.name, current_connection))
