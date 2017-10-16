@@ -518,12 +518,15 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         else:
             db_type = SQL_SQLITE
 
-        ok, exc = sqlhelper.test_configuration(
-                    (hostname,
-                    self.ui.port.value(),
-                    db_type,
-                    str(self.ui.user.text()),
-                    str(self.ui.password.text())))
+        kwargs = dict(host=hostname,
+                      port=int(self.ui.port.value()),
+                      user=utf8(self.ui.user.text()),
+                      password=utf8(self.ui.password.text()),
+                      path=utf8(self.ui.input_db_path.text()))
+
+
+        con = get_connection(None, db_type, **kwargs)
+        ok, exc = con.test()
         if not ok:
             if "access denied" in str(exc.orig).lower():
                 self.accessDenied.emit(exc.orig)
