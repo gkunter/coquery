@@ -18,7 +18,6 @@ from collections import defaultdict
 import re
 import logging
 import math
-import sqlalchemy
 import pandas as pd
 import os
 import tempfile
@@ -38,7 +37,6 @@ from .defines import (
 from .general import collapse_words, CoqObject, html_escape
 from . import tokens, NAME
 from . import options
-from . import sqlhelper
 from .links import get_by_hash
 
 
@@ -611,13 +609,6 @@ class SQLResource(BaseResource):
         return None
 
     @classmethod
-    def get_engine(cls, *args, **kwargs):
-        return sqlalchemy.create_engine(
-            sqlhelper.sql_url(options.cfg.current_connection.name,
-                              cls.db_name),
-            *args, **kwargs)
-
-    @classmethod
     def _str_table_desc_mysql(cls, table):
         S = "SHOW CREATE TABLE {}.{}".format(
             cls.db_name, getattr(cls, "{}_table".format(table)))
@@ -657,7 +648,7 @@ class SQLResource(BaseResource):
         return d
 
     def get_table_size(self, rc_table):
-        engine = self.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         table = getattr(self, "{}_table".format(rc_table))
         S = "SELECT COUNT(*) FROM {}".format(table)
         size = pd.read_sql(S, con=engine).iloc[0][0]
@@ -671,7 +662,7 @@ class SQLResource(BaseResource):
         return None
 
     def get_table_names(self, rc_table):
-        engine = self.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         table_name = getattr(self, "{}_table".format(rc_table))
         db_type = options.cfg.current_connection.db_type()
         if db_type == SQL_MYSQL:
@@ -688,7 +679,7 @@ class SQLResource(BaseResource):
 
     def dump_table(self, path, rc_table, table_size, chunk_signal,
                    chunksize=250000):
-        engine = self.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         table = getattr(self, "{}_table".format(rc_table))
         primary = self.get_primary_key(rc_table)
         S = "SELECT * FROM {} WHERE {} BETWEEN {{}} AND {{}}".format(
@@ -1736,7 +1727,7 @@ class SQLResource(BaseResource):
                 getattr(self, pos_feature),
                 self.get_operator(current_token),
                 pos)
-            engine = self.get_engine()
+            engine = options.cfg.current_connection.get_engine(self.db_name)
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
             return len(df.index) > 0
@@ -1877,7 +1868,7 @@ class SQLResource(BaseResource):
             sentence=sentence,
             id_list=", ".join([str(x) for x in id_list]))
 
-        engine = self.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         df = pd.read_sql(S, engine)
         engine.dispose()
 
@@ -1893,7 +1884,7 @@ class SQLResource(BaseResource):
                      corpus=self.corpus_table,
                      id=self.corpus_id,
                      token_id=token_id)
-        engine = self.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         df = pd.read_sql(S, engine)
         engine.dispose()
 
@@ -1945,7 +1936,8 @@ class CorpusClass(object):
                 corpus_id=self.resource.corpus_id,
                 token_ids=", ".join(token_ids))
 
-        engine = self.resource.get_engine()
+        engine = options.cfg.current_connection.get_engine(
+            self.resource.db_name)
         df = pd.read_sql(S, engine)
         engine.dispose()
         return df
@@ -1979,10 +1971,10 @@ class CorpusClass(object):
             self.resource.corpus_id,
             token_id)
 
-        engine = sqlalchemy.create_engine(
-            sqlhelper.sql_url(options.cfg.current_connection.name,
-                              self.resource.db_name))
+        engine = options.cfg.current_connection.get_engine(
+            self.resource.db_name)
         df = pd.read_sql(S, engine)
+        engine.dispose()
 
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
@@ -2033,7 +2025,8 @@ class CorpusClass(object):
                     table_name, id_column, df[column].values[0])
                 # Fetch all fields from the linked table for the current
                 # token:
-                engine = self.resource.get_engine()
+                engine = options.cfg.current_connection.get_engine(
+                    self.resource.db_name)
                 row = pd.read_sql(S, engine)
                 engine.dispose()
 
@@ -2101,7 +2094,8 @@ class CorpusClass(object):
 
         S = "SELECT COUNT(*) FROM {}".format(from_str)
         if S not in self._corpus_size_cache:
-            engine = self.resource.get_engine()
+            engine = options.cfg.current_connection.get_engine(
+                self.resource.db_name)
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
             self._corpus_size_cache[S] = df.values.ravel()[0]
@@ -2217,7 +2211,8 @@ class CorpusClass(object):
 
             S = "SELECT MIN({id}), MAX({id}) FROM {tables}".format(
                 id=self.resource.corpus_id, tables=from_str)
-            engine = self.resource.get_engine()
+            engine = options.cfg.current_connection.get_engine(
+                self.resource.db_name)
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
             val = df.values.ravel()[0:2]
@@ -2507,7 +2502,8 @@ class CorpusClass(object):
         if options.cfg.verbose:
             logger.info(S)
             print(S)
-        engine = self.resource.get_engine()
+        engine = options.cfg.current_connection.get_engine(
+            self.resource.db_name)
         df = pd.read_sql(S, engine)
         if hasattr(self.resource, "tag_table"):
             S = """
