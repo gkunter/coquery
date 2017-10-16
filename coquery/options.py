@@ -284,7 +284,6 @@ class Options(object):
                                              self.config_name)
         connection = SQLiteConnection(DEFAULT_CONFIGURATION)
         self.args.connections = dict(Default=connection)
-        self.args.current_connection = connection
 
         self.args.reference_corpus = {}
         self.args.main_window = None
@@ -572,7 +571,6 @@ class Options(object):
         connection_dict = defaultdict(dict)
         for name, value in config_file.items("sql"):
             if name.startswith("config_"):
-                print(name)
                 fields = name.split("_")
                 if len(fields) != 3:
                     continue
@@ -592,7 +590,6 @@ class Options(object):
                         connection_dict[number]["dbtype"] = value
 
         for i in connection_dict:
-            print(connection_dict[i])
             connection = get_connection(**connection_dict[i])
             self.args.connections[connection.name] = connection
 
@@ -729,7 +726,6 @@ class Options(object):
                 except ValueError:
                     pass
                 else:
-                    print(filt)
                     self.args.filter_list.append(filt)
 
             # read FUNCTIONS section
@@ -1160,6 +1156,7 @@ def set_current_server(name):
     """
     global cfg
     cfg.current_connection = cfg.connections.get(name, None)
+    cfg.current_connection.find_resources()
 
     # make sure that a subdirectory exists in "connections" for the current
     # connection:
