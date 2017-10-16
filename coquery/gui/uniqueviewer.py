@@ -13,10 +13,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import pandas as pd
-import sqlalchemy
 import os
 
-from coquery import sqlhelper
 from coquery import options
 from coquery.unicode import utf8
 from coquery.defines import msg_disk_error, msg_encoding_error
@@ -96,15 +94,17 @@ class UniqueViewer(QtWidgets.QDialog):
     def get_unique(self):
         if not self.db_name:
             return
-        sql = sqlhelper.sql_url(options.cfg.current_connection.name,
-                                self.db_name)
+
+        engine = options.cfg.current_connection.get_engine()
         if self._uniques:
             S = "SELECT DISTINCT {} FROM {}".format(self.column, self.table)
-            self.df = pd.read_sql(S, sqlalchemy.create_engine(sql))
+            self.df = pd.read_sql(S, engine)
             self.df = self.df.sort_values(self.column, ascending=True)
         else:
             S = "SELECT {} FROM {}".format(self.column, self.table)
-            self.df = pd.read_sql(S, sqlalchemy.create_engine(sql))
+            self.df = pd.read_sql(S, engine)
+        engine.dispose()
+
         items = (self.df[self.column].apply(utf8)
                                      .apply(QtWidgets.QTableWidgetItem))
         self.ui.tableWidget.setRowCount(len(items))
