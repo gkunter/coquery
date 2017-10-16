@@ -48,7 +48,7 @@ class Session(object):
         options.cfg.query_label = ""
 
         available_resources = options.cfg.current_connection.resources()
-        current_connection = options.cfg.current_connection.name
+        current_connection = options.cfg.current_connection
         # load current corpus module depending on the value of
         # options.cfg.corpus, i.e. the corpus specified as an argumment:
         if len(available_resources) and options.cfg.corpus:
@@ -70,14 +70,14 @@ class Session(object):
                 self.Resource.db_name)
 
             logging.info("Corpus '{}' on connection '{}'".format(
-                self.Resource.name, current_connection))
+                self.Resource.name, current_connection.name))
 
         else:
             self.Corpus = None
             self.Resource = None
             self.db_engine = None
             warnings.warn("No corpus available on connection '{}'".format(
-                current_connection))
+                current_connection.name))
 
         self.query_type = queries.get_query_type(options.cfg.MODE)
 
