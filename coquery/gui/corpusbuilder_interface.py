@@ -21,7 +21,6 @@ import sys
 import zipfile
 
 from coquery import options
-from coquery import sqlhelper
 from coquery import NAME
 from coquery.defines import (msg_install_abort,
                              msg_corpus_path_not_valid)
@@ -693,8 +692,7 @@ class BuilderGui(InstallerGui):
                 button.setEnabled(False)
 
         def validate_db_does_not_exist(button):
-            db_exists = sqlhelper.has_database(
-                options.cfg.current_connection.name,
+            db_exists = options.cfg.current_connection.has_database(
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if db_exists:
                 self.ui.corpus_name.setStyleSheet(STYLE_WARN)
@@ -704,8 +702,7 @@ class BuilderGui(InstallerGui):
                 button.setEnabled(False)
 
         def validate_db_does_exist(button):
-            db_exists = sqlhelper.has_database(
-                options.cfg.current_connection.name,
+            db_exists = options.cfg.current_connection.has_database(
                 "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
             if not db_exists:
                 self.ui.corpus_name.setStyleSheet(STYLE_WARN)
