@@ -23,7 +23,6 @@ import re
 import warnings
 
 from coquery import managers
-from coquery import sqlhelper
 from coquery import NAME, __version__
 from coquery.general import memory_dump
 from coquery import options
@@ -2885,8 +2884,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             return False
         else:
             try:
-                state, _ = sqlhelper.test_configuration(
-                    options.cfg.current_connection.name)
+                state, _ = options.cfg.current_connection.test()
             except ImportError:
                 state = False
 
