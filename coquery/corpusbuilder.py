@@ -1588,11 +1588,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
         necessary.
         """
         con = options.cfg.current_connection
-        configuration = con.name
-
-        if sqlhelper.has_database(configuration, self.arguments.db_name):
+        if con.has_database(self.arguments.db_name):
             con.remove_database(self.arguments.db_name)
-        sqlhelper.create_database(configuration, self.arguments.db_name)
+        con.create_database(self.arguments.db_name)
 
         kwargs = dict(Host=getattr(con, "host", None),
                       Port=getattr(con, "port", None),
