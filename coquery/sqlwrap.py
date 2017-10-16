@@ -11,9 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import os
 import logging
-import warnings
 import codecs
 import sys
 import pandas as pd
@@ -66,53 +64,10 @@ class SqlDB(object):
         print(test, version)
         self.connection = None
 
-    def create_database(self, db_name):
-        engine = options.cfg.current_connection.get_engine()
-        with engine.connect() as connection:
-            if self.db_type == SQL_MYSQL:
-                S = """
-                    CREATE DATABASE {}
-                    CHARACTER SET utf8mb4
-                    COLLATE utf8mb4_unicode_ci
-                    """.format(db_name)
-                connection.execute(S)
-            self.use_database(db_name)
-        engine.dispose()
-
     def use_database(self, db_name):
         self.db_name = db_name
         self.sql_url = options.cfg.current_connection.url(db_name)
         self.engine = options.cfg.current_connection.get_engine(db_name)
-
-    def has_database(self, db_name):
-        """
-        Check if the database 'db_name' exists on the current connection.
-
-        Parameters
-        ----------
-        db_name : str
-            The name of the database
-
-        Returns
-        -------
-        b : bool
-            True if the database exists, or False otherwise.
-        """
-        if self.db_type == SQL_MYSQL:
-            with self.engine.connect() as connection:
-                results = connection.execute("SHOW DATABASES")
-            try:
-                for x in results:
-                    if x[0] == db_name.split()[0]:
-                        return db_name
-            except pymysql.ProgrammingError as ex:
-                warnings.warn(ex)
-                raise ex
-            return False
-        elif self.db_type == SQL_SQLITE:
-            path = os.path.join(options.cfg.current_connection.path,
-                                db_name)
-            return os.path.exists(path)
 
     def has_table(self, table_name):
         """
@@ -638,14 +593,3 @@ class SqlDB(object):
             self.explain(S)
         logging.debug(S)
         self.connection.execute(S)
-
-    def get_database_size(self, database_name):
-        """ Returns the size of the database in bytes."""
-        if self.db_type == SQL_MYSQL:
-            sql_str = """
-                SELECT data_length+index_length
-                FROM information_schema.tables
-                WHERE table_schema = '{}'""".format(database_name)
-            return self.connection.execute(sql_str).fetchone()[0]
-        elif self.db_type == SQL_SQLITE:
-            return os.path.getsize(self.sqlite_path(database_name))

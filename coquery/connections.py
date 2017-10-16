@@ -192,10 +192,49 @@ class MySQLConnection(Connection):
                 pass
         return res
 
+    def create_database(self, db_name):
+        engine = self.get_engine(db_name)
+        with engine.connect() as connection:
+            S = """
+                CREATE DATABASE {}
+                CHARACTER SET utf8mb4
+                COLLATE utf8mb4_unicode_ci
+                """.format(db_name.split()[0])
+            connection.execute(S)
+        engine.dispose()
+
     def remove_database(self, db_name):
         sql_string = "DROP DATABASE {}".format(db_name)
         with self.get_engine().connect() as connection:
             connection.execute(sql_string)
+
+    def has_database(self, db_name):
+        engine = self.get_engine(db_name)
+        S = """
+            SELECT SCHEMA_NAME
+            FROM INFORMATION_SCHEMA.SCHEMATA
+            WHERE SCHEMA_NAME = '{}'
+            """.format(db_name)
+        try:
+            engine.execute(S)
+            engine.dispose()
+        except sqlalchemy.exc.InternalError as e:
+            return False
+        except Exception as e:
+            raise e
+        else:
+            return True
+
+    def get_database_size(self, db_name):
+        engine = self.get_engine(db_name)
+        S = """
+            SELECT data_length+index_length
+            FROM information_schema.tables
+            WHERE table_schema = '{}'""".format(db_name)
+        with engine.connect() as connection:
+            size = connection.execute(S).fetchone()[0]
+        engine.dispose()
+        return size
 
 
 class SQLiteConnection(Connection):
@@ -235,9 +274,19 @@ class SQLiteConnection(Connection):
         else:
             return (False, IOError)
 
+    def create_database(self, db_name):
+        pass
+
     def remove_database(self, db_name):
         os.remove(os.path.join(self.path, "{}.db".format(db_name)))
 
+    def has_database(self, db_name):
+        path = os.path.join(self.path, "{}.db".format(db_name))
+        return os.path.exists(path)
+
+    def get_database_size(self, db_name):
+        path = os.path.join(self.path, "{}.db".format(db_name))
+        return os.path.getsize(path)
 
 def get_connection(name, dbtype,
                    host=None, port=None, user=None, password=None,
