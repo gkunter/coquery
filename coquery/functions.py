@@ -18,13 +18,12 @@ import re
 import sys
 import pandas as pd
 import numpy as np
-import sqlalchemy
 import operator
 import logging
 import numbers
 from scipy import stats
 
-from . import options, sqlhelper, NAME
+from . import options
 from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
 from .general import CoqObject, collapse_words
 from .gui.pyqt_compat import get_toplevel_window
@@ -901,10 +900,7 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         session = get_toplevel_window().Session
 
         self._res = self.get_reference()
-
-        url = sqlhelper.sql_url(options.cfg.current_connection.name,
-                                self._res.db_name)
-        engine = sqlalchemy.create_engine(url)
+        engine = options.cfg.current_connection.get_engine(self._res.db_name)
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         # concatenate the word columns, separated by space
@@ -1007,7 +1003,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
 
         _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq, "size": size})
         if len(word_columns) > 1:
-            logger.warning("LL calculation for more than one column is experimental!")
+            logging.warning("LL calculation for more than one column is experimental!")
         val = _df.apply(lambda x: self._func(x[["freq1", "freq2"]],
                                              size=x["size"],
                                              ext_size=ext_size,
@@ -1186,11 +1182,9 @@ class ConditionalProbability2(Proportion):
         if resource is None:
             return self.constant(df, None)
 
-        url = sqlhelper.sql_url(options.cfg.current_connection.name,
-                                resource.db_name)
-        engine = sqlalchemy.create_engine(url)
         span = df[self.columns[0]] + " " + df[self.columns[1]]
         left = df[self.columns[0]]
+        engine = options.cfg.current_connection.get_engine(resource.db_name)
         try:
             freq_full = span.apply(
                 lambda x: resource.corpus.get_frequency(x, engine))
@@ -1504,4 +1498,3 @@ class ContextString(ContextColumns):
         #val.index = df.index
         #return val
 
-logger = logging.getLogger(NAME)
