@@ -1587,13 +1587,13 @@ class BaseCorpusBuilder(corpus.SQLResource):
         Create a connection to the server, and creates the database if
         necessary.
         """
-        configuration = options.cfg.current_connection.name
+        con = options.cfg.current_connection
+        configuration = con.name
 
         if sqlhelper.has_database(configuration, self.arguments.db_name):
-            sqlhelper.drop_database(configuration, self.arguments.db_name)
+            con.remove_database(self.arguments.db_name)
         sqlhelper.create_database(configuration, self.arguments.db_name)
 
-        con = options.cfg.current_connection
         kwargs = dict(Host=getattr(con, "host", None),
                       Port=getattr(con, "port", None),
                       User=getattr(con, "user", None),
@@ -1719,8 +1719,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
         - the corpus installer in case of adhoc corpora
         """
         try:
-            sqlhelper.drop_database(options.cfg.current_connection.name,
-                                    self.arguments.db_name)
+            options.cfg.current_connection.remove_database(
+                self.arguments.db_name)
         except:
             pass
         path = self.get_module_path(self.arguments.name)
