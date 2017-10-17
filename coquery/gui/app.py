@@ -33,6 +33,7 @@ from coquery.defines import (
     QUERY_ITEM_GLOSS, QUERY_ITEM_LEMMA, QUERY_ITEM_POS, QUERY_ITEM_WORD,
     QUERY_ITEM_TRANSCRIPT,
     QUERY_MODE_CONTINGENCY, QUERY_MODE_TOKENS, QUERY_MODE_COLLOCATIONS,
+    QUERY_MODE_FREQUENCIES, QUERY_MODE_TYPES,
     CONTEXT_COLUMNS, CONTEXT_KWIC, CONTEXT_NONE, CONTEXT_SENTENCE,
     CONTEXT_STRING,
     TOOLBOX_AGGREGATE, TOOLBOX_CONTEXT, TOOLBOX_GROUPING, TOOLBOX_ORDER,
@@ -508,11 +509,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.menuSettings.addAction(self.ui.action_limit_query)
 
         _widget = QtWidgets.QWidget()
+
         _hlayout = QtWidgets.QHBoxLayout(_widget)
         _hlayout.setContentsMargins(0, 0, 0, 0)
         _hlayout.setSpacing(0)
 
-        self.ui.label_limit_matches = classes.CoqClickableLabel("Matches per &query")
+        self.ui.label_limit_matches = classes.CoqClickableLabel(
+            "Matches per &query")
         self.ui.spin_query_limit = QtWidgets.QSpinBox()
         self.ui.spin_query_limit.setMinimum(1)
         self.ui.spin_query_limit.setMaximum(9999)
@@ -520,12 +523,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.label_limit_matches.setBuddy(self.ui.spin_query_limit)
         self.ui.spin_query_limit.valueChanged.connect(_set_number_of_tokens)
 
-        _hlayout.addItem(QtWidgets.QSpacerItem(QtWidgets.QCheckBox().sizeHint().width() * 2,
-                                           0, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
+        width = QtWidgets.QCheckBox().sizeHint().width() * 2
+
+        _hlayout.addItem(
+            QtWidgets.QSpacerItem(width, 0,
+                                  QtWidgets.QSizePolicy.Fixed,
+                                  QtWidgets.QSizePolicy.Fixed))
         _hlayout.addWidget(self.ui.label_limit_matches)
         _hlayout.addWidget(self.ui.spin_query_limit)
 
-        self.ui.action_number_of_matches = QtWidgets.QWidgetAction(self)
         self.ui.action_number_of_matches = QtWidgets.QWidgetAction(self)
         self.ui.action_number_of_matches.setDefaultWidget(_widget)
 
@@ -610,7 +616,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                        self.ui.tree_groups.groupAdded,
                        self.ui.tree_groups.groupRemoved,
                        self.ui.tree_groups.groupModified,
-                       self.ui.list_column_order.listOrderChanged):
+                       self.ui.list_column_order.listOrderChanged,
+                       self.ui.spin_sample_size.valueChanged,
+                       self.ui.check_sample_matches.toggled):
             signal.connect(self.enable_apply_button)
 
         self.ui.button_stopwords.clicked.connect(self.manage_stopwords)
@@ -759,20 +767,28 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.column_tree.hide()
 
     def check_transformation(self):
+        selected = None
         for i in range(self.ui.layout_aggregate.count()):
             widget = self.ui.layout_aggregate.itemAt(i).widget()
-            try:
-                if widget.isChecked():
-                    is_collocations = (utf8(widget.text()) ==
-                                       QUERY_MODE_COLLOCATIONS)
-                    self.ui.spin_collo_left.setEnabled(is_collocations)
-                    self.ui.spin_collo_right.setEnabled(is_collocations)
-                    break
-            except AttributeError:
-                pass
+            if hasattr(widget, "isChecked") and widget.isChecked():
+                selected = utf8(widget.text())
+                break
+        is_collocations = selected == QUERY_MODE_COLLOCATIONS
+        self.ui.spin_collo_left.setEnabled(is_collocations)
+        self.ui.spin_collo_right.setEnabled(is_collocations)
+
+        allow_sampling = selected in set([QUERY_MODE_TOKENS,
+                                          QUERY_MODE_TYPES,
+                                          QUERY_MODE_FREQUENCIES])
+        self.ui.check_sample_matches.setEnabled(allow_sampling)
+        self.ui.spin_sample_size.setEnabled(allow_sampling)
+
 
     def toggle_limit_matches(self):
         options.cfg.limit_matches = not options.cfg.limit_matches
+
+    def toggle_sample(self):
+        options.cfg.sample_matches = not options.cfg.sample_matches
 
     def toggle_data_management(self):
         options.cfg.show_data_management = not options.cfg.show_data_management
@@ -986,7 +1002,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 _set_icon(2, active_icon)
 
         elif row == TOOLBOX_SUMMARY:
-            active = (self.Session.summary_group.get_functions())
+            active = (self.Session.summary_group.get_functions() or
+                      (self.ui.check_sample_matches.isEnabled() and
+                       self.ui.check_sample_matches.isChecked() and
+                       int(self.ui.spin_sample_size.value()) > 0))
             filtered = (options.cfg.filter_list)
             _set_icon(1, filter_icon if filtered else None)
             _set_icon(2, active_icon if active else None)
@@ -3023,17 +3042,24 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             # either get the query input string or the query file name:
             if self.ui.radio_query_string.isChecked():
-                if type(self.ui.edit_query_string) == QtWidgets.QLineEdit:
-                    options.cfg.query_list = [utf8(self.ui.edit_query_string.text())]
-                else:
-                    options.cfg.query_list = [utf8(self.ui.edit_query_string.toPlainText())]
+                content = utf8(self.ui.edit_query_string.toPlainText())
+                options.cfg.query_list = [content]
             options.cfg.input_path = utf8(self.ui.edit_file_name.text())
-            options.cfg.select_radio_query_file = bool(self.ui.radio_query_file.isChecked())
+            query_file = bool(self.ui.radio_query_file.isChecked())
+            options.cfg.select_radio_query_file = query_file
 
             options.cfg.external_links = self.get_external_links()
             # FIXME: eventually, selected_features should be a session variable
             options.cfg.selected_features = self.column_tree.selected()
             self.get_context_values()
+
+
+            sample_matches = (self.ui.check_sample_matches.isEnabled() and
+                              self.ui.check_sample_matches.isChecked() and
+                              int(self.ui.spin_sample_size.value()) > 0)
+            sample_size = int(self.ui.spin_sample_size.value())
+            options.cfg.sample_matches = sample_matches
+            options.cfg.sample_size = sample_size
 
     def get_external_links(self):
         """
@@ -3126,6 +3152,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.ui.radio_query_string.setChecked(not options.cfg.select_radio_query_file)
         self.ui.radio_query_file.setChecked(options.cfg.select_radio_query_file)
+
+        self.ui.spin_sample_size.setValue(options.cfg.sample_size)
+        self.ui.check_sample_matches.setChecked(options.cfg.sample_matches)
 
         for rc_feature in options.cfg.selected_features:
             self.ui.options_tree.setCheckState(rc_feature, QtCore.Qt.Checked)

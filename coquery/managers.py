@@ -262,7 +262,8 @@ class Manager(CoqObject):
             else:
                 context_key = (options.cfg.context_mode,
                                options.cfg.context_left,
-                               options.cfg.context_right)
+                               options.cfg.context_right,
+                               options.cfg.context_restrict)
             if context_key in self._context_cache:
                 # use the cached context columns if available:
                 df = pd.concat([df,
@@ -724,6 +725,10 @@ class Manager(CoqObject):
                            session.summary_group.get_functions() +
                            self.manager_functions.get_list() +
                            functions)
+
+        if options.cfg.sample_matches:
+            df = df.sample(min(len(df), options.cfg.sample_size))
+            df = df.reset_index(drop=True)
 
         return df
 
