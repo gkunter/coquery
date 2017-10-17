@@ -125,7 +125,6 @@ def check_orphans(path):
     Get a list of orphanaged databases in the database directory for the
     current connetion.
     """
-
     l = []
     if options.get_configuration_type() == SQL_SQLITE:
         databases = glob.glob(os.path.join(path, "*.db"))
@@ -161,7 +160,7 @@ def check_orphans(path):
                 db_size = 0
 
             if (db_name not in databases or db_size == 0):
-                timestamp = os.path.getmtime(x)
+                timestamp = os.path.getmtime(db_name)
                 date = (datetime.fromtimestamp(timestamp).strftime(
                     '%Y-%m-%d, %H:%M:%S'))
                 size = os.path.getsize(module_path)
