@@ -326,7 +326,7 @@ class Options(object):
                 [x for x in sys.argv[1:]])
 
         self.args.filter_list = []
-        self.args.selected_features = set()
+        self.args.selected_features = set("word_label")
         self.args.external_links = {}
 
         # these attributes are used only in the GUI:
