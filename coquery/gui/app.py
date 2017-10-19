@@ -742,6 +742,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_scatter_plot.setEnabled(enable)
         self.ui.action_stacked_area_plot.setEnabled(enable)
         self.ui.action_stacked_bars.setEnabled(enable)
+        self.ui.action_visualization_designer.setEnabled(enable)
 
         self.ui.action_tree_map.setVisible(False)
         self.ui.action_word_cloud.setVisible(False)
