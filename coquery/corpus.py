@@ -1789,11 +1789,8 @@ class SQLResource(BaseResource):
         results = db_connection.execute(S)
         word_lists = [[], [], []]
 
-        if options.cfg.context_mode == CONTEXT_STRING:
-            word_lists[1] = [x[0] for x in results]
-        else:
-            for x in results:
-                word_lists[x[-1]].append(x[0])
+        for x in results:
+            word_lists[x[-1]].append(x[0])
 
         return ([''] * (left_span - len(word_lists[0])) + word_lists[0],
                 word_lists[1],
@@ -1816,7 +1813,8 @@ class SQLResource(BaseResource):
         joins = "\n".join([x for x in
                            cls.get_feature_joins(0, [word_feature])[0]])
 
-        columns = ["{word_table}.{word} AS Context".format(
+        columns = ["{word_table}.{word}{n} AS Context".format(
+                        n="1" if hasattr(cls, "corpus_word") else "",
                         word_table=word_table,
                         word=getattr(cls, word_feature)),
                    "{position}"]
