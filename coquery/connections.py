@@ -77,7 +77,7 @@ class Connection(CoqObject):
     def remove_resource(self, name, flags=(MODULE | DATABASE | INSTALLER)):
         resource = self.resources()[name][0]
         db_name = resource.db_name
-        
+
         # remove database:
         if flags & Connection.DATABASE:
             self.remove_database(db_name)
@@ -176,38 +176,38 @@ class MySQLConnection(Connection):
         return template.format(**kwargs)
 
     def test(self):
+        engine = self.get_engine()
         try:
-            engine = sqlalchemy.create_engine(self.url())
             with engine.connect() as connection:
                 result = connection.execute("SELECT VERSION()")
         except sqlalchemy.exc.SQLAlchemyError as e:
             res = (False, e)
         except Exception as e:
+            engine.dispose()
             raise e
         else:
             res = (True, result.fetchall()[0][0])
             result.close()
-            try:
-                engine.dispose()
-            except UnboundLocalError:
-                pass
+            engine.dispose()
         return res
 
     def create_database(self, db_name):
         engine = self.get_engine(db_name)
+        S = """
+            CREATE DATABASE {}
+            CHARACTER SET utf8mb4
+            COLLATE utf8mb4_unicode_ci
+            """.format(db_name.split()[0])
         with engine.connect() as connection:
-            S = """
-                CREATE DATABASE {}
-                CHARACTER SET utf8mb4
-                COLLATE utf8mb4_unicode_ci
-                """.format(db_name.split()[0])
             connection.execute(S)
         engine.dispose()
 
     def remove_database(self, db_name):
-        sql_string = "DROP DATABASE {}".format(db_name)
-        with self.get_engine().connect() as connection:
+        engine = self.get_engine(db_name)
+        S = "DROP DATABASE {}".format(db_name)
+        with engine.connect() as connection:
             connection.execute(sql_string)
+        engine.dispose()
 
     def has_database(self, db_name):
         engine = self.get_engine(db_name)
@@ -216,15 +216,17 @@ class MySQLConnection(Connection):
             FROM INFORMATION_SCHEMA.SCHEMATA
             WHERE SCHEMA_NAME = '{}'
             """.format(db_name)
-        try:
-            engine.execute(S)
-            engine.dispose()
-        except sqlalchemy.exc.InternalError as e:
-            return False
-        except Exception as e:
-            raise e
-        else:
-            return True
+        with engine.connect() as connection:
+            try:
+                connection.execute(S)
+            except sqlalchemy.exc.InternalError as e:
+                engine.dispose()
+                return False
+            except Exception as e:
+                engine.dispose()
+                raise e
+        engine.dispose()
+        return True
 
     def get_database_size(self, db_name):
         engine = self.get_engine(db_name)
