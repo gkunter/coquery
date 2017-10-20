@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -275,6 +275,20 @@ class Ui_MainWindow(object):
         self.button_filters = QtWidgets.QPushButton(self.tool_widget_page_summary)
         self.button_filters.setObjectName("button_filters")
         self.verticalLayout_13.addWidget(self.button_filters)
+        self.gridLayout_2 = QtWidgets.QGridLayout()
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.check_sample_matches = QtWidgets.QCheckBox(self.tool_widget_page_summary)
+        self.check_sample_matches.setText("")
+        self.check_sample_matches.setObjectName("check_sample_matches")
+        self.gridLayout_2.addWidget(self.check_sample_matches, 0, 0, 1, 1)
+        self.label = QtWidgets.QLabel(self.tool_widget_page_summary)
+        self.label.setObjectName("label")
+        self.gridLayout_2.addWidget(self.label, 0, 1, 1, 1)
+        self.spin_sample_size = QtWidgets.QSpinBox(self.tool_widget_page_summary)
+        self.spin_sample_size.setObjectName("spin_sample_size")
+        self.gridLayout_2.addWidget(self.spin_sample_size, 1, 1, 1, 1)
+        self.gridLayout_2.setColumnStretch(1, 1)
+        self.verticalLayout_13.addLayout(self.gridLayout_2)
         spacerItem3 = QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_13.addItem(spacerItem3)
         self.tool_widget.addWidget(self.tool_widget_page_summary)
@@ -450,7 +464,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 753, 31))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 753, 27))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -754,10 +768,11 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuAnalyse.menuAction())
         self.menubar.addAction(self.menuSettings.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
+        self.label.setBuddy(self.check_sample_matches)
         self.label_2.setBuddy(self.combo_corpus)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(0)
+        self.tool_widget.setCurrentIndex(5)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.combo_corpus, self.radio_query_string)
         MainWindow.setTabOrder(self.radio_query_string, self.edit_query_string)
@@ -818,6 +833,8 @@ class Ui_MainWindow(object):
         self.button_stopwords.setText(_translate("MainWindow", "Change stop &words..."))
         self.button_add_summary_function.setText(_translate("MainWindow", "Summary functions{}..."))
         self.button_filters.setText(_translate("MainWindow", "Filter results{}..."))
+        self.label.setText(_translate("MainWindow", "Show &random sample:"))
+        self.spin_sample_size.setSuffix(_translate("MainWindow", " match(es)"))
         self.button_apply_management.setText(_translate("MainWindow", "&Apply"))
         self.button_apply_management.setShortcut(_translate("MainWindow", "F5"))
         self.button_cancel_management.setText(_translate("MainWindow", "Cancel"))
@@ -830,7 +847,7 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+"</style></head><body style=\" font-family:\'Oxygen-Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menuHelp.setTitle(_translate("MainWindow", "&Help"))

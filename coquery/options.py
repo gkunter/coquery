@@ -288,8 +288,10 @@ class Options(object):
         self.args.reference_corpus = {}
         self.args.main_window = None
         self.args.first_run = False
-        self.args.number_of_tokens = 50
         self.args.limit_matches = False
+        self.args.number_of_tokens = 50
+        self.args.sample_matches = False
+        self.args.sample_size = 50
         self.args.last_number_of_tokens = 50
         self.args.output_separator = ","
         self.args.corpus = None
@@ -321,7 +323,7 @@ class Options(object):
                 [x for x in sys.argv[1:]])
 
         self.args.filter_list = []
-        self.args.selected_features = set()
+        self.args.selected_features = set("word_label")
         self.args.external_links = {}
 
         # these attributes are used only in the GUI:
@@ -705,6 +707,8 @@ class Options(object):
             self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
             self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
             self.args.limit_matches = config_file.bool("gui", "limit_matches", fallback=False)
+            self.args.sample_size = config_file.int("gui", "sample_size", fallback=0)
+            self.args.sample_matches = config_file.bool("gui", "sample_matches", fallback=False)
 
             s = config_file.str("gui", "show_log_messages", d=defaults)
             try:
@@ -1101,9 +1105,17 @@ def save_configuration():
         except AttributeError:
             config.set("gui", "number_of_tokens", 0)
         try:
+            config.set("gui", "sample_size", cfg.sample_size)
+        except AttributeError:
+            config.set("gui", "sample_size", 0)
+        try:
             config.set("gui", "limit_matches", cfg.limit_matches)
         except AttributeError:
             config.set("gui", "limit_matches", False)
+        try:
+            config.set("gui", "sample_matches", cfg.sample_matches)
+        except AttributeError:
+            config.set("gui", "sample_matches", False)
 
         try:
             config.set("gui", "save_query_string", cfg.save_query_string)

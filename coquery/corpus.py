@@ -31,8 +31,7 @@ from .defines import (
     QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
     SQL_MYSQL, SQL_SQLITE,
     CONTEXT_STRING,
-    PREFERRED_ORDER,
-    DEFAULT_MISSING_VALUE)
+    PREFERRED_ORDER)
 
 from .general import collapse_words, CoqObject, html_escape
 from . import tokens, NAME
@@ -588,6 +587,12 @@ class SQLResource(BaseResource):
         self._word_cache = {}
         self.corpus = corpus
         self.attach_list = []
+        self._context_string_template = self.get_context_string_template()
+        self._sentence_feature = (
+                getattr(self, "corpus_sentence", None) or
+                getattr(self, "corpus_sentence_id", None) or
+                getattr(self, "corpus_utterance", None) or
+                getattr(self, "corpus_utterance_id", None))
 
     @classmethod
     def get_origin_rc(cls):
@@ -1734,114 +1739,6 @@ class SQLResource(BaseResource):
         else:
             return False
 
-    def get_context(self, token_id, origin_id, number_of_tokens,
-                    db_connection, sentence_id=None, left=None, right=None):
-        def get_orth(word_id):
-            """
-            Return the orthographic forms of the word_ids.
-
-            If word_id is not a list, it is converted into one.
-
-            Parameters
-            ----------
-            word_id : list
-                A list of values designating the words_ids that are to
-                be looked up.
-
-            Returns
-            -------
-            L : list
-                A list of strings, giving the orthographic representation of the
-                words.
-            """
-            L = []
-            for i in word_id:
-                if i not in self._word_cache:
-                    if not self._get_orth_str:
-                        if hasattr(self, "surface_feature"):
-                            word_feature = self.surface_feature
-                        else:
-                            word_feature = getattr(self, QUERY_ITEM_WORD)
-                        _, table, feature = self.split_resource_feature(word_feature)
-
-                        self.joined_tables = []
-                        self.table_list = [self.word_table]
-                        self.add_table_path("word_id", word_feature)
-
-                        self._get_orth_str = "SELECT {0} FROM {1} WHERE {2}.{3} = {{}} LIMIT 1".format(
-                            getattr(self, word_feature),
-                            " ".join(self.table_list),
-                            self.word_table,
-                            self.word_id)
-                    try:
-                        self._word_cache[i], = db_connection.execute(self._get_orth_str.format(i)).fetchone()
-                    except TypeError as e:
-                        print(e)
-                        print(i)
-                        print(self._get_orth_str.format(i))
-                        self._word_cache[i] = DEFAULT_MISSING_VALUE
-                L.append(self._word_cache[i])
-            return L
-        if left is not None:
-            left_span = left
-        else:
-            left_span = options.cfg.context_left
-        if right is not None:
-            right_span = right
-        else:
-            right_span = options.cfg.context_right
-
-        try:
-            token_id = int(token_id)
-        except ValueError:
-            return ([None] * int(left_span),
-                    [None] * int(number_of_tokens),
-                    [None] * int(right_span))
-
-        if left_span > token_id:
-            start = 1
-        else:
-            start = token_id - left_span
-
-        # Get words in left context:
-        S = self.corpus.sql_string_get_wordid_in_range(
-                start, token_id - 1, origin_id, sentence_id)
-        results = db_connection.execute(S)
-        if not hasattr(self, "corpus_word_id"):
-            left_context_words = [x for (x, ) in results]
-        else:
-            left_context_words = get_orth([x for (x, ) in results])
-        left_context_words = [''] * (left_span - len(left_context_words)) + left_context_words
-
-        if options.cfg.context_mode == CONTEXT_STRING:
-            # Get words matching the query:
-            S = self.corpus.sql_string_get_wordid_in_range(
-                    token_id, token_id + number_of_tokens - 1, origin_id,
-                    sentence_id)
-            results = db_connection.execute(S)
-            if not hasattr(self, "corpus_word_id"):
-                string_context_words = [x for (x, ) in results if x]
-            else:
-                string_context_words = get_orth([x for (x, ) in results if x])
-        else:
-            string_context_words = []
-
-        # Get words in right context:
-        S = self.corpus.sql_string_get_wordid_in_range(
-                token_id + number_of_tokens,
-                token_id + number_of_tokens + right_span - 1,
-                origin_id, sentence_id)
-        results = db_connection.execute(S)
-        if not hasattr(self, "corpus_word_id"):
-            right_context_words = [x for (x, ) in results]
-        else:
-            right_context_words = get_orth([x for (x, ) in results])
-        right_context_words = right_context_words + [''] * (right_span - len(right_context_words))
-
-        return (left_context_words,
-                string_context_words,
-                right_context_words)
-
     def get_sentence_ids(self, id_list):
         """
         Return a list containing the sentence IDs that belong to the list of
@@ -1873,6 +1770,87 @@ class SQLResource(BaseResource):
         engine.dispose()
 
         return df
+
+    def get_context(self, token_id, origin_id, number_of_tokens,
+                    db_connection, sentence_id=None, left=None, right=None):
+
+        left_span = left or options.cfg.context_left
+        right_span = right or options.cfg.context_right
+
+        S = self.get_context_string(token_id, number_of_tokens,
+                                    left_span, right_span,
+                                    origin_id, sentence_id)
+        results = db_connection.execute(S)
+        word_lists = [[], [], []]
+
+        for x in results:
+            word_lists[x[-1]].append(x[0])
+
+        return ([''] * (left_span - len(word_lists[0])) + word_lists[0],
+                word_lists[1],
+                word_lists[2] + [''] * (right_span - len(word_lists[2])))
+
+    @classmethod
+    def get_context_string_template(cls):
+        template = """
+        SELECT     {columns}
+        FROM       {corpus} AS COQ_CORPUS_1
+        {joins}
+        WHERE      {{where}}
+        LIMIT      {{length}}
+        """
+
+        word_feature = getattr(cls, QUERY_ITEM_WORD)
+        _, w_tab, _ = cls.split_resource_feature(word_feature)
+        word_table = "COQ_{}_1".format(w_tab.upper())
+
+        joins = "\n".join([x for x in
+                           cls.get_feature_joins(0, [word_feature])[0]])
+
+        columns = ["{word_table}.{word}{n} AS Context".format(
+                        n="1" if hasattr(cls, "corpus_word") else "",
+                        word_table=word_table,
+                        word=getattr(cls, word_feature)),
+                   "{position}"]
+
+        return template.format(
+            columns=", ".join(columns),
+            corpus=cls.get_subselect_corpus(1, 1),
+            joins=joins)
+
+    def get_context_string(self,
+                           token_id, width,
+                           left, right,
+                           origin_id, sentence_id=None):
+
+        start = max(0, token_id - left)
+        end = token_id + width + right - 1
+
+        S = """
+            (COQ_CORPUS_1.{corpus_token}1 BETWEEN {start} AND {end}) AND
+            (COQ_CORPUS_1.{corpus_origin}1 = {origin_id})
+            """.format(corpus_token=self.corpus_id,
+                       start=start, end=end,
+                       corpus_origin=getattr(self, self.get_origin_rc()),
+                       origin_id=origin_id)
+
+        if sentence_id and self._sentence_feature:
+            S = "{S} AND (COQ_CORPUS_1.{sentence}1 = {sentence_id})".format(
+                S=S,
+                sentence=self._sentence_feature, sentence_id=sentence_id)
+
+        position = """
+            (CASE
+                WHEN ID1 < {token_id} THEN 0
+                WHEN ID1 >= {token_id} + {width} THEN 2
+                ELSE 1
+            END) AS Position
+            """.format(token_id=token_id, width=width)
+
+        return self._context_string_template.format(
+            where=S,
+            length=end - start + 1,
+            position=position)
 
     def get_origin_id(self, token_id):
         origin_rc = self.get_origin_rc()
@@ -2279,53 +2257,6 @@ class CorpusClass(object):
         self._frequency_cache[key] = freq
         return freq
 
-    def sql_string_get_wordid_in_range(self, start, end, origin_id, sentence_id=None):
-        if hasattr(self.resource, "corpus_word_id"):
-            word_id_column = self.resource.corpus_word_id
-        elif hasattr(self.resource, "corpus_word"):
-            word_id_column = self.resource.corpus_word
-
-        origin_rc = self.resource.get_origin_rc()
-
-        if origin_rc and origin_id:
-            S = """
-                SELECT {corpus_wordid}
-                FROM {corpus}
-                WHERE {token_id} BETWEEN {start} AND {end}
-                      AND {corpus_source} = {this_source}
-                """.format(
-                        corpus_wordid=word_id_column,
-                        corpus=self.resource.corpus_table,
-                        token_id=self.resource.corpus_id,
-                        start=start, end=end,
-                        corpus_source=getattr(self.resource, origin_rc),
-                        this_source=origin_id)
-            if sentence_id:
-                if hasattr(self.resource, "corpus_sentence"):
-                    sentence = self.resource.corpus_sentence
-                elif hasattr(self.resource, "corpus_sentence_id"):
-                    sentence = self.resource.corpus_sentence_id
-
-                S2 = """
-                      {corpus_sentence} = {sentence_id}
-                """.format(corpus_sentence=sentence,
-                           sentence_id=sentence_id)
-                S = " AND ".join([S, S2])
-        else:
-            # if no source id is specified, simply return the tokens in
-            # the corpus that are within the specified range.
-            S = """
-                SELECT {corpus_wordid}
-                FROM {corpus}
-                WHERE {corpus_token} BETWEEN {start} AND {end} {verbose}
-                """.format(
-                    corpus_wordid=word_id_column,
-                    corpus=self.resource.corpus_table,
-                    corpus_token=self.resource.corpus_id,
-                    start=start, end=end,
-                    verbose=" -- sql_string_get_wordid_in_range" if options.cfg.verbose else "")
-        return S
-
     def get_tag_translate(self, s):
         """
         Translates a corpus tag string to a HTML tag string
@@ -2536,8 +2467,7 @@ class CorpusClass(object):
             df = df.sort(columns=headers)
         self._context_cache[(token_id, source_id, token_width)] = (df, tags)
 
-    def get_rendered_context(self, token_id, source_id, token_width,
-                             context_width, widget):
+    def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
         """
         Return a dictionary with the context data.
 
