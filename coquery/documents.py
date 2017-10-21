@@ -14,14 +14,13 @@ from __future__ import unicode_literals
 import logging
 import codecs
 import os.path
-import sys
 import re
 
-from . import options, NAME
-from .defines import *
+from . import options
 from .unicode import utf8
 
 # define file type constants:
+
 
 FT_BINARY = "BINARY"
 FT_PLAIN = "PLAIN"
@@ -29,6 +28,7 @@ FT_HTML = "HTML"
 FT_DOCX = "DOCX"
 FT_ODT = "ODT"
 FT_PDF = "PDF"
+
 
 def detect_file_type(file_name, sample_length=1024):
     """
@@ -62,18 +62,6 @@ def detect_file_type(file_name, sample_length=1024):
         this module: FT_BINARY, FT_DOCX, FT_HTML, FT_ODT, FT_PDF, FT_PLAIN
     """
 
-    # This code is based on http://stackoverflow.com/a/7392391. The idea is
-    # to map all text characters in a string to None. If anything remains, it
-    # must be a binary string.
-    # Note that the present version accounts for the change of the the
-    # translate() API has changed from Python 2.7 to 3.x:
-    _textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
-    if sys.version_info < (3, 0):
-        _is_binary = lambda x: bool(x.translate(None, _textchars))
-    else:
-        _dict = dict(zip(_textchars, [None] * len(_textchars)))
-        _is_binary = lambda x: bool(x.translate(_dict))
-
     # Define magic numbers and headers:
     _pk_header = b"PK\x03\x04"
     _pdf_header = b"%PDF-"
@@ -85,6 +73,14 @@ def detect_file_type(file_name, sample_length=1024):
     # Read first 1024 bytes from file as a sample:
     with open(file_name, "rb") as fp:
         sample = fp.read(sample_length)
+
+    # The following bytearray is used to detect binary files. The idea is
+    # based on http://stackoverflow.com/a/7392391: all text characters (as
+    # defined by the bytearray) in the sample are mapped to None. If anything
+    # remains, the sample contains non-text characters, and is therefore
+    # treated as a binary string.
+    _textchars = bytearray({0, 7, 8, 9, 10, 12, 13, 27} |
+                           set(range(0x20, 0x100)) - {0x7f})
 
     # try to detect file type based on the content of the sample (and,
     # where appropriate, the file extension):
@@ -103,6 +99,7 @@ def detect_file_type(file_name, sample_length=1024):
 
     return file_type
 
+
 def docx_to_str(path, encoding="utf-8"):
     if options.use_docx:
         from docx import Document
@@ -110,6 +107,7 @@ def docx_to_str(path, encoding="utf-8"):
     document = Document(path)
     txt = [para.text for para in document.paragraphs]
     return "\n".join(txt)
+
 
 def pdf_to_str(path, encoding="utf-8"):
     if options.use_pdfminer:
@@ -133,9 +131,10 @@ def pdf_to_str(path, encoding="utf-8"):
 
     content = StringIO()
     manager = PDFResourceManager()
-    ## not all versions of TextConverter support encodings:
+    # not all versions of TextConverter support encodings:
     try:
-        device = TextConverter(manager, content, codec=encoding, laparams=LAParams())
+        device = TextConverter(manager, content, codec=encoding,
+                               laparams=LAParams())
     except TypeError:
         device = TextConverter(manager, content, laparams=LAParams())
     interpreter = PDFPageInterpreter(manager, device)
@@ -160,6 +159,7 @@ def pdf_to_str(path, encoding="utf-8"):
 
     return txt
 
+
 def html_to_str(path, encoding="utf-8"):
     if options.use_bs4:
         from bs4 import BeautifulSoup
@@ -168,7 +168,8 @@ def html_to_str(path, encoding="utf-8"):
         """
         Filter from http://stackoverflow.com/a/1983219
         """
-        if element.parent.name in ['style', 'script', '[document]', 'head', 'title']:
+        if element.parent.name in ['style', 'script', '[document]',
+                                   'head', 'title']:
             return False
         elif re.match('<!--.*-->', str(element)):
             return False
@@ -179,17 +180,18 @@ def html_to_str(path, encoding="utf-8"):
     texts = soup.findAll(text=True)
     return " ".join(list(filter(visible, texts)))
 
+
 def odt_to_str(path):
     if options.use_odfpy:
         from odf.opendocument import load
         from odf import text
-        from odf.element import Text
 
     document = load(utf8(path))
     txt = []
     for para in document.getElementsByType(text.P):
         txt.append(utf8(para.__str__()))
     return "\n".join(txt)
+
 
 def plain_to_str(path):
     if options.use_chardet:
@@ -198,27 +200,31 @@ def plain_to_str(path):
         detection = chardet.detect(content)
         encoding = detection["encoding"]
         confidence = detection["confidence"]
-        if encoding == None:
-            logger.warn("Cannot detect encoding of file {}. Is this file really a text file in one of the supported formats?".format(
-                path))
+        if encoding is None:
+            s = ("Cannot detect encoding of file {}. Is this file really a "
+                 "text file in one of the supported formats?").format(path)
+            logging.warn(s)
             raw_text = content
         else:
             if confidence < 0.5:
-                logger.warn("Low confidence ({:.2}) about the encoding of file {}. Assuming encoding '{}'.".format(
-                    confidence, path, encoding))
+                s = ("Low confidence ({:.2}) about the encoding of file {}. "
+                     "Assuming encoding '{}'.").format(
+                         confidence, path, encoding)
+                logging.warn(s)
             else:
-                logger.info("Encoding '{}' detected for file {} (confidence: {:.2})".format(
-                    encoding, path, confidence))
+                s = "Encoding '{}' detected for file {} (confidence: {:.2})"
+                s = s.format(encoding, path, confidence)
+                logging.info(s)
             raw_text = content.decode(encoding)
     else:
         try:
             with codecs.open(path, "r", encoding="utf-8") as input_file:
                 raw_text = input_file.read()
-                logger.info("Assuming encoding 'utf-8' for file {}".format(path))
+                s = "Assuming encoding 'utf-8' for file {}".format(path)
+                logging.info(s)
         except UnicodeDecodeError:
             with codecs.open(path, "r", encoding="ISO-8859-1") as input_file:
                 raw_text = input_file.read()
-                logger.info("Assuming encoding 'ISO-8859-1' for file {}".format(path))
+                s = "Assuming encoding 'ISO-8859-1' for file {}".format(path)
+                logging.info(s)
     return utf8(raw_text, errors="replace")
-
-logger = logging.getLogger(NAME)
