@@ -488,21 +488,23 @@ class BaseCorpusBuilder(corpus.SQLResource):
             A list of file names as created by get_file_list()
 
         """
-        found_list = [x for x
-                      in [os.path.basename(y) for y in file_list]
-                      if x in cls.expected_files]
-        found_list_lower = [x.lower() for x in found_list]
 
-        missing_list = []
+        expected_files = cls.expected_files
 
-        for file_name in cls.expected_files:
-            path, basename = os.path.split(file_name)
+        base_case = [os.path.basename(x) for x in expected_files]
+        base_no_case = [os.path.basename(x).lower() for x in expected_files]
+
+        for file_name in file_list:
+            path, base_name = os.path.split(file_name)
             if check_fs_case_sensitive(path):
-                if basename not in found_list:
-                    missing_list.append(basename)
+                if base_name in base_case:
+                    base_case.remove(base_name)
             else:
-                if basename.lower() not in found_list_lower:
-                    missing_list.append(basename)
+                if base_name.lower() in base_no_case:
+                    base_no_case.remove(base_name.lower())
+
+        missing_list = [x for x in expected_files
+                        if x in base_case and x.lower() in base_no_case]
 
         if missing_list:
             sample = "<br/>".join(missing_list[:5])
