@@ -68,6 +68,7 @@ class TextgridResource(SQLResource):
     file_duration = "Duration"
 
     db_name = "Test"
+    query_item_word = "word_label"
 
 
 class TestTextGridModuleMethods(unittest.TestCase):

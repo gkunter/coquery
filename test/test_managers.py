@@ -51,6 +51,7 @@ class TestManager(unittest.TestCase):
         options.cfg.summary_group = [Summary("summary")]
         default = SQLiteConnection(DEFAULT_CONFIGURATION)
         options.cfg.current_connection = default
+        options.cfg.sample_matches = False
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")

@@ -23,6 +23,14 @@ from coquery.managers import Manager, Summary
 from coquery.connections import SQLiteConnection
 
 
+class TestResource(SQLResource):
+    name = "MockResource"
+    corpus_table = "Corpus"
+    word_table = "Lexicon"
+    word_label = "Word"
+    query_item_word = "word_label"
+
+
 class TestSessionInputFile(unittest.TestCase):
     def setUp(self):
         options.cfg = argparse.Namespace()
@@ -214,17 +222,15 @@ class TestSessionMethods(unittest.TestCase):
         options.cfg.summary_group = [Summary("summary")]
         default = SQLiteConnection(DEFAULT_CONFIGURATION)
         options.cfg.current_connection = default
+        options.cfg.sample_matches = False
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self.session = SessionCommandLine()
 
         self.corpus = CorpusClass()
-        self.session.Resource = SQLResource(None, self.corpus)
-        self.session.Resource.name = "MockResource"
-        self.session.Resource.word_table = "Lexicon"
-        self.session.Resource.word_label = "Word"
-        self.session.Resource.query_item_word = "word_label"
+
+        self.session.Resource = TestResource(None, self.corpus)
         self.manager = Manager()
         options.cfg.managers = {}
         options.cfg.managers["MockResource"] = {}

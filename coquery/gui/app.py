@@ -332,6 +332,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.setup_hooks()
         self.setup_menu_actions()
+        self.ui.menuAnalyse.menuAction().setVisible(False)
         self.setup_icons()
 
         self.change_corpus()
@@ -685,25 +686,23 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_share_query.setVisible(False)
 
         # leave if the results table is empty:
-        if (not self.ui.data_preview.isEnabled() or
-                len(self.table_model.content) == 0):
-            # disable the result-related menu entries:
-            self.ui.action_save_selection.setDisabled(True)
-            self.ui.action_save_results.setDisabled(True)
-            self.ui.action_copy_to_clipboard.setDisabled(True)
-            self.ui.action_create_textgrid.setDisabled(True)
-            return
+        empty = (not self.ui.data_preview.isEnabled() or
+                 not len(self.table_model.content))
 
-        # enable "Save results"
-        self.ui.action_save_results.setEnabled(True)
-        self.ui.action_create_textgrid.setEnabled(True)
+        # disable the result-related menu entries:
+        self.ui.action_save_results.setDisabled(empty)
 
-        # enable "Save selection" and "Copy selection to clipboard" if there
-        # is a selection:
-        if (self.ui.data_preview.selectionModel() and
-                self.ui.data_preview.selectionModel().selection()):
-            self.ui.action_save_selection.setEnabled(True)
-            self.ui.action_copy_to_clipboard.setEnabled(True)
+        no_selection = (
+            empty or
+            not len(self.ui.data_preview.selectionModel().selection()))
+
+        self.ui.action_save_selection.setDisabled(no_selection)
+        self.ui.action_copy_to_clipboard.setDisabled(no_selection)
+
+        allow_textgrids = (not empty and
+                           hasattr(self.resource, "corpus_starttime"))
+        self.ui.action_create_textgrid.setEnabled(allow_textgrids)
+
 
     def show_corpus_menu(self):
         enabled = bool(self.ui.combo_corpus.count())
@@ -729,6 +728,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_column_properties.setEnabled(enable)
         self.ui.action_show_hidden.setEnabled(enable)
         self.ui.action_find.setEnabled(enable)
+        self.ui.action_visualization_designer.setEnabled(enable)
 
     def show_visualizations_menu(self):
         enable = hasattr(self, "table_model")
@@ -745,7 +745,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_scatter_plot.setEnabled(enable)
         self.ui.action_stacked_area_plot.setEnabled(enable)
         self.ui.action_stacked_bars.setEnabled(enable)
-        self.ui.action_visualization_designer.setEnabled(enable)
 
         self.ui.action_tree_map.setVisible(False)
         self.ui.action_word_cloud.setVisible(False)
@@ -1410,20 +1409,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_run_query.setDisabled(True)
 
         self.Session.groups = self.ui.tree_groups.groups()
-        manager = self.Session.get_manager()
-        manager.reset_hidden_columns()
-        manager.set_groups(self.Session.groups)
-        for hidden in self.hidden_features:
-            manager.hide_column(hidden)
-
-        columns = [x for _, x in self.ui.list_column_order.items()]
-        manager.set_column_order(columns)
 
         if start:
             self.Session.start_timer()
         self.showMessage("Managing data...")
         self.unfiltered_tokens = len(self.Session.data_table.index)
-        self.aggr_thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
+        self.aggr_thread = classes.CoqThread(
+            lambda: self.Session.aggregate_data(recalculate), parent=self)
         self.aggr_thread.taskException.connect(self.exception_during_query)
         self.aggr_thread.taskFinished.connect(self.finalize_reaggregation)
         self.abortRequested.connect(self.kill_reaggregation)
@@ -1466,9 +1458,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             title = "No word information available for stopwords – Coquery"
 
             QtWidgets.QMessageBox.warning(self,
-                                      msg, title,
+                                      title, msg,
                                       QtWidgets.QMessageBox.Ok,
                                       QtWidgets.QMessageBox.Ok)
+
+        for func_name, exc, exc_info in manager._exceptions:
+            errorbox.ErrorBox.show(exc_info, exc, message=func_name)
 
         options.cfg.app.alert(self, 0)
         self.ui.data_preview.setFocus()

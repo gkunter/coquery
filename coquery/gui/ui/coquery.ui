@@ -926,8 +926,8 @@ p, li { white-space: pre-wrap; }
     </property>
     <addaction name="action_save_results"/>
     <addaction name="action_save_selection"/>
-    <addaction name="action_create_textgrid"/>
     <addaction name="action_copy_to_clipboard"/>
+    <addaction name="action_create_textgrid"/>
     <addaction name="separator"/>
     <addaction name="action_save_query"/>
     <addaction name="action_load_query"/>
@@ -1025,12 +1025,13 @@ p, li { white-space: pre-wrap; }
     <addaction name="menuFrequency_maps"/>
     <addaction name="menuDensity_plots"/>
     <addaction name="separator"/>
-    <addaction name="action_visualization_designer"/>
    </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
      <string>&amp;Results</string>
     </property>
+    <addaction name="action_visualization_designer"/>
+    <addaction name="separator"/>
     <addaction name="action_column_properties"/>
     <addaction name="action_show_hidden"/>
     <addaction name="action_add_column"/>

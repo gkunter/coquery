@@ -119,10 +119,13 @@ class Identifier(Column):
     @property
     def name(self):
         return self._name
+
+    @property
+    def alias(self):
         if self.unique:
-            return self._name
+            return self.name
         else:
-            return "{}_primary".format(self._name)
+            return "{}_primary".format(self.name)
 
 
 class Link(Column):
@@ -173,6 +176,7 @@ class Table(object):
         self._col_names = None
         self._engine = None
         self._max_cache = 0
+        self._line_counter = 0
 
     @property
     def name(self):
@@ -197,7 +201,7 @@ class Table(object):
         """
 
         if self._add_cache:
-            df = pd.DataFrame(self._add_cache)
+            df = pd.DataFrame(self._add_cache).fillna("")
 
             try:
                 df.columns = self._get_field_order()
@@ -220,8 +224,14 @@ class Table(object):
                 except TypeError:
                     pass
 
+            if not self.primary.unique:
+                df[self.primary.alias] = range(self._line_counter,
+                                               self._line_counter + len(df))
+                self._line_counter += len(df)
+
             df.to_sql(self.name, self._DB.engine, if_exists="append",
                       index=False)
+
             self._add_cache = list()
 
     def add(self, values):

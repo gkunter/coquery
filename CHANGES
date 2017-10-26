@@ -19,6 +19,8 @@ Corpora
 * New corpora: Old Bailey Corpus 2.0, Korpus Malti
 
 Visualizations
+* Move Visualization Designer action to Results menu
+* Hide Visualizations menu
 * Bring time series visualization to the visualization designer
 * Add button to refresh the data frame used by the visualization designer
 
@@ -26,10 +28,13 @@ Data management
 * Allow sampling: show only a random number of matches from the results table
 * Data groups now provide an option to drop duplicate rows
 * New dialogs for Column, Group and Summary functions
+* Contexts are now retrieved faster
+
+Functions
+* Errors in functions don't cause the whole function list to fail anymore
 * More flexible handling of function arguments
 * New functions: NOT, IF, IFANY, EMPTY, MISSING, Percentile, Log, Replace
 * Mathematical functions can now be applied column-wise
-* Contexts are now retrieved faster
 
 API changes
 * Disposed of obsolete LexiconClass

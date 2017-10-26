@@ -15,6 +15,7 @@ from __future__ import division
 
 import math
 import hashlib
+import logging
 
 try:
     range = xrange
@@ -157,7 +158,9 @@ class TokenQuery(object):
                             try:
                                 connection.execute(S)
                             except Exception:
-                                pass
+                                error = ("Exception raised when executing "
+                                         "{}").format(S)
+                                logging.warn(error)
 
                     try:
                         results = (connection

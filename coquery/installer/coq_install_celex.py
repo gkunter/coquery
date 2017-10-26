@@ -753,7 +753,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_db_name():
-        return "celex"
+        return "coq_celex"
 
     @staticmethod
     def get_language():
@@ -765,7 +765,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_references():
-        return ["Baayen, R, R Piepenbrock, and L Gulikers. 1995. <i>CELEX2 LDC96L14</i>. Web Download. Philadelphia: Linguistic Data Consortium."]
+        return ["Baayen, R., R. Piepenbrock, and L. Gulikers. 1995. <i>CELEX2 LDC96L14</i>. Web Download. Philadelphia: Linguistic Data Consortium."]
 
     @staticmethod
     def get_license():
