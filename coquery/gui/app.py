@@ -1406,20 +1406,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_run_query.setDisabled(True)
 
         self.Session.groups = self.ui.tree_groups.groups()
-        manager = self.Session.get_manager()
-        manager.reset_hidden_columns()
-        manager.set_groups(self.Session.groups)
-        for hidden in self.hidden_features:
-            manager.hide_column(hidden)
-
-        columns = [x for _, x in self.ui.list_column_order.items()]
-        manager.set_column_order(columns)
 
         if start:
             self.Session.start_timer()
         self.showMessage("Managing data...")
         self.unfiltered_tokens = len(self.Session.data_table.index)
-        self.aggr_thread = classes.CoqThread(lambda: self.Session.aggregate_data(recalculate), parent=self)
+        self.aggr_thread = classes.CoqThread(
+            lambda: self.Session.aggregate_data(recalculate), parent=self)
         self.aggr_thread.taskException.connect(self.exception_during_query)
         self.aggr_thread.taskFinished.connect(self.finalize_reaggregation)
         self.abortRequested.connect(self.kill_reaggregation)
@@ -1462,9 +1455,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             title = "No word information available for stopwords – Coquery"
 
             QtWidgets.QMessageBox.warning(self,
-                                      msg, title,
+                                      title, msg,
                                       QtWidgets.QMessageBox.Ok,
                                       QtWidgets.QMessageBox.Ok)
+
+        for func_name, exc, exc_info in manager._exceptions:
+            errorbox.ErrorBox.show(exc_info, exc, message=func_name)
 
         options.cfg.app.alert(self, 0)
         self.ui.data_preview.setFocus()

@@ -12,12 +12,26 @@ from __future__ import unicode_literals
 
 import unittest
 import warnings
+import pandas as pd
+from argparse import Namespace
+import logging
 
 from coquery.functionlist import FunctionList
-from coquery.functions import Function
+from coquery.functions import Function, StringChain, StringLength
+from coquery import options
 
+
+class BreakFunction(StringLength):
+    _name = "BREAK"
+    def evaluate(*args, **kwargs):
+        raise RuntimeError
 
 class TestFunctionList(unittest.TestCase):
+    def setUp(self):
+        options.cfg = Namespace()
+        options.cfg.drop_on_na = False
+        options.cfg.benchmark = False
+
     def test_get_list(self):
         func1 = Function(columns=["col1", "col2"], value="x")
         func2 = Function(columns=["col3", "col4"], value="y")
@@ -129,8 +143,40 @@ class TestFunctionList(unittest.TestCase):
             [func3.get_id()])
 
     def test_lapply(self):
-        pass
+        df = pd.DataFrame(
+            {"coq_word_label_1": ["abc"] * 3 + ["x"] * 2,
+             "coq_word_label_2": ["a"] * 4 + [None]})
 
+        func1 = StringChain(columns=["coq_word_label_1",
+                                     "coq_word_label_2"])
+        func2 = StringLength(columns=[func1.get_id()])
+        f_list = FunctionList([func1, func2])
+
+        df = f_list.lapply(df)
+        self.assertEqual(list(df[func2.get_id()].values),
+                         [4, 4, 4, 2, 1])
+
+    def test_lapply_exception(self):
+        df = pd.DataFrame(
+            {"coq_word_label_1": ["abc"] * 3 + ["x"] * 2,
+             "coq_word_label_2": ["a"] * 4 + [None]})
+
+        func1 = StringChain(columns=["coq_word_label_1",
+                                     "coq_word_label_2"])
+        breaking = BreakFunction(columns=[func1.get_id()])
+        func3 = StringLength(columns=[func1.get_id()])
+        f_list = FunctionList([func1, breaking, func3])
+
+        logging.disable(logging.ERROR)
+        df = f_list.lapply(df)
+        logging.disable(logging.NOTSET)
+        self.assertTrue(len(f_list.exceptions()) == 1)
+
+        self.assertTrue(func1.get_id() in df.columns)
+        self.assertTrue(breaking.get_id() not in df.columns)
+        self.assertTrue(func3.get_id() in df.columns)
+        self.assertEqual(list(df[func3.get_id()].values),
+                         [4, 4, 4, 2, 1])
 
 def main():
     suite = unittest.TestSuite([
