@@ -160,7 +160,7 @@ def check_orphans(path):
                 db_size = 0
 
             if (db_name not in databases or db_size == 0):
-                timestamp = os.path.getmtime(db_name)
+                timestamp = os.path.getmtime(module_path)
                 date = (datetime.fromtimestamp(timestamp).strftime(
                     '%Y-%m-%d, %H:%M:%S'))
                 size = os.path.getsize(module_path)
