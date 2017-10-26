@@ -711,15 +711,14 @@ class Options(object):
                 self.args.reference_corpus[configuration] = corpus
         # select active SQL configuration, or use Default as fallback
         try:
-            try:
-                self.args.current_server = config_file.str("sql",
-                                                           "active_configuration")
-            except Exception:
-                raise ValueError
-            if self.args.current_server not in self.args.server_configuration:
-                raise ValueError
-        except (NoOptionError, ValueError):
-            self.args.current_server = "Default"
+            configuration = config_file.str("sql", "active_configuration")
+        except (NoOptionError, AttributeError, ValueError):
+            configuration = "Default"
+        else:
+            if configuration not in self.args.server_configuration:
+                configuration = "Default"
+        self.args.current_server = configuration
+
         self.args.current_resources = get_available_resources(self.args.current_server)
 
         # only use the other settings from the configuration file if a
