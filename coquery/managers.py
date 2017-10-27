@@ -75,6 +75,7 @@ class Group(CoqObject):
                 df = df.drop_duplicates(
                     self.columns +
                     [x.get_id() for x in function_list.get_list()])
+            manager._exceptions += function_list.exceptions()
         return df
 
     def get_functions(self):
@@ -91,6 +92,7 @@ class Summary(Group):
         function_list = FunctionList(self.get_functions())
         df = function_list.lapply(
             df, session=session, manager=manager)
+        manager._exceptions += function_list.exceptions()
 
         if self.show_distinct:
             self.total_rows = len(df)
@@ -116,6 +118,7 @@ class Manager(CoqObject):
     def __init__(self):
         super(Manager, self).__init__()
         self._functions = []
+        self._exceptions = []
         self._subst = {}
         self.sorters = []
         self._len_pre_filter = None
@@ -136,6 +139,9 @@ class Manager(CoqObject):
         self._column_order = []
         self._last_query_id = None
         self.reset_context_cache()
+
+    def exceptions(self):
+        return self._exceptions
 
     def reset_context_cache(self):
         self._context_cache = {}
@@ -252,6 +258,7 @@ class Manager(CoqObject):
         # apply mutate functions, excluding context functions:
         mutate_functions = FunctionList(fnc_general)
         df = mutate_functions.lapply(df, session=session, manager=self)
+        self._exceptions += mutate_functions.exceptions()
 
         # only apply context functions during the first stage:
         if stage == "first" and fnc_contexts:
@@ -273,6 +280,7 @@ class Manager(CoqObject):
                 context_functions = FunctionList(fnc_contexts)
                 df = context_functions.lapply(df,
                                               session=session, manager=self)
+                self._exceptions += context_functions.exceptions()
                 context_columns = [x for x in df.columns
                                    if x.startswith(("coq_context"))]
                 # and store context in cache
@@ -302,6 +310,8 @@ class Manager(CoqObject):
             fl = FunctionList(self.stage_two_functions)
         if fl:
             df = fl.lapply(df, session=session, manager=self)
+            self._exceptions += fl.exceptions()
+
         df = df.reset_index(drop=True)
 
         if options.cfg.verbose:
@@ -462,6 +472,7 @@ class Manager(CoqObject):
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
         df = self.manager_functions.lapply(df, session=session, manager=self)
+        self._exceptions += self.manager_functions.exceptions()
         if not self.ignore_user_functions:
             df = session.summary_group.process(
                 df, session=session, manager=self)
@@ -659,6 +670,8 @@ class Manager(CoqObject):
             Discard the columns that are not needed for the current
             transformation.
         """
+        self._exceptions = []
+
         if options.cfg.verbose:
             print("process()")
 

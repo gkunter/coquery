@@ -242,7 +242,7 @@ class StringFunction(Function):
     def validate_regex(cls, value):
         try:
             re.compile(value, re.UNICODE)
-        except Exception:
+        except re.error:
             return False
         else:
             return True

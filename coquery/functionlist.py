@@ -14,6 +14,9 @@ from __future__ import unicode_literals
 import pandas as pd
 import datetime
 import warnings
+import sys
+import traceback
+import logging
 
 from . import options
 from .general import CoqObject
@@ -23,6 +26,7 @@ from .defines import msg_runtime_error_function
 class FunctionList(CoqObject):
     def __init__(self, l=None, *args, **kwargs):
         super(FunctionList, self).__init__()
+        self._exceptions = []
         if l:
             self._list = l
         else:
@@ -47,8 +51,7 @@ class FunctionList(CoqObject):
         else:
             drop_on_na = True
 
-        exception = None
-
+        self._exceptions = []
         for fun in list(self._list):
             if any(col not in df.columns for col in fun.columns):
                 self._list.remove(fun)
@@ -68,24 +71,28 @@ class FunctionList(CoqObject):
                 else:
                     val = fun.evaluate(df, **fun.kwargs)
             except Exception as e:
-                # can be caused by a function applied to a non-existing column
+                # if an exception occurs, the function is removed, and the
+                # error is logged.
                 self._list.remove(fun)
-                exception = RuntimeError(
-                                msg_runtime_error_function.format(
-                                    fun.get_label(session), str(e)))
+                error = "Error during function call {}".format(
+                    fun.get_label(session))
+                logging.exception(error)
+                self._exceptions.append((error, e, sys.exc_info()))
             else:
                 # Functions can return either single columns or data frames.
                 # Handle the function result accordingly:
+                new_column = fun.get_id()
                 if fun.single_column:
-                    df[fun.get_id()] = val
+                    df[new_column] = val
                 else:
                     df = pd.concat([df, val], axis="columns")
-        if exception:
-            raise exception
         # tell the manager whether rows with NA will be dropped:
         if manager:
             manager.drop_on_na = drop_on_na
         return df
+
+    def exceptions(self):
+        return self._exceptions
 
     def get_list(self):
         return self._list

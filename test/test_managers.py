@@ -48,6 +48,7 @@ class TestManager(unittest.TestCase):
         options.cfg.benchmark = False
         options.cfg.verbose = False
         options.cfg.summary_group = [Summary("summary")]
+        options.cfg.sample_matches = False
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
