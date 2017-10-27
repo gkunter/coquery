@@ -165,14 +165,18 @@ class Visualizer(vis.BaseVisualizer):
 class TimeSeries(vis.Visualizer):
     axes_style = "whitegrid"
     _default = "Frequency"
+    _unit = " units"
     bandwidth = 1
+
+    kind = "line"
+    stacked = False
 
     def get_custom_widgets(self):
         layout = QtWidgets.QHBoxLayout()
         label = QtWidgets.QApplication.instance().translate(
                     "TimeSeries", "Bandwidth", None)
         unit = QtWidgets.QApplication.instance().translate(
-                    "TimeSeries", " years", None)
+                    "TimeSeries", " units", None)
         button = QtWidgets.QApplication.instance().translate(
                     "TimeSeries", "Apply", None)
 
@@ -272,9 +276,10 @@ class TimeSeries(vis.Visualizer):
             levels = levels_z
         val = fun(data[numeric])
         if not category:
+            col = sns.color_palette(kwargs["palette"])[0]
             tab = val.value_counts().sort_index()
 
-            tab.plot(ax=plt.gca())
+            self.plot_func(S=tab, color=col, ax=plt.gca())
             min_x = val.min()
             max_x = val.max()
 
@@ -287,18 +292,30 @@ class TimeSeries(vis.Visualizer):
                 labels = x_range
             plt.xticks(x_range, labels)
         else:
+            col = sns.color_palette(kwargs["palette"],
+                                    n_colors=len(levels))[::-1]
             index = (val.dropna()
                         .drop_duplicates()
                         .sort_values())
+            tmp = {}
+
             for i, level in enumerate(levels):
                 df = data[data[category] == level]
                 val = fun(df[numeric])
                 tab = val.value_counts().sort_index()
                 tab = tab.reindex_axis(index).fillna(0)
-                tab.plot()
+                tmp[level] = tab
+            df = pd.DataFrame(tmp)
+            self.plot_func(df=df, color=col, ax=plt.gca())
         if levels:
             self.legend_title = category
             self.legend_levels = levels
+
+    def plot_func(self, S=None, df=None, *args, **kwargs):
+        if type(S) is not type(None):
+            pd.Series(S).plot.line(*args, **kwargs)
+        else:
+            df.plot.line(*args, **kwargs)
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
@@ -321,13 +338,37 @@ class TimeSeries(vis.Visualizer):
 
         return True
 
+
 class StackedArea(TimeSeries):
-    pass
+    kind = "area"
+    stacked = True
 
-class PercentageArea(TimeSeries):
-    def set_annotations(self, grid):
-        super(PercentageArea, self).set_annotations(grid)
+    def plot_func(self, S=None, df=None, *args, **kwargs):
+        if type(S) is not type(None):
+            self._transform(S=S).plot.area(stacked=True, *args, **kwargs)
+        else:
+            self._transform(df=df).plot.area(stacked=True, *args, **kwargs)
+
+    def _transform(self, S=None, df=None):
+        if type(S) is not type(None):
+            return S
+        else:
+            return df
+
+
+class PercentageArea(StackedArea):
+    _default = "Percentage"
+
+    def _transform(self, S=None, df=None):
+        print("perc")
+        if type(S) is not type(None):
+            print("S")
+            return pd.Series(data=[100] * len(S), index=S.index)
+        else:
+            print("df")
+            return df.apply(lambda x: x * 100 / sum(x), axis=1)
+
+    def set_annotations(self, grid, values):
+        super(PercentageArea, self).set_annotations(grid, values)
         grid.set(ylim=(0, 100))
-
-
 
