@@ -48,8 +48,8 @@ visualizer_mapping = (
     ("Stacked bars", "Barchart_stacked", "barplot", "StackedBars"),
     ("Percentage bars", "Barchart_percent", "barplot", "PercentBars"),
     ("Change over time (lines)", "Lines", "timeseries", "TimeSeries"),
-    #("Change over time (stacked)", "Areas_stacked", "timeseries"),
-    #("Change over time (percent)", "Areas_percent", "timeseries"),
+    ("Change over time (stacked)", "Areas_stacked", "timeseries", "StackedArea"),
+    ("Change over time (percent)", "Areas_percent", "timeseries", "PercentageArea"),
     ("Heat map", "Heatmap", "heatmap", "Heatmap"),
     ("Box-Whisker plot", "Boxplot", "boxplot", "BoxPlot"),
     ("Violin plot", "Violinplot", "boxplot", "ViolinPlot"),
@@ -483,20 +483,24 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.vis = visualizer_class(self.df, self.session)
         self.vis.updateRequested.connect(self.plot_figure)
 
-        while self.ui.layout_custom.count():
-            item = self.ui.layout_custom.takeAt(0)
+        for i in reversed(range(self.ui.layout_custom.count())):
+            item = self.ui.layout_custom.itemAt(i)
             if isinstance(item, QtWidgets.QLayout):
-                while item.count():
-                    subitem = item.takeAt(0)
-                    try:
-                        subitem.hide()
-                    except AttributeError:
-                        break
+                for j in reversed(range(item.count())):
+                    subitem = item.takeAt(j)
+                    if hasattr(subitem, "widget"):
+                        widget = subitem.widget()
+                        if widget:
+                            widget.hide()
+                            widget.setParent(None)
                     del subitem
-            try:
+            else:
                 item.hide()
-            except AttributeError:
-                break
+            if hasattr(item, "widget"):
+                widget = item.widget()
+                if widget:
+                    widget.hide()
+                    widget.setParent(None)
             del item
 
         widgets = self.vis.get_custom_widgets()
