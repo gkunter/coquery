@@ -1159,7 +1159,8 @@ class SQLResource(BaseResource):
     @classmethod
     def has_ngram(cls):
         return (hasattr(cls, "corpusngram_table") and
-                not options.cfg.no_ngram)
+                not options.cfg.no_ngram and
+                options.cfg.experimental)
 
     @staticmethod
     def alias_external_table(n, link, res):

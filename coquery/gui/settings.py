@@ -12,7 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 from coquery import options
-from coquery.defines import AUTO_VISIBILITY, AUTO_APPLY_DEFAULT
+from coquery.defines import AUTO_APPLY_DEFAULT
 from coquery.errors import remove_source_path, add_source_path
 from coquery.unicode import utf8
 from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
@@ -25,8 +25,6 @@ class Settings(QtWidgets.QDialog):
         self._options = _options
         self.ui = Ui_SettingsDialog()
         self.ui.setupUi(self)
-        #self.ui.check_ignore_punctuation.setEnabled(False)
-        #self.ui.check_experimental.setEnabled(False)
         self.ui.edit_visualizer_path.setEnabled(False)
         self.ui.button_visualizer_path.setEnabled(False)
 
@@ -41,6 +39,8 @@ class Settings(QtWidgets.QDialog):
                 (self.ui.button_cache_path, self.select_cache_path),
                 (self.ui.button_clear_cache, self.cache_button_clicked)):
             button.clicked.connect(slot)
+
+        self.ui.check_experimental.toggled.connect(self.warn_experimental)
 
         self._table_font = self._options.table_font
         self._context_font = self._options.context_font
@@ -88,6 +88,30 @@ class Settings(QtWidgets.QDialog):
                     options.cfg.query_cache.size() > 0)
         self.ui.button_clear_cache.setIcon(icon)
 
+    def warn_experimental(self, check):
+        if check:
+            msgbox = QtWidgets.QMessageBox()
+            msgbox.setWindowTitle("Enable experimental mode – Coquery")
+            msgbox.setText(
+                "<b>You have chosen to enable experimental mode.</b>")
+            msgbox.setStandardButtons(msgbox.Yes | msgbox.No)
+            msgbox.setDefaultButton(msgbox.No)
+            msgbox.setIcon(msgbox.Question)
+            msg = (
+                "<p>This mode activates options that may not be fully tested"
+                ", which may show an unexpected behavior, or which are not "
+                "fully documented yet.</p><p>If you wish to continue in "
+                "experimental mode, click <b>{yes}</b>.</p><p>If you wish "
+                "to continue in normal mode, click <b>{no}</b>.</p>".format(
+                    yes=msgbox.button(msgbox.Yes).text().replace("&", ""),
+                    no=msgbox.button(msgbox.No).text().replace("&", "")))
+            msgbox.setInformativeText(msg)
+
+            if msgbox.exec_() == msgbox.No:
+                self.ui.check_experimental.blockSignals(True)
+                self.ui.check_experimental.setChecked(False)
+                self.ui.check_experimental.blockSignals(False)
+
     def closeEvent(self, event):
         options.settings.setValue("settings_size", self.size())
 
@@ -114,9 +138,7 @@ class Settings(QtWidgets.QDialog):
             self._table_font = new_font
         elif label == self.ui.label_sample_context:
             self._context_font = new_font
-        #new_font.setPointSize(QtWidgets.QLabel().font().pointSize())
-        #new_font.setStyle(QtWidgets.QFont.StyleNormal)
-        #new_font.setWeight(QtWidgets.QFont.Normal)
+
         label.setFont(new_font)
         label.setText(new_font.family())
 
@@ -177,14 +199,15 @@ class Settings(QtWidgets.QDialog):
             self.ui.check_regular_expressions.setChecked(self._options.regexp)
         except AttributeError:
             pass
-        #try:
-            #self.ui.check_ignore_punctuation.setChecked(bool(self._options.ignore_punctuation))
-        #except AttributeError:
-            #pass
-        #try:
-            #self.ui.check_experimental.setChecked(bool(self._options.experimental))
-        #except AttributeError:
-            #pass
+
+        try:
+            self.ui.check_experimental.blockSignals(True)
+            self.ui.check_experimental.setChecked(
+                bool(self._options.experimental))
+        except AttributeError:
+            pass
+        finally:
+            self.ui.check_experimental.blockSignals(False)
         try:
             self.ui.check_align_quantified.setChecked(
                 bool(self._options.align_quantified))
@@ -263,7 +286,6 @@ class Settings(QtWidgets.QDialog):
         except AttributeError:
             pass
 
-        l = []
         for i in range(self.ui.list_auto_apply.count()):
             item = self.ui.list_auto_apply.item(i)
             if i in options.settings.value("settings_auto_apply",
@@ -272,7 +294,6 @@ class Settings(QtWidgets.QDialog):
             else:
                 state = QtCore.Qt.Unchecked
             item.setCheckState(state)
-
 
     def change_options(self):
         self._options.output_case_sensitive = (
@@ -283,6 +304,8 @@ class Settings(QtWidgets.QDialog):
         # Query options
         self._options.query_case_sensitive = (
             not bool(self.ui.check_ignore_case_query.isChecked()))
+        self._options.experimental = (
+            bool(self.ui.check_experimental.isChecked()))
         self._options.regexp = (
             bool(self.ui.check_regular_expressions.isChecked()))
         self._options.drop_on_na = (
@@ -294,9 +317,10 @@ class Settings(QtWidgets.QDialog):
         self._options.last_cache_size = (
             int(self.ui.spin_cache_size.value()))
         if self._options.use_cache:
-            if self._options.query_cache_size != self._options.last_cache_size:
-                self._options.query_cache_size = self._options.last_cache_size * 1024 * 1024
-                self._options.query_cache.resize(self._options.query_cache_size)
+            size = self._options.query_cache_size
+            if size != self._options.last_cache_size:
+                self._options.query_cache_size = size * 1024 * 1024
+                self._options.query_cache.resize(size * 1024 * 1024)
             new_cache_path = utf8(self.ui.edit_cache_path.text())
             if new_cache_path != self._options.cache_path:
                 try:
