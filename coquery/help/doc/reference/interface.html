@@ -1,20 +1,17 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Coquery Documentation: Main interface &#8212; Coquery 0.10.0 documentation</title>
-    
+    <title>Coquery Documentation: Main interface &#8212; Coquery 0.11.prev documentation</title>
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.10.0',
+        VERSION:     '0.11.prev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -28,14 +25,14 @@
     <link rel="next" title="Menu entries" href="menu.html" />
     <link rel="prev" title="Reference guide" href="index.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="header-wrapper" role="banner">
       <div class="header">
           <p class="logo"><a href="../../index.html">
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.10.0 documentation</a></div>
+          href="../../index.html">Coquery 0.11.prev documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="index.html" title="Reference guide"
              accesskey="P">previous</a> |
@@ -111,7 +108,7 @@ context tokens</p>
 <a class="reference internal image-reference" href="../../_images/stopwords_button.png"><img alt="../../_images/stopwords_button.png" src="../../_images/stopwords_button.png" style="width: 93.0px; height: 37.0px;" /></a>
 <p class="caption"><span class="caption-text">The Stop words button.</span></p>
 </div>
-<p>Clicking on the &#8216;Stop-words&#8217; button opens the Stop words dialog.</p>
+<p>Clicking on the ‘Stop-words’ button opens the Stop words dialog.</p>
 <div class="figure" id="id5">
 <a class="reference internal image-reference" href="../../_images/stopwords.png"><img alt="../../_images/stopwords.png" src="../../_images/stopwords.png" style="width: 415.0px; height: 336.0px;" /></a>
 <p class="caption"><span class="caption-text">The Stop words dialog.</span></p>
@@ -128,10 +125,10 @@ entry field, and press return. The new stop word will be listed as active.</p>
 is, for example, possible to specifcy the stop word <code class="docutils literal"><span class="pre">??</span></code>, which treats all
 words as stop words that consist of exactly two letters. See <a class="reference internal" href="../userguide/syntax.html#syntax"><span class="std std-ref">Query syntax</span></a>
 for details.</p>
-<p>Click the &#8216;Reset&#8217; button to remove all stop words. Click the &#8216;Save&#8217; button to
+<p>Click the ‘Reset’ button to remove all stop words. Click the ‘Save’ button to
 store the list of currently active stop words to a text file. Click the
-&#8216;Open&#8217; button to read a list of words from a text file that will be added to
-the active stop words. Click the &#8216;Ok&#8217; button to close the dialog.</p>
+‘Open’ button to read a list of words from a text file that will be added to
+the active stop words. Click the ‘Ok’ button to close the dialog.</p>
 </div>
 <div class="section" id="query-strings">
 <h2>Query strings</h2>
@@ -145,20 +142,20 @@ by typing them into the query string entry field, or by reading them from a
 text file.</p>
 <p>With either method, it is possible to process more than one query string with
 a single query command. For example in the screenshot above, three query
-strings are specified: <em>alice</em>, <em>king</em>, and <em>queen</em>. If the &#8216;Query&#8217; button is
+strings are specified: <em>alice</em>, <em>king</em>, and <em>queen</em>. If the ‘Query’ button is
 clicked, the three query strings will be queried one after another, and the
 reasults of each subquery will be added to the results table.</p>
 <p>In order to read query strings from a text file, enter the file name in the
-query file entry field, or click on the &#8216;Open&#8217; button. Each line from the
+query file entry field, or click on the ‘Open’ button. Each line from the
 selected text file will be considered a query string.</p>
-<p>If the the text file contains tabular data, you can click on the &#8216;Options&#8217;
+<p>If the the text file contains tabular data, you can click on the ‘Options’
 button to specify the format of the text file. The Input file dialog will
 appear:</p>
 <div class="figure" id="id7">
 <a class="reference internal image-reference" href="../../_images/csvoptions.png"><img alt="../../_images/csvoptions.png" src="../../_images/csvoptions.png" style="width: 407.0px; height: 336.0px;" /></a>
 <p class="caption"><span class="caption-text">The Input file options dialog.</span></p>
 </div>
-<p>The field &#8216;Character that separates columns&#8217; can be used to specify the
+<p>The field ‘Character that separates columns’ can be used to specify the
 character that separates the columns in the text file. Either enter the
 charater in the field, or choose a pre-defined character from the drop-down
 menu. Select <code class="docutils literal"><span class="pre">{tab}</span></code> if the text file uses tabulator characters as
@@ -167,11 +164,11 @@ separators.</p>
 clicking on the column in the preview area, or by typing in the number in
 the respective field. In the screen shot, the second column contains the
 query strings.</p>
-<p>Check the box &#8216;File contains header&#8217; if the first line in the text file
+<p>Check the box ‘File contains header’ if the first line in the text file
 contains the column names of the table. This line will not be used as a
 query string.</p>
 <p>It is possible to skip some lines in the text file by entering a number in
-the field &#8216;Text lines to ignore after header&#8217;. These lines will be ignored in
+the field ‘Text lines to ignore after header’. These lines will be ignored in
 the query.</p>
 <p>If the text file uses either single or double quotation marks as quoting
 characters, these marks can be selected from the drop-down menu.</p>
@@ -189,7 +186,7 @@ In the example, the columns <em>Word</em> from the table <em>Lexicon</em>, <em>I
 table <em>Corpus</em>, and <em>Filename</em> from the table <em>Files</em> are selected.</p>
 <p>Columns marked by the tag icon <img alt="tag" src="../../_images/tag.png" /> are colums that are mapped on the query
 item type given in brackets after the name. In the example, the column <em>Word</em>
-from the tabe <em>Lexicon</em> is mapped onto the query item type &#8216;Word&#8217;, i.e. a
+from the tabe <em>Lexicon</em> is mapped onto the query item type ‘Word’, i.e. a
 query item that contains a word specification will be matched against this
 column.</p>
 <div class="admonition note">

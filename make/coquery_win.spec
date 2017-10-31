@@ -10,7 +10,7 @@ block_cipher = None
 
 coq_path = os.path.realpath(
             os.path.join(os.getenv("HOMEPATH"),
-                         "coquery-release", "coquery"))
+                         "coquery-preview", "coquery"))
 python_path = os.path.split(sys.executable)[0]
 
 binaries = []

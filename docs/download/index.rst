@@ -13,7 +13,7 @@
 Download
 ========
 
-The current version of Coquery is 0.10.0. This version is fully functional, and
+The current version of Coquery is 0.11.prev. This version is fully functional, and
 is sufficiently stable for regular use.
 
 There are a few bugs, problems, and unexpected behaviors, though. For a list
@@ -32,7 +32,7 @@ menu.
 
 .. raw:: html
 
-    <p>Windows installer: <code>coquery-0.10.0-setup-win32.exe</code> <a href="coquery-0.10.0-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p>
+    <p>Windows installer: <code>coquery-0.11.prev-setup-win32.exe</code> <a href="coquery-0.11.prev-setup-win32.exe" class="btn btn-primary btn-sm">Download</a></p>
 
 Mac OS X
 --------
@@ -43,7 +43,7 @@ folder on your computer, e.g. the Applications folder.
 
 .. raw:: html
 
-    <p>Mac OS X disk image: <code>coquery-0.10.0-macos-sierra.dmg</code> <a href="coquery-0.10.0-macos-sierra.dmg" class="btn btn-primary btn-sm">Download</a></p>
+    <p>Mac OS X disk image: <code>coquery-0.11.prev-macos-sierra.dmg</code> <a href="coquery-0.11.prev-macos-sierra.dmg" class="btn btn-primary btn-sm">Download</a></p>
 
 If the disk image does not work on your version of Mac OS X, you can follow
 the installation instructions given below for Linux on your computer.
