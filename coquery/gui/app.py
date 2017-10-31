@@ -251,10 +251,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except AttributeError:
             pass
 
-        separator = QtWidgets.QFrame()
-        separator.setFrameShape(QtWidgets.QFrame.HLine)
-        separator.setFrameShadow(QtWidgets.QFrame.Sunken)
-
         self.ui.aggregate_radio_list = []
         for label in SUMMARY_MODES:
             radio = QtWidgets.QRadioButton(label)
@@ -262,6 +258,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             radio.toggled.connect(self.check_transformation)
             self.ui.layout_aggregate.addWidget(radio)
             if label == QUERY_MODE_TOKENS:
+                separator = QtWidgets.QFrame()
+                separator.setFrameShape(QtWidgets.QFrame.HLine)
+                separator.setFrameShadow(QtWidgets.QFrame.Sunken)
                 self.ui.layout_aggregate.addWidget(separator)
             self.ui.aggregate_radio_list.append(radio)
             if label == QUERY_MODE_COLLOCATIONS:
@@ -304,13 +303,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             widget = self.ui.tool_widget.widget(i)
             max_x = max(widget.sizeHint().width(), max_x)
             min_y = max(widget.sizeHint().height(), min_y)
-        self.ui.tool_widget.setMaximumWidth(max_x)
         self.ui.tool_widget.setMinimumWidth(max_x)
         self.ui.tool_widget.setMinimumHeight(min_y + 5)
 
         self.change_toolbox(options.cfg.last_toolbox)
         header = self.ui.list_toolbox.horizontalHeader()
         header.setSectionResizeMode(header.ResizeToContents)
+        header.setMinimumSectionSize(0)
         header.setSectionResizeMode(0, header.Stretch)
         header.setSectionResizeMode(1, header.ResizeToContents)
         header.setSectionResizeMode(2, header.ResizeToContents)
