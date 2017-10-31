@@ -3049,13 +3049,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.cfg.selected_features = self.column_tree.selected()
             self.get_context_values()
 
-
             sample_matches = (self.ui.check_sample_matches.isEnabled() and
                               self.ui.check_sample_matches.isChecked() and
                               int(self.ui.spin_sample_size.value()) > 0)
             sample_size = int(self.ui.spin_sample_size.value())
             options.cfg.sample_matches = sample_matches
             options.cfg.sample_size = sample_size
+            options.cfg.column_order = (
+                [x for _, x in self.ui.list_column_order.items()])
 
     def get_external_links(self):
         """
