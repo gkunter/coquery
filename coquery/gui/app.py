@@ -309,13 +309,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.tool_widget.setMinimumHeight(min_y + 5)
 
         self.change_toolbox(options.cfg.last_toolbox)
-        self.ui.list_toolbox.resizeColumnsToContents()
         header = self.ui.list_toolbox.horizontalHeader()
-        header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
-        header.resizeSection(1, 24)
-        header.resizeSection(2, 24)
+        header.setSectionResizeMode(header.ResizeToContents)
+        header.setSectionResizeMode(0, header.Stretch)
+        header.setSectionResizeMode(1, header.ResizeToContents)
+        header.setSectionResizeMode(2, header.ResizeToContents)
+        self.ui.list_toolbox.resizeColumnsToContents()
 
         # use a file system model for the file name auto-completer::
         self.dirModel = QtWidgets.QFileSystemModel(parent=self)
@@ -1009,6 +1008,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             filtered = (options.cfg.filter_list)
             _set_icon(1, filter_icon if filtered else None)
             _set_icon(2, active_icon if active else None)
+
+        self.ui.list_toolbox.resizeColumnsToContents()
+
 
     ###
     ### interface status and interface interaction methods
