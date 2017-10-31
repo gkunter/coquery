@@ -166,10 +166,18 @@ class InstallerGui(QtWidgets.QDialog):
 
         val = options.settings.value("corpusinstaller_use_nltk", "false")
         self.ui.use_pos_tagging.setChecked(val == "true" or val is True)
-        val = options.settings.value("corpusinstaller_use_ngram_table", "false")
-        self.ui.check_n_gram.setChecked(val == "true" or val is True)
-        self.ui.spin_n.setValue(
-            int(options.settings.value("corpusinstaller_n_gram_width", 2)))
+
+        if not options.cfg.experimental:
+            self.ui.widget_n_gram.hide()
+        else:
+            self.ui.widget_n_gram.show()
+            val = options.settings.value("corpusinstaller_use_ngram_table",
+                                         "false")
+            self.ui.check_n_gram.setChecked(val == "true")
+            self.ui.spin_n.setValue(
+                int(options.settings.value("corpusinstaller_n_gram_width",
+                                           2)))
+
         self.ui.radio_read_files.blockSignals(False)
         self.ui.radio_only_module.blockSignals(False)
 
@@ -435,7 +443,8 @@ class InstallerGui(QtWidgets.QDialog):
             namespace.l = True
             namespace.c = True
             namespace.only_module = False
-            if self.ui.check_n_gram.checkState():
+            if (self.ui.check_n_gram.checkState() and
+                    options.cfg.experimental):
                 namespace.lookup_ngram = True
                 namespace.ngram_width = int(self.ui.spin_n.value())
             else:
@@ -459,6 +468,7 @@ class InstallerGui(QtWidgets.QDialog):
 class BuilderGui(InstallerGui):
     button_label = "&Build"
     window_title = "Corpus builder – Coquery"
+    nltk_label = "Use NLTK for part-of-speech tagging and lemmatization"
 
     def __init__(self, builder_class, onefile=False, parent=None):
         super(BuilderGui, self).__init__(builder_class, parent)
@@ -528,7 +538,7 @@ class BuilderGui(InstallerGui):
         if not self._onefile:
             self.ui.label_pos_tagging.show()
             self.ui.use_pos_tagging.show()
-            label_text = ["Use NLTK for part-of-speech tagging and lemmatization"]
+            label_text = [self.nltk_label]
 
             try:
                 val = options.settings.value("corpusbuilder_nltk") == "True"
@@ -560,7 +570,10 @@ class BuilderGui(InstallerGui):
                 self.ui.input_path.setText("")
 
         self.ui.yes_button.setEnabled(False)
-        self.ui.corpus_name.textChanged.connect(lambda: self.validate_dialog(check_path=False))
+        self.ui.corpus_name.textChanged.connect(
+            lambda: self.validate_dialog(check_path=False))
+        self.ui.check_use_metafile.toggled.connect(
+            lambda: self.validate_dialog(check_path=False))
         self.ui.corpus_name.setFocus()
         try:
             self.resize(options.settings.value("corpusbuilder_size"))
@@ -662,6 +675,7 @@ class BuilderGui(InstallerGui):
         self._testing = False
         self.ui.label_pos_tagging.setDisabled(False)
         self.ui.use_pos_tagging.setDisabled(False)
+        self.ui.label_pos_tagging.setText(self.nltk_label)
         self.validate_dialog()
 
     def file_options(self):
