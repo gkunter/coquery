@@ -15,7 +15,6 @@ Corpora
 * Allow Excel files as input format for metadata files and as corpus input
   files
 * Packaging: corpora can be packaged, and packaged corpora can be installed
-* Experimental support for N-gram lookup tables
 * New corpora: Old Bailey Corpus 2.0, Korpus Malti
 
 Visualizations
@@ -35,6 +34,10 @@ Functions
 * More flexible handling of function arguments
 * New functions: NOT, IF, IFANY, EMPTY, MISSING, Percentile, Log, Replace
 * Mathematical functions can now be applied column-wise
+
+EXPERIMENTAL features
+* Experimental mode can be activated in the Settings dialog
+* Support for N-gram lookup tables
 
 API changes
 * Disposed of obsolete LexiconClass
