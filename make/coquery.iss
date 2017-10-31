@@ -6,7 +6,7 @@
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 
-# define coq_version "0.10.0"
+# define coq_version "0.11.prev"
 # define coq_icon "icons\artwork\logo.ico"
 
 AppId={{42204621-F37F-40C3-96E2-886FFF94D497}
