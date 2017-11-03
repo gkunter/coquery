@@ -23,6 +23,7 @@ import pandas as pd
 import io
 import ctypes
 import platform
+import logging
 
 from .unicode import utf8
 from .defines import LANGUAGES
@@ -371,6 +372,13 @@ def memory_dump():
                       "ref": len(referents)})
             if len(referents) < 2000:
                 print(obj)
+
+
+def Print(*args, **kwargs):
+    from .options import cfg
+    if cfg.verbose:
+        print(*args, **kwargs)
+        logging.info(*args, **kwargs)
 
 
 try:
