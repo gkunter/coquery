@@ -316,6 +316,37 @@ class BuilderClass(BaseCorpusBuilder):
         else:
             return super(BuilderClass, self).store_filename(file_name)
 
+    def build_initialize(self):
+        super(BuilderClass, self).build_initialize()
+        if self.arguments.use_nltk:
+            import nltk
+
+            # the WordNet lemmatizer will be used to obtain the lemma for a
+            # given word:
+            self._lemmatize = (
+                lambda x, y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(
+                    x, pos=y))
+
+            # The NLTK POS tagger produces some labels that are different from
+            # the labels used in WordNet. In order to use the WordNet
+            # lemmatizer for all words, we need a function that translates
+            # these labels:
+            self._pos_translate = lambda x: {
+                'NN': nltk.corpus.wordnet.NOUN,
+                'JJ': nltk.corpus.wordnet.ADJ,
+                'VB': nltk.corpus.wordnet.VERB,
+                'RB': nltk.corpus.wordnet.ADV}[x.upper()[:2]]
+        else:
+            # The default lemmatizer is pretty dumb and simply turns the
+            # word-form to lower case so that at least 'Dogs' and 'dogs' are
+            # assigned the same lemma -- which is a different lemma from the
+            # one assigned to 'dog' and 'Dog'.
+            #
+            # If NLTK is used, the lemmatizer will use the data from WordNet,
+            # which will result in much better results.
+            self._lemmatize = lambda x: x.lower()
+            self._pos_translate = lambda x: x
+
     def process_file(self, file_name):
         """
         Process a text file.
@@ -358,23 +389,6 @@ class BuilderClass(BaseCorpusBuilder):
         # if possible, use NLTK for lemmatization, tokenization, and tagging:
         if self.arguments.use_nltk:
             import nltk
-
-            # the WordNet lemmatizer will be used to obtain the lemma for a
-            # given word:
-            self._lemmatize = (
-                lambda x, y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(
-                    x, pos=y))
-
-            # The NLTK POS tagger produces some labels that are different from
-            # the labels used in WordNet. In order to use the WordNet
-            # lemmatizer for all words, we need a function that translates
-            # these labels:
-            self._pos_translate = lambda x: {
-                'NN': nltk.corpus.wordnet.NOUN,
-                'JJ': nltk.corpus.wordnet.ADJ,
-                'VB': nltk.corpus.wordnet.VERB,
-                'RB': nltk.corpus.wordnet.ADV}[x.upper()[:2]]
-
             # Create a list of sentences from the content of the current file
             # and process this list one by one:
             sentence_list = nltk.sent_tokenize(raw_text)
@@ -388,16 +402,6 @@ class BuilderClass(BaseCorpusBuilder):
                     # store each token:
                     self.add_token(current_token, current_pos)
         else:
-            # The default lemmatizer is pretty dumb and simply turns the
-            # word-form to lower case so that at least 'Dogs' and 'dogs' are
-            # assigned the same lemma -- which is a different lemma from the
-            # one assigned to 'dog' and 'Dog'.
-            #
-            # If NLTK is used, the lemmatizer will use the data from WordNet,
-            # which will result in much better results.
-            self._lemmatize = lambda x: x.lower()
-            self._pos_translate = lambda x: x
-
             # use a dumb tokenizer that simply splits the file content by
             # spaces:
 
