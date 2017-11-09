@@ -58,7 +58,7 @@ class BuilderClass(TEICorpusBuilder):
         Column(speaker_class,
                "ENUM('?','upper (1-5)','lower (6-13)') NOT NULL")]
 
-    event_table = "Event"
+    event_table = "Events"
     event_id = "EventId"
     event_label = "Event"
     event_scribe = "Scribe"
