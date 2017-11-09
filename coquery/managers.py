@@ -228,7 +228,8 @@ class Manager(CoqObject):
         if not self._groups:
             return df
 
-        Print("\tmutate_groups({}), {} rows".format(self._groups, len(df)))
+        Print("\tmutate_groups({}), {} rows, columns: {}".format(
+            self._groups, len(df), df.columns))
 
         for group in self._groups:
             df = group.process(df, session=session, manager=self)
@@ -244,7 +245,8 @@ class Manager(CoqObject):
         if len(df) == 0:
             return df
 
-        Print("\tmutate(stage='{}'), {} rows".format(stage, len(df)))
+        Print("\tmutate(stage='{}'), {} rows, columns: {}".format(
+            stage, len(df), df.columns))
 
         # separate general functions from context functions:
         fnc_all = self._get_main_functions(df, session)
@@ -311,7 +313,7 @@ class Manager(CoqObject):
 
         df = df.reset_index(drop=True)
 
-        Print("\t\tdone, {} rows".format(len(df)))
+        Print("\t\tdone, {} rows, columns: {}".format(len(df), df.columns))
 
         return df
 
@@ -374,7 +376,8 @@ class Manager(CoqObject):
         if len(df) == 0 or len(self._groups) == 0:
             return df
 
-        Print("\tarrange_groups({}), {} rows".format(self._groups, len(df)))
+        Print("\tarrange_groups(), {} rows, columns: {}".format(
+            len(df), df.columns))
 
         for group in self._groups:
             columns = list(group.columns)
