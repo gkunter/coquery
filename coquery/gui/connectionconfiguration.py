@@ -25,7 +25,8 @@ from coquery.general import (utf8,
 from coquery import options
 from coquery.defines import (DEFAULT_CONFIGURATION, SQL_MYSQL, SQL_SQLITE,
                              msg_not_enough_space, msg_completely_remove)
-from coquery.connections import MySQLConnection, get_connection
+from coquery.connections import (get_connection,
+                                 MySQLConnection, SQLiteConnection)
 
 from .pyqt_compat import (QtCore, QtWidgets, QtGui,
                           get_toplevel_window, STYLE_WARN)
@@ -189,32 +190,29 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
     def add_new_placeholder(self):
         name = "New connection..."
-        d = dict(type=SQL_SQLITE, host="127.0.0.1", port=3306,
-                 user="mysql", password="mysql", path="",
-                 name="")
+        connection = SQLiteConnection("", "")
         item = QtWidgets.QListWidgetItem(name)
-        item.setData(QtCore.Qt.UserRole, d)
+        item.setData(QtCore.Qt.UserRole, connection)
         self.ui.list_config.insertItem(0, item)
 
     def get_gui_content(self):
+        name = utf8(self.ui.connection_name.text())
+        db_type = (SQL_MYSQL if self.ui.radio_mysql.isChecked() else
+                   SQL_SQLITE)
+
         d = dict()
-        d["name"] = utf8(self.ui.connection_name.text())
         d["host"] = utf8(self.ui.hostname.text())
         d["port"] = int(self.ui.port.text())
         d["user"] = utf8(self.ui.user.text())
         d["password"] = utf8(self.ui.password.text())
-        d["type"] = (SQL_MYSQL if self.ui.radio_mysql.isChecked() else
-                     SQL_SQLITE)
-        if d["type"] == SQL_MYSQL:
-            d["path"] = ""
-        else:
-            d["path"] = os.path.abspath(utf8(self.ui.input_db_path.text()))
-        return d
+        d["path"] = os.path.abspath(utf8(self.ui.input_db_path.text()))
+
+        return get_connection(name, db_type, **d)
 
     def add_new_connection(self):
-        d = self.get_gui_content()
-        self.add_connection(d)
-        self.select_item(d["name"])
+        connection = self.get_gui_content()
+        self.add_connection(connection)
+        self.select_item(connection.name)
 
     def is_new_connection(self):
         return (self.ui.list_config.currentRow() ==
@@ -229,13 +227,14 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             self.ui.list_config.count() - 1, item)
 
     def remove_connection(self):
-        name = utf8(self.ui.list_config.currentItem().text())
-        connection = options.cfg.connections[name]
+        item = self.ui.list_config.currentItem()
+        connection = item.data(QtCore.Qt.UserRole)
+        name = utf8(item.text())
         confirm_remove = False
         if connection.db_type() == SQL_MYSQL:
             confirm_remove = True
         else:
-            db_paths = self.files_from_connection(name)
+            db_paths = self.files_from_connection(connection)
             resources = options.get_available_resources(name)
             size = sum([os.path.getsize(x) for x in db_paths])
             kwargs = dict(name=name, size=format_file_size(size),
@@ -254,7 +253,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                         QtWidgets.QMessageBox.Yes)
             confirm_remove = response == QtWidgets.QMessageBox.Yes
         if confirm_remove:
-            self._removed.add(name)
+            self._removed.add(connection)
             for old_name in list(self._renamed.keys()):
                 if self._renamed[old_name] == name:
                     self._renamed.pop(old_name)
@@ -266,7 +265,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
     def select_item(self, name):
         for i in range(self.ui.list_config.count()):
             item = self.ui.list_config.item(i)
-            if item.data(QtCore.Qt.UserRole)["name"] == name:
+            print(item.data(QtCore.Qt.UserRole))
+            if item.data(QtCore.Qt.UserRole).name == name:
                 self.ui.list_config.setCurrentItem(item)
                 return item
         self.ui.list_config.setCurrentItem(None)
@@ -294,7 +294,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
     def set_connection(self, d):
         self.block_input_signals()
 
-        name = d["name"]
+        name = d.name
         self.ui.connection_name.setText(name)
 
         is_default = (name == DEFAULT_CONFIGURATION)
@@ -307,23 +307,23 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.ui.radio_sqlite.setVisible(is_new)
         self.ui.label_mysql_server.setVisible(is_new)
 
-        if d["type"] == SQL_MYSQL:
+        if isinstance(d, MySQLConnection):
             self.ui.radio_mysql.setChecked(True)
             self.ui.frame_mysql.show()
             self.ui.frame_sqlite.hide()
 
-            if d["host"] == "127.0.0.1":
+            if d.host == "127.0.0.1":
                 self.ui.radio_local.setChecked(True)
                 self.ui.hostname.setDisabled(True)
             else:
                 self.ui.radio_remote.setChecked(True)
-                self.ui.hostname.setText(d["host"])
+                self.ui.hostname.setText(d.host)
                 self.ui.hostname.setDisabled(False)
 
-            self.ui.user.setText(d["user"])
-            self.ui.password.setText(d["password"])
-            self.ui.port.setValue(int(d["port"]))
-        elif d["type"] == SQL_SQLITE:
+            self.ui.user.setText(d.user)
+            self.ui.password.setText(d.password)
+            self.ui.port.setValue(int(d.port))
+        elif isinstance(d, SQLiteConnection):
             self.ui.radio_sqlite.setChecked(True)
             self.ui.frame_sqlite.show()
             self.ui.frame_mysql.hide()
@@ -331,7 +331,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         if is_new:
             path = ""
         elif not is_default:
-            path = d.get("path", "")
+            path = getattr(d, "path", "")
         else:
             path = os.path.join(
                 options.cfg.connections_path, name, "databases")
@@ -392,7 +392,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         Change the current database engine type.
         """
         d = self.ui.list_config.currentItem().data(QtCore.Qt.UserRole)
-        name = d["name"]
+        name = d.name
 
         # the default connection cannot be changed:
         if name == DEFAULT_CONFIGURATION:
@@ -588,12 +588,12 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 for name in new_configs:
                     new = new_configs[name]
                     old = old_configs.get(name, None)
-                    if (new["type"] == SQL_SQLITE and
+                    if (isinstance(new, SQLiteConnection) and
                             old and
-                            new["path"] != old["path"]):
+                            new.path != old.path):
                         try:
                             self.move_connection(
-                                name, old["path"], data["path"])
+                                name, old.path, data.path)
 
                         except Exception as e:
                             errorbox.ErrorBox.show(sys.exc_info())
@@ -601,8 +601,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                     d[name] = new
 
                 # *really* remove the files that are slated for removal:
-                for name in self._removed:
-                    self.wipe_connection(name)
+                for connection in self._removed:
+                    self.wipe_connection(connection)
 
             except Exception as e:
                 print(e)
@@ -611,10 +611,9 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         else:
             return None
 
-    def files_from_connection(self, name):
-        connection = options.cfg.connections[name]
+    def files_from_connection(self, connection):
         resources = connection.resources()
-        from_path = connection.db_path()
+        from_path = connection.path
         db_paths = [os.path.join(from_path,
                                  "{}.db".format(resources[x][0].db_name))
                     for x in resources]
@@ -630,6 +629,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             dialog.show()
             result = dialog.exec_()
         except Exception as e:
+            print(e)
             result = None
             raise e
         finally:
@@ -716,8 +716,9 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         logging.info("Renamed connection '{}' as '{}'".format(
             old_name, new_name))
 
-    def wipe_connection(self, name):
-        for file_name in self.files_from_connection(name):
+    def wipe_connection(self, connection):
+        name = connection.name
+        for file_name in self.files_from_connection(connection):
             try:
                 os.remove(file_name)
             except Exception as e:
@@ -731,8 +732,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         logging.info("Completely removed connection '{}'".format(name))
         options.cfg.connections.pop(name)
 
-    def move_connection(self, name, from_path, to_path):
-        db_paths = self.files_from_connection(name)
+    def move_connection(self, connection, from_path, to_path):
+        db_paths = self.files_from_connection(connection)
         # We add a 20 percent safety margin to the calculated disk usage,
         # just to make sure that there will be enough space on the new
         # target:
@@ -742,7 +743,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
         if available < used:
             kwargs = dict(
-                name=name,
+                name=connection.name,
                 from_path=from_path,
                 to_path=to_path,
                 available=format_file_size(available),
@@ -775,7 +776,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             for source_file in db_paths:
                 os.remove(source_file)
         logging.info("Moved databases of '{}' from {} to {}".format(
-            name, from_path, to_path))
+            connection.name, from_path, to_path))
 
     def exception_during_move(self, exception):
         errorbox.ErrorBox.show(self.exc_info, self.exception)
