@@ -3,7 +3,7 @@ Interface
 * Provide POS tag helper dialog via the 'Help' menu
 * Regular expressions can be inserted from the regexp tester into input fields
 * User data columns are now available again (and can also be removed)
-* The database paths of custom connections can now be changed
+* The database paths of non-MySQL connections can now be changed
 * Provide more visual feedback on actions that don't have a visible effect
 * Column selection dialogs: Switch order of available and selected
 
