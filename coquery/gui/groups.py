@@ -264,24 +264,33 @@ class GroupDialog(QtWidgets.QDialog):
         self.ui = Ui_GroupDialog()
         self.ui.setupUi(self)
 
+        self.ui.ok_button = self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.Ok)
+
         # Remove group function columns as they may not be available yet
         # when the group is formed.
         # FIXME: at some point, this needs to be redone so that earlier
         # group columns are available for later groups.
         all_columns = [x for x in all_columns
                        if not re.match("func_.*_group_", x)]
+        group.columns = [x for x in group.columns if x in all_columns]
         selected_columns = [x for x in group.columns
                             if not re.match("func_.*_group_", x)]
+
         self.ui.edit_label.setText(group.name)
         self.ui.radio_remove_duplicates.setChecked(group.show_distinct)
+
         self.ui.widget_selection.setSelectedList(
             selected_columns,
             get_toplevel_window().Session.translate_header)
-
         self.ui.widget_selection.setAvailableList(
             [x for x in all_columns
              if x not in group.columns],
             get_toplevel_window().Session.translate_header)
+
+        self.ui.widget_selection.itemSelectionChanged.connect(
+            self.check_buttons)
+        self.check_buttons()
 
         function_columns = {fnc_class: columns
                             for fnc_class, columns in group.functions}
@@ -314,6 +323,10 @@ class GroupDialog(QtWidgets.QDialog):
             self.ui.linked_functions.addList(group_item, function_items)
 
         self.ui.linked_functions.setCurrentCategoryRow(0)
+
+    def check_buttons(self):
+        self.ui.ok_button.setEnabled(bool(
+            self.ui.widget_selection.selectedItems()))
 
     def setup_values(self, group):
         self.ui.edit_label.setText(group.name)
@@ -397,16 +410,20 @@ class SummaryDialog(GroupDialog):
     def __init__(self, group, all_columns, parent=None):
         super(SummaryDialog, self).__init__(group, all_columns, parent)
         self.ui.label.hide()
-        self.ui.label_duplicates.hide()
         self.ui.radio_remove_duplicates.hide()
         self.ui.radio_keep_duplicates.hide()
         self.ui.widget_selection.hide()
         self.ui.edit_label.hide()
-        function_list = self.ui.horizontalLayout_2.takeAt(0).widget()
+        edit_search = self.ui.layout_functions.takeAt(0).widget()
+        function_list = self.ui.layout_functions.takeAt(0).widget()
         self.ui.tabWidget.hide()
-        self.ui.gridLayout.addWidget(function_list, 0, 0)
+        self.ui.gridLayout.addWidget(edit_search, 0, 0)
+        self.ui.gridLayout.addWidget(function_list, 1, 0)
         self.ui.gridLayout.setColumnStretch(0, 1)
         self.ui.gridLayout.setColumnStretch(1, 0)
+
+    def check_buttons(self):
+        pass
 
     @staticmethod
     def edit(group, all_columns, parent=None):

@@ -140,12 +140,12 @@ class CoqGroupTree(QtWidgets.QWidget):
         except AttributeError:
             available_columns = []
 
-        columns = self.selected_columns or available_columns
+        columns = self.selected_columns or []
 
         self._item_number += 1
         name = self.group_label.format(self._item_number)
-        group = Group(name, list(vis_cols))
-        result = GroupDialog.edit(group, columns,
+        group = Group(name, list(columns))
+        result = GroupDialog.edit(group, available_columns,
                                   parent=get_toplevel_window())
         if result:
             item = CoqGroupTreeItem(result)

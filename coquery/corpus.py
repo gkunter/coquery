@@ -31,6 +31,7 @@ from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
     QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
     SQL_MYSQL, SQL_SQLITE,
+    CONTEXT_NONE,
     PREFERRED_ORDER)
 
 from .general import collapse_words, CoqObject, html_escape
@@ -1634,23 +1635,26 @@ class SQLResource(BaseResource):
                 if s not in columns:
                     columns.append(s)
 
-        if to_file:
-            if not columns:
-                s = "{name}{N} AS coquery_invisible_corpus_id".format(
+        id_str = "{name}{N} AS coquery_invisible_corpus_id".format(
                     N=_first_item, name=cls.corpus_id)
-                columns.append(s)
-        else:
-            s = "{name}{N} AS coquery_invisible_corpus_id".format(
-                N=_first_item, name=cls.corpus_id)
-            if s not in columns:
-                columns.append(s)
 
-            origin_id = (getattr(cls, "corpus_source_id", "") or
-                         getattr(cls, "corpus_file_id", ""))
-            if origin_id:
-                s = "{name}{N} AS coquery_invisible_origin_id".format(
+        origin_id = (getattr(cls, "corpus_source_id", "") or
+                     getattr(cls, "corpus_file_id", ""))
+        if origin_id:
+            origin_str = "{name}{N} AS coquery_invisible_origin_id".format(
                     N=_first_item, name=origin_id)
-                columns.append(s)
+
+        if to_file:
+            if not columns or (options.cfg.context_mode != CONTEXT_NONE):
+                columns.append(id_str)
+            if (options.cfg.context_mode != CONTEXT_NONE):
+                columns.append(origin_str)
+        else:
+            if id_str not in columns:
+                columns.append(id_str)
+            if origin_id:
+                columns.append(origin_str)
+
         return columns
 
     @classmethod

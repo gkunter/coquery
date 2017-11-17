@@ -59,8 +59,6 @@ class CoqListSelect(QtWidgets.QWidget):
         self._last_available_row = None
 
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.ui.list_selected.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.ui.list_available.setFocusPolicy(QtCore.Qt.NoFocus)
 
     @staticmethod
     def _fill_list_widget(w, l, translate, *args, **kwargs):

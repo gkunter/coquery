@@ -18,6 +18,7 @@ Corpora
 * New corpora: Old Bailey Corpus 2.0, Korpus Malti
 
 Visualizations
+* Add Line Charts
 * Move Visualization Designer action to Results menu
 * Hide Visualizations menu
 * Bring time series visualization to the visualization designer

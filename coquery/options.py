@@ -739,7 +739,7 @@ class Options(object):
             self.args.query_case_sensitive = config_file.bool("main", "query_case_sensitive", d=defaults)
             self.args.output_case_sensitive = config_file.bool("main", "output_case_sensitive", d=defaults)
             self.args.regexp = config_file.bool("main", "regexp", d=defaults)
-            self.args.regexp = config_file.bool("main", "experimental", d=defaults)
+            self.args.experimental = config_file.bool("main", "experimental", d=defaults)
             self.args.output_to_lower = config_file.bool("main", "output_to_lower", d=defaults)
             self.args.drop_on_na = config_file.bool("main", "drop_on_na", d=defaults)
             self.args.na_string = config_file.str("main", "na_string", d=defaults)

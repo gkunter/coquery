@@ -30,7 +30,7 @@ from .functions import (Freq,
                         MutualInformation, ConditionalProbability,
                         SubcorpusSize)
 from .functionlist import FunctionList
-from .general import CoqObject, get_visible_columns
+from .general import CoqObject, get_visible_columns, Print
 from . import options
 from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
 
@@ -228,14 +228,13 @@ class Manager(CoqObject):
         if not self._groups:
             return df
 
-        if options.cfg.verbose:
-            print("\tmutate_groups({})".format(self._groups))
+        Print("\tmutate_groups({}), {} rows, columns: {}".format(
+            self._groups, len(df), df.columns))
 
         for group in self._groups:
             df = group.process(df, session=session, manager=self)
 
-        if options.cfg.verbose:
-            print("\tDone mutate_groups")
+        Print("\tDone mutate_groups")
 
         return df
 
@@ -246,8 +245,8 @@ class Manager(CoqObject):
         if len(df) == 0:
             return df
 
-        if options.cfg.verbose:
-            print("\tmutate(stage='{}')".format(stage))
+        Print("\tmutate(stage='{}'), {} rows, columns: {}".format(
+            stage, len(df), df.columns))
 
         # separate general functions from context functions:
         fnc_all = self._get_main_functions(df, session)
@@ -314,8 +313,8 @@ class Manager(CoqObject):
 
         df = df.reset_index(drop=True)
 
-        if options.cfg.verbose:
-            print("\tdone")
+        Print("\t\tdone, {} rows, columns: {}".format(len(df), df.columns))
+
         return df
 
     def substitute(self, df, session, stage="first"):
@@ -377,8 +376,8 @@ class Manager(CoqObject):
         if len(df) == 0 or len(self._groups) == 0:
             return df
 
-        if options.cfg.verbose:
-            print("\tarrange_groups({})".format(self._groups))
+        Print("\tarrange_groups(), {} rows, columns: {}".format(
+            len(df), df.columns))
 
         for group in self._groups:
             columns = list(group.columns)
@@ -395,8 +394,8 @@ class Manager(CoqObject):
                                     axis="index")
 
         df = df.reset_index(drop=True)
-        if options.cfg.verbose:
-            print("\tdone")
+        Print("\t\tdone, {} rows".format(len(df)))
+
         return df
 
     def arrange(self, df, session):
@@ -404,7 +403,7 @@ class Manager(CoqObject):
             print("exit arrange")
             return df
 
-        print("\tarrange()")
+        Print("\tarrange(), {} rows".format(len(df)))
 
         original_columns = df.columns
         columns = []
@@ -461,14 +460,14 @@ class Manager(CoqObject):
             df = pd.concat([df_data, df_totals])
         else:
             df = df_data
-        print("\tdone")
+        Print("\t\tdone, {} rows".format(len(df)))
 
         df = df[[x for x in df.columns if not x.endswith("__rev")]]
         return df
 
     def summarize(self, df, session):
-        if options.cfg.verbose:
-            print("\tsummarize()")
+        Print("\tsummarize(), {} rows".format(len(df)))
+
         vis_cols = get_visible_columns(df, manager=self, session=session)
 
         df = self.manager_functions.lapply(df, session=session, manager=self)
@@ -485,8 +484,8 @@ class Manager(CoqObject):
                               .index)
             self.dropped_na_count = len(df) - len(ix)
             df = df.loc[ix]
-        if options.cfg.verbose:
-            print("\tdone")
+        Print("\t\tdone, {} rows".format(len(df)))
+
         return df
 
     def distinct(self, df, session):
@@ -504,13 +503,12 @@ class Manager(CoqObject):
 
         self.reset_group_filter_statistics()
         self._len_pre_filter = len(df)
-        if options.cfg.verbose or True:
-            print("\tfilter()")
+        Print("\tfilter(), {} rows".format(len(df)))
         for filt in self._filters:
             if filt.stage == stage:
                 df = filt.apply(df).reset_index(drop=True)
-        if options.cfg.verbose or True:
-            print("\tdone")
+        Print("\t\tdone, {} rows".format(len(df)))
+
         self._len_post_filter = len(df)
         return df
 
@@ -533,7 +531,7 @@ class Manager(CoqObject):
                 len(options.cfg.group_filter_list) == 0):
             return df
 
-        print("\tfilter_groups()")
+        Print("\tfilter_groups(), {} rows".format(df))
         self.reset_group_filter_statistics()
 
         columns = self.get_group_columns(df, session)
@@ -552,7 +550,8 @@ class Manager(CoqObject):
         df = pd.concat(sub_list, axis=0)
         df = df.reset_index(drop=True)
 
-        print("\tdone")
+        Print("\t\tdone, {} rows".format(len(df)))
+
         return df
 
     def select(self, df, session):
@@ -560,8 +559,7 @@ class Manager(CoqObject):
         Select the columns that will appear in the final output. Also, put
         them into the preferred order.
         """
-        if options.cfg.verbose:
-            print("\tselect()")
+        Print("\tselect(), {} rows".format(len(df)))
 
         columns = list(df.columns)
 
@@ -599,8 +597,8 @@ class Manager(CoqObject):
         except ValueError:
             pass
         df = df[columns]
-        if options.cfg.verbose:
-            print("\tdone")
+        Print("\t\tdone, {} rows".format(len(df)))
+
         return df
 
     def filter_stopwords(self, df, session):
@@ -609,7 +607,7 @@ class Manager(CoqObject):
         if not options.cfg.stopword_list:
             return df
 
-        print("\tfilter_stopwords({})".format(options.cfg.stopword_list))
+        Print("\tfilter_stopwords({})".format(options.cfg.stopword_list))
         word_id_column = getattr(session.Resource, QUERY_ITEM_WORD)
         columns = []
         for col in df.columns:
@@ -623,7 +621,8 @@ class Manager(CoqObject):
         valid = ~(df[columns].apply(lambda x: x.str.lower()
                                                    .isin(stopwords))
                              .any(axis=1))
-        print("\tdone")
+        Print("\t\tdone, {} rows".format(len(df)))
+
         return df[valid]
 
     def process(self, df, session, recalculate=True):
@@ -672,8 +671,7 @@ class Manager(CoqObject):
         """
         self._exceptions = []
 
-        if options.cfg.verbose:
-            print("process()")
+        Print("process(), {} rows".format(len(df)))
 
         df = df.reset_index(drop=True)
         if len(self._column_order):
@@ -706,7 +704,6 @@ class Manager(CoqObject):
             df = df.loc[ix.sort_values()]
 
         df = df.reset_index(drop=True)
-
         self.drop_on_na = None
 
         if options.cfg.stopword_list:

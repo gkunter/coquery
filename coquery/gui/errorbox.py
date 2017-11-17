@@ -108,11 +108,11 @@ class ExceptionBox(QtWidgets.QDialog):
         self.ui.icon_label.setPixmap(
             QtGui.QIcon.fromTheme("dialog-error").pixmap(32, 32))
 
-        errort = ("<table><tr><td><b>{}&nbsp;</b></td><td>{}<br></td></tr>"
-                  "<tr><td><b>Trace&nbsp;</b></td><td>{}</td></tr></table>"
-                  .format(type(exception).__name__,
-                          exception,
-                          get_error_repr(tb)))
+        error = ("<table><tr><td><b>{}&nbsp;</b></td><td>{}<br></td></tr>"
+                 "<tr><td><b>Trace&nbsp;</b></td><td>{}</td></tr></table>"
+                 .format(type(exception).__name__,
+                         exception,
+                         get_error_repr(tb)))
         self.ui.trace_area.setText(error)
 
         try:
