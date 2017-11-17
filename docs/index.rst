@@ -29,8 +29,8 @@
                 <h2>News</h2>
                     <p><b>October 31, 2017</b>: Installer files for a preview
                     of the next version 0.11.0 are available for
-                    <a href="coquery-0.11.prev-setup-win32.exe">Windows</a> and
-                    <a href="coquery-0.11.prev-macos-sierra.dmg">Mac OS</a>.</p>
+                    <a href="download/coquery-0.11.prev-setup-win32.exe">Windows</a> and
+                    <a href="download/coquery-0.11.prev-macos-sierra.dmg">Mac OS</a>.</p>
                     <p><b>May 23, 2017</b>: Version 0.10.0 "ICAME38" is now
                     available. This version is a major upgrade over the
                     previous versions, reflecting nearly a year of development.
