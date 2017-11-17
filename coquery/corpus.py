@@ -31,7 +31,6 @@ from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
     QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
     SQL_MYSQL, SQL_SQLITE,
-    CONTEXT_STRING,
     PREFERRED_ORDER)
 
 from .general import collapse_words, CoqObject, html_escape
@@ -660,6 +659,17 @@ class SQLResource(BaseResource):
                     "Null": ("NOT NULL" if row["null"] in ["NO", 1] else ""),
                     "Name": field_name}
         return d
+
+    def get_primary_keys(self):
+        """
+        Returns a dictionary with the tables of the current resource as
+        keys, and tuples as values. Each tuple contains the name and the
+        dtype of the primary key of that table.
+
+        This structure can be used to make Link objects work even if the
+        linked table has not been instantiated yet.
+        """
+        raise NotImplementedError
 
     def get_table_size(self, rc_table):
         engine = self.get_engine()
