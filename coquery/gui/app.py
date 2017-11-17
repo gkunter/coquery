@@ -1608,9 +1608,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def update_table_models(self, visible=None, hidden=None):
         if visible is None and hidden is None:
             manager = self.Session.get_manager()
-            for x in list(manager.hidden_columns):
-                if x not in self.Session.output_object.columns:
-                    manager.hidden_columns.remove(x)
+            manager.reset_hidden_columns()
+            for col in self.hidden_features:
+                manager.hide_column(col)
             hidden_cols = pd.Index(manager.hidden_columns)
 
             vis_cols = [x for x in self.Session.output_object.columns
