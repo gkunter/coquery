@@ -55,21 +55,22 @@ class LineChart(vis.Visualizer):
             hue = data[z]
             levels = levels_z
         else:
-            hue = [1] * len(data)
+            hue = pd.Series(data=[1] * len(data),
+                            index=data.index)
             levels = ["no hue"]
 
+        col = sns.color_palette(kwargs.get("palette"),
+                                n_colors=len(levels))[::-1]
+
         if category:
-            col = sns.color_palette(kwargs.get("palette"),
-                                    n_colors=len(levels))[::-1]
-            sns.pointplot(x=x, y=y, hue=hue, data=data, palette=col)
+            x_val = data[x]
+            y_val = data[y]
         else:
-            col = sns.color_palette(kwargs.get("palette"),
-                                    n_colors=len(levels))
             self._xlab = "Index"
-            sns.pointplot(x=list(range(len(data))),
-                          y=data[numeric],
-                          hue=hue,
-                          palette=col)
+            x_val = pd.Series(range(len(data)))
+            y_val = data[numeric]
+
+        sns.pointplot(x=x_val, y=y_val, hue=hue, palette=col)
 
         if z and data.dtypes[z] == object:
             self.legend_title = z
