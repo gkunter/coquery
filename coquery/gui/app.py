@@ -2945,15 +2945,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def connection_settings(self):
         from .connectionconfiguration import ConnectionConfiguration
         try:
+            name = options.cfg.current_connection.name
+            connections = options.cfg.connections
             config_dict, name = ConnectionConfiguration.choose(
-                options.cfg.current_connection.name,
-                options.cfg.connections)
-        except TypeError:
-            return
+                name, connections)
+        except TypeError as e:
+            raise e
         else:
-            options.cfg.connections = [
-                connections.get_connection(name, **kwargs)
-                for name, kwargs in config_dict.values()]
+            options.cfg.connections = config_dict
             self.change_connection(name)
 
     def show_mysql_guide(self):
