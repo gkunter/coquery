@@ -250,7 +250,7 @@ class BuilderClass(XMLCorpusBuilder):
 
     corpus_table = "Corpus"
     corpus_id = "ID"
-    corpus_sentence = "Sentence__ID"
+    corpus_sentence = "SentenceID"
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
     corpus_source_id = "SourceId"

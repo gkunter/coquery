@@ -1,20 +1,17 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Coquery Documentation: Tutorial &#8212; Coquery 0.10.0 documentation</title>
-    
+    <title>Coquery Documentation: Tutorial &#8212; Coquery 0.11.prev documentation</title>
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.10.0',
+        VERSION:     '0.11.prev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -28,14 +25,14 @@
     <link rel="next" title="Users manual" href="../userguide/index.html" />
     <link rel="prev" title="Coquery documentation" href="../index.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="header-wrapper" role="banner">
       <div class="header">
           <p class="logo"><a href="../../index.html">
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.10.0 documentation</a></div>
+          href="../../index.html">Coquery 0.11.prev documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="../index.html" title="Coquery documentation"
              accesskey="P">previous</a> |
@@ -62,7 +59,7 @@ the results.</p>
 <p>At the end of this tutorial, you will have solved the following task:</p>
 <ul class="simple">
 <li>Visualize the occurrences of ten key characters in the twelve chapters
-of <em>Alice&#8217;s Adventures in Wonderland</em> by Lewis Carroll</li>
+of <em>Alice’s Adventures in Wonderland</em> by Lewis Carroll</li>
 </ul>
 <div class="section" id="starting-coquery">
 <h2>Starting Coquery</h2>
@@ -82,31 +79,31 @@ first corpus.</p>
 </div>
 <div class="section" id="building-the-alice-corpus">
 <h2>Building the ALICE corpus</h2>
-<p>The twelve chapters of <em>Alice&#8217;s Adventures in Wonderland</em> by Lewis Carroll
+<p>The twelve chapters of <em>Alice’s Adventures in Wonderland</em> by Lewis Carroll
 (available from <a class="reference external" href="http://www.gutenberg.org/cache/epub/11/pg11.txt">Project Gutenberg</a>)
 are already provided as text files by Coquery in the the subdirectory
 <code class="docutils literal"><span class="pre">texts/alice</span></code> of the installation directory. We will use these text files
 to build the ALICE corpus.</p>
-<p>First, select &#8216;Corpus manager` from the &#8216;Corpus&#8217; menu. The corpus manager
+<p>First, select ‘Corpus manager` from the ‘Corpus’ menu. The corpus manager
 dialog will open:</p>
 <div class="figure" id="id3">
 <a class="reference internal image-reference" href="../../_images/corpus_manager_empty.png"><img alt="../../_images/corpus_manager_empty.png" src="../../_images/corpus_manager_empty.png" style="width: 420.0px; height: 320.0px;" /></a>
 <p class="caption"><span class="caption-text">The corpus manager.</span></p>
 </div>
-<p>Now, click on the green &#8216;Add&#8217; button <a class="reference internal" href="../../_images/sign-add.png"><img alt="add" src="../../_images/sign-add.png" style="height: 12px;" /></a> on the entry labelled &#8216;Build new
-corpus...&#8217; to open the Corpus builder:</p>
+<p>Now, click on the green ‘Add’ button <a class="reference internal" href="../../_images/sign-add.png"><img alt="add" src="../../_images/sign-add.png" style="height: 12px;" /></a> on the entry labelled ‘Build new
+corpus…’ to open the Corpus builder:</p>
 <div class="figure" id="id4">
 <a class="reference internal image-reference" href="../../_images/corpus_builder.png"><img alt="../../_images/corpus_builder.png" src="../../_images/corpus_builder.png" style="width: 337.5px; height: 276.0px;" /></a>
 <p class="caption"><span class="caption-text">The corpus builder.</span></p>
 </div>
 <p>The path to the <em>Alice</em> text files is already set up correctly. Type in the
-name of the new corpus: ALICE, and click on &#8216;Build&#8217;. Leave the other options
+name of the new corpus: ALICE, and click on ‘Build’. Leave the other options
 for later (you can use them later to select a meta file that contains
 information on each of your corpus files, or to build a corpus with automatic
 lemmatization and POS tagging, which is provided by the NLTK toolkit).</p>
 <p>The corpus builder will take a few moments to load the texts from the file
-into the new corpus. When finished, you will see an entry ALICE under &#8216;User
-corpora&#8217; in the corpus manager. You can click on the entry to see a corpus overview.</p>
+into the new corpus. When finished, you will see an entry ALICE under ‘User
+corpora’ in the corpus manager. You can click on the entry to see a corpus overview.</p>
 <p>When you are finished, close the corpus manager window.</p>
 </div>
 <div class="section" id="getting-a-frequency-list">
@@ -114,14 +111,14 @@ corpora&#8217; in the corpus manager. You can click on the entry to see a corpus
 <p>You will notice that now that the ALICE corpus is installed, many more
 functions in the main interface have become active.</p>
 <p>In order to get a frequency list for the words in the ALICE corpus, enter a
-single asterisk &#8216;*&#8217; (without quotation marks) into the query string entry
+single asterisk ‘*’ (without quotation marks) into the query string entry
 field. The asterisk is a wild card that matches any orthographic word in the
 corpus:</p>
 <div class="figure" id="id5">
 <a class="reference internal image-reference" href="../../_images/tutorial_query_string_asterisk.png"><img alt="../../_images/tutorial_query_string_asterisk.png" src="../../_images/tutorial_query_string_asterisk.png" style="width: 154.5px; height: 160.0px;" /></a>
 <p class="caption"><span class="caption-text">A query string matching any orthographic word.</span></p>
 </div>
-<p>Next, click on &#8216;Transformation&#8217; in the data management toolbox in the upper
+<p>Next, click on ‘Transformation’ in the data management toolbox in the upper
 right corner of the main interface. You can choose between different
 transformations that will be applied to the query results once they are
 retrieved from the corpus. For example, you can hide all duplicate rows so
@@ -131,7 +128,7 @@ produce a frequency list, so activate the corresponding option:</p>
 <a class="reference internal image-reference" href="../../_images/tutorial_aggregation_frequency.png"><img alt="../../_images/tutorial_aggregation_frequency.png" src="../../_images/tutorial_aggregation_frequency.png" style="width: 88.5px; height: 196.0px;" /></a>
 <p class="caption"><span class="caption-text">Activating the Frequency list transformation.</span></p>
 </div>
-<p>Now, it is time to run your first query. Simply click the &#8216;<a class="reference internal" href="../../_images/go.png"><img alt="go" src="../../_images/go.png" style="height: 12px;" /></a> New query&#8217;
+<p>Now, it is time to run your first query. Simply click the ‘<a class="reference internal" href="../../_images/go.png"><img alt="go" src="../../_images/go.png" style="height: 12px;" /></a> New query’
 button. After a few moments, a frequency list will be shown in the query
 results table:</p>
 <div class="figure" id="id7">
@@ -157,7 +154,7 @@ comma and the quotation mark are the most frequent types in ALICE, followed
 by the definite article <em>the</em>, the full stop, and the conjunction <em>and</em>. With
 a female protagonist, <em>she</em> also ranks relatively high at rank eight. The name
 <em>Alice</em> appears at rank 14.</p>
-<p>You can save the results table by calling &#8216;Save results&#8217; from the File menu.
+<p>You can save the results table by calling ‘Save results’ from the File menu.
 The table is saved as a file with comma-separated values (CSV). You can use
 this file in other programs such as <em>OpenOffice/LibreOffice Calc</em> or
 <em>R</em>/<em>RStudio</em>.</p>
@@ -165,12 +162,12 @@ this file in other programs such as <em>OpenOffice/LibreOffice Calc</em> or
 <div class="section" id="contingency-tables">
 <h2>Contingency tables</h2>
 <p>In the second part of our tutorial task, we want to find out in which
-chapters from <em>Alice&#8217;s Adventures in Wonderland</em> the ten key characters are
+chapters from <em>Alice’s Adventures in Wonderland</em> the ten key characters are
 mentioned.</p>
-<p>However, there is a small problem: as your ALICE corpus doesn&#8217;t contain any
+<p>However, there is a small problem: as your ALICE corpus doesn’t contain any
 metadata, there is no straightforward way of identifying key characters
 automatically. We solve this problem by assuming that in a story like
-<em>Alice&#8217;s Adventures</em>, the important characters will be referred to by animate
+<em>Alice’s Adventures</em>, the important characters will be referred to by animate
 nouns, and that the frequency of the nouns will reflect their importance for
 the story.</p>
 <p>Thus, we go through the sorted word frequency list and find the ten most
@@ -185,49 +182,49 @@ the book):</p>
 </div>
 <p>Before we run a new query to get the matches for these query strings, we have
 to indicate that we also want to include the chapter information in our query
-result table. We do this by including the corpus feature &#8216;Filename&#8217; as an
-additional output column in the results table. We use the &#8216;Feature selection&#8217;
+result table. We do this by including the corpus feature ‘Filename’ as an
+additional output column in the results table. We use the ‘Feature selection’
 tree in the upper left corner of the main interface for that. Make sure that
-both &#8216;Word&#8217; in the &#8216;Tokens&#8217; table as well as &#8216;Filename&#8217; in the &#8216;Files&#8217; table
+both ‘Word’ in the ‘Tokens’ table as well as ‘Filename’ in the ‘Files’ table
 are selected, like in the following picture:</p>
 <div class="figure" id="id10">
 <a class="reference internal image-reference" href="../../_images/tutorial_output_columns.png"><img alt="../../_images/tutorial_output_columns.png" src="../../_images/tutorial_output_columns.png" style="width: 145.0px; height: 197.5px;" /></a>
-<p class="caption"><span class="caption-text">The &#8216;Feature selection&#8217; tree with &#8216;Word&#8217; and &#8216;Filename&#8217; selected.</span></p>
+<p class="caption"><span class="caption-text">The ‘Feature selection’ tree with ‘Word’ and ‘Filename’ selected.</span></p>
 </div>
-<p>As you can see in the figure, the checkboxes next to &#8216;Word&#8217; and &#8216;Filename&#8217;
+<p>As you can see in the figure, the checkboxes next to ‘Word’ and ‘Filename’
 are ticked. This means that the query will include the information from these
-two columns in the results table. &#8216;Word&#8217; was ticked by default, which is why
+two columns in the results table. ‘Word’ was ticked by default, which is why
 the result table contained the Word column in the first place.</p>
-<p>Now, with &#8216;Word&#8217; and &#8216;Filename&#8217; selected, click the &#8216;<a class="reference internal" href="../../_images/go.png"><img alt="go" src="../../_images/go.png" style="height: 12px;" /></a> New uery&#8217; button to
+<p>Now, with ‘Word’ and ‘Filename’ selected, click the ‘<a class="reference internal" href="../../_images/go.png"><img alt="go" src="../../_images/go.png" style="height: 12px;" /></a> New uery’ button to
 run a new query. If you followed all steps from the tutorial, your new
 results table should look like this:</p>
 <div class="figure" id="id11">
 <a class="reference internal image-reference" href="../../_images/tutorial_results_table_filename.png"><img alt="../../_images/tutorial_results_table_filename.png" src="../../_images/tutorial_results_table_filename.png" style="width: 387.0px; height: 192.5px;" /></a>
-<p class="caption"><span class="caption-text">A frequency table for eleven nouns, summarized by &#8216;Filename&#8217;.</span></p>
+<p class="caption"><span class="caption-text">A frequency table for eleven nouns, summarized by ‘Filename’.</span></p>
 </div>
 <p>Apparently, <em>alice</em> occurs 50 times in chapter 7, 47 times in chapter 9, and
-so on. You can rearrange these results by switching from the &#8216;Frequency list&#8217;
-transformation to &#8216;Contingency table&#8217;. Again, use the data management toolbox
+so on. You can rearrange these results by switching from the ‘Frequency list’
+transformation to ‘Contingency table’. Again, use the data management toolbox
 for this:</p>
 <div class="figure" id="id12">
 <a class="reference internal image-reference" href="../../_images/tutorial_aggregation_contingency.png"><img alt="../../_images/tutorial_aggregation_contingency.png" src="../../_images/tutorial_aggregation_contingency.png" style="width: 90.5px; height: 195.0px;" /></a>
-<p class="caption"><span class="caption-text">Switching to the &#8216;Contingency table&#8217; transformation.</span></p>
+<p class="caption"><span class="caption-text">Switching to the ‘Contingency table’ transformation.</span></p>
 </div>
-<p>You will notice that below the toolbox, the &#8216;Apply&#8217; button will have become
+<p>You will notice that below the toolbox, the ‘Apply’ button will have become
 active. Once you click on that button, all pending data management steps will
 be applied to the results table. You can switch between the different
 transformations without having to run the query again. This can be very
 helpful if you are working with corpora that are much bigger than ALICE, as
 queries can easily take a few minutes or more. For a detailled description of
 data management in Coquery, see <a class="reference internal" href="../userguide/management.html#management"><span class="std std-ref">Data management</span></a> in the <a class="reference internal" href="../userguide/index.html#users"><span class="std std-ref">Users manual</span></a>.</p>
-<p>For now, press the &#8216;Apply&#8217; button to produce a contingency table a
+<p>For now, press the ‘Apply’ button to produce a contingency table a
 contingency table instead of the frequency list:</p>
 <div class="figure" id="id13">
 <a class="reference internal image-reference" href="../../_images/tutorial_results_table_contingency.png"><img alt="../../_images/tutorial_results_table_contingency.png" src="../../_images/tutorial_results_table_contingency.png" style="width: 385.5px; height: 189.0px;" /></a>
 <p class="caption"><span class="caption-text">The contingency table for the last query.</span></p>
 </div>
 <p>In this contingency table, each row corresponds to one noun from the query
-strings, and each column corresponds to one chapter (use the &#8216;Feature order&#8217;
+strings, and each column corresponds to one chapter (use the ‘Feature order’
 toolbox if you want to change what appears in the rows and and the columns of
 a contingency table). We can quickly see for instance that <em>alice</em> is relatively frequent in all chapters, but <em>mouse</em>
 is mentioned mostly in chapters 2 and 3.</p>
@@ -239,8 +236,8 @@ the distribution of the key characters within the <em>Alice</em> story, but by
 making use of the visualization capabilities of Coquery, we can learn much
 more.</p>
 <p>The visualization designer helps you to visually understand the structure of
-your query results. You can open the designer by selecting &#8216;Visualization
-designer&#8217; from the &#8216;Results&#8217; menu:</p>
+your query results. You can open the designer by selecting ‘Visualization
+designer’ from the ‘Results’ menu:</p>
 <div class="figure" id="id14">
 <a class="reference internal image-reference" href="../../_images/visualization_designer.png"><img alt="../../_images/visualization_designer.png" src="../../_images/visualization_designer.png" style="width: 371.5px; height: 230.0px;" /></a>
 <p class="caption"><span class="caption-text">The visualization designer.</span></p>
@@ -258,18 +255,18 @@ drag the column onto one of the fields in the layout panel. Then, you select
 a figure type by clicking on one of the icons in the right panel. After a
 short moment, a figure will be shown.</p>
 <p>One particularly useful visualization for analysing token occurrences across
-a corpus is the &#8216;Barcode plot&#8217; (users of <a class="reference external" href="http://www.laurenceanthony.net/software/antconc/">AntConc</a> will know a similar type of
-visualization as &#8216;concordance plots&#8217;). We will create a barcode plot that
+a corpus is the ‘Barcode plot’ (users of <a class="reference external" href="http://www.laurenceanthony.net/software/antconc/">AntConc</a> will know a similar type of
+visualization as ‘concordance plots’). We will create a barcode plot that
 shows in which files the key characters occur.</p>
-<p>First, drag the &#8216;Filename&#8217; column to the field labeled &#8216;Y&#8217;. In this way, the
-different values of the &#8216;Filename&#8217; column will be arranged vertically. Next,
-drag the &#8216;Word&#8217; column to the field labeled &#8216;Columns&#8217; under &#8216;Grid layout&#8217;.
+<p>First, drag the ‘Filename’ column to the field labeled ‘Y’. In this way, the
+different values of the ‘Filename’ column will be arranged vertically. Next,
+drag the ‘Word’ column to the field labeled ‘Columns’ under ‘Grid layout’.
 This is what the visualization designer should look like:</p>
 <div class="figure" id="id15">
 <a class="reference internal image-reference" href="../../_images/visualization_designer_word_by_filename.png"><img alt="../../_images/visualization_designer_word_by_filename.png" src="../../_images/visualization_designer_word_by_filename.png" style="width: 371.5px; height: 230.0px;" /></a>
-<p class="caption"><span class="caption-text">The visualization designer, with &#8216;Word&#8217; in the &#8216;Y&#8217; field, and &#8216;Filename&#8217; in the &#8216;Column&#8217; field.</span></p>
+<p class="caption"><span class="caption-text">The visualization designer, with ‘Word’ in the ‘Y’ field, and ‘Filename’ in the ‘Column’ field.</span></p>
 </div>
-<p>Finally, click on the &#8216;Barcode plot&#8217; icon in the right panel. The following
+<p>Finally, click on the ‘Barcode plot’ icon in the right panel. The following
 figure will be created:</p>
 <div class="figure" id="id16">
 <a class="reference internal image-reference" href="../../_images/barcode_alice.png"><img alt="../../_images/barcode_alice.png" src="../../_images/barcode_alice.png" style="width: 426.0px; height: 362.5px;" /></a>
@@ -290,13 +287,13 @@ chapter 10). Also co-occurring characters are apparently <em>hatter</em> and
 number of key characters than most of the other chapters, but this
 figure is perhaps not the best visualization to confirm this.</p>
 <p>You can easily change the visualization from inside of the designer dialog.
-Simply drag the &#8216;Word&#8217; column from the &#8216;Columns&#8217; field to the &#8216;Y&#8217; field. This
-will replace the &#8216;Filename&#8217; column, which will be returned to the list in the
-left panel. Drag it to the &#8216;Columns&#8217; field which was previously occupied by
-the &#8216;Word&#8217; column. Now, your visualization designer looks like this:</p>
+Simply drag the ‘Word’ column from the ‘Columns’ field to the ‘Y’ field. This
+will replace the ‘Filename’ column, which will be returned to the list in the
+left panel. Drag it to the ‘Columns’ field which was previously occupied by
+the ‘Word’ column. Now, your visualization designer looks like this:</p>
 <div class="figure" id="id17">
 <a class="reference internal image-reference" href="../../_images/visualization_designer_filename_by_word.png"><img alt="../../_images/visualization_designer_filename_by_word.png" src="../../_images/visualization_designer_filename_by_word.png" style="width: 371.5px; height: 230.0px;" /></a>
-<p class="caption"><span class="caption-text">The visualization designer, with &#8216;Filename&#8217; in the &#8216;Y&#8217; field, and &#8216;Word&#8217; in the &#8216;Column&#8217; field.</span></p>
+<p class="caption"><span class="caption-text">The visualization designer, with ‘Filename’ in the ‘Y’ field, and ‘Word’ in the ‘Column’ field.</span></p>
 </div>
 <p>The new barcode plot will look like this:</p>
 <div class="figure" id="id18">

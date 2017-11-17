@@ -214,6 +214,7 @@ class Session(object):
         manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
+        manager.set_column_order(options.cfg.column_order)
 
         dtype_list = []
         self.queries = {}
@@ -370,6 +371,7 @@ class Session(object):
         manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
+        manager.set_column_order(options.cfg.column_order)
 
         column_properties = {}
         try:

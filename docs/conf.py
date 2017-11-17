@@ -57,7 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Coquery'
-copyright = u'2016, 2017, Gero Kunter'
+copyright = u'2016, 2017 Gero Kunter'
 author = u'Gero Kunter'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -201,3 +201,5 @@ html_static_path = ['_static', "_static/css"]
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Coquerydoc'
 
+def setup(app):
+    app.add_stylesheet('coquery.css')

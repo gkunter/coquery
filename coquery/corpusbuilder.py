@@ -1693,9 +1693,11 @@ class BaseCorpusBuilder(corpus.SQLResource):
         # unavailable:
         if not self.arguments.only_module:
             for module, package, url in self.get_modules():
+                logging.info("importing module: {}".format(module))
                 try:
                     exec("import {}".format(module))
                 except ImportError:
+                    logging.info("Import failed.")
                     raise DependencyError(package, url)
 
         if self.DB.db_type == SQL_MYSQL:
@@ -1703,6 +1705,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
             self.DB.connection.execute("SET CHARACTER SET 'utf8mb4'")
             self.DB.connection.execute("SET unique_checks=0")
             self.DB.connection.execute("SET foreign_key_checks=0")
+        logging.info("Builder initialized")
 
     def remove_build(self):
         """
@@ -1790,49 +1793,56 @@ class BaseCorpusBuilder(corpus.SQLResource):
         current = progress_next(current)
 
         with self.DB.engine.connect() as self.DB.connection:
+            logging.info("Stage 0")
             self.build_initialize()
-            progress_done()
+            #progress_done()
 
             try:
                 if not self.arguments.only_module:
                     # create tables
                     if not self.interrupted:
+                        logging.info("Stage 1")
                         if self.arguments.metadata:
                             self.add_metadata(self.arguments.metadata,
                                               self.arguments.metadata_column)
                         self.build_create_tables()
-                        progress_done()
+                        #progress_done()
 
                     # read files
                     if not self.interrupted:
+                        logging.info("Stage 2")
                         current = progress_next(current)
                         if self.arguments.metadata:
                             self.store_metadata()
                         self.build_load_files()
                         self.commit_data()
-                        progress_done()
+                        #progress_done()
 
                     # any additional stage
                     if not self.interrupted:
+                        logging.info("Stage 3")
                         current = progress_next(current)
                         for stage in self.additional_stages:
                             if not self.interrupted:
                                 stage()
-                        progress_done()
+                        #progress_done()
 
                     # optimize
-                    if (not self.interrupted and self.DB.db_type == SQL_MYSQL):
+                    if (not self.interrupted and
+                            self.DB.db_type == SQL_MYSQL):
+                        logging.info("Stage 4")
                         current = progress_next(current)
                         self.build_optimize()
-                        progress_done()
+                        #progress_done()
 
                     # lookup table
                     try:
-                        if (self.arguments.lookup_ngram and
-                                not self.interrupted):
+                        if (not self.interrupted and
+                                self.arguments.lookup_ngram):
+                            logging.info("Stage 5")
                             current = progress_next(current)
                             self.build_lookup_ngram()
-                            progress_done()
+                            #progress_done()
                     except Exception as e:
                         S = "Error building ngram lookup table: {}".format(e)
                         logging.error(S)
@@ -1841,12 +1851,14 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
                     # build indexes
                     if not self.interrupted:
+                        logging.info("Stage 6")
                         current = progress_next(current)
                         self.build_create_indices()
-                        progress_done()
+                        #progress_done()
 
                 # write module
                 if not self.interrupted:
+                    logging.info("Stage 8")
                     current = progress_next(current)
                     self.build_write_module()
 
@@ -1854,7 +1866,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
             except Exception as e:
                 for x in get_error_repr(sys.exc_info()):
                     print(x)
-                warnings.warn(str(e))
+                    logging.warn(x)
+                logging.warn(str(e))
                 print(str(e))
                 self.remove_build()
                 self.DB.connection.close()

@@ -19,6 +19,7 @@ import os
 from .. import options
 from coquery.errors import VisualizationModuleError
 from coquery.unicode import utf8
+from coquery.defines import msg_visualization_error
 
 from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
 
@@ -33,6 +34,7 @@ import seaborn as sns
 
 from ..visualizer.visualizer import get_grid_layout
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
+from . import classes
 
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
@@ -47,9 +49,10 @@ visualizer_mapping = (
     ("Barplot", "Barchart", "barplot", "BarPlot"),
     ("Stacked bars", "Barchart_stacked", "barplot", "StackedBars"),
     ("Percentage bars", "Barchart_percent", "barplot", "PercentBars"),
+    ("Line plot", "Lines", "linechart", "LineChart"),
     ("Change over time (lines)", "Lines", "timeseries", "TimeSeries"),
-    #("Change over time (stacked)", "Areas_stacked", "timeseries"),
-    #("Change over time (percent)", "Areas_percent", "timeseries"),
+    ("Change over time (stacked)", "Areas_stacked", "timeseries", "StackedArea"),
+    ("Change over time (percent)", "Areas_percent", "timeseries", "PercentageArea"),
     ("Heat map", "Heatmap", "heatmap", "Heatmap"),
     ("Box-Whisker plot", "Boxplot", "boxplot", "BoxPlot"),
     ("Violin plot", "Violinplot", "boxplot", "ViolinPlot"),
@@ -182,7 +185,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.ui.table_categorical.clear()
         self.ui.table_numerical.clear()
-
         self.df = df
         self.alias = alias or {}
         for i, x in enumerate(df.columns):
@@ -411,23 +413,25 @@ class VisualizationDesigner(QtWidgets.QDialog):
         # Hook up checks for grid layout enable state.
         # The enable state of the grid layout box is checked if there are
         # changes to the data trays.
-        self.ui.tray_data_x.featureChanged.connect(self.check_grid_layout)
-        self.ui.tray_data_y.featureChanged.connect(self.check_grid_layout)
-        self.ui.tray_data_z.featureChanged.connect(self.check_grid_layout)
-        self.ui.tray_data_x.featureCleared.connect(self.check_grid_layout)
-        self.ui.tray_data_y.featureCleared.connect(self.check_grid_layout)
-        self.ui.tray_data_z.featureCleared.connect(self.check_grid_layout)
+        for signal in (self.ui.tray_data_x.featureChanged,
+                       self.ui.tray_data_y.featureChanged,
+                       self.ui.tray_data_z.featureChanged,
+                       self.ui.tray_data_x.featureCleared,
+                       self.ui.tray_data_y.featureCleared,
+                       self.ui.tray_data_z.featureCleared):
+            signal.connect(self.check_grid_layout)
 
         # Hook up annotation changes:
-        self.ui.edit_figure_title.textChanged.connect(self.add_annotations)
-        self.ui.edit_x_label.textChanged.connect(self.add_annotations)
-        self.ui.edit_y_label.textChanged.connect(self.add_annotations)
-        self.ui.spin_size_title.valueChanged.connect(self.add_annotations)
-        self.ui.spin_size_x_label.valueChanged.connect(self.add_annotations)
-        self.ui.spin_size_y_label.valueChanged.connect(self.add_annotations)
-        self.ui.spin_size_x_ticklabels.valueChanged.connect(self.add_annotations)
-        self.ui.spin_size_y_ticklabels.valueChanged.connect(self.add_annotations)
-        self.ui.combo_font_figure.currentIndexChanged.connect(self.add_annotations)
+        for signal in (self.ui.edit_figure_title.textChanged,
+                       self.ui.edit_x_label.textChanged,
+                       self.ui.edit_y_label.textChanged,
+                       self.ui.spin_size_title.valueChanged,
+                       self.ui.spin_size_x_label.valueChanged,
+                       self.ui.spin_size_y_label.valueChanged,
+                       self.ui.spin_size_x_ticklabels.valueChanged,
+                       self.ui.spin_size_y_ticklabels.valueChanged,
+                       self.ui.combo_font_figure.currentIndexChanged):
+            signal.connect(self.add_annotations)
 
         # (6) changing the legend layout
         self.ui.edit_legend_title.editingFinished.connect(self.change_legend)
@@ -483,20 +487,24 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.vis = visualizer_class(self.df, self.session)
         self.vis.updateRequested.connect(self.plot_figure)
 
-        while self.ui.layout_custom.count():
-            item = self.ui.layout_custom.takeAt(0)
+        for i in reversed(range(self.ui.layout_custom.count())):
+            item = self.ui.layout_custom.itemAt(i)
             if isinstance(item, QtWidgets.QLayout):
-                while item.count():
-                    subitem = item.takeAt(0)
-                    try:
-                        subitem.hide()
-                    except AttributeError:
-                        break
+                for j in reversed(range(item.count())):
+                    subitem = item.takeAt(j)
+                    if hasattr(subitem, "widget"):
+                        widget = subitem.widget()
+                        if widget:
+                            widget.hide()
+                            widget.setParent(None)
                     del subitem
-            try:
+            else:
                 item.hide()
-            except AttributeError:
-                break
+            if hasattr(item, "widget"):
+                widget = item.widget()
+                if widget:
+                    widget.hide()
+                    widget.setParent(None)
             del item
 
         widgets = self.vis.get_custom_widgets()
@@ -613,7 +621,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         x = self.get_palette_name()
         n = self.ui.spin_number.value()
         if (x != self._palette_name or n != self._color_number):
-            print(x, n)
             self.show_palette()
             self.plot_figure()
 
@@ -827,31 +834,67 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                       legend_out=True,
                                       sharex=True, sharey=True)
 
+        kwargs = dict(x=data_x, y=data_y, z=data_z,
+                      levels_x=levels_x, levels_y=levels_y, levels_z=levels_z,
+                      session=self.session,
+                      palette=self.get_palette_name(),
+                      color_number=self.ui.spin_number.value())
+
+        if options.cfg.experimental:
+            self.plot_thread = classes.CoqThread(
+                self.run_plot, **kwargs, parent=self)
+            self.plot_thread.taskStarted.connect(self.start_plot)
+            self.plot_thread.taskFinished.connect(self.finalize_plot)
+            self.plot_thread.taskException.connect(self.exception_plot)
+            self.vis.moveToThread(self.plot_thread)
+            self.plot_thread.start()
+        else:
+            self.start_plot()
+            self.run_plot(**kwargs)
+            self.finalize_plot()
+
+    def start_plot(self):
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.show()
+        self.dialog_layout.addWidget(self.progress_bar)
+
+    def run_plot(self, **kwargs):
+        self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
+        self.grid.fig.tight_layout()
+
+    def finalize_plot(self):
         try:
-            self.grid = self.grid.map_dataframe(
-                self.vis.plot_facet,
-                x=data_x, y=data_y, z=data_z,
-                levels_x=levels_x, levels_y=levels_y, levels_z=levels_z,
-                session=self.session,
-                palette=self.get_palette_name(),
-                color_number=self.ui.spin_number.value())
+            values = self.get_gui_values()
+            figure_title = values["figure_type"].text()
+
+            self.dialog_layout.removeWidget(self.progress_bar)
+            self.progress_bar.hide()
+            del self.progress_bar
+
             self.setup_canvas(self.grid.fig)
             self.add_annotations()
             self.change_legend()
 
-            self.dialog.setWindowTitle("{} – Coquery".format(figure_type.text()))
+            self.dialog.setWindowTitle("{} – Coquery".format(figure_title))
             self.dialog.show()
             self.dialog.raise_()
 
             if hasattr(self.vis, "on_pick"):
                 self.grid.fig.canvas.mpl_connect('button_press_event',
                                                 self.vis.on_pick)
-
-            self.grid.fig.tight_layout()
-            self.tool.functight()
-            self.grid.fig.canvas.draw_idle()
-        except ValueError as e:
+        except Exception as e:
+            print("EXCEPTION")
             print(e)
+            logging.error(e)
+            raise e
+
+    def exception_plot(self, e):
+        logging.error(e)
+        QtWidgets.QMessageBox.critical(self,
+            "Error while plotting – Coquery",
+            msg_visualization_error.format(str(e)),
+            QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
     def add_annotations(self):
         if self.vis:
@@ -860,7 +903,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 self.vis.set_annotations(self.grid, values)
             except Exception as e:
                 print("ERROR: ", e)
-                pass
+                logging.error(str(e))
             else:
                 self.canvas.draw()
 

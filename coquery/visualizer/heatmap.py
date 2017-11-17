@@ -71,8 +71,6 @@ class Visualizer(vis.BaseVisualizer):
         else:
             self.options["label_legend"] = self._groupby[0]
 
-
-
     def draw(self):
         """ Draw a heat map. """
 

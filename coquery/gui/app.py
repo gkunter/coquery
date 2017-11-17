@@ -251,10 +251,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except AttributeError:
             pass
 
-        separator = QtWidgets.QFrame()
-        separator.setFrameShape(QtWidgets.QFrame.HLine)
-        separator.setFrameShadow(QtWidgets.QFrame.Sunken)
-
         self.ui.aggregate_radio_list = []
         for label in SUMMARY_MODES:
             radio = QtWidgets.QRadioButton(label)
@@ -262,6 +258,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             radio.toggled.connect(self.check_transformation)
             self.ui.layout_aggregate.addWidget(radio)
             if label == QUERY_MODE_TOKENS:
+                separator = QtWidgets.QFrame()
+                separator.setFrameShape(QtWidgets.QFrame.HLine)
+                separator.setFrameShadow(QtWidgets.QFrame.Sunken)
                 self.ui.layout_aggregate.addWidget(separator)
             self.ui.aggregate_radio_list.append(radio)
             if label == QUERY_MODE_COLLOCATIONS:
@@ -304,18 +303,17 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             widget = self.ui.tool_widget.widget(i)
             max_x = max(widget.sizeHint().width(), max_x)
             min_y = max(widget.sizeHint().height(), min_y)
-        self.ui.tool_widget.setMaximumWidth(max_x)
         self.ui.tool_widget.setMinimumWidth(max_x)
         self.ui.tool_widget.setMinimumHeight(min_y + 5)
 
         self.change_toolbox(options.cfg.last_toolbox)
-        self.ui.list_toolbox.resizeColumnsToContents()
         header = self.ui.list_toolbox.horizontalHeader()
-        header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Fixed)
-        header.resizeSection(1, 24)
-        header.resizeSection(2, 24)
+        header.setSectionResizeMode(header.ResizeToContents)
+        header.setMinimumSectionSize(0)
+        header.setSectionResizeMode(0, header.Stretch)
+        header.setSectionResizeMode(1, header.ResizeToContents)
+        header.setSectionResizeMode(2, header.ResizeToContents)
+        self.ui.list_toolbox.resizeColumnsToContents()
 
         # use a file system model for the file name auto-completer::
         self.dirModel = QtWidgets.QFileSystemModel(parent=self)
@@ -1013,6 +1011,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             _set_icon(1, filter_icon if filtered else None)
             _set_icon(2, active_icon if active else None)
 
+        self.ui.list_toolbox.resizeColumnsToContents()
+
+
     ###
     ### interface status and interface interaction methods
     ###
@@ -1608,9 +1609,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def update_table_models(self, visible=None, hidden=None):
         if visible is None and hidden is None:
             manager = self.Session.get_manager()
-            for x in list(manager.hidden_columns):
-                if x not in self.Session.output_object.columns:
-                    manager.hidden_columns.remove(x)
+            manager.reset_hidden_columns()
+            for col in self.hidden_features:
+                manager.hide_column(col)
             hidden_cols = pd.Index(manager.hidden_columns)
 
             vis_cols = [x for x in self.Session.output_object.columns
@@ -2983,13 +2984,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.cfg.selected_features = self.column_tree.selected()
             self.get_context_values()
 
-
             sample_matches = (self.ui.check_sample_matches.isEnabled() and
                               self.ui.check_sample_matches.isChecked() and
                               int(self.ui.spin_sample_size.value()) > 0)
             sample_size = int(self.ui.spin_sample_size.value())
             options.cfg.sample_matches = sample_matches
             options.cfg.sample_size = sample_size
+            options.cfg.column_order = (
+                [x for _, x in self.ui.list_column_order.items()])
 
     def get_external_links(self):
         """

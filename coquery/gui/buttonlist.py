@@ -11,15 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import warnings
-
-
-from coquery import options
-from coquery.defines import *
-from coquery.unicode import utf8
-
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
-from . import classes
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.buttonListUi import Ui_ButtonList
 
 
@@ -44,7 +36,7 @@ class CoqButtonList(QtWidgets.QWidget):
         self.ui.button_group_down.setIcon(
             get_toplevel_window().get_icon("Circled Chevron Down"))
 
-        #self.ui.button_remove_group.clicked.connect(self._remove_feature)
+        self.ui.button_remove_group.clicked.connect(self._remove_feature)
         self.ui.list_widget.itemActivated.connect(self._check_buttons)
 
         self._old_drop = self.ui.list_widget.dropEvent
@@ -55,6 +47,7 @@ class CoqButtonList(QtWidgets.QWidget):
         self.ui.button_group_down.clicked.connect(
             lambda: self._move_group_column(direction="down"))
 
+        self.listOrderChanged.connect(self._check_buttons)
         self._check_buttons()
 
     def dropEvent(self, *args, **kwargs):
@@ -71,16 +64,19 @@ class CoqButtonList(QtWidgets.QWidget):
                 item = QtWidgets.QListWidgetItem(label)
                 item.setData(QtCore.Qt.UserRole, data)
                 self.ui.list_widget.addItem(item)
+            self.ui.list_widget.setCurrentRow(0)
+        self.listOrderChanged.emit()
 
     def items(self):
         items = []
         for i in range(self.ui.list_widget.count()):
             item = self.ui.list_widget.item(i)
-            items.append((item, item.data(QtCore.Qt.UserRole)))
+            items.append((item.text(), item.data(QtCore.Qt.UserRole)))
         return items
 
     def _check_buttons(self):
         current_row = self.ui.list_widget.currentRow()
+
         self.ui.button_remove_group.setEnabled(current_row > -1)
         self.ui.button_group_up.setEnabled(current_row > 0)
         self.ui.button_group_down.setEnabled(
@@ -93,5 +89,6 @@ class CoqButtonList(QtWidgets.QWidget):
         self.ui.list_widget.insertItem(new_row, item)
         self.ui.list_widget.setCurrentRow(new_row)
         self.listOrderChanged.emit()
-        self._check_buttons()
 
+    def _remove_feature(self):
+        raise NotImplementedError

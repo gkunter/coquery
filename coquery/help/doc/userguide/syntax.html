@@ -1,20 +1,17 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Coquery Documentation: Query syntax &#8212; Coquery 0.10.0 documentation</title>
-    
+    <title>Coquery Documentation: Query syntax &#8212; Coquery 0.11.prev documentation</title>
     <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.10.0',
+        VERSION:     '0.11.prev',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -25,21 +22,21 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Visualizations" href="visualizations.html" />
+    <link rel="next" title="Data management" href="management.html" />
     <link rel="prev" title="Users manual" href="index.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="header-wrapper" role="banner">
       <div class="header">
           <p class="logo"><a href="../../index.html">
             <img class="logo" src="../../_static/logo_small.png" alt="Logo"/>
           </a></p>
         <div class="headertitle"><a
-          href="../../index.html">Coquery 0.10.0 documentation</a></div>
+          href="../../index.html">Coquery 0.11.prev documentation</a></div>
         <div class="rel" role="navigation" aria-label="related navigation">
           <a href="index.html" title="Users manual"
              accesskey="P">previous</a> |
-          <a href="visualizations.html" title="Visualizations"
+          <a href="management.html" title="Data management"
              accesskey="N">next</a>
         </div>
        </div>
@@ -116,14 +113,14 @@ the BNC that are tagged as singular nouns.</p>
 example, COCA uses the CLAWS7 tag set, while BNC uses CLAWS5. A list of
 the POS tags that are available in the active corpus can be displayed by
 first right-clicking on the part-of-speech column column in the Output
-column list, and then selecting &#8220;View unique values&#8221; from the context
+column list, and then selecting “View unique values” from the context
 menu.</p>
 <p>For convenience, and in order to retain syntactic compatibility with the
 BYU syntax (see below), POS specifiers can also be used without providing
 also a query item. Thus, <code class="docutils literal"><span class="pre">[nn1]</span></code> matches all tokens
 tagged as singular nouns (NN1) in the BNC. Note that this syntax is
 potentially ambiguous: For example, the tag POS is used in the BNC to
-tag the possessive marker <em>&#8216;s</em>. At the same time, there are a few
+tag the possessive marker <em>‘s</em>. At the same time, there are a few
 tokens that have <em>POS</em> as their lemma. Similarly, articles in CLAWS7
 are tagged by AT, which also exists as a lemma <em>at</em>. In the case of
 such ambiguities between POS tags and lemmas, Coquery is compatible to
@@ -183,7 +180,7 @@ with <em>n</em>. In the BNC, this matches the singular noun <em>walk</em>
 <h2>Escaping characters</h2>
 <p>If you want to query any character that has a special meaning in query
 items (for example the wildcard characters, the square brackets, the
-quotation mark, or the slashes), you must precede it by the &#8216;escape&#8217;
+quotation mark, or the slashes), you must precede it by the ‘escape’
 character <code class="docutils literal"><span class="pre">\\</span></code> (the backslash). For example, if you want to match
 all occurrences of the asterisk character in a corpus, you have to use the
 query string <code class="docutils literal"><span class="pre">\\*</span></code>, because the unescaped asterisk <code class="docutils literal"><span class="pre">*</span></code> is interpreted as
@@ -275,7 +272,7 @@ Also, Transcription queries are not supported by the BYU syntax.</p>
           <div role="navigation" aria-label="related navigaton">
             <a href="index.html" title="Users manual"
               >previous</a> |
-            <a href="visualizations.html" title="Visualizations"
+            <a href="management.html" title="Data management"
               >next</a>
           </div>
           <div role="note" aria-label="source link">

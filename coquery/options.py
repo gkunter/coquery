@@ -514,6 +514,7 @@ class Options(object):
             "query_case_sensitive": False,
             "output_case_sensitive": False,
             "regexp": False,
+            "experimental": False,
             "output_to_lower": True,
             "drop_duplicates": True,
             "na_string": DEFAULT_MISSING_VALUE,
@@ -626,6 +627,7 @@ class Options(object):
             self.args.query_case_sensitive = config_file.bool("main", "query_case_sensitive", d=defaults)
             self.args.output_case_sensitive = config_file.bool("main", "output_case_sensitive", d=defaults)
             self.args.regexp = config_file.bool("main", "regexp", d=defaults)
+            self.args.experimental = config_file.bool("main", "experimental", d=defaults)
             self.args.output_to_lower = config_file.bool("main", "output_to_lower", d=defaults)
             self.args.drop_on_na = config_file.bool("main", "drop_on_na", d=defaults)
             self.args.na_string = config_file.str("main", "na_string", d=defaults)
@@ -917,6 +919,7 @@ def save_configuration():
     config.set("main", "output_case_sensitive", cfg.output_case_sensitive)
     config.set("main", "query_case_sensitive", cfg.query_case_sensitive)
     config.set("main", "regexp", cfg.regexp)
+    config.set("main", "experimental", cfg.experimental)
     config.set("main", "drop_on_na", cfg.drop_on_na)
     config.set("main", "na_string", cfg.na_string)
     try:

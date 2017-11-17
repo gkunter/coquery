@@ -51,7 +51,7 @@ for file in glob.glob(os.path.join(coq_path, 'visualizer', '*.py')):
 
 pslexer = os.path.join(python_path, "Lib", "site-packages", "pdfminer", "pslexer.py")
 l.append((pslexer, "pdfminer"))
-    
+
 a = Analysis([os.path.join('..', 'Coquery.py')],
              pathex=[coq_path,
                  os.path.join(coq_path, "visualizer"),

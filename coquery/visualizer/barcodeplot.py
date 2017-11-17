@@ -97,6 +97,10 @@ class BarcodePlot(vis.Visualizer):
     BOTTOM = 0.025
     COLOR = None
 
+    def __init__(self, *args, **kwargs):
+        vis.Visualizer.__init__(self, *args, **kwargs)
+        self.horizontal = True
+
     def plot_facet(self,
                    data, color, x=None, y=None, levels_x=None, levels_y=None,
                    palette=None, rug=None, rug_color="Black",
@@ -251,19 +255,20 @@ class HeatbarPlot(BarcodePlot):
 
         corpus_size = self.session.Corpus.get_corpus_size()
         M = []
-        if x:
+        if x and not y:
+            self.horizontal = False
             for current_x in levels_x:
                 dsub = data[data[x] == current_x]
                 matches = dsub.coquery_invisible_corpus_id
                 density = self.kde(matches.astype(float))
                 density.fit(bw="scott")
                 values = density.evaluate(range(corpus_size))[::-1]
-                #M.append(len(matches) * values / values.max())
                 M.append(len(matches) * values)
             plt.imshow(pd.np.array(M).T,
                        aspect="auto", cmap="Greys",
                        extent=(0, len(levels_x), 0, corpus_size))
-        elif y:
+        elif y and not x:
+            self.horizontal = True
             for current_y in levels_y:
                 dsub = data[data[y] == current_y]
                 matches = dsub.coquery_invisible_corpus_id

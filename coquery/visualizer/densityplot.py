@@ -257,9 +257,9 @@ class CumulativePlot(DensityPlot):
         super(CumulativePlot, self).plot_facet(data, color, **kwargs)
         ax = plt.gca()
         if self.flip:
-            ax.set_ylim(0, 1)
-        else:
             ax.set_xlim(0, 1)
+        else:
+            ax.set_ylim(0, 1)
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):

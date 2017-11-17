@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'groupDialog.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,11 +12,7 @@ class Ui_GroupDialog(object):
     def setupUi(self, GroupDialog):
         GroupDialog.setObjectName("GroupDialog")
         GroupDialog.resize(640, 480)
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(GroupDialog)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.gridLayout = QtWidgets.QGridLayout()
-        self.gridLayout.setContentsMargins(-1, -1, -1, 0)
-        self.gridLayout.setVerticalSpacing(10)
+        self.gridLayout = QtWidgets.QGridLayout(GroupDialog)
         self.gridLayout.setObjectName("gridLayout")
         self.label = QtWidgets.QLabel(GroupDialog)
         self.label.setObjectName("label")
@@ -25,25 +21,16 @@ class Ui_GroupDialog(object):
         self.edit_label.setText("")
         self.edit_label.setObjectName("edit_label")
         self.gridLayout.addWidget(self.edit_label, 0, 1, 1, 1)
-        self.label_duplicates = QtWidgets.QLabel(GroupDialog)
-        self.label_duplicates.setObjectName("label_duplicates")
-        self.gridLayout.addWidget(self.label_duplicates, 2, 0, 1, 1)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setContentsMargins(4, -1, -1, -1)
-        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout()
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.radio_keep_duplicates = QtWidgets.QRadioButton(GroupDialog)
         self.radio_keep_duplicates.setChecked(True)
         self.radio_keep_duplicates.setObjectName("radio_keep_duplicates")
-        self.horizontalLayout.addWidget(self.radio_keep_duplicates)
+        self.verticalLayout_3.addWidget(self.radio_keep_duplicates)
         self.radio_remove_duplicates = QtWidgets.QRadioButton(GroupDialog)
         self.radio_remove_duplicates.setObjectName("radio_remove_duplicates")
-        self.horizontalLayout.addWidget(self.radio_remove_duplicates)
-        self.gridLayout.addLayout(self.horizontalLayout, 2, 1, 1, 1)
-        self.buttonBox = QtWidgets.QDialogButtonBox(GroupDialog)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
-        self.gridLayout.addWidget(self.buttonBox, 3, 0, 1, 2)
+        self.verticalLayout_3.addWidget(self.radio_remove_duplicates)
+        self.gridLayout.addLayout(self.verticalLayout_3, 0, 2, 2, 1)
         self.tabWidget = QtWidgets.QTabWidget(GroupDialog)
         self.tabWidget.setObjectName("tabWidget")
         self.tab = QtWidgets.QWidget()
@@ -57,19 +44,24 @@ class Ui_GroupDialog(object):
         self.tabWidget.addTab(self.tab, "")
         self.tab_functions = QtWidgets.QWidget()
         self.tab_functions.setObjectName("tab_functions")
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.tab_functions)
-        self.horizontalLayout_2.setContentsMargins(4, 4, 4, 4)
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.layout_functions = QtWidgets.QVBoxLayout(self.tab_functions)
+        self.layout_functions.setContentsMargins(4, 4, 4, 4)
+        self.layout_functions.setObjectName("layout_functions")
+        self.lineEdit = CoqSearchLine(self.tab_functions)
+        self.lineEdit.setObjectName("lineEdit")
+        self.layout_functions.addWidget(self.lineEdit)
         self.linked_functions = CoqLinkedLists(self.tab_functions)
         self.linked_functions.setEditTriggers(QtWidgets.QAbstractItemView.CurrentChanged)
         self.linked_functions.setAlternatingRowColors(True)
         self.linked_functions.setObjectName("linked_functions")
-        self.horizontalLayout_2.addWidget(self.linked_functions)
+        self.layout_functions.addWidget(self.linked_functions)
         self.tabWidget.addTab(self.tab_functions, "")
-        self.gridLayout.addWidget(self.tabWidget, 1, 0, 1, 2)
-        self.gridLayout.setColumnStretch(0, 1)
-        self.gridLayout.setColumnStretch(1, 2)
-        self.verticalLayout_3.addLayout(self.gridLayout)
+        self.gridLayout.addWidget(self.tabWidget, 2, 0, 1, 3)
+        self.buttonBox = QtWidgets.QDialogButtonBox(GroupDialog)
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.gridLayout.addWidget(self.buttonBox, 3, 0, 1, 3)
         self.label.setBuddy(self.edit_label)
 
         self.retranslateUi(GroupDialog)
@@ -77,19 +69,18 @@ class Ui_GroupDialog(object):
         self.buttonBox.accepted.connect(GroupDialog.accept)
         self.buttonBox.rejected.connect(GroupDialog.reject)
         QtCore.QMetaObject.connectSlotsByName(GroupDialog)
-        GroupDialog.setTabOrder(self.widget_selection, self.radio_keep_duplicates)
-        GroupDialog.setTabOrder(self.radio_keep_duplicates, self.buttonBox)
+        GroupDialog.setTabOrder(self.widget_selection, self.buttonBox)
 
     def retranslateUi(self, GroupDialog):
         _translate = QtCore.QCoreApplication.translate
         GroupDialog.setWindowTitle(_translate("GroupDialog", "Add a group – Coquery"))
         self.label.setText(_translate("GroupDialog", "&Group name:"))
-        self.label_duplicates.setText(_translate("GroupDialog", "Duplicates:"))
-        self.radio_keep_duplicates.setText(_translate("GroupDialog", "&Keep"))
-        self.radio_remove_duplicates.setText(_translate("GroupDialog", "&Remove"))
+        self.radio_keep_duplicates.setText(_translate("GroupDialog", "&Keep duplicates"))
+        self.radio_remove_duplicates.setText(_translate("GroupDialog", "&Remove duplicates"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("GroupDialog", "&Columns"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_functions), _translate("GroupDialog", "&Functions"))
 
 from ..linkedlists import CoqLinkedLists
 from ..listselect import CoqListSelect
+from ..searchline import CoqSearchLine
 
