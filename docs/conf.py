@@ -201,3 +201,5 @@ html_static_path = ['_static', "_static/css"]
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Coquerydoc'
 
+def setup(app):
+    app.add_stylesheet('coquery.css')
