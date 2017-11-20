@@ -70,6 +70,8 @@ class CoqGroupTree(QtWidgets.QWidget):
         self.ui.setupUi(self)
 
         icon_getter = get_toplevel_window().get_icon
+        self.ui.button_group_up.setIcon(icon_getter("Circled Chevron Up"))
+        self.ui.button_group_down.setIcon(icon_getter("Circled Chevron Down"))
         self.ui.button_add_group.setIcon(icon_getter("Plus"))
         self.ui.button_remove_group.setIcon(icon_getter("Minus"))
         self.ui.button_edit_group.setIcon(icon_getter("Edit"))
@@ -110,6 +112,38 @@ class CoqGroupTree(QtWidgets.QWidget):
         self.ui.button_remove_group.clicked.connect(self._remove_group)
         self.ui.button_edit_group.clicked.connect(self._edit_group)
         self.ui.tree_groups.itemSelectionChanged.connect(self.check_buttons)
+        self.ui.button_group_up.clicked.connect(self.selected_up)
+        self.ui.button_group_down.clicked.connect(self.selected_down)
+
+    def selected_up(self):
+        self.move_selected(up=True)
+
+    def selected_down(self):
+        self.move_selected(up=False)
+
+    def move_selected(self, up):
+        indexes = self.ui.tree_groups.selectedIndexes()
+        items = self.ui.tree_groups.selectedItems()
+
+        if not items:
+            return
+
+        pos_first = indexes[0].row()
+
+        if up:
+            new_pos = pos_first - 1
+        else:
+            new_pos = pos_first + 1
+
+        items = [self.ui.tree_groups.takeTopLevelItem(pos_first)
+                 for _ in items]
+
+        self.ui.tree_groups.insertTopLevelItems(new_pos, items)
+        for x in items:
+            x.setSelected(True)
+            self.ui.tree_groups.setCurrentItem(x)
+        self.groupModified.emit(x)
+        self.check_buttons()
 
     def get_current_item(self):
         item = self.ui.tree_groups.currentItem()
@@ -120,6 +154,20 @@ class CoqGroupTree(QtWidgets.QWidget):
 
     def check_buttons(self):
         selected = self.ui.tree_groups.selectedItems()
+        selected_count = self.ui.tree_groups.topLevelItemCount()
+
+        self.ui.button_group_up.setDisabled(True)
+        self.ui.button_group_down.setDisabled(True)
+
+        try:
+            selected_row = self.ui.tree_groups.selectedIndexes()[0].row()
+            if selected_row > 0:
+                self.ui.button_group_up.setEnabled(True)
+            if selected_row + 1 < selected_count:
+                self.ui.button_group_down.setEnabled(True)
+        except IndexError:
+            pass
+
         try:
             get_toplevel_window().table_model.content
         except:
@@ -153,6 +201,7 @@ class CoqGroupTree(QtWidgets.QWidget):
             self.groupAdded.emit(item.group)
         else:
             self._item_number -= 1
+        self.check_buttons()
 
     def _remove_group(self):
         item = self.get_current_item()
@@ -160,6 +209,7 @@ class CoqGroupTree(QtWidgets.QWidget):
         self.ui.tree_groups.takeTopLevelItem(
             self.ui.tree_groups.indexOfTopLevelItem(item))
         self.groupRemoved.emit(group)
+        self.check_buttons()
 
     def _edit_group(self):
         try:
