@@ -56,6 +56,15 @@ class Ui_GroupDialog(object):
         self.linked_functions.setObjectName("linked_functions")
         self.layout_functions.addWidget(self.linked_functions)
         self.tabWidget.addTab(self.tab_functions, "")
+        self.tab_filters = QtWidgets.QWidget()
+        self.tab_filters.setObjectName("tab_filters")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.tab_filters)
+        self.verticalLayout.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.widget = CoqEditFilters(self.tab_filters)
+        self.widget.setObjectName("widget")
+        self.verticalLayout.addWidget(self.widget)
+        self.tabWidget.addTab(self.tab_filters, "")
         self.gridLayout.addWidget(self.tabWidget, 2, 0, 1, 3)
         self.buttonBox = QtWidgets.QDialogButtonBox(GroupDialog)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
@@ -79,8 +88,9 @@ class Ui_GroupDialog(object):
         self.radio_remove_duplicates.setText(_translate("GroupDialog", "&Remove duplicates"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("GroupDialog", "&Columns"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_functions), _translate("GroupDialog", "&Functions"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_filters), _translate("GroupDialog", "Filters"))
 
+from ..editfilters import CoqEditFilters
 from ..linkedlists import CoqLinkedLists
 from ..listselect import CoqListSelect
 from ..searchline import CoqSearchLine
-

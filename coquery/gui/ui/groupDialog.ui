@@ -93,6 +93,19 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_filters">
+      <attribute name="title">
+       <string>Filters</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="margin">
+        <number>9</number>
+       </property>
+       <item>
+        <widget class="CoqEditFilters" name="widget" native="true"/>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item row="3" column="0" colspan="3">
@@ -122,6 +135,12 @@
    <class>CoqSearchLine</class>
    <extends>QLineEdit</extends>
    <header>..searchline</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqEditFilters</class>
+   <extends>QWidget</extends>
+   <header>..editfilters</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>
