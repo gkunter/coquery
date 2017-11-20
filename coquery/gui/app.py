@@ -1757,7 +1757,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.switch_to_file()
 
     def manage_filters(self):
-        from . import addfilters
+        from . import filters
         old_list = options.cfg.filter_list
 
         try:
@@ -1769,7 +1769,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             columns = []
             dtypes = []
 
-        result = addfilters.FilterDialog.set_filters(
+        result = filters.FilterDialog.set_filters(
             filter_list=options.cfg.filter_list,
             columns=columns, session=self.Session, dtypes=dtypes)
 

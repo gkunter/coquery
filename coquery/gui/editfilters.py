@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-addfilter.py is part of Coquery.
+editfilter.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -19,7 +19,6 @@ from coquery.defines import (
     OP_EQ, OP_NE, OP_GT, OP_GE, OP_LT, OP_LE, OP_MATCH, OP_NMATCH)
 from coquery.unicode import utf8
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
-from .ui.addFilterUi import Ui_FiltersDialog
 from .classes import CoqTableItem
 from coquery.filters import Filter
 
@@ -28,28 +27,23 @@ DtypeRole = QtCore.Qt.UserRole + 1
 FilterObjectRole = QtCore.Qt.UserRole + 2
 
 
-class FilterDialog(QtWidgets.QDialog):
-    def __init__(self, filter_list, columns, dtypes, session, parent=None):
-        super(FilterDialog, self).__init__(parent)
-        self.ui = Ui_FiltersDialog()
-        self.ui.setupUi(self)
+class CoqEditFilters(QtWidgets.QWidget):
+    listChanged = QtCore.Signal()
 
-        try:
-            self.resize(options.settings.value("filterdialog_size"))
-        except TypeError:
-            pass
+    def __init__(self, *args, **kwargs):
+        from .ui import coqEditFiltersUi
+        super(CoqEditFilters, self).__init__(*args, **kwargs)
+        self.ui = coqEditFiltersUi.Ui_CoqEditFilters()
+        self.ui.setupUi(self)
+        self.ui.check_before_transformation.hide()
+
+        self.columns = []
+        self.dtypes = []
+
         self.ui.button_add.setIcon(
             get_toplevel_window().get_icon("sign-add"))
         self.ui.button_remove.setIcon(
             get_toplevel_window().get_icon("sign-delete"))
-
-        assert len(columns) == len(dtypes)
-
-        self.columns = columns
-        self.dtypes = dtypes
-        self.filter_list = filter_list
-        self.session = session
-        self.old_list = {filt.get_hash() for filt in filter_list}
 
         operator_dict = {x: globals()[x] for x in globals()
                          if x.startswith("OP_")}
@@ -58,9 +52,36 @@ class FilterDialog(QtWidgets.QDialog):
         self.radio_operators = {
             operator_dict[x.split("_", 1)[1]]: x for x in radio_widgets}
 
+        self.setup_hooks()
+
+    def setData(self, columns, dtypes, filter_list, session):
+        assert len(columns) == len(dtypes)
+
+        self.columns = columns
+        self.dtypes = dtypes
+        self.session = session
+        self.filter_list = filter_list
+        self.old_list = {filt.get_hash() for filt in filter_list}
+
         self.fill_lists()
         self.change_filter()
-        self.setup_hooks()
+
+    def isModified(self):
+        current_list = {filt.get_hash() for filt in self.filters()}
+        return self.old_list != current_list
+
+    def filters(self):
+        l = []
+        for i in range(self.ui.table_filters.rowCount() - 1):
+            item = self.ui.table_filters.item(i, 0)
+            filt = item.data(FilterObjectRole)
+
+            ix = self.columns.tolist().index(filt.feature)
+            if self.dtypes[ix] == int:
+                filt.value = int(filt.value)
+
+            l.append(filt)
+        return l
 
     def fill_lists(self):
         for i, x in enumerate(self.columns):
@@ -130,12 +151,6 @@ class FilterDialog(QtWidgets.QDialog):
             filt = item.data(FilterObjectRole)
             if filt is not None:
                 new_list.add(filt.get_hash())
-
-        ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
-        if self.old_list == new_list:
-            ok_button.setDisabled(True)
-        else:
-            ok_button.setEnabled(True)
 
     def update_filter(self):
         """
@@ -280,6 +295,7 @@ class FilterDialog(QtWidgets.QDialog):
             self.ui.table_filters.selectRow(rows)
             self.ui.check_before_transformation.setChecked(False)
             self.update_buttons(self.ui.table_filters.currentItem())
+        self.listChanged.emit()
 
     def remove_filter(self):
         """
@@ -295,6 +311,7 @@ class FilterDialog(QtWidgets.QDialog):
                 current = max(0, current - 1)
             self.ui.table_filters.selectRow(current)
             self.update_buttons(self.ui.table_filters.currentItem())
+            self.listChanged.emit()
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
