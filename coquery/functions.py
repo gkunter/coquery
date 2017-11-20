@@ -855,6 +855,7 @@ class FreqNorm(Freq):
 
 class RowNumber(Freq):
     _name = "statistics_row_number"
+    maximum_columns = 0
 
     def evaluate(self, df, **kwargs):
         val = pd.Series(range(1, len(df)+1), index=df.index)
