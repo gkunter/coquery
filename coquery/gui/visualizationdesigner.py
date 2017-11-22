@@ -860,7 +860,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.dialog_layout.addWidget(self.progress_bar)
 
     def run_plot(self, **kwargs):
-        self.grid = self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
+        self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
+        self.grid.fig.tight_layout()
 
     def finalize_plot(self):
         try:
@@ -882,9 +883,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
             if hasattr(self.vis, "on_pick"):
                 self.grid.fig.canvas.mpl_connect('button_press_event',
                                                 self.vis.on_pick)
-            self.grid.fig.tight_layout()
-            self.tool.functight()
-            self.grid.fig.canvas.draw_idle()
         except Exception as e:
             print("EXCEPTION")
             print(e)
