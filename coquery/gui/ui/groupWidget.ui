@@ -6,18 +6,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>478</height>
+    <width>759</width>
+    <height>450</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" rowstretch="1,0,0,1,0,0" columnstretch="1,0,0,1,0">
+  <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,0">
    <property name="margin">
     <number>0</number>
    </property>
-   <item row="0" column="0" rowspan="4" colspan="4">
+   <item row="0" column="0" rowspan="4">
     <widget class="QTreeWidget" name="tree_groups">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -44,7 +44,7 @@
      </column>
     </widget>
    </item>
-   <item row="0" column="4">
+   <item row="0" column="1">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -57,7 +57,7 @@
      </property>
     </spacer>
    </item>
-   <item row="1" column="4">
+   <item row="1" column="1">
     <widget class="QToolButton" name="button_group_up">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -70,7 +70,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="4">
+   <item row="2" column="1">
     <widget class="QToolButton" name="button_group_down">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -83,7 +83,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="4">
+   <item row="3" column="1">
     <spacer name="verticalSpacer_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -96,52 +96,72 @@
      </property>
     </spacer>
    </item>
-   <item row="4" column="0" rowspan="2">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="4" column="0" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="spacing">
+      <number>0</number>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>211</width>
-       <height>20</height>
-      </size>
+     <property name="margin">
+      <number>0</number>
      </property>
-    </spacer>
-   </item>
-   <item row="4" column="1">
-    <widget class="QPushButton" name="button_add_group">
-     <property name="text">
-      <string>New...</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="3" rowspan="2">
-    <spacer name="horizontalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>211</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="5" column="1">
-    <widget class="QPushButton" name="button_edit_group">
-     <property name="text">
-      <string>Edit...</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="2">
-    <widget class="QPushButton" name="button_remove_group">
-     <property name="text">
-      <string>Remove</string>
-     </property>
-    </widget>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>0</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="margin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>4</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="button_add_group">
+         <property name="text">
+          <string>New...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QPushButton" name="button_edit_group">
+         <property name="text">
+          <string>Edit...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QPushButton" name="button_remove_group">
+         <property name="text">
+          <string>Remove</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>0</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
