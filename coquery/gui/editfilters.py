@@ -12,7 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-from coquery import options
+import pandas as pd
+
 from coquery.defines import (
     FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL,
     OPERATOR_LABELS,
@@ -25,6 +26,19 @@ from coquery.filters import Filter
 FeatureRole = QtCore.Qt.UserRole
 DtypeRole = QtCore.Qt.UserRole + 1
 FilterObjectRole = QtCore.Qt.UserRole + 2
+
+
+def format_filter(filt):
+    """
+    Return a string containing a visual representation of the filter.
+    """
+    col = get_toplevel_window().Session.translate_header(filt.feature)
+    value = filt.fix(filt.value)
+    op = OPERATOR_LABELS[filt.operator]
+    S = "{} {} {}".format(col, op, value)
+    if filt.stage == FILTER_STAGE_BEFORE_TRANSFORM:
+        S = "{} (before transformation)".format(S)
+    return S
 
 
 class CoqEditFilters(QtWidgets.QWidget):
@@ -57,7 +71,7 @@ class CoqEditFilters(QtWidgets.QWidget):
     def setData(self, columns, dtypes, filter_list, session):
         assert len(columns) == len(dtypes)
 
-        self.columns = columns
+        self.columns = pd.Index(columns)
         self.dtypes = dtypes
         self.session = session
         self.filter_list = filter_list
@@ -78,7 +92,10 @@ class CoqEditFilters(QtWidgets.QWidget):
 
             ix = self.columns.tolist().index(filt.feature)
             if self.dtypes[ix] == int:
-                filt.value = int(filt.value)
+                try:
+                    filt.value = int(filt.value)
+                except ValueError:
+                    pass
 
             l.append(filt)
         return l
@@ -92,7 +109,7 @@ class CoqEditFilters(QtWidgets.QWidget):
         self.ui.list_columns.setCurrentRow(0)
 
         for filt in self.filter_list:
-            item = CoqTableItem(self.format_filter(filt))
+            item = CoqTableItem(format_filter(filt))
             item.setData(FilterObjectRole, filt)
             i = self.ui.table_filters.rowCount()
             self.ui.table_filters.insertRow(i)
@@ -183,7 +200,7 @@ class CoqEditFilters(QtWidgets.QWidget):
         selected = self.ui.table_filters.item(row, 0)
         self.blockSignals(True)
         selected.setData(FilterObjectRole, filt)
-        selected.setText(self.format_filter(filt))
+        selected.setText(format_filter(filt))
         self.update_buttons(selected)
 
         self.blockSignals(False)
@@ -222,18 +239,6 @@ class CoqEditFilters(QtWidgets.QWidget):
             self.blockSignals(False)
 
         self.update_buttons(selected)
-
-    def format_filter(self, filt):
-        """
-        Return a string containing a visual representation of the filter.
-        """
-        col = get_toplevel_window().Session.translate_header(filt.feature)
-        value = filt.fix(filt.value)
-        op = OPERATOR_LABELS[filt.operator]
-        S = "{} {} {}".format(col, op, value)
-        if filt.stage == FILTER_STAGE_BEFORE_TRANSFORM:
-            S = "{} (before transformation)".format(S)
-        return S
 
     def get_values(self):
         """
@@ -312,32 +317,3 @@ class CoqEditFilters(QtWidgets.QWidget):
             self.ui.table_filters.selectRow(current)
             self.update_buttons(self.ui.table_filters.currentItem())
             self.listChanged.emit()
-
-    def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Escape:
-            self.reject()
-
-    def closeEvent(self, *args):
-        options.settings.setValue("filterdialog_size", self.size())
-
-    def exec_(self):
-        result = super(FilterDialog, self).exec_()
-        if result == QtWidgets.QDialog.Accepted:
-            l = []
-            for i in range(self.ui.table_filters.rowCount() - 1):
-                item = self.ui.table_filters.item(i, 0)
-                filt = item.data(FilterObjectRole)
-                ix = self.columns.tolist().index(filt.feature)
-                if self.dtypes[ix] == int:
-                    filt.value = int(filt.value)
-                l.append(filt)
-            return l
-        else:
-            return None
-
-    @staticmethod
-    def set_filters(filter_list, **kwargs):
-        dialog = FilterDialog(filter_list=filter_list, **kwargs)
-        dialog.setVisible(True)
-
-        return dialog.exec_()
