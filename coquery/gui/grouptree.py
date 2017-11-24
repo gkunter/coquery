@@ -15,6 +15,7 @@ from coquery.managers import Group
 
 from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
 from .ui.groupWidgetUi import Ui_GroupWidget
+from .editfilters import format_filter
 from .groups import GroupDialog
 
 
@@ -33,20 +34,32 @@ class CoqGroupTreeItem(QtWidgets.QTreeWidgetItem):
             column.setText(0, name)
             column_node.addChild(column)
         self.addChild(column_node)
-        functions = QtWidgets.QTreeWidgetItem()
-        functions.setText(0, "Functions")
-        for x in group.get_functions():
-            func = QtWidgets.QTreeWidgetItem()
-            name = get_toplevel_window().Session.translate_header(x._name)
-            func.setText(0, name)
-            functions.addChild(func)
-        self.addChild(functions)
+
+        if group.get_functions():
+            functions = QtWidgets.QTreeWidgetItem()
+            functions.setText(0, "Functions")
+            for x in group.get_functions():
+                func = QtWidgets.QTreeWidgetItem()
+                name = get_toplevel_window().Session.translate_header(x._name)
+                func.setText(0, name)
+                functions.addChild(func)
+            self.addChild(functions)
+
+        if group.filters:
+            filters = QtWidgets.QTreeWidgetItem()
+            filters.setText(0, "Filters")
+            for x in group.filters:
+                filt = QtWidgets.QTreeWidgetItem()
+                filt.setText(0, format_filter(x))
+                filters.addChild(filt)
+            self.addChild(filters)
+
         if group.show_distinct:
             distinct = QtWidgets.QTreeWidgetItem()
             distinct.setText(0, "Removes duplicates")
             distinct.setToolTip(0, distinct.text(0))
             icon_getter = get_toplevel_window().get_icon
-            #distinct.setIcon(0, icon_getter("Ok"))
+            distinct.setIcon(0, icon_getter("Ok"))
             self.addChild(distinct)
 
     def change_group(self, group):
@@ -204,10 +217,9 @@ class CoqGroupTree(QtWidgets.QWidget):
         self.check_buttons()
 
     def _remove_group(self):
-        item = self.get_current_item()
-        group = Group(item.group.name, item.group.columns)
-        self.ui.tree_groups.takeTopLevelItem(
-            self.ui.tree_groups.indexOfTopLevelItem(item))
+        index = self.ui.tree_groups.currentIndex()
+        item = self.ui.tree_groups.takeTopLevelItem(index.row())
+        group = item.group
         self.groupRemoved.emit(group)
         self.check_buttons()
 
