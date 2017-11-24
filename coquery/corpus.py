@@ -989,7 +989,13 @@ class SQLResource(BaseResource):
 
     @staticmethod
     def penalize_query_item(x, i):
-        if x[1] == "*":
+        # FIXME:
+        # Currently, any query item that starts with an asterisk will trigger
+        # a full table scan because indexing is not possible. In the future,
+        # there should be reversed Word and Lemma columns that are queried in
+        # such cases. Then the following line should be changed to
+        # `if x[1] == "*":`
+        if x[1].startswith ("*"):
             return 9999
         else:
             return (len(x[1]) - 2 * x[1].count("["))
