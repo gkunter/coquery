@@ -102,7 +102,7 @@
         <number>9</number>
        </property>
        <item>
-        <widget class="CoqEditFilters" name="widget" native="true"/>
+        <widget class="CoqEditFilters" name="widget_filters" native="true"/>
        </item>
       </layout>
      </widget>
