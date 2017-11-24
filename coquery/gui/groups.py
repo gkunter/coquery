@@ -324,6 +324,26 @@ class GroupDialog(QtWidgets.QDialog):
 
         self.ui.linked_functions.setCurrentCategoryRow(0)
 
+        dtypes = []
+
+        vis_cols = list(get_toplevel_window().table_model.content.columns)
+        hidden_cols = list(get_toplevel_window().hidden_model.content.columns)
+
+        vis_dtypes = get_toplevel_window().table_model.content.dtypes
+        hidden_dtypes = get_toplevel_window().hidden_model.content.dtypes
+
+        for col in all_columns:
+            if col in vis_cols:
+                dtype = vis_dtypes[col]
+            else:
+                dtype = hidden_dtypes[col]
+            dtypes.append(dtype)
+
+        self.ui.widget_filters.setData(all_columns,
+                                       dtypes,
+                                       group.filters,
+                                       get_toplevel_window().Session)
+
     def check_buttons(self):
         self.ui.ok_button.setEnabled(bool(
             self.ui.widget_selection.selectedItems()))
@@ -362,15 +382,15 @@ class GroupDialog(QtWidgets.QDialog):
 
     def exec_(self, *args, **kwargs):
         result = super(GroupDialog, self).exec_(*args, **kwargs)
-        if result == QtWidgets.QDialog.Accepted:
-            name = utf8(self.ui.edit_label.text())
-            columns = [x.data(QtCore.Qt.UserRole)
-                       for x in self.ui.widget_selection.selectedItems()]
-            functions = self.get_selected_items()
-            show_distinct = bool(self.ui.radio_remove_duplicates.isChecked())
-
-            group = Group(name, columns, functions, show_distinct)
-            return group
+        if result == self.Accepted:
+            kwargs = dict(
+                name=utf8(self.ui.edit_label.text()),
+                columns=[x.data(QtCore.Qt.UserRole)
+                         for x in self.ui.widget_selection.selectedItems()],
+                functions=self.get_selected_items(),
+                filters=self.ui.widget_filters.filters(),
+                distinct=bool(self.ui.radio_remove_duplicates.isChecked()))
+            return Group(**kwargs)
         else:
             return None
 
