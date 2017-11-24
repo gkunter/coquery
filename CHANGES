@@ -27,6 +27,8 @@ Visualizations
 Data management
 * Allow sampling: show only a random number of matches from the results table
 * Data groups now provide an option to drop duplicate rows
+* Data groups can now be moved up and down
+* Filters can be added to each data group
 * New dialogs for Column, Group and Summary functions
 * Contexts are now retrieved faster
 
