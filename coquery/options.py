@@ -885,6 +885,7 @@ class Options(object):
             grp_columns = {}
             grp_function_types = defaultdict(dict)
             grp_function_columns = defaultdict(dict)
+            grp_filters = defaultdict(dict)
             grp_distinct = {}
 
             for var, value in config_file.items("groups"):
@@ -892,6 +893,7 @@ class Options(object):
                 if (len(parsed) == 3 and parsed[0] == "group"):
                     num = parsed[1]
                     attr = parsed[2]
+
                     if attr.startswith("fnc"):
                         # group functions
                         f_parsed = attr.split("_")
@@ -901,18 +903,33 @@ class Options(object):
                                 grp_function_types[num][f_num] = value
                             elif f_attr == "columns":
                                 grp_function_columns[num][f_num] = value
+
+                    elif attr.startswith("filter"):
+                        f_parsed = attr.split("_")
+                        if len(f_parsed) == 2:
+                            try:
+                                filt = parse_filter_text(value)
+                            except ValueError:
+                                pass
+                            else:
+                                print("---")
+                                print(filt)
+                                print("---")
+                                _, f_num = f_parsed
+                                grp_filters[num][f_num] = filt
+
                     elif attr == "name":
                         grp_names[num] = value
+
                     elif attr == "columns":
                         grp_columns[num] = value
+
                     elif attr == "distinct":
-                        grp_distinct[num] = bool(value)
+                        grp_distinct[num] = value == "True"
 
             self.args.groups = []
             for num in grp_names:
-                name = grp_names.get(num)
-                distinct = grp_distinct.get(num, False)
-                columns = grp_columns.get(num, None)
+                # build group function list
                 function_list = []
                 for f_num in grp_function_types.get(num, {}):
                     f_type = grp_function_types[num][f_num]
@@ -922,9 +939,19 @@ class Options(object):
                         if fnc:
                             function_list.append(
                                 (fnc, f_columns.strip().split(",")))
+
+                name = grp_names.get(num)
+                distinct = grp_distinct.get(num, False)
+                columns = grp_columns.get(num, None)
+                filters = grp_filters.get(num, {})
+                filter_list = [filters[x] for x in sorted(filters.keys())]
+
                 if columns is not None:
-                    group = Group(name, columns.split(","),
-                                  function_list, distinct)
+                    group = Group(name=name,
+                                  columns=columns.split(","),
+                                  functions=function_list,
+                                  filters=filter_list,
+                                  distinct=distinct)
                     self.args.groups.append(group)
 
             # process [summary]
@@ -1097,6 +1124,9 @@ def save_configuration():
                        fnc._name)
             config.set("groups", "group_{}_fnc_{}_columns".format(i, j),
                        ",".join(columns))
+        for j, filt in enumerate(grp.filters):
+            config.set("groups", "group_{}_filter_{}".format(i, j),
+                       str(filt))
 
     if "summary" not in config.sections():
         config.add_section("summary")
