@@ -271,8 +271,8 @@ class GroupDialog(QtWidgets.QDialog):
         # when the group is formed.
         # FIXME: at some point, this needs to be redone so that earlier
         # group columns are available for later groups.
-        all_columns = [x for x in all_columns
-                       if not re.match("func_.*_group_", x)]
+        self.all_columns = [x for x in all_columns
+                            if not re.match("func_.*_group_", x)]
         group.columns = [x for x in group.columns if x in all_columns]
         selected_columns = [x for x in group.columns
                             if not re.match("func_.*_group_", x)]
@@ -284,14 +284,15 @@ class GroupDialog(QtWidgets.QDialog):
             selected_columns,
             get_toplevel_window().Session.translate_header)
         self.ui.widget_selection.setAvailableList(
-            [x for x in all_columns
+            [x for x in self.all_columns
              if x not in group.columns],
             get_toplevel_window().Session.translate_header)
 
         self.ui.widget_selection.itemSelectionChanged.connect(
             self.check_buttons)
-        self.check_buttons()
-
+        self.ui.widget_selection.itemSelectionChanged.connect(
+            self.update_tabs)
+        self.check_buttons(self.ui.widget_selection.selectedItems())
         function_columns = {fnc_class: columns
                             for fnc_class, columns in group.functions}
 
@@ -310,10 +311,11 @@ class GroupDialog(QtWidgets.QDialog):
                 list_item = QtGui.QStandardItem()
                 if fnc in function_columns:
                     columns = function_columns[fnc]
-                    available = [x for x in all_columns if x not in columns]
+                    available = [x for x in self.all_columns
+                                 if x not in columns]
                     check = QtCore.Qt.Checked
                 else:
-                    columns = all_columns
+                    columns = self.all_columns
                     available = []
                     check = QtCore.Qt.Unchecked
                 list_item.setData([fnc, columns, available, check],
@@ -324,7 +326,7 @@ class GroupDialog(QtWidgets.QDialog):
 
         self.ui.linked_functions.setCurrentCategoryRow(0)
 
-        dtypes = []
+        self.dtypes = []
 
         vis_cols = list(get_toplevel_window().table_model.content.columns)
         hidden_cols = list(get_toplevel_window().hidden_model.content.columns)
@@ -332,21 +334,40 @@ class GroupDialog(QtWidgets.QDialog):
         vis_dtypes = get_toplevel_window().table_model.content.dtypes
         hidden_dtypes = get_toplevel_window().hidden_model.content.dtypes
 
-        for col in all_columns:
+        for col in self.all_columns:
             if col in vis_cols:
                 dtype = vis_dtypes[col]
             else:
                 dtype = hidden_dtypes[col]
-            dtypes.append(dtype)
+            self.dtypes.append(dtype)
 
-        self.ui.widget_filters.setData(all_columns,
-                                       dtypes,
+        self.ui.widget_filters.setData(self.all_columns,
+                                       self.dtypes,
                                        group.filters,
                                        get_toplevel_window().Session)
 
-    def check_buttons(self):
-        self.ui.ok_button.setEnabled(bool(
-            self.ui.widget_selection.selectedItems()))
+    def _get_dtypes(self, columns):
+        return [self.dtypes[self.all_columns.index(col)] for col in columns]
+
+    def check_buttons(self, selected=None):
+        selected = selected or []
+        self.ui.ok_button.setEnabled(len(selected) > 0)
+
+    def update_tabs(self, selected):
+        features = [item.data(QtCore.Qt.UserRole) for item in selected]
+        columns = [col for col in self.all_columns if col not in features]
+        dtypes = self._get_dtypes(columns)
+        filters = self.ui.widget_filters.filters()
+
+        return
+        self.ui.widget_filters.setData(columns,
+                                       dtypes,
+                                       filters,
+                                       get_toplevel_window().Session)
+        self.ui.widget_filters.setEnabled(len(columns))
+
+
+
 
     def setup_values(self, group):
         self.ui.edit_label.setText(group.name)
