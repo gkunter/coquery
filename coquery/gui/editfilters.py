@@ -101,13 +101,18 @@ class CoqEditFilters(QtWidgets.QWidget):
         return l
 
     def fill_lists(self):
+        self.ui.list_columns.blockSignals(True)
+        self.ui.list_columns.clear()
         for i, x in enumerate(self.columns):
             item = QtWidgets.QListWidgetItem(self.session.translate_header(x))
             item.setData(FeatureRole, x)
             item.setData(DtypeRole, self.dtypes[i])
             self.ui.list_columns.addItem(item)
-        self.ui.list_columns.setCurrentRow(0)
+        if len(self.columns) > 0:
+            self.ui.list_columns.setCurrentRow(0)
+        self.ui.list_columns.blockSignals(False)
 
+        self.ui.table_filters.setRowCount(0)
         for filt in self.filter_list:
             item = CoqTableItem(format_filter(filt))
             item.setData(FilterObjectRole, filt)
@@ -201,9 +206,9 @@ class CoqEditFilters(QtWidgets.QWidget):
         self.blockSignals(True)
         selected.setData(FilterObjectRole, filt)
         selected.setText(format_filter(filt))
+        self.blockSignals(False)
         self.update_buttons(selected)
 
-        self.blockSignals(False)
 
     def change_filter(self):
         """
@@ -293,7 +298,7 @@ class CoqEditFilters(QtWidgets.QWidget):
             hashed_filters.add(existing_filt.get_hash())
 
         if hashed not in hashed_filters:
-            item = CoqTableItem(self.format_filter(new_filt))
+            item = CoqTableItem(format_filter(new_filt))
             item.setData(FilterObjectRole, new_filt)
             self.ui.table_filters.insertRow(rows - 1)
             self.ui.table_filters.setItem(rows - 1, 0, item)
