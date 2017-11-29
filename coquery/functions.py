@@ -429,14 +429,15 @@ class CalcFunction(NumFunction):
     arguments = {"float": [("value", "Value:", None)]}
 
     def evaluate(self, df, **kwargs):
-        if len(self.columns) == 1 and kwargs["value"] is None:
+        parameter = kwargs.get("value", None)
+        if len(self.columns) == 1 and not parameter:
             val = reduce(self._func, df[self.columns[0]].values)
         else:
             val = df[self.columns[0]].values
             for x in self.columns[1:]:
                 val = self._func(val, df[x].values)
-            if kwargs["value"] is not None:
-                const = self.coerce_value(df, kwargs["value"])
+            if parameter:
+                const = self.coerce_value(df, parameter)
                 val = self._func(val, const)
             if not self._ignore_na:
                 nan_rows = pd.np.any(pd.isnull(df[self.columns].values),
