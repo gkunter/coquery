@@ -292,7 +292,7 @@ class GroupDialog(QtWidgets.QDialog):
             self.check_buttons)
         self.ui.widget_selection.itemSelectionChanged.connect(
             self.update_tabs)
-        self.check_buttons(self.ui.widget_selection.selectedItems())
+        self.check_buttons(selected=self.ui.widget_selection.selectedItems())
         function_columns = {fnc_class: columns
                             for fnc_class, columns in group.functions}
 
@@ -463,7 +463,7 @@ class SummaryDialog(GroupDialog):
         self.ui.gridLayout.setColumnStretch(0, 1)
         self.ui.gridLayout.setColumnStretch(1, 0)
 
-    def check_buttons(self):
+    def check_buttons(self, selected=False):
         pass
 
     @staticmethod
