@@ -79,7 +79,7 @@
         <number>4</number>
        </property>
        <item>
-        <widget class="CoqSearchLine" name="lineEdit"/>
+        <widget class="CoqSearchLine" name="edit_search_functions"/>
        </item>
        <item>
         <widget class="CoqLinkedLists" name="linked_functions">
