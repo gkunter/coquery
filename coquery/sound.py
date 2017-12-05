@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import wave
-import warnings
+import logging
 import threading
 import struct
 import sys
@@ -27,39 +27,73 @@ except ImportError:
 _use_alsaaudio = False
 _use_winsound = False
 _use_simpleaudio = False
+_audio_loaded = False
 
-if sys.version_info < (3, 0):
-    if sys.platform.startswith("linux"):
+ERROR = "Could not load audio module '{}'."
+
+
+def _warn(S):
+    logging.warn(S)
+    print(S)
+
+
+# Try to initialize an audio module.
+#
+# This method tries to load one of the potentially available audio modules.
+# Depending on the operating system, the order of modules is different:
+#
+# Linux:      (1) alsaaudio   (2) simpleaudio
+# macOS:      (1) simpleaudio
+# Windows:    (1) simpleaudio (2) winsound
+
+if sys.platform.startswith("linux"):
+    try:
+        _audio_module = "alsaaudio"
+        import alsaaudio
+    except ImportError:
+        _warn(ERROR.format(_audio_module))
+    else:
+        _use_alsaaudio = True
+        _audio_loaded = True
+
+        from sys import byteorder
         try:
-            import alsaaudio
+            from alsaaudio import PCM_FORMAT_S16_NE as _pcm_format
         except ImportError:
-            warnings.warn("Could not load audio module 'alsaaudio'.")
-        else:
-            _use_alsaaudio = True
-    elif sys.platform in ("win32", "cygwin"):
+            if 'little' in byteorder.lower():
+                _pcm_format = alsaaudio.PCM_FORMAT_S16_LE
+            else:
+                _pcm_format = alsaaudio.PCM_FORMAT_S16_BE
+
+if not _audio_loaded:
+    try:
+        _audio_module = "simpleaudio"
+        import simpleaudio
+        import time
+    except ImportError:
+        _warn(ERROR.format(_audio_module))
+    else:
+        _use_simpleaudio = True
+        _audio_loaded = True
+
+if not _audio_loaded:
+    if sys.platform in ("win32", "cygwin"):
         try:
+            _audio_module = "winsound"
             import winsound
         except ImportError:
-            warnings.warn("Could not load audio module 'winsound'.")
+            _warn(ERROR.format(_audio_module))
         else:
             _use_winsound = True
-else:
-    if sys.platform.startswith("linux"):
-        try:
-            import alsaaudio
-        except ImportError:
-            warnings.warn("Could not load audio module 'alsaaudio'.")
-        else:
-            _use_alsaaudio = True
-    #try:
-        #import simpleaudio
-    #except ImportError:
-        #warnings.warn("Could not load audio module 'simpleaudio'.")
-    #else:
-        #_use_simpleaudio = True
+            _audio_loaded = True
 
-if not(_use_alsaaudio or _use_simpleaudio or _use_winsound):
-    warnings.warn("No audio module available.")
+if not _audio_loaded:
+    _warn("No audio module available.")
+    _audio_module = None
+else:
+    logging.info("Loaded audio module: {}".format(_audio_module))
+    print("Loaded audio module: {}".format(_audio_module))
+
 
 class Sound(object):
     def __init__(self, source, start=0, end=None):
@@ -121,14 +155,13 @@ class Sound(object):
         _output.setnchannels(self.channels)
         _output.setsampwidth(self.samplewidth)
         _output.setframerate(self.framerate)
-        raw = self.raw[start_pos:end_pos]
         _output.writeframes(self.raw[start_pos:end_pos])
         _output.close()
         _buffer.seek(0)
         return Sound(_buffer)
 
     def play(self, start=0, end=None, async=True):
-        self.thread = SoundThread(sound=self, start=start, end=end)
+        self.thread = _get_sound_thread(sound=self, start=start, end=end)
         if not async:
             self.thread.run()
             return None
@@ -186,78 +219,77 @@ class _SoundThread(threading.Thread):
         except ValueError:
             pass
 
-if _use_simpleaudio:
-    import time
 
-    class SoundThread(_SoundThread):
-        def play_device(self):
-            args = [self.sound.astype(np.int32),
-                    2,
-                    self.sound.samplewidth,
-                    self.sound.framerate]
-            self.play_object = simpleaudio.play_buffer(*args)
-            time.sleep(self.sound.duration() + 0.01)
+class _simpleaudio_SoundThread(_SoundThread):
+    def play_device(self):
+        args = [self.sound.astype(np.int32),
+                2,
+                self.sound.samplewidth,
+                self.sound.framerate]
+        self.play_object = simpleaudio.play_buffer(*args)
+        time.sleep(self.sound.duration() + 0.01)
 
-        def stop_device(self):
-            self.play_object.stop()
+    def stop_device(self):
+        self.play_object.stop()
 
-elif _use_alsaaudio:
-    # detect byte order:
-    try:
-        from sys import byteorder
-        from alsaaudio import PCM_FORMAT_S16_NE as _pcm_format
-    except ImportError:
-        if 'little' in byteorder.lower():
-            _pcm_format = alsaaudio.PCM_FORMAT_S16_LE
-        else:
-            _pcm_format = alsaaudio.PCM_FORMAT_S16_BE
 
-    class SoundThread(_SoundThread):
-        def __init__(self, sound, start=0, end=None):
-            super(SoundThread, self).__init__(sound, start, end)
-            self.alsa_pcm = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK)
-            self.alsa_pcm.setchannels(sound.channels)
-            self.alsa_pcm.setrate(sound.framerate)
-            self.alsa_pcm.setformat(_pcm_format)
-            self.alsa_pcm.setperiodsize(160)
+class _alsaaudio_SoundThread(_SoundThread):
+    def __init__(self, sound, start=0, end=None):
+        super(_alsaaudio_SoundThread, self).__init__(sound, start, end)
+        self.alsa_pcm = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK)
+        self.alsa_pcm.setchannels(sound.channels)
+        self.alsa_pcm.setrate(sound.framerate)
+        self.alsa_pcm.setformat(_pcm_format)
+        self.alsa_pcm.setperiodsize(160)
 
-        def play_device(self):
-            self.alsa_pcm.write(self.sound.raw)
+    def play_device(self):
+        self.alsa_pcm.write(self.sound.raw)
 
-        def pause_device(self):
-            self.paused = not self.paused
-            self.alsa_pcm.pause(int(self.paused))
+    def pause_device(self):
+        self.paused = not self.paused
+        self.alsa_pcm.pause(int(self.paused))
 
-        def stop_device(self):
-            self.alsa_pcm.close()
+    def stop_device(self):
+        self.alsa_pcm.close()
 
-elif _use_winsound:
-    class SoundThread(_SoundThread):
-        def __init__(self, sound, start=0, end=None):
-            super(SoundThread, self).__init__()
-            self.wav_buffer = io.BytesIO()
-            _output = wave.open(self.wav_buffer, "wb")
-            _output.setnchannels(self.sound.channels)
-            _output.setsampwidth(self.sound.samplewidth)
-            _output.setframerate(self.sound.framerate)
-            _output.writeframes(self.sound.raw)
-            _output.close()
-            self.wav_buffer.seek(0)
 
-        def play_device(self):
-            winsound.PlaySound(self.wav_buffer,
-                               winsound.SND_FILENAME | winsound.SND_NOSTOP)
+class _winsound_SoundThread(_SoundThread):
+    def __init__(self, sound, start=0, end=None):
+        super(_winsound_SoundThread, self).__init__()
+        self.wav_buffer = io.BytesIO()
+        _output = wave.open(self.wav_buffer, "wb")
+        _output.setnchannels(self.sound.channels)
+        _output.setsampwidth(self.sound.samplewidth)
+        _output.setframerate(self.sound.framerate)
+        _output.writeframes(self.sound.raw)
+        _output.close()
+        self.wav_buffer.seek(0)
 
-        def stop_device(self):
-            winsound.PlaySound(self.wav_buffer, winsound.SND_PURGE)
+    def play_device(self):
+        winsound.PlaySound(self.wav_buffer,
+                           winsound.SND_FILENAME | winsound.SND_NOSTOP)
+
+    def stop_device(self):
+        winsound.PlaySound(self.wav_buffer, winsound.SND_PURGE)
+
 
 _threads = []
 
 
+def _get_sound_thread(*args, **kwargs):
+    if _use_alsaaudio:
+        return _alsaaudio_SoundThread(*args, **kwargs)
+    elif _use_simpleaudio:
+        return _simpleaudio_SoundThread(*args, **kwargs)
+    elif _use_winsound:
+        return _winsound_SoundThread(*args, **kwargs)
+    else:
+        return _SoundThread(*args, **kwargs)
+
+
 def read_wav(source, start=0, end=None):
-    warnings.warn(
-        "read_wav() is deprecated, use Sound() class instead",
-        DeprecationWarning)
+    _warn("read_wav() is deprecated, use Sound() class instead",
+          DeprecationWarning)
     in_wav = wave.open(source, "rb")
     fr = in_wav.getframerate()
     chan = in_wav.getnchannels()
@@ -288,9 +320,8 @@ def extract_sound(source, target, start=0, end=None):
     target: either a stream object or a string with the target file name
     start, end : Beginning and end in seconds
     """
-    warnings.warn(
-        "extract_sound() is deprecated, use Sound() class instead",
-        DeprecationWarning)
+    _warn("extract_sound() is deprecated, use Sound() class instead",
+          DeprecationWarning)
     sound = read_wav(source, start, end)
 
     out_wav = wave.open(target, "wb")
