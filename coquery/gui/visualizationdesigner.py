@@ -256,12 +256,19 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.figure_loader.start()
 
     def populate_variable_lists(self):
+        d = self.get_gui_values()
+        used = [d[x]
+                for x in ["data_x", "data_y", "data_z", "columns", "rows"]
+                if d[x]]
+
         self.categorical = [col for col in self.df.columns
-                            if self.df.dtypes[col] in (object, bool) and not
-                            col.startswith(("coquery_invisible"))]
+                            if self.df.dtypes[col] in (object, bool) and
+                            not col in used and
+                            not col.startswith(("coquery_invisible"))]
         self.numerical = [col for col in self.df.columns
-                          if self.df.dtypes[col] in (int, float) and not
-                          col.startswith(("coquery_invisible"))]
+                          if self.df.dtypes[col] in (int, float) and
+                          not col in used and
+                          not col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
             label = self.alias.get(col) or col
@@ -787,6 +794,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             return pal_name
 
     def plot_figure(self):
+        logging.info("VIS: plot_figure()")
         values = self.get_gui_values()
         figure_type = values["figure_type"]
         if not figure_type:
@@ -818,8 +826,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         df_columns = [x for x in [data_x, data_y, data_z, columns, rows] if x]
         df_columns.append("coquery_invisible_corpus_id")
 
-        visualizer_class = VisualizationDesigner.visualizers[figure_type.text()]
-
         df = self.df[df_columns]
         df.columns = [self.alias.get(x) or x for x in df.columns]
 
@@ -827,12 +833,16 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.alias.get(x) or x
             for x in (data_x, data_y, data_z, columns, rows))
 
+        logging.info("VIS: Data initialized")
+        visualizer_class = VisualizationDesigner.visualizers[figure_type.text()]
         self.vis = visualizer_class(df, self.session)
+        logging.info("VIS: Visualizer initialized")
 
         self.grid = self.vis.get_grid(col=columns, row=rows,
                                       col_wrap=col_wrap,
                                       legend_out=True,
                                       sharex=True, sharey=True)
+        logging.info("VIS: Grid initialized")
 
         kwargs = dict(x=data_x, y=data_y, z=data_z,
                       levels_x=levels_x, levels_y=levels_y, levels_z=levels_z,
@@ -852,25 +862,42 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.start_plot()
             self.run_plot(**kwargs)
             self.finalize_plot()
+        logging.info("VIS: plot_figure() done")
 
     def start_plot(self):
-        self.progress_bar = QtWidgets.QProgressBar()
-        self.progress_bar.setRange(0, 0)
-        self.progress_bar.show()
-        self.dialog_layout.addWidget(self.progress_bar)
+        logging.info("VIS: start_plot()")
+        try:
+            self.progress_bar = QtWidgets.QProgressBar()
+            self.progress_bar.setRange(0, 0)
+            self.progress_bar.show()
+            self.dialog_layout.addWidget(self.progress_bar)
+        except Exception as e:
+            logging.error("VIS: start_plot(), exception {}".format(str(e)))
+            raise e
+        logging.info("VIS: start_plot() done")
 
     def run_plot(self, **kwargs):
-        self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
-        self.grid.fig.tight_layout()
+        logging.info("VIS: run_plot()")
+        try:
+            self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
+            self.grid.fig.tight_layout()
+        except Exception as e:
+            logging.error("VIS: run_plot(), exception {}".format(str(e)))
+            raise e
+        logging.info("VIS: run_plot() done")
 
     def finalize_plot(self):
+        logging.info("VIS: finalize_plot()")
         try:
             values = self.get_gui_values()
             figure_title = values["figure_type"].text()
 
-            self.dialog_layout.removeWidget(self.progress_bar)
-            self.progress_bar.hide()
-            del self.progress_bar
+            try:
+                self.dialog_layout.removeWidget(self.progress_bar)
+                self.progress_bar.hide()
+                del self.progress_bar
+            except AttributeError:
+                pass
 
             self.setup_canvas(self.grid.fig)
             self.add_annotations()
@@ -884,10 +911,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 self.grid.fig.canvas.mpl_connect('button_press_event',
                                                 self.vis.on_pick)
         except Exception as e:
-            print("EXCEPTION")
-            print(e)
-            logging.error(e)
+            logging.error("VIS: finalize_plot(), exception {}".format(str(e)))
             raise e
+        logging.info("VIS: finalize_plot() done")
 
     def exception_plot(self, e):
         logging.error(e)
