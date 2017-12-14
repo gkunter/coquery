@@ -26,24 +26,22 @@ class CoqGroupTreeItem(QtWidgets.QTreeWidgetItem):
 
     def add_group_info(self, group):
         self.takeChildren()
-        column_node = QtWidgets.QTreeWidgetItem()
-        column_node.setText(0, "Columns")
+
+        icon_getter = get_toplevel_window().get_icon
         for x in group.columns:
             column = QtWidgets.QTreeWidgetItem()
             name = get_toplevel_window().Session.translate_header(x)
             column.setText(0, name)
-            column_node.addChild(column)
-        self.addChild(column_node)
+            column.setIcon(0, icon_getter("Columns"))
+            self.addChild(column)
 
         if group.get_functions():
-            functions = QtWidgets.QTreeWidgetItem()
-            functions.setText(0, "Functions")
             for x in group.get_functions():
                 func = QtWidgets.QTreeWidgetItem()
                 name = get_toplevel_window().Session.translate_header(x._name)
                 func.setText(0, name)
-                functions.addChild(func)
-            self.addChild(functions)
+                func.setIcon(0, icon_getter("Percentage"))
+                self.addChild(func)
 
         if group.filters:
             filters = QtWidgets.QTreeWidgetItem()
@@ -56,9 +54,14 @@ class CoqGroupTreeItem(QtWidgets.QTreeWidgetItem):
 
         if group.show_distinct:
             distinct = QtWidgets.QTreeWidgetItem()
-            distinct.setText(0, "Removes duplicates")
+            distinct.setText(0, "Remove duplicates")
             distinct.setToolTip(0, distinct.text(0))
-            icon_getter = get_toplevel_window().get_icon
+            distinct.setIcon(0, icon_getter("Cancel"))
+            self.addChild(distinct)
+        else:
+            distinct = QtWidgets.QTreeWidgetItem()
+            distinct.setText(0, "Keep duplicates")
+            distinct.setToolTip(0, distinct.text(0))
             distinct.setIcon(0, icon_getter("Ok"))
             self.addChild(distinct)
 
@@ -173,12 +176,13 @@ class CoqGroupTree(QtWidgets.QWidget):
         self.ui.button_group_down.setDisabled(True)
 
         try:
-            selected_row = self.ui.tree_groups.selectedIndexes()[0].row()
+            group_item = self.ui.tree_groups.currentItem().parent()
+            selected_row = self.ui.tree_groups.indexFromItem(group_item).row()
             if selected_row > 0:
                 self.ui.button_group_up.setEnabled(True)
             if selected_row + 1 < selected_count:
                 self.ui.button_group_down.setEnabled(True)
-        except IndexError:
+        except (IndexError, AttributeError):
             pass
 
         try:
