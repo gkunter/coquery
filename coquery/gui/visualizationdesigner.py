@@ -35,6 +35,7 @@ import seaborn as sns
 from ..visualizer.visualizer import get_grid_layout
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 from . import classes
+from .app import get_icon
 
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
@@ -143,7 +144,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.check_wrapping()
         self.check_grid_layout()
         self.check_clear_buttons()
-        self.check_orientation()
         self._finetune_ui()
         self.change_figure_type()
 
@@ -153,7 +153,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.dialog_layout = QtWidgets.QVBoxLayout(self.dialog)
         self.dialog.resize(self.viewer_size)
         self.dialog.setWindowTitle("<no figure> – Coquery")
-        self.dialog.setWindowIcon(app.get_icon(
+        self.dialog.setWindowIcon(get_icon(
             "coquerel_icon.png", small_n_flat=False))
         self.dialog.show()
 
@@ -209,21 +209,26 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.list_figures.setMinimumWidth(180 + w)
         self.ui.list_figures.setMaximumWidth(180 + w)
 
-        self.ui.button_columns.setIcon(app.get_icon("Select Column"))
-        self.ui.button_rows.setIcon(app.get_icon("Select Row"))
+        icon_size = QtCore.QSize(QtWidgets.QLabel().sizeHint().height(),
+                                 QtWidgets.QLabel().sizeHint().height())
+        pix_col = get_icon("Select Column").pixmap(icon_size)
+        pix_row = get_icon("Select Row").pixmap(icon_size)
 
-        self.ui.button_clear_x.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_y.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_z.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_columns.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_rows.setIcon(app.get_icon("Clear Symbol"))
+        self.ui.icon_columns.setPixmap(pix_col)
+        self.ui.icon_rows.setPixmap(pix_row)
+
+        self.ui.button_clear_x.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_y.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_z.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_columns.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_rows.setIcon(get_icon("Clear Symbol"))
 
     def add_figure_type(self, label, icon):
         item = QtWidgets.QListWidgetItem(label)
         try:
-            item.setIcon(app.get_icon(icon, small_n_flat=False))
+            item.setIcon(get_icon(icon, small_n_flat=False))
         except Exception as e:
-            item.setIcon(app.get_icon(icon, size="64x64"))
+            item.setIcon(get_icon(icon, size="64x64"))
 
         size = QtCore.QSize(
             180, 64 + 0 * QtWidgets.QLabel().sizeHint().height())
@@ -276,7 +281,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             if label in self.session.Resource.time_features:
-                new_item.setIcon(app.get_icon("Clock"))
+                new_item.setIcon(get_icon("Clock"))
             self.ui.table_categorical.addItem(new_item)
 
         for col in self.numerical:
@@ -285,7 +290,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             if label in self.session.Resource.time_features:
-                new_item.setIcon(app.get_icon("Clock"))
+                new_item.setIcon(get_icon("Clock"))
             self.ui.table_numerical.addItem(new_item)
 
         ## add functions
@@ -471,10 +476,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         # (4) selecting a different figure type
         self.ui.list_figures.currentItemChanged.connect(self.plot_figure)
 
-        # (5) changing the orientation
-        self.ui.radio_horizontal.toggled.connect(self.plot_figure)
-        self.ui.radio_vertical.toggled.connect(self.plot_figure)
-
     def change_figure_type(self):
         self.ui.group_custom.hide()
 
@@ -523,24 +524,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 else:
                     self.ui.layout_custom.addWidget(item)
 
-    def check_orientation(self):
-        data_x = self.ui.tray_data_x.data()
-        data_y = self.ui.tray_data_y.data()
-        data_z = self.ui.tray_data_z.data()
-
-        if data_x is None or data_y is None:
-            self.ui.radio_horizontal.setDisabled(True)
-            self.ui.radio_vertical.setDisabled(True)
-        else:
-            self.ui.radio_horizontal.setDisabled(False)
-            self.ui.radio_vertical.setDisabled(False)
-
-        if (not self.ui.radio_horizontal.isChecked() and
-                not self.ui.radio_vertical.isChecked()):
-            self.ui.radio_horizontal.blockSignals(True)
-            self.ui.radio_horizontal.setChecked(True)
-            self.ui.radio_horizontal.blockSignals(False)
-
     def check_wrapping(self):
         """
         Activate or deactivate the 'Wrap layout' checkbox. If the checkbox
@@ -569,7 +552,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_clear_z.setEnabled(bool(self.ui.tray_data_z.text()))
         self.ui.button_clear_columns.setEnabled(bool(self.ui.tray_columns.text()))
         self.ui.button_clear_rows.setEnabled(bool(self.ui.tray_rows.text()))
-        self.check_orientation()
 
     def check_grid_layout(self):
         if self.ui.tray_data_x.text() or self.ui.tray_data_y.text():
@@ -580,7 +562,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 self.ui.tray_columns.clear()
             if self.ui.tray_rows.text():
                 self.ui.tray_rows.clear()
-        self.check_orientation()
 
     def check_figure_types(self):
         last_item = self.ui.list_figures.currentItem()
