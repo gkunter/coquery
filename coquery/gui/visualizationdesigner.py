@@ -575,8 +575,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
         for i in range(self.ui.list_figures.count()):
             item = self.ui.list_figures.takeItem(i)
             visualizer = VisualizationDesigner.visualizers[item.text()]
-            if visualizer.validate_data(data_x, data_y, data_z,
-                                        self.df, self.session):
+            if (visualizer.validate_data(data_x, data_y, data_z,
+                                         self.df, self.session) and
+                    not data_x == data_y):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
                 if last_item and item.text() == last_item.text():
                     restored_position = i
