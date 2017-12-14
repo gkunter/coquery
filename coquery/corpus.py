@@ -1816,7 +1816,6 @@ class SQLResource(BaseResource):
         word_lists = [[], [], []]
 
         for x in results:
-            print(x, x[-1], x[0])
             word_lists[x[-1]].append(x[0])
 
         return ([''] * (left_span - len(word_lists[0])) + word_lists[0],
