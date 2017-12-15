@@ -577,7 +577,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             visualizer = VisualizationDesigner.visualizers[item.text()]
             if (visualizer.validate_data(data_x, data_y, data_z,
                                          self.df, self.session) and
-                    not data_x == data_y):
+                    not ((data_x or data_y) and (data_x == data_y))):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
                 if last_item and item.text() == last_item.text():
                     restored_position = i
