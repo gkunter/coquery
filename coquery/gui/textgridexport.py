@@ -15,8 +15,10 @@ import os
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
+from .pyqt_compat import (QtCore, QtWidgets, QtGui, get_toplevel_window,
+                          STYLE_WARN)
 from .ui.textgridExportUi import Ui_TextgridExport
+from .app import get_icon
 
 
 class TextgridExportDialog(QtWidgets.QDialog):
@@ -37,8 +39,8 @@ class TextgridExportDialog(QtWidgets.QDialog):
         self.ui.button_sound_path.clicked.connect(self.set_sound_path)
         self.ui.edit_output_path.textChanged.connect(self.check_gui)
         self.ui.edit_sound_path.textChanged.connect(self.check_gui)
-        self.ui.button_output_path.setIcon(parent.get_icon("Folder"))
-        self.ui.button_sound_path.setIcon(parent.get_icon("Folder"))
+        self.ui.button_output_path.setIcon(get_icon("Folder"))
+        self.ui.button_sound_path.setIcon(get_icon("Folder"))
 
         # Add auto complete to file name edit:
         completer = QtWidgets.QCompleter()
@@ -48,49 +50,60 @@ class TextgridExportDialog(QtWidgets.QDialog):
         self.ui.edit_output_path.setCompleter(completer)
         self.ui.edit_sound_path.setCompleter(completer)
 
-
     def restore_settings(self):
         try:
             self.resize(options.settings.value("textgridexport_size"))
         except TypeError:
             pass
-        val = options.settings.value("textgridexport_radio_one_per_match", None)
-        self.ui.radio_one_per_match.setChecked(val == None or val == "true" or val == True)
-        self.ui.radio_one_per_file.setChecked(not (val == None or val == "true" or val == True))
+        val = options.settings.value("textgridexport_radio_one_per_match",
+                                     None)
+        one_per_file = (val is None) or (val == "true") or (val is True)
+        self.ui.radio_one_per_match.setChecked(one_per_file)
+        self.ui.radio_one_per_file.setChecked(not one_per_file)
 
-        val = options.settings.value("textgridexport_check_extract_sound", False)
-        if val == "true" or val == True:
+        val = options.settings.value("textgridexport_check_extract_sound",
+                                     False)
+        if val == "true" or val:
             self.ui.check_copy_sounds.setCheckState(QtCore.Qt.Checked)
         else:
             self.ui.check_copy_sounds.setCheckState(QtCore.Qt.Unchecked)
         val = options.settings.value("textgridexport_check_remember", False)
-        if val == "true" or val == True:
+        if val == "true" or val:
             self.ui.check_remember.setCheckState(QtCore.Qt.Checked)
         else:
             self.ui.check_remember.setCheckState(QtCore.Qt.Unchecked)
-        self.ui.edit_output_path.setText(options.settings.value("textgridexport_output_path",
-                                                                os.path.expanduser("~")))
-        self.ui.edit_file_prefix.setText(options.settings.value("textgridexport_file_prefix", ""))
-        self.ui.edit_sound_path.setText(options.settings.value("textgridexport_sound_path", ""))
-        self.ui.spin_left_padding.setValue(float(options.settings.value("textgridexport_left_padding", 0)))
-        self.ui.spin_right_padding.setValue(float(options.settings.value("textgridexport_right_padding", 0)))
+        self.ui.edit_output_path.setText(
+            options.settings.value("textgridexport_output_path",
+                                   os.path.expanduser("~")))
+        self.ui.edit_file_prefix.setText(
+            options.settings.value("textgridexport_file_prefix", ""))
+        self.ui.edit_sound_path.setText(
+            options.settings.value("textgridexport_sound_path", ""))
+        self.ui.spin_left_padding.setValue(
+            float(options.settings.value("textgridexport_left_padding", 0)))
+        self.ui.spin_right_padding.setValue(
+            float(options.settings.value("textgridexport_right_padding", 0)))
 
     def check_gui(self, *args, **kwargs):
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
+        ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+
+        ok_button.setEnabled(True)
         if not os.path.exists(utf8(self.ui.edit_output_path.text())):
-            S = "QLineEdit { background-color: rgb(255, 255, 192) }"
-            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setDisabled(True)
+            S = STYLE_WARN
+            ok_button.setDisabled(True)
         else:
             S = "QLineEdit {{ background-color: {} }} ".format(
                 options.cfg.app.palette().color(QtGui.QPalette.Base).name())
+
         self.ui.edit_output_path.setStyleSheet(S)
         if self.ui.check_copy_sounds.isChecked():
             if not os.path.exists(utf8(self.ui.edit_sound_path.text())):
-                S = "QLineEdit { background-color: rgb(255, 255, 192) }"
-                self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setDisabled(True)
+                S = STYLE_WARN
+                ok_button.setDisabled(True)
             else:
+                palette = options.cfg.app.palette()
                 S = "QLineEdit {{ background-color: {} }} ".format(
-                    options.cfg.app.palette().color(QtGui.QPalette.Base).name())
+                    palette.color(QtGui.QPalette.Base).name())
             self.ui.edit_sound_path.setStyleSheet(S)
 
     def set_output_path(self):
@@ -105,7 +118,12 @@ class TextgridExportDialog(QtWidgets.QDialog):
 
     def select_file(self, path=""):
         """ Call a file selector, and add file name to query file input. """
-        name = QtWidgets.QFileDialog.getExistingDirectory(directory=path, options=QtWidgets.QFileDialog.ReadOnly|QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.HideNameFilterDetails)
+        name = QtWidgets.QFileDialog.getExistingDirectory(
+            directory=path,
+            options=(QtWidgets.QFileDialog.ReadOnly |
+                     QtWidgets.QFileDialog.ShowDirsOnly |
+                     QtWidgets.QFileDialog.HideNameFilterDetails))
+
         # getOpenFileName() returns different types in PyQt and PySide, fix:
         if type(name) == tuple:
             name = name[0]
@@ -118,30 +136,43 @@ class TextgridExportDialog(QtWidgets.QDialog):
     def accept(self, *args):
         super(TextgridExportDialog, self).accept(*args)
         options.settings.setValue("textgridexport_size", self.size())
-        options.settings.setValue("textgridexport_radio_one_per_match", self.ui.radio_one_per_match.isChecked())
-        options.settings.setValue("textgridexport_check_extract_sound", bool(self.ui.check_copy_sounds.checkState()))
-        options.settings.setValue("textgridexport_sound_path", utf8(self.ui.edit_sound_path.text()))
-        options.settings.setValue("textgridexport_output_path", utf8(self.ui.edit_output_path.text()))
-        options.settings.setValue("textgridexport_left_padding", float(self.ui.spin_left_padding.value()))
-        options.settings.setValue("textgridexport_right_padding", float(self.ui.spin_right_padding.value()))
-        options.settings.setValue("textgridexport_check_remember", bool(self.ui.check_remember.checkState()))
-        options.settings.setValue("textgridexport_file_prefix", utf8(self.ui.edit_file_prefix.text()))
+        options.settings.setValue("textgridexport_radio_one_per_match",
+                                  self.ui.radio_one_per_match.isChecked())
+        options.settings.setValue(
+            "textgridexport_check_extract_sound",
+            bool(self.ui.check_copy_sounds.checkState()))
+        options.settings.setValue("textgridexport_sound_path",
+                                  utf8(self.ui.edit_sound_path.text()))
+        options.settings.setValue("textgridexport_output_path",
+                                  utf8(self.ui.edit_output_path.text()))
+        options.settings.setValue("textgridexport_left_padding",
+                                  float(self.ui.spin_left_padding.value()))
+        options.settings.setValue("textgridexport_right_padding",
+                                  float(self.ui.spin_right_padding.value()))
+        options.settings.setValue("textgridexport_check_remember",
+                                  bool(self.ui.check_remember.checkState()))
+        options.settings.setValue("textgridexport_file_prefix",
+                                  utf8(self.ui.edit_file_prefix.text()))
 
     def exec_(self):
         result = super(TextgridExportDialog, self).exec_()
         if result == QtWidgets.QDialog.Accepted:
-            columns = []
             columns = [x.data(QtCore.Qt.UserRole) for x
                        in self.ui.list_columns.selectedItems()]
-            return {"output_path": utf8(self.ui.edit_output_path.text()),
-                    "columns": columns,
-                    "one_grid_per_match": self.ui.radio_one_per_match.isChecked(),
-                    "remember_time": self.ui.check_remember.checkState() != QtCore.Qt.Unchecked,
-                    "sound_path": ("" if self.ui.check_copy_sounds.checkState() == QtCore.Qt.Unchecked else
-                                   utf8(self.ui.edit_sound_path.text())),
-                    "file_prefix": utf8(self.ui.edit_file_prefix.text()),
-                    "left_padding": float(self.ui.spin_left_padding.value()),
-                    "right_padding": float(self.ui.spin_right_padding.value())}
+            if (self.ui.check_copy_sounds.checkState == QtCore.Qt.Unchecked):
+                sound_path = ""
+            else:
+                sound_path = utf8(self.ui.edit_sound_path.text())
+            return {
+                "output_path": utf8(self.ui.edit_output_path.text()),
+                "columns": columns,
+                "one_grid_per_match": self.ui.radio_one_per_match.isChecked(),
+                "remember_time": (self.ui.check_remember.checkState() !=
+                                  QtCore.Qt.Unchecked),
+                "sound_path": sound_path,
+                "file_prefix": utf8(self.ui.edit_file_prefix.text()),
+                "left_padding": float(self.ui.spin_left_padding.value()),
+                "right_padding": float(self.ui.spin_right_padding.value())}
         else:
             return None
 

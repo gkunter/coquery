@@ -55,9 +55,9 @@ class CoqEditFilters(QtWidgets.QWidget):
         self.dtypes = []
 
         self.ui.button_add.setIcon(
-            get_toplevel_window().get_icon("sign-add"))
+            get_toplevel_window().get_icon("Plus"))
         self.ui.button_remove.setIcon(
-            get_toplevel_window().get_icon("sign-delete"))
+            get_toplevel_window().get_icon("Minus"))
 
         operator_dict = {x: globals()[x] for x in globals()
                          if x.startswith("OP_")}

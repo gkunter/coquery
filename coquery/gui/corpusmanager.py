@@ -42,6 +42,7 @@ from . import classes
 from .pyqt_compat import (QtCore, QtWidgets, QtGui, frameShadow, frameShape,
                           get_toplevel_window)
 from .ui.corpusManagerUi import Ui_corpusManager
+from .app import get_icon
 
 
 class CoqAccordionEntry(QtWidgets.QWidget):
@@ -146,24 +147,24 @@ class CoqAccordionEntry(QtWidgets.QWidget):
         entry_widget.header_layout.addLayout(self.widget_layout)
 
         button_build = QtWidgets.QPushButton()
-        button_build.setIcon(self._stack.parent().get_icon("View File"))
+        button_build.setIcon(get_icon("View File"))
         button_build.setText("Build")
         button_build.setToolTip("Build new corpus")
         button_remove = QtWidgets.QPushButton()
-        button_remove.setIcon(self._stack.parent().get_icon("Minus"))
+        button_remove.setIcon(get_icon("Minus"))
         button_remove.setText("Remove")
         button_remove.setToolTip("Remove corpus")
         button_install = QtWidgets.QPushButton()
-        button_install.setIcon(self._stack.parent().get_icon("Plus"))
+        button_install.setIcon(get_icon("Plus"))
         button_install.setText("Install")
         button_install.setToolTip("Install corpus")
         button_reinstall = QtWidgets.QPushButton()
-        button_reinstall.setIcon(self._stack.parent().get_icon("Connection Sync"))
+        button_reinstall.setIcon(get_icon("Connection Sync"))
         button_reinstall.setText("Reinstall")
         button_reinstall.setToolTip("Reinstall corpus")
         button_dump = QtWidgets.QPushButton("Package")
         button_dump.setToolTip("Package corpus")
-        button_dump.setIcon(self._stack.parent().get_icon("Save"))
+        button_dump.setIcon(get_icon("Save"))
 
         # make all buttons the same width:
         max_width = 0
@@ -392,7 +393,6 @@ class CorpusManager(QtWidgets.QDialog):
 
         self.update()
 
-
     def built_in(self, path):
         """
         Check if the path points to a built-in installer, i.e. one that is
@@ -526,7 +526,9 @@ class CorpusManager(QtWidgets.QDialog):
                     entry = CoqAccordionEntry(stack=self)
 
                     name = utf8(builder_class.get_name())
-                    self.detail_box = classes.CoqDetailBox(name, entry, alternative=name)
+                    self.detail_box = classes.CoqDetailBox(name,
+                                                           entry,
+                                                           alternative=name)
 
                     if basename not in ("coq_install_generic_table",
                                         "coq_install_generic",
@@ -543,10 +545,10 @@ class CorpusManager(QtWidgets.QDialog):
                         if builder_class.get_url():
                             entry.setURL(utf8(builder_class.get_url()))
 
-                        if builder_class.get_description():
-                            entry.setDescription(
-                                "".join(["<p>{}</p>".format(utf8(x))
-                                         for x in builder_class.get_description()]))
+                        desc = builder_class.get_description()
+                        if desc:
+                            l = ["<p>{}</p>".format(utf8(x)) for x in desc]
+                            entry.setDescription("".join(l))
 
                         if builder_class.get_language():
                             entry.setLanguage(
@@ -554,18 +556,25 @@ class CorpusManager(QtWidgets.QDialog):
                                 utf8(builder_class.get_language_code()))
 
                         if builder_class.get_references():
-                            entry.setReferences(builder_class.get_references())
+                            entry.setReferences(
+                                builder_class.get_references())
 
-                        if builder_class.get_license():
-                            entry.setLicense("<p><b>License</b></p><p>{}</p>".format(utf8(builder_class.get_license())))
+                        license = builder_class.get_license()
+                        if license:
+                            S = "<p><b>License</b></p><p>{}</p>".format(
+                                utf8(license))
+                            entry.setLicense(S)
 
                         if builder_class.get_modules():
                             entry.setModules(builder_class.get_modules())
 
-                        entry.setup_buttons(name in options.cfg.current_resources, entry_widget=self.detail_box)
+                        entry.setup_buttons(
+                            name in options.cfg.current_resources,
+                            entry_widget=self.detail_box)
                         entry.setBuilderClass(builder_class)
 
-                        self.detail_box.clicked.connect(lambda x: self.update_accordion(x))
+                        self.detail_box.clicked.connect(
+                            lambda x: self.update_accordion(x))
 
                         # add entry to installer list:
                         self.ui.list_layout.addWidget(self.detail_box)

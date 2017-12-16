@@ -67,6 +67,40 @@ if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
     sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
 
 
+def get_icon(s, small_n_flat=True, size="24x24"):
+    """
+    Return an icon that matches the given string.
+
+    Parameters
+    ----------
+    s : str
+        The name of the icon. In the case of small-n-flat icons, the name
+        does not contain an extension, this is added automatically.
+    small_n_flat : bool
+        True if the icon is from the 'small-n-flat' icon set. False if it
+        is artwork provided by Coquery (in the icons/artwork/
+        subdirectory).
+    """
+    icon = QtGui.QIcon()
+    if small_n_flat:
+        path = os.path.join(options.cfg.base_path,
+                            "icons",
+                            "Icons8",
+                            "PNG",
+                            size,
+                            "{}.png".format(s))
+    else:
+        if not s.lower().endswith(".png"):
+            s = "{}.png".format(s)
+        path = os.path.join(options.cfg.base_path,
+                            "icons",
+                            "artwork",
+                            s)
+    icon.addFile(path)
+    assert os.path.exists(path), "Image not found: {}".format(path)
+    return icon
+
+
 class focusFilter(QtCore.QObject):
     """
     Define an event filter that emits a focus signal whenever the widget
@@ -408,28 +442,28 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._resizing_column = False
 
     def setup_icons(self):
-        self.ui.action_help.setIcon(self.get_icon("Lifebuoy"))
+        self.ui.action_help.setIcon(get_icon("Lifebuoy"))
         self.ui.action_connection_settings.setIcon(
-            self.get_icon("Data Configuration"))
-        self.ui.action_settings.setIcon(self.get_icon("Maintenance"))
-        self.ui.action_build_corpus.setIcon(self.get_icon("Add Database"))
-        self.ui.action_manage_corpus.setIcon(self.get_icon("Database"))
-        self.ui.action_corpus_documentation.setIcon(self.get_icon("Info"))
-        self.ui.action_statistics.setIcon(self.get_icon("Table"))
+            get_icon("Data Configuration"))
+        self.ui.action_settings.setIcon(get_icon("Maintenance"))
+        self.ui.action_build_corpus.setIcon(get_icon("Add Database"))
+        self.ui.action_manage_corpus.setIcon(get_icon("Database"))
+        self.ui.action_corpus_documentation.setIcon(get_icon("Info"))
+        self.ui.action_statistics.setIcon(get_icon("Table"))
 
-        self.ui.action_add_column.setIcon(self.get_icon("Add Column"))
-        self.ui.action_column_properties.setIcon(self.get_icon("Edit Column"))
-        self.ui.action_find.setIcon(self.get_icon("View File"))
+        self.ui.action_add_column.setIcon(get_icon("Add Column"))
+        self.ui.action_column_properties.setIcon(get_icon("Edit Column"))
+        self.ui.action_find.setIcon(get_icon("View File"))
 
-        self.ui.action_quit.setIcon(self.get_icon("Exit"))
-        self.ui.action_view_log.setIcon(self.get_icon("List"))
-        self.ui.action_save_results.setIcon(self.get_icon("Save"))
-        self.ui.action_save_selection.setIcon(self.get_icon("Save"))
-        self.ui.button_change_file.setIcon(self.get_icon("Open Folder"))
-        self.ui.button_run_query.setIcon(self.get_icon("Circled Play"))
-        self.ui.button_stop_query.setIcon(self.get_icon("Cancel"))
-        self.ui.button_apply_management.setIcon(self.get_icon("Process"))
-        self.ui.button_cancel_management.setIcon(self.get_icon("Stop"))
+        self.ui.action_quit.setIcon(get_icon("Exit"))
+        self.ui.action_view_log.setIcon(get_icon("List"))
+        self.ui.action_save_results.setIcon(get_icon("Save"))
+        self.ui.action_save_selection.setIcon(get_icon("Save"))
+        self.ui.button_change_file.setIcon(get_icon("Open Folder"))
+        self.ui.button_run_query.setIcon(get_icon("Circled Play"))
+        self.ui.button_stop_query.setIcon(get_icon("Cancel"))
+        self.ui.button_apply_management.setIcon(get_icon("Process"))
+        self.ui.button_cancel_management.setIcon(get_icon("Stop"))
 
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
@@ -863,7 +897,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.radio_query_string.setChecked(True)
 
     @staticmethod
-    def get_icon(s, small_n_flat=True, size="24x24"):
+    def get_icon(*args, **kwargs):
+        return get_icon(*args, **kwargs)
         """
         Return an icon that matches the given string.
 
@@ -879,15 +914,32 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         icon = QtGui.QIcon()
         if small_n_flat:
-            path = os.path.join(options.cfg.base_path, "icons", "Icons8", "PNG", size, "{}.png".format(s))
+            path = os.path.join(options.cfg.base_path,
+                                "icons",
+                                "Icons8",
+                                "PNG",
+                                size,
+                                "{}.png".format(s))
             if not os.path.exists(path):
-                path = os.path.join(options.cfg.base_path, "icons", "Essential_Collection", "PNG", "16x16", "{}.png".format(s))
+                path = os.path.join(options.cfg.base_path,
+                                    "icons",
+                                    "Essential_Collection",
+                                    "PNG",
+                                    "16x16",
+                                    "{}.png".format(s))
             if not os.path.exists(path):
-                path = os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG", "{}.png".format(s))
+                path = os.path.join(options.cfg.base_path,
+                                    "icons",
+                                    "small-n-flat",
+                                    "PNG",
+                                    "{}.png".format(s))
         else:
             if not s.lower().endswith(".png"):
                 s = "{}.png".format(s)
-            path = os.path.join(options.cfg.base_path, "icons", "artwork", s)
+            path = os.path.join(options.cfg.base_path,
+                                "icons",
+                                "artwork",
+                                s)
         icon.addFile(path)
         assert os.path.exists(path), "Image not found: {}".format(path)
         return icon
@@ -2129,7 +2181,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 #else:
                     #action = QtWidgets.QAction("&Show row", self)
                 #action.triggered.connect(lambda: self.set_row_visibility(selection, True))
-                #action.setIcon(self.get_icon("sign-maximize"))
+                #action.setIcon(get_icon("Expand Arrow"))
                 #menu.addAction(action)
             ## Check if any row is visible
             #if row_vis.any():
@@ -2141,7 +2193,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 #else:
                     #action = QtWidgets.QAction("&Hide row", self)
                 #action.triggered.connect(lambda: self.set_row_visibility(selection, False))
-                #action.setIcon(self.get_icon("sign-minimize"))
+                #action.setIcon(get_icon("Collapse Arrow"))
                 #menu.addAction(action)
 
             menu.addSeparator()
@@ -3144,6 +3196,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)
+        self.change_toolbox(options.cfg.last_toolbox)
 
         self.ui.edit_file_name.setText(options.cfg.input_path)
         self.ui.edit_query_string.setText("\n".join(options.cfg.query_list))

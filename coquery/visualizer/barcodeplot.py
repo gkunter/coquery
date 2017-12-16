@@ -14,82 +14,10 @@ from __future__ import unicode_literals
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-
-
-from coquery import options
-from coquery.unicode import utf8
 
 from coquery.visualizer import visualizer as vis
+from coquery.gui.pyqt_compat import QtWidgets, QtCore
 
-
-def lineplot(x=None, y=None, data=None, order=None, palette=None,
-             linewidth=0, ax=None, orient="v", **kwargs):
-    if ax is None:
-        ax = plt.gca()
-    if not order:
-        order = y.unique()
-    order = list(sorted(order))
-    func = plt.vlines if orient=="v" else plt.hlines
-    for i, lev in enumerate(order):
-        func(x[y == lev], i + 0.025, i + 0.975, colors=palette[i], linewidth=1)
-
-    if len(order) < 2:
-        ax.set(yticks=[])
-    else:
-        ax.set(yticks=[0.5 + n for n in range(len(order))])
-        ax.set(yticklabels=order)
-    ax.set(xlim=(0, max(x)))
-    ax.set(ylim=(len(order), 0))
-    return ax
-
-class Visualizer(vis.BaseVisualizer):
-    dimensionality = 1
-
-    def format_coord(self, x, y, title):
-        return "{}: <b>{}</b>, Corpus position: {}".format(
-            self._groupby[-1], sorted(self._levels[-1])[int(y)], int(x))
-
-    def onclick(self, event):
-        try:
-            options.cfg.main_window.result_cell_clicked(token_id=int(event.xdata))
-        except TypeError:
-            pass
-
-    def set_defaults(self):
-        self.options["color_palette"] = "Paired"
-        self.options["color_number"] = len(self._levels[0])
-        super(Visualizer, self).set_defaults()
-        self.options["label_x_axis"] = "Corpus position"
-        if not self._levels or len(self._levels[0]) < 2:
-            self.options["label_y_axis"] = ""
-        else:
-            self.options["label_y_axis"] = self._groupby[0]
-
-    def setup_figure(self):
-        with sns.axes_style("white"):
-            super(Visualizer, self).setup_figure()
-
-    def draw(self):
-        """ Plot a vertical line for each token in the current data table.
-        The line is drawn in a subplot matching the factor level
-        combination in that row. The horizontal position corresponds to the
-        token id so that tokens that occur in the same part of the corpus
-        will also have lines that are placed close to each other. """
-        def plot_facet(data, color):
-            lineplot(
-                x=data["coquery_invisible_corpus_id"],
-                y=data[self._groupby[-1]],
-                order=self._levels[-1],
-                palette=self.options["color_palette_values"],
-                data=data)
-
-        #sns.despine(self.g.fig,
-                    #left=False, right=False, top=False, bottom=False)
-
-        self.map_data(plot_facet)
-        self.g.set_axis_labels(utf8(self.options["label_x_axis"]), utf8(self.options["label_y_axis"]))
-        self.g.set(xlim=(0, options.cfg.main_window.Session.Corpus.get_corpus_size(filters=[])))
 
 class BarcodePlot(vis.Visualizer):
     axes_style = "white"
@@ -97,12 +25,49 @@ class BarcodePlot(vis.Visualizer):
     BOTTOM = 0.025
     COLOR = None
 
-    def __init__(self, *args, **kwargs):
-        vis.Visualizer.__init__(self, *args, **kwargs)
-        self.horizontal = True
+    DEFAULT_LABEL = "Corpus position"
+
+    horizontal = True
+    force_vertical = False
+
+    def get_custom_widgets(self):
+        layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QApplication.instance().translate(
+                    "BarcodePlot", "Plot horizontal by default", None)
+        button = QtWidgets.QApplication.instance().translate(
+                    "Visualizer", "Apply", None)
+
+        BarcodePlot.check_horizontal = QtWidgets.QCheckBox(label)
+        BarcodePlot.check_horizontal.setCheckState(
+            QtCore.Qt.Checked if BarcodePlot.horizontal else
+            QtCore.Qt.Unchecked)
+
+        BarcodePlot.button_apply = QtWidgets.QPushButton(button)
+        BarcodePlot.button_apply.setDisabled(True)
+        BarcodePlot.button_apply.clicked.connect(
+            lambda: BarcodePlot.update_figure(
+                self, BarcodePlot.check_horizontal.checkState()))
+
+        BarcodePlot.check_horizontal.stateChanged.connect(
+            lambda x: BarcodePlot.button_apply.setEnabled(True))
+
+        layout.addWidget(BarcodePlot.check_horizontal)
+        layout.addWidget(BarcodePlot.button_apply)
+        layout.setStretch(0, 1)
+        layout.setStretch(1, 0)
+        return [layout]
+
+    @classmethod
+    def update_figure(cls, self, i):
+        cls.horizontal = bool(i)
+        print(i, cls.horizontal)
+        BarcodePlot.button_apply.setDisabled(True)
+        self.updateRequested.emit()
 
     def plot_facet(self,
-                   data, color, x=None, y=None, levels_x=None, levels_y=None,
+                   data, color,
+                   x=None, y=None, z=None,
+                   levels_x=None, levels_y=None, levels_z=None,
                    palette=None, rug=None, rug_color="Black",
                    **kwargs):
         """
@@ -111,74 +76,80 @@ class BarcodePlot(vis.Visualizer):
         In a barcode plot, each token is represented by a line drawn at the
         location of the corresponding corpus id.
         """
-        def get_colors(palette, levels):
-            return sns.color_palette(palette, n_colors=len(levels))
+
+        self._xlab = self.DEFAULT_LABEL
+        self._ylab = self.DEFAULT_LABEL
 
         corpus_id = data["coquery_invisible_corpus_id"]
 
+        if x:
+            colors = self.get_palette(palette, len(levels_x))
+            val = data[x].apply(lambda x: levels_x.index(x))
+            cols = val.apply(lambda x: colors[x])
+        elif y:
+            colors = self.get_palette(palette, len(levels_y))
+            val = data[y].apply(lambda y: levels_y.index(y))
+            cols = val.apply(lambda y: colors[y])
+        else:
+            cols = [self.get_palette(palette, 1)[0]] * len(data)
+            val = pd.Series([0] * len(data), index=data.index)
+
+        # Take care of a hue variable:
+        if z:
+            colors = self.get_palette(palette, len(levels_z))
+            cols = [colors[levels_z.index(d)] for d in data[z]]
+            self.legend_title = z
+            self.legend_levels = levels_z
+
+        ax_kwargs = {}
+
         if x and not y:
-            self.horizontal = False
+            BarcodePlot.force_vertical = True
             ax_kwargs = {"xticks": 0.5 + pd.np.arange(len(levels_x)),
                          "xticklabels": levels_x}
-            if levels_x:
-                ax_kwargs["xlim"] = (0, len(levels_x))
-
-            xval = data[x].apply(lambda x: levels_x.index(x))
-            colors = get_colors(palette, levels_x)
-            cols = xval.apply(lambda x: colors[x])
             if rug:
                 if "top" in rug:
-                    plt.hlines(corpus_id, xval + 0.9, xval + 1, cols)
+                    plt.hlines(corpus_id, val + 0.9, val + 1, cols)
                 if "bottom" in rug:
-                    plt.hlines(corpus_id, xval, xval + 0.1, cols)
+                    plt.hlines(corpus_id, val, val + 0.1, cols)
             else:
-                plt.hlines(corpus_id, xval + self.BOTTOM, xval + self.TOP, cols)
-            self._ylab = "Corpus position"
+                plt.hlines(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
             if levels_x:
+                ax_kwargs["xlim"] = (0, len(levels_x))
                 self._xlab = x
             else:
                 self._xlab = ""
         else:
-            self.horizontal = True
+            BarcodePlot.force_vertical = False
             levels_y = levels_y[::-1]
             ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
                          "yticklabels": levels_y}
-            if levels_y:
-                ax_kwargs["ylim"] = (0, len(levels_y))
 
-            if not x and not y:
-                cols = [get_colors(palette, [0])[0]] * len(data)
-                yval = 0
-            elif y and not x:
-                yval = data[y].apply(lambda y: levels_y.index(y))
-                colors = get_colors(palette, levels_y)[::-1]
-                cols = yval.apply(lambda y: colors[y])
-            elif x and y:
-                yval = data[y].apply(lambda y: levels_y.index(y))
-                colors = get_colors(palette, levels_x)
-                cols = data[x].apply(lambda x: colors[levels_x.index(x)])
+            if not y and BarcodePlot.horizontal:
+                func = plt.vlines
+            else:
+                func = plt.hlines
+
             if rug:
                 if "top" in rug:
-                    plt.vlines(corpus_id, yval + 0.9, yval + 1, cols)
+                    func(corpus_id, val + 0.9, val + 1, cols)
                 if "bottom" in rug:
-                    plt.vlines(corpus_id, yval, yval + 0.1, cols)
+                    func(corpus_id, val, val + 0.1, cols)
             else:
-                plt.vlines(corpus_id,
-                           yval + self.BOTTOM, yval + self.TOP,
-                           cols)
-            self._xlab = "Corpus position"
+                func(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
+
             if levels_y:
                 self._ylab = y
+                ax_kwargs["ylim"] = (0, len(levels_y))
             else:
                 self._ylab = ""
-
 
         ax = kwargs.get("ax", plt.gca())
         ax.set(**ax_kwargs)
 
     def set_annotations(self, grid, values):
         lim = (0, self.session.Corpus.get_corpus_size())
-        if self.horizontal:
+        if BarcodePlot.horizontal and not BarcodePlot.force_vertical:
             grid.set(xlim=lim)
         else:
             grid.set(ylim=lim)
@@ -192,9 +163,10 @@ class BarcodePlot(vis.Visualizer):
         if len(df) == 0:
             return False
 
-        if len(num) > 0 or len(cat) > 2:
+        if len(num) > 0 or len(cat) > 1:
             return False
         return True
+
 
 class HeatbarPlot(BarcodePlot):
     """
@@ -208,11 +180,11 @@ class HeatbarPlot(BarcodePlot):
     import statsmodels
 
     corpus_size = 50000
-    matches = np.unique(
-                np.concatenate(
+    matches = pd.np.unique(
+                pd.np.concatenate(
                     (np.random.normal(1000, 250, 10).astype(int),
-                     np.random.normal(32500, 2000, 20).astype(int),
-                     np.random.uniform(0, corpus_size, 20).astype(int))))
+                     pd.np.random.normal(32500, 2000, 20).astype(int),
+                     pd.np.random.uniform(0, corpus_size, 20).astype(int))))
 
     # KDE from statsmodels:
     from statsmodels.nonparametric.kde import KDEUnivariate
@@ -238,7 +210,7 @@ class HeatbarPlot(BarcodePlot):
     def __init__(self, *args, **kwargs):
         from statsmodels.nonparametric.kde import KDEUnivariate
         HeatbarPlot.kde = KDEUnivariate
-        super(HeatbarPlot, self).__init__(*args, **kwargs)
+        BarcodePlot.__init__(self, *args, **kwargs)
 
     def plot_facet(self, data, color, **kwargs):
         """

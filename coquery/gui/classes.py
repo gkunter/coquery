@@ -21,7 +21,7 @@ import random
 import pandas as pd
 from collections import deque
 
-from coquery import general, NAME
+from coquery import general
 from coquery import options
 from coquery import managers
 from coquery import session
@@ -421,7 +421,7 @@ class CoqInfoLabel(QtWidgets.QLabel):
         self.setCursor(QtCore.Qt.WhatsThisCursor)
 
         self.setText("")
-        self.setPixmap(get_toplevel_window().get_icon("sign-info").pixmap(
+        self.setPixmap(get_toplevel_window().get_icon("Info").pixmap(
             QtCore.QSize(QtWidgets.QSpinBox().sizeHint().height(),
                          QtWidgets.QSpinBox().sizeHint().height())))
 
@@ -990,8 +990,8 @@ class CoqDetailBox(QtWidgets.QWidget):
             return options.cfg.app.palette().color(x).name()
 
         try:
-            up = get_toplevel_window().get_icon("Chevron Up_2")
-            down = get_toplevel_window().get_icon("Chevron Right_2")
+            up = get_toplevel_window().get_icon("Multiply")
+            down = get_toplevel_window().get_icon("Plus Math")
         except AttributeError:
             up = None
             down = None
@@ -1052,6 +1052,7 @@ class CoqDetailBox(QtWidgets.QWidget):
                 # harmless RuntimeError
                 pass
             self.header.setFlat(True)
+            self.header.update()
             icon = down
         if icon:
             self.header.setIcon(icon)
@@ -2528,5 +2529,3 @@ class CoqFlowLayout(QtWidgets.QLayout):
             lineHeight = max(lineHeight, item.sizeHint().height())
 
         return y + lineHeight - rect.y()
-
-logger = logging.getLogger(NAME)

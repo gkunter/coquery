@@ -20,9 +20,9 @@ from coquery.unicode import utf8
 from coquery.defines import (msg_csv_encoding_error,
                              msg_csv_file_error,
                              CHARACTER_ENCODINGS)
-#from coquery.errors import *
-from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
+from .pyqt_compat import QtWidgets, QtGui, QtCore
 from .ui.csvOptionsUi import Ui_FileOptions
+from .app import get_icon
 
 
 class CSVOptions(object):
@@ -121,7 +121,8 @@ class MyTableModel(QtCore.QAbstractTableModel):
             value = self.df.iloc[index.row()][index.column()]
             if isinstance(value, pd.np.int64):
                 value = int(value)
-            elif isinstance(value, (pd.np.float64, pd.np.float, pd.np.float32)):
+            elif isinstance(value,
+                            (pd.np.float64, pd.np.float, pd.np.float32)):
                 value = float(value)
 
         if c_role:
@@ -179,8 +180,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
         else:
             self.ui = Ui_FileOptions()
         self.ui.setupUi(self)
-        icon = get_toplevel_window().get_icon("Folder")
-        self.ui.button_browse_file.setIcon(icon)
+        self.ui.button_browse_file.setIcon(get_icon("Folder"))
 
         self.ui.edit_file_name.setText(default.file_name)
 
@@ -191,7 +191,6 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self._col_select = 0
         self._read_from_xls = False
 
-        #sep, col, head, skip, quotechar = default
         if default.sep == "\t":
             default.sep = "{tab}"
         if default.sep == " ":
@@ -215,7 +214,9 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self.ui.file_has_headers.setChecked(default.header)
         self.ui.ignore_lines.setValue(default.skip_lines)
 
-        self.ui.combo_encoding.addItems([x.replace("_", "-") for x in CHARACTER_ENCODINGS if x != "ascii"])
+        self.ui.combo_encoding.addItems([x.replace("_", "-")
+                                         for x in CHARACTER_ENCODINGS
+                                         if x != "ascii"])
 
         index = self.ui.quote_char.findText(quote_chars[default.quote_char])
         self.ui.quote_char.setCurrentIndex(index)
@@ -277,11 +278,6 @@ class CSVOptionDialog(QtWidgets.QDialog):
         dialog = CSVOptionDialog(default=default, parent=parent, icon=icon)
         return dialog.exec_()
 
-    #def set_new_skip(self):
-        #self.table_model.skip_lines = self.ui.ignore_lines.value()
-        #self.ui.FilePreviewArea.reset()
-        #self.set_query_column()
-
     def set_encoding_selection(self, encoding):
         """
         Disconnect the encoding button box, set the new value, and reconnect.
@@ -293,7 +289,8 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self.ui.combo_encoding.currentIndexChanged.disconnect()
         index = self.ui.combo_encoding.findText(encoding)
         self.ui.combo_encoding.setCurrentIndex(index)
-        self.ui.combo_encoding.currentIndexChanged.connect(self.update_content)
+        self.ui.combo_encoding.currentIndexChanged.connect(
+            self.update_content)
 
     def split_file_content(self, file_name):
         """
@@ -319,8 +316,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self._read_from_xls = False
         if options.use_xlrd:
             try:
-                df = pd.read_excel(file_name,
-                                header=header)
+                df = pd.read_excel(file_name, header=header)
             except Exception as e:
                 print(e)
             else:
@@ -342,8 +338,8 @@ class CSVOptionDialog(QtWidgets.QDialog):
 
                 if not hasattr(self, "_last_encoding"):
                     # this happened the first time the file content was split.
-                    # This is probably due to a wrong encoding setting, so we try
-                    # to autodetect the encoding:
+                    # This is probably due to a wrong encoding setting, so we
+                    # try to autodetect the encoding:
 
                     if options.use_chardet:
                         # detect character encoding using chardet
@@ -382,13 +378,14 @@ class CSVOptionDialog(QtWidgets.QDialog):
                         self.set_encoding_selection(encoding)
 
                 elif self._last_encoding != encoding:
-                    # we should alert the user that they should use a different
-                    # encoding.
+                    # we should alert the user that they should use a
+                    # different encoding.
                     QtWidgets.QMessageBox.critical(
                         self.parent(), "Query file error",
                         msg_csv_encoding_error.format(file=file_name,
-                                                    encoding=encoding))
-                    # return to the last encoding, which was hopefully working:
+                                                      encoding=encoding))
+                    # return to the last encoding, which was hopefully
+                    # working:
                     self.set_encoding_selection(self._last_encoding)
                     encoding = self._last_encoding
                 else:
@@ -404,14 +401,14 @@ class CSVOptionDialog(QtWidgets.QDialog):
             df.columns = ["X{}".format(x) for x in range(len(df.columns))]
 
         # make column headers SQL-conforming
-        df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x)
-                                   for x in df.columns]
+        df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x) for x in df.columns]
 
         return df
 
     def select_file(self):
         """ Call a file selector, and add file name to query file input. """
-        name = QtWidgets.QFileDialog.getOpenFileName(directory=options.cfg.query_file_path)
+        name = QtWidgets.QFileDialog.getOpenFileName(
+            directory=options.cfg.query_file_path)
 
         # getOpenFileName() returns different types in PyQt and PySide, fix:
         if type(name) == tuple:
@@ -430,7 +427,9 @@ class CSVOptionDialog(QtWidgets.QDialog):
         else:
             self.file_table = self.split_file_content(current_file)
 
-        self.table_model = MyTableModel(self, self.file_table, self.ui.ignore_lines.value())
+        self.table_model = MyTableModel(self,
+                                        self.file_table,
+                                        self.ui.ignore_lines.value())
         self.ui.FilePreviewArea.setModel(self.table_model)
         self.set_query_column()
         self.ui.FilePreviewArea.resizeColumnsToContents()
@@ -440,13 +439,16 @@ class CSVOptionDialog(QtWidgets.QDialog):
     def validate(self):
         self.blockSignals(True)
         button_okay = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+        S = "QLineEdit {{ background-color: {} }}"
         if not os.path.exists(utf8(self.ui.edit_file_name.text())):
-            self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
+            S = S.format("rgb(255, 255, 192)")
             button_okay.setEnabled(False)
         else:
-            self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
+            pal = options.cfg.app.palette()
+            S = S.format(pal.color(QtGui.QPalette.Base).name())
             button_okay.setEnabled(True)
 
+        self.ui.edit_file_name.setStyleSheet(S)
         if self.ui.query_column.value() == 0:
             self.ui.query_column.setValue(1)
 
@@ -487,4 +489,3 @@ class CSVOptionDialog(QtWidgets.QDialog):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
-

@@ -36,6 +36,7 @@ import seaborn as sns
 from ..visualizer.visualizer import get_grid_layout
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 from . import classes
+from .app import get_icon
 
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
@@ -144,7 +145,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.check_wrapping()
         self.check_grid_layout()
         self.check_clear_buttons()
-        self.check_orientation()
         self._finetune_ui()
         self.change_figure_type()
 
@@ -154,7 +154,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.dialog_layout = QtWidgets.QVBoxLayout(self.dialog)
         self.dialog.resize(self.viewer_size)
         self.dialog.setWindowTitle("<no figure> – Coquery")
-        self.dialog.setWindowIcon(app.get_icon(
+        self.dialog.setWindowIcon(get_icon(
             "coquerel_icon.png", small_n_flat=False))
         self.dialog.show()
 
@@ -210,21 +210,26 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.list_figures.setMinimumWidth(180 + w)
         self.ui.list_figures.setMaximumWidth(180 + w)
 
-        self.ui.button_columns.setIcon(app.get_icon("Select Column"))
-        self.ui.button_rows.setIcon(app.get_icon("Select Row"))
+        icon_size = QtCore.QSize(QtWidgets.QLabel().sizeHint().height(),
+                                 QtWidgets.QLabel().sizeHint().height())
+        pix_col = get_icon("Select Column").pixmap(icon_size)
+        pix_row = get_icon("Select Row").pixmap(icon_size)
 
-        self.ui.button_clear_x.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_y.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_z.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_columns.setIcon(app.get_icon("Clear Symbol"))
-        self.ui.button_clear_rows.setIcon(app.get_icon("Clear Symbol"))
+        self.ui.icon_columns.setPixmap(pix_col)
+        self.ui.icon_rows.setPixmap(pix_row)
+
+        self.ui.button_clear_x.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_y.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_z.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_columns.setIcon(get_icon("Clear Symbol"))
+        self.ui.button_clear_rows.setIcon(get_icon("Clear Symbol"))
 
     def add_figure_type(self, label, icon):
         item = QtWidgets.QListWidgetItem(label)
         try:
-            item.setIcon(app.get_icon(icon, small_n_flat=False))
+            item.setIcon(get_icon(icon, small_n_flat=False))
         except Exception as e:
-            item.setIcon(app.get_icon(icon, size="64x64"))
+            item.setIcon(get_icon(icon, size="64x64"))
 
         size = QtCore.QSize(
             180, 64 + 0 * QtWidgets.QLabel().sizeHint().height())
@@ -257,12 +262,19 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.figure_loader.start()
 
     def populate_variable_lists(self):
+        d = self.get_gui_values()
+        used = [d[x]
+                for x in ["data_x", "data_y", "data_z", "columns", "rows"]
+                if d[x]]
+
         self.categorical = [col for col in self.df.columns
-                            if self.df.dtypes[col] in (object, bool) and not
-                            col.startswith(("coquery_invisible"))]
+                            if self.df.dtypes[col] in (object, bool) and
+                            not col in used and
+                            not col.startswith(("coquery_invisible"))]
         self.numerical = [col for col in self.df.columns
-                          if self.df.dtypes[col] in (int, float) and not
-                          col.startswith(("coquery_invisible"))]
+                          if self.df.dtypes[col] in (int, float) and
+                          not col in used and
+                          not col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
             label = self.alias.get(col) or col
@@ -270,7 +282,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             if label in self.session.Resource.time_features:
-                new_item.setIcon(app.get_icon("Clock"))
+                new_item.setIcon(get_icon("Clock"))
             self.ui.table_categorical.addItem(new_item)
 
         for col in self.numerical:
@@ -279,7 +291,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             if label in self.session.Resource.time_features:
-                new_item.setIcon(app.get_icon("Clock"))
+                new_item.setIcon(get_icon("Clock"))
             self.ui.table_numerical.addItem(new_item)
 
         ## add functions
@@ -465,10 +477,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         # (4) selecting a different figure type
         self.ui.list_figures.currentItemChanged.connect(self.plot_figure)
 
-        # (5) changing the orientation
-        self.ui.radio_horizontal.toggled.connect(self.plot_figure)
-        self.ui.radio_vertical.toggled.connect(self.plot_figure)
-
     def change_figure_type(self):
         self.ui.group_custom.hide()
 
@@ -479,13 +487,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
         if self.df is None:
             return
 
-        visualizer_class = VisualizationDesigner.visualizers[
+        vis_class = VisualizationDesigner.visualizers[
             figure_type.text()]
 
         #if self.vis is not None:
             #self.vis.updateRequested.disconnect()
 
-        self.vis = visualizer_class(self.df, self.session)
+        self.vis = vis_class(self.df, self.session)
         self.vis.updateRequested.connect(self.plot_figure)
         self.add_custom_widgets()
 
@@ -519,24 +527,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 else:
                     self.ui.layout_custom.addWidget(item)
 
-    def check_orientation(self):
-        data_x = self.ui.tray_data_x.data()
-        data_y = self.ui.tray_data_y.data()
-        data_z = self.ui.tray_data_z.data()
-
-        if data_x is None or data_y is None:
-            self.ui.radio_horizontal.setDisabled(True)
-            self.ui.radio_vertical.setDisabled(True)
-        else:
-            self.ui.radio_horizontal.setDisabled(False)
-            self.ui.radio_vertical.setDisabled(False)
-
-        if (not self.ui.radio_horizontal.isChecked() and
-                not self.ui.radio_vertical.isChecked()):
-            self.ui.radio_horizontal.blockSignals(True)
-            self.ui.radio_horizontal.setChecked(True)
-            self.ui.radio_horizontal.blockSignals(False)
-
     def check_wrapping(self):
         """
         Activate or deactivate the 'Wrap layout' checkbox. If the checkbox
@@ -565,7 +555,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_clear_z.setEnabled(bool(self.ui.tray_data_z.text()))
         self.ui.button_clear_columns.setEnabled(bool(self.ui.tray_columns.text()))
         self.ui.button_clear_rows.setEnabled(bool(self.ui.tray_rows.text()))
-        self.check_orientation()
 
     def check_grid_layout(self):
         if self.ui.tray_data_x.text() or self.ui.tray_data_y.text():
@@ -576,7 +565,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 self.ui.tray_columns.clear()
             if self.ui.tray_rows.text():
                 self.ui.tray_rows.clear()
-        self.check_orientation()
 
     def check_figure_types(self):
         last_item = self.ui.list_figures.currentItem()
@@ -590,8 +578,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
         for i in range(self.ui.list_figures.count()):
             item = self.ui.list_figures.takeItem(i)
             visualizer = VisualizationDesigner.visualizers[item.text()]
-            if visualizer.validate_data(data_x, data_y, data_z,
-                                        self.df, self.session):
+            if (visualizer.validate_data(data_x, data_y, data_z,
+                                         self.df, self.session) and
+                    not ((data_x or data_y) and (data_x == data_y))):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
                 if last_item and item.text() == last_item.text():
                     restored_position = i
@@ -818,12 +807,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
             return pal_name
 
     def plot_figure(self):
+        logging.info("VIS: plot_figure()")
         values = self.get_gui_values()
 
         if not values["figure_type"]:
             return
 
-        visualizer_class = VisualizationDesigner.visualizers[
+        vis_class = VisualizationDesigner.visualizers[
             values["figure_type"].text()]
 
         if (self.ui.check_wrap_layout.isChecked()):
@@ -844,12 +834,15 @@ class VisualizationDesigner(QtWidgets.QDialog):
         df = self.df[data_columns]
         df.columns = aliased_columns
 
-        self.vis = visualizer_class(df, self.session)
+        logging.info("VIS: Data initialized")
+        self.vis = vis_class(df, self.session)
+        logging.info("VIS: Visualizer initialized")
         self.grid = self.vis.get_grid(col=values["columns"],
                                       row=values["rows"],
                                       col_wrap=col_wrap,
                                       legend_out=True,
                                       sharex=True, sharey=True)
+        logging.info("VIS: Grid initialized")
 
         if options.cfg.experimental:
             self.plot_thread = classes.CoqThread(
@@ -863,25 +856,42 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.start_plot()
             self.run_plot(**values)
             self.finalize_plot()
+        logging.info("VIS: plot_figure() done")
 
     def start_plot(self):
-        self.progress_bar = QtWidgets.QProgressBar()
-        self.progress_bar.setRange(0, 0)
-        self.progress_bar.show()
-        self.dialog_layout.addWidget(self.progress_bar)
+        logging.info("VIS: start_plot()")
+        try:
+            self.progress_bar = QtWidgets.QProgressBar()
+            self.progress_bar.setRange(0, 0)
+            self.progress_bar.show()
+            self.dialog_layout.addWidget(self.progress_bar)
+        except Exception as e:
+            logging.error("VIS: start_plot(), exception {}".format(str(e)))
+            raise e
+        logging.info("VIS: start_plot() done")
 
     def run_plot(self, **kwargs):
-        self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
-        self.grid.fig.tight_layout()
+        logging.info("VIS: run_plot()")
+        try:
+            self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
+            self.grid.fig.tight_layout()
+        except Exception as e:
+            logging.error("VIS: run_plot(), exception {}".format(str(e)))
+            raise e
+        logging.info("VIS: run_plot() done")
 
     def finalize_plot(self):
+        logging.info("VIS: finalize_plot()")
         try:
             values = self.get_gui_values()
             figure_title = values["figure_type"].text()
 
-            self.dialog_layout.removeWidget(self.progress_bar)
-            self.progress_bar.hide()
-            del self.progress_bar
+            try:
+                self.dialog_layout.removeWidget(self.progress_bar)
+                self.progress_bar.hide()
+                del self.progress_bar
+            except AttributeError:
+                pass
 
             self.setup_canvas(self.grid.fig)
             self.add_annotations()
@@ -895,10 +905,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 self.grid.fig.canvas.mpl_connect('button_press_event',
                                                 self.vis.on_pick)
         except Exception as e:
-            print("EXCEPTION")
-            print(e)
-            logging.error(e)
+            logging.error("VIS: finalize_plot(), exception {}".format(str(e)))
             raise e
+        logging.info("VIS: finalize_plot() done")
 
     def exception_plot(self, e):
         logging.error(e)
@@ -944,8 +953,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                   self.viewer_size)
         options.settings.setValue("visualizationdesigner_data_x", self.data_x)
         options.settings.setValue("visualizationdesigner_data_y", self.data_y)
-        options.settings.setValue("visualizationdesigner_layout_columns", self.layout_columns)
-        options.settings.setValue("visualizationdesigner_layout_rows", self.layout_rows)
+        options.settings.setValue("visualizationdesigner_layout_columns",
+                                  self.layout_columns)
+        options.settings.setValue("visualizationdesigner_layout_rows",
+                                  self.layout_rows)
 
         options.settings.setValue("visualizationdesigner_figure_font",
             utf8(self.ui.combo_font_figure.currentText()))
@@ -968,10 +979,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
         val = "true" if self.ui.check_show_legend.isChecked() else "false"
         options.settings.setValue("visualizationdesigner_show_legend", val)
 
-        options.settings.setValue("visualizationdesigner_legend_columns", self.legend_columns)
+        options.settings.setValue("visualizationdesigner_legend_columns",
+                                  self.legend_columns)
 
         val = "true" if self.ui.check_reverse.isChecked() else "false"
-        options.settings.setValue("visualizationdesigner_reverse_palette", val)
+        options.settings.setValue("visualizationdesigner_reverse_palette",
+                                  val)
         options.settings.setValue("visualizationdesigner_color_number",
                                    self.ui.spin_number.value())
 

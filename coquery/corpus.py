@@ -1742,7 +1742,7 @@ class SQLResource(BaseResource):
         if options.cfg.limit_matches and options.cfg.number_of_tokens:
             S = """{}
             LIMIT  {}
-            """.format(S, options.cfg.number_of_tokens)
+            """.format(S, int(options.cfg.number_of_tokens))
         return S
 
     def pos_check_function(self, l):
@@ -1804,13 +1804,19 @@ class SQLResource(BaseResource):
         left_span = left or options.cfg.context_left
         right_span = right or options.cfg.context_right
 
-        S = self.get_context_string(token_id, number_of_tokens,
-                                    left_span, right_span,
-                                    origin_id, sentence_id)
-        results = db_connection.execute(S)
+        if pd.np.isnan(origin_id):
+            results = ([(None, 0)] * left_span +
+                       [(None, 1)] * number_of_tokens +
+                       [(None, 2)] * right_span)
+        else:
+            S = self.get_context_string(token_id, number_of_tokens,
+                                        left_span, right_span,
+                                        origin_id, sentence_id)
+            results = db_connection.execute(S)
         word_lists = [[], [], []]
 
         for x in results:
+            x = list(x)
             word_lists[x[-1]].append(x[0])
 
         return ([''] * (left_span - len(word_lists[0])) + word_lists[0],
@@ -1876,7 +1882,7 @@ class SQLResource(BaseResource):
 
         return self._context_string_template.format(
             where=S,
-            length=end - start + 1,
+            length=int(end - start + 1),
             position=position)
 
     def get_origin_id(self, token_id):

@@ -13,8 +13,9 @@ from __future__ import unicode_literals
 
 from coquery import __version__, DATE
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.aboutUi import Ui_AboutDialog
+from .app import get_icon
 
 
 class AboutDialog(QtWidgets.QDialog):
@@ -26,9 +27,7 @@ class AboutDialog(QtWidgets.QDialog):
         self.ui = Ui_AboutDialog()
         self.ui.setupUi(self)
 
-        main_window = get_toplevel_window()
-        icon = (main_window.get_icon("title.png", small_n_flat=False)
-                           .pixmap(self.size()))
+        icon = get_icon("title.png", small_n_flat=False).pixmap(self.size())
         image = QtGui.QImage(icon.toImage())
         painter = QtGui.QPainter(image)
         painter.setPen(QtCore.Qt.black)
