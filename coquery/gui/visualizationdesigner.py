@@ -30,6 +30,7 @@ from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT)
 from matplotlib.backends.backend_qt5 import SubplotToolQt
 
+import pandas as pd
 import seaborn as sns
 
 from ..visualizer.visualizer import get_grid_layout
@@ -486,7 +487,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.vis = visualizer_class(self.df, self.session)
         self.vis.updateRequested.connect(self.plot_figure)
+        self.add_custom_widgets()
 
+    def add_custom_widgets(self):
         for i in reversed(range(self.ui.layout_custom.count())):
             item = self.ui.layout_custom.itemAt(i)
             if isinstance(item, QtWidgets.QLayout):
@@ -507,7 +510,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
                     widget.setParent(None)
             del item
 
-        widgets = self.vis.get_custom_widgets()
+        widgets = self.vis.get_custom_widgets(**self.get_gui_values())
         if widgets:
             self.ui.group_custom.show()
             for item in widgets:
@@ -749,9 +752,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
         """
         """
         d = dict(
-                data_x=self.ui.tray_data_x.data(),
-                data_y=self.ui.tray_data_y.data(),
-                data_z=self.ui.tray_data_z.data(),
+                x=self.ui.tray_data_x.data(),
+                y=self.ui.tray_data_y.data(),
+                z=self.ui.tray_data_z.data(),
                 columns=self.ui.tray_columns.data(),
                 rows=self.ui.tray_rows.data(),
                 figure_type=self.ui.list_figures.currentItem(),
@@ -764,7 +767,35 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 size_ylab=self.ui.spin_size_y_label.value(),
                 size_xticks=self.ui.spin_size_x_ticklabels.value(),
                 size_yticks=self.ui.spin_size_y_ticklabels.value(),
+                session=self.session,
+                palette=self.get_palette_name(),
+                color_number=self.ui.spin_number.value(),
                 )
+
+        # get levels by discarding NAs and then sorting the unique values,
+        # using a much more efficient but less transparent variant of
+        # sorted(self.df[var].dropna().unique().values()
+        if d["x"]:
+            d["levels_x"] = sorted(
+                set(self.df[d["x"]].values[
+                    ~pd.isnull(self.df[d["x"]].values)]))
+        else:
+            d["levels_x"] = []
+
+        if d["y"]:
+            d["levels_y"] = sorted(
+                set(self.df[d["y"]].values[
+                    ~pd.isnull(self.df[d["y"]].values)]))
+        else:
+            d["levels_y"] = []
+
+        if d["z"]:
+            d["levels_z"] = sorted(
+                set(self.df[d["z"]].values[
+                    ~pd.isnull(self.df[d["z"]].values)]))
+        else:
+            d["levels_z"] = []
+
         return d
 
     def get_palette_name(self):
@@ -788,61 +819,41 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def plot_figure(self):
         values = self.get_gui_values()
-        figure_type = values["figure_type"]
-        if not figure_type:
+
+        if not values["figure_type"]:
             return
 
-        columns = self.ui.tray_columns.data()
-        rows = self.ui.tray_rows.data()
-        data_x = self.ui.tray_data_x.data()
-        data_y = self.ui.tray_data_y.data()
-        data_z = self.ui.tray_data_z.data()
-        if data_x:
-            levels_x = sorted(list(self.df[data_x].dropna().unique()))
-        else:
-            levels_x = []
-        if data_y:
-            levels_y = sorted(list(self.df[data_y].dropna().unique()))
-        else:
-            levels_y = []
-        if data_z:
-            levels_z = sorted(list(self.df[data_z].dropna().unique()))
-        else:
-            levels_z = []
+        visualizer_class = VisualizationDesigner.visualizers[
+            values["figure_type"].text()]
 
         if (self.ui.check_wrap_layout.isChecked()):
-            col_wrap, _ = get_grid_layout(len(self.df[columns].unique()))
+            col_wrap, _ = get_grid_layout(
+                len(self.df[values["columns"]].unique()))
         else:
             col_wrap = None
 
-        df_columns = [x for x in [data_x, data_y, data_z, columns, rows] if x]
-        df_columns.append("coquery_invisible_corpus_id")
+        data_columns = [values[x] for
+                        x in ["x", "y", "z", "columns", "rows"]
+                        if values[x]]
+        data_columns.append("coquery_invisible_corpus_id")
+        aliased_columns = [self.alias.get(x, x) for x in data_columns]
 
-        visualizer_class = VisualizationDesigner.visualizers[figure_type.text()]
+        for x in ["x", "y", "z", "columns", "rows"]:
+            values[x] = self.alias.get(values[x], values[x])
 
-        df = self.df[df_columns]
-        df.columns = [self.alias.get(x) or x for x in df.columns]
-
-        (data_x, data_y, data_z, columns, rows) = (
-            self.alias.get(x) or x
-            for x in (data_x, data_y, data_z, columns, rows))
+        df = self.df[data_columns]
+        df.columns = aliased_columns
 
         self.vis = visualizer_class(df, self.session)
-
-        self.grid = self.vis.get_grid(col=columns, row=rows,
+        self.grid = self.vis.get_grid(col=values["columns"],
+                                      row=values["rows"],
                                       col_wrap=col_wrap,
                                       legend_out=True,
                                       sharex=True, sharey=True)
 
-        kwargs = dict(x=data_x, y=data_y, z=data_z,
-                      levels_x=levels_x, levels_y=levels_y, levels_z=levels_z,
-                      session=self.session,
-                      palette=self.get_palette_name(),
-                      color_number=self.ui.spin_number.value())
-
         if options.cfg.experimental:
             self.plot_thread = classes.CoqThread(
-                self.run_plot, **kwargs, parent=self)
+                self.run_plot, **values, parent=self)
             self.plot_thread.taskStarted.connect(self.start_plot)
             self.plot_thread.taskFinished.connect(self.finalize_plot)
             self.plot_thread.taskException.connect(self.exception_plot)
@@ -850,7 +861,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.plot_thread.start()
         else:
             self.start_plot()
-            self.run_plot(**kwargs)
+            self.run_plot(**values)
             self.finalize_plot()
 
     def start_plot(self):
