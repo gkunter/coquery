@@ -60,7 +60,7 @@ class LineChart(vis.Visualizer):
             levels = ["no hue"]
 
         col = sns.color_palette(kwargs.get("palette"),
-                                n_colors=len(levels))[::-1]
+                                n_colors=len(levels))
 
         if category:
             x_val = data[x]
