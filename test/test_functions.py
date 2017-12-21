@@ -31,6 +31,7 @@ from coquery.functions import (
     Percentile,
     Equal, NotEqual, GreaterThan, GreaterEqual, LessThan, LessEqual,
     And, Or, Xor, If, IfAny, Empty, Missing,
+    ToNumeric, ToCategory,
     )
 from coquery.functionlist import FunctionList
 from coquery import options
@@ -237,6 +238,17 @@ class TestStringFunctions(unittest.TestCase):
             val.iloc[:, -2].values.ravel().tolist(), ["a"] * 5 + [""] * 10)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(), ["x"] * 5 + [""] * 10)
+        print(val.dtypes)
+
+    def test_extract_groups_and_compare(self):
+        df = pd.DataFrame({"word": ["win-win", "self-destruct"]})
+
+        func1 = StringExtract(columns=["word"], pat="(.*)-(.*)")
+        df = FunctionList([func1]).lapply(df, session=None)
+        func2 = Equal(columns=df.columns[-2:])
+        val = FunctionList([func2]).lapply(df, session=None)
+
+        print(val)
 
     def test_upper(self):
         df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
@@ -946,6 +958,40 @@ class TestDistributionalFunctions(unittest.TestCase):
             ["a", "b", "c", "d"])
 
 
+class TestConversionFunctions(unittest.TestCase):
+    def assert_result(self, func_class, df, columns, expected, value=None,
+                      **kwargs):
+        func = func_class(columns=columns, value=value, **kwargs)
+        result = FunctionList([func]).lapply(df, session=None)
+        npt.assert_equal(result[func.get_id()].values, expected)
+
+    def test_str_to_num(self):
+        df = pd.DataFrame({"str1": list("123"),
+                           "str2": list("abc"),
+                           "str3": list("1bc")})
+
+        expected1 = [1, 2, 3]
+        expected2 = [pd.np.nan, pd.np.nan, pd.np.nan]
+        expected3 = [1, pd.np.nan, pd.np.nan]
+
+        self.assert_result(ToNumeric, df, ["str1"], expected1)
+        self.assert_result(ToNumeric, df, ["str2"], expected2)
+        self.assert_result(ToNumeric, df, ["str3"], expected3)
+
+    def test_num_to_str(self):
+        df = pd.DataFrame({"num1": [1, 2, 3],
+                           "num2": [1, 2, None],
+                           "num3": [1.5, 2.5, 3.5]})
+
+        expected1 = ["1", "2", "3"]
+        expected2 = ["1.0", "2.0", None]
+        expected3 = ["1.5", "2.5", "3.5"]
+
+        self.assert_result(ToCategory, df, ["num1"], expected1)
+        self.assert_result(ToCategory, df, ["num2"], expected2)
+        self.assert_result(ToCategory, df, ["num3"], expected3)
+
+
 provided_tests = (
                   TestFrequencyFunctions,
                   TestStringFunctions,
@@ -953,6 +999,7 @@ provided_tests = (
                   TestLogicalFunctions,
                   TestDistributionalFunctions,
                   TestModuleFunctions,
+                  TestConversionFunctions,
                   )
 
 
