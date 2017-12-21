@@ -11,156 +11,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from coquery.visualizer import visualizer as vis
 import math
-import seaborn as sns
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-import logging
 
-from coquery.errors import *
 from coquery.gui.pyqt_compat import QtWidgets
 
-class Visualizer(vis.BaseVisualizer):
-    dimensionality = 2
-    vmax = 0
-
-    def __init__(self, *args, **kwargs):
-        try:
-            self.area = kwargs.pop("area")
-        except KeyError:
-            self.area = False
-        try:
-            self.percentage = kwargs.pop("percentage")
-        except KeyError:
-            self.percentage = False
-        try:
-            self.smooth = kwargs.pop("smooth")
-        except KeyError:
-            self.smooth = False
-
-        super(Visualizer, self).__init__(*args, **kwargs)
-
-    def set_defaults(self):
-        if self.percentage:
-            self.options["label_y_axis"] = "Percentage"
-        else:
-            if self.area:
-                self.options["label_y_axis"] = "Cummulative frequency"
-            else:
-                self.options["label_y_axis"] = "Frequency"
-        self.options["label_x_axis"] = self._groupby[-1]
-        self.options["label_legend"] = self._groupby[0]
-        super(Visualizer, self).set_defaults()
-
-    def update_data(self, bandwidth=1):
-        super(Visualizer, self).update_data()
-        for x in self._table.columns[::-1]:
-            if x in self._time_columns:
-                self._time_column = x
-                break
-        else:
-            self._time_column = ""
-
-        self.bandwidth = bandwidth
-
-        # Found column with temporal data?
-        if self._time_column:
-            if  self._time_column in self._groupby:
-                # make sure that column is last in the internal data frame
-                if self._groupby[-1] != self._time_column:
-                    self._groupby = self._groupby[::-1]
-                    self._levels = self._levels[::-1]
-            else:
-                if len(self._groupby) == 2:
-                    if self._col_factor:
-                        self._row_factor = self._col_factor
-                    self._col_factor = self._groupby[0]
-
-                    self._groupby[0] = self._groupby[1]
-                    self._levels = [self._levels[1]]
-                    self._groupby[1] = self._time_column
-                else:
-                    self._groupby.append(self._time_column)
-        else:
-            raise VisualizationInvalidDataError
-
-    def setup_figure(self):
-        with sns.axes_style("whitegrid"):
-            super(Visualizer, self).setup_figure()
-
-    def convert_to_datetime(self, x):
-        try:
-            return (int(x) // self.bandwidth) * self.bandwidth
-        except ValueError:
-            return np.NaN
-
-    def convert_to_timeseries(self, x):
-        # FIXME:
-        # pandas >= 0.17.0 has changed the Timestamp API. Check that this
-        # is still working!
-        version = [int(x) for x in pd.__version__.split(".")]
-        try:
-             return pd.Timestamp("{}".format(
-                (pd.Timestamp("{}".format(x)).year // self.bandwidth) * self.bandwidth)).year
-        except ValueError:
-            return pd.NaT
-
-    def draw(self, **kwargs):
-        """ Draw time series. """
-
-        def plot_facet(data, color, **kwargs):
-            num = []
-            date = []
-            time = data[self._time_column]
-            num = data[self._time_column].apply(self.convert_to_datetime)
-            date = data[self._time_column].apply(self.convert_to_timeseries)
-            if pd.isnull(num).sum() <= pd.isnull(date).sum():
-                data[self._time_column] = num
-            else:
-                data[self._time_column] = date
-
-            data.dropna(inplace=True)
-            if len(self._groupby) == 2:
-                ct = pd.crosstab(data[self._time_column], data[self._groupby[0]])
-                ct = ct.reindex_axis(self._levels[0], axis=1).fillna(0)
-                ct = ct[pd.notnull(ct.index)]
-            else:
-                ct = pd.crosstab(
-                    data[self._time_column],
-                    pd.Series([""] * len(self._table[self._time_column]), name=""))
-
-            # percentage area plot:
-            if self.percentage:
-                # if there is only one grouping variable (the time column),
-                # the cross table produces a Series, not a data frame. It
-                # isn't really very informative to plot it, but we provide
-                # for this special case anyway_
-                if type(ct) == pd.Series:
-                    ct = ct.apply(lambda x: 100)
-                else:
-                    ct = ct.apply(lambda x: (100 * x) / sum(x), axis=1)
-                ct.plot(kind="area", ax=plt.gca(), stacked=True, color=self.get_palette(), **kwargs)
-            else:
-                if self.area:
-                    # Stacked area plot:
-                    if len(self._groupby) == 2:
-                        self.vmax = max(self.vmax, ct.apply(sum, axis=1).max())
-                    ct.plot(ax=plt.gca(), kind="area", stacked=True, color=self.get_palette(), **kwargs)
-                else:
-                    # Line plot:
-                    self.vmax = max(self.vmax, ct.values.max())
-                    ct.plot(ax=plt.gca(), color=self.get_palette())
-
-        self.map_data(plot_facet)
-
-        if self.percentage:
-            self.g.set(ylim=(0, 100))
-        else:
-            self.g.set(ylim=(0, self.vmax))
-        self.g.set_axis_labels(self.options["label_x_axis"], self.options["label_y_axis"])
-
-        if len(self._groupby) == 2:
-            self.add_legend()
 
 class TimeSeries(vis.Visualizer):
     axes_style = "whitegrid"
@@ -171,7 +26,7 @@ class TimeSeries(vis.Visualizer):
     kind = "line"
     stacked = False
 
-    def get_custom_widgets(self):
+    def get_custom_widgets(self, *args, **kwargs):
         layout = QtWidgets.QHBoxLayout()
         label = QtWidgets.QApplication.instance().translate(
                     "TimeSeries", "Bandwidth", None)
@@ -185,6 +40,8 @@ class TimeSeries(vis.Visualizer):
         TimeSeries.spin_bandwidth.setValue(TimeSeries.bandwidth)
         TimeSeries.spin_bandwidth.setSuffix(unit)
         TimeSeries.spin_bandwidth.setMinimum(1)
+        TimeSeries.spin_bandwidth.setMaximum(9999)
+        TimeSeries.spin_bandwidth.setValue(TimeSeries.bandwidth)
         TimeSeries.button_apply = QtWidgets.QPushButton(button)
         TimeSeries.button_apply.setDisabled(True)
         TimeSeries.button_apply.clicked.connect(
@@ -206,7 +63,10 @@ class TimeSeries(vis.Visualizer):
         TimeSeries.button_apply.setDisabled(True)
         self.updateRequested.emit()
 
-    def plot_facet(self, data, color, **kwargs):
+    def plot_facet(self, data, color,
+                   x=None, y=None, z=None,
+                   levels_x=None, levels_y=None, levels_z=None,
+                   palette=None, **kwargs):
 
         def to_num(x):
             bw = TimeSeries.bandwidth
@@ -224,16 +84,8 @@ class TimeSeries(vis.Visualizer):
                                       (int(x.year) // bw) * bw)
             return val
 
-        x = kwargs.get("x")
-        y = kwargs.get("y")
-        z = kwargs.get("z")
-        levels_x = kwargs.get("levels_x")
-        levels_y = kwargs.get("levels_y")
-        levels_z = kwargs.get("levels_z")
-
         category = None
         levels = None
-        value = None
         numeric = None
 
         self._xlab = self._default
@@ -276,7 +128,7 @@ class TimeSeries(vis.Visualizer):
             levels = levels_z
         val = fun(data[numeric])
         if not category:
-            col = sns.color_palette(kwargs["palette"])[0]
+            col = self.get_palette(palette, kwargs["color_number"])[0]
             tab = val.value_counts().sort_index()
 
             self.plot_func(S=tab, color=col, ax=plt.gca())
@@ -292,8 +144,7 @@ class TimeSeries(vis.Visualizer):
                 labels = x_range
             plt.xticks(x_range, labels)
         else:
-            col = sns.color_palette(kwargs["palette"],
-                                    n_colors=len(levels))[::-1]
+            col = self.get_palette(palette, len(levels))[::-1]
             index = (val.dropna()
                         .drop_duplicates()
                         .sort_values())
@@ -319,24 +170,26 @@ class TimeSeries(vis.Visualizer):
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
+        """
+        Validate the parameters.
+
+        For TimeSeries visualizations, the parameters are valid if either x or
+        y is either a time feature or a numeric variable.
+        """
         cat, num, none = vis.Visualizer.count_parameters(
             data_x, data_y, data_z, df, session)
 
-        # check if any of the data columns is a time column:
-        if ((session.translate_header(data_x) not
-             in session.Resource.time_features) and
-            (session.translate_header(data_x) not
-             in session.Resource.time_features)):
-            return False
+        time = [x for x in [data_x, data_y] if
+                session.translate_header(x) in session.Resource.time_features]
 
-        return True
+        if ((len(time) == 1 and len(num) == 1) or
+                (len(time) == 1 and len(num) == 0 and len(cat) == 1)):
+            return True
 
-        # check if either column is a categorical column:
-        if (TimeSeries.dtype(data_x, df) != object and
-            TimeSeries.dtype(data_y, df) != object):
-            return False
+        if len(num) == 1 and len(time) == 0:
+            return True
 
-        return True
+        return False
 
 
 class StackedArea(TimeSeries):
