@@ -265,7 +265,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         d = self.get_gui_values()
         used = [d[x]
                 for x in ["data_x", "data_y", "data_z", "columns", "rows"]
-                if d[x]]
+                if x in d and d[x]]
 
         self.categorical = [col for col in self.df.columns
                             if self.df.dtypes[col] in (object, bool) and
