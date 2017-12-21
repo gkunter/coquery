@@ -9,7 +9,7 @@ from .mockmodule import MockOptions
 
 from coquery.corpus import SQLResource, CorpusClass
 from coquery.coquery import options
-from coquery.defines import SQL_MYSQL
+from coquery.defines import SQL_MYSQL, CONTEXT_NONE
 from coquery.queries import TokenQuery
 from coquery.tokens import COCAToken
 import coquery.links
@@ -103,6 +103,7 @@ class FlatResource(SQLResource):
     corpus_source_id = "FileId"
     corpus_starttime = "Start"
     corpus_endtime = "End"
+    corpus_sentence = "Sentence"
     word_table = "Lexicon"
     word_id = "WordId"
     word_label = "Word"
@@ -144,6 +145,7 @@ class TestCorpus(unittest.TestCase):
         options.cfg.regexp = False
         options.cfg.query_case_sensitive = False
         options.get_configuration_type = lambda: SQL_MYSQL
+        options.cfg.context_mode = CONTEXT_NONE
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
@@ -1218,6 +1220,67 @@ class TestCorpus(unittest.TestCase):
         self.assertEqual(simple(query_string),
                          simple(target_string))
 
+    def test_get_context_string(self):
+        target_string = """
+            SELECT     COQ_WORD_1.Word AS Context,
+                       (CASE
+                           WHEN ID1 < 100 THEN 0
+                           WHEN ID1 >= 100 + 1 THEN 2
+                           ELSE 1
+                       END) AS Position
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Start AS Start1,
+                         WordId AS WordId1
+                  FROM   Corpus) AS COQ_CORPUS_1
+
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            WHERE      (COQ_CORPUS_1.ID1 BETWEEN 95 AND 105) AND
+                       (COQ_CORPUS_1.FileId1 = 1) LIMIT 11"""
+        context_string = self.resource.get_context_string(
+            self.resource,
+            token_id=100,
+            width=1,
+            left=5,
+            right=5,
+            origin_id=1)
+        self.assertEqual(simple(context_string),
+                         simple(target_string))
+
+    def test_get_context_string_sentence(self):
+        target_string = """
+            SELECT     COQ_WORD_1.Word AS Context,
+                       (CASE
+                           WHEN ID1 < 100 THEN 0
+                           WHEN ID1 >= 100 + 1 THEN 2
+                           ELSE 1
+                       END) AS Position
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Sentence AS Sentence1,
+                         Start AS Start1,
+                         WordId AS WordId1
+                  FROM   Corpus) AS COQ_CORPUS_1
+
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            WHERE      (COQ_CORPUS_1.ID1 BETWEEN 95 AND 105) AND
+                       (COQ_CORPUS_1.FileId1 = 1) AND
+                       (COQ_CORPUS_1.Sentence1 = '99') LIMIT 11"""
+        context_string = self.flat_resource.get_context_string(
+            self.flat_resource,
+            token_id=100,
+            width=1,
+            left=5,
+            right=5,
+            origin_id=1,
+            sentence_id=99)
+        self.assertEqual(simple(context_string),
+                         simple(target_string))
+
 
 def _monkeypatch_get_resource(name):
     return TestCorpusWithExternal.external, None, None
@@ -1485,7 +1548,7 @@ class TestNGramCorpus(unittest.TestCase):
         options.cfg.limit_matches = False
         options.cfg.regexp = False
         options.cfg.query_case_sensitive = False
-        options.cfg.experimental = False
+        options.cfg.experimental = True
         options.get_configuration_type = lambda: SQL_MYSQL
         options.get_resource = _monkeypatch_get_resource
         options.cfg.no_ngram = False
@@ -1659,6 +1722,28 @@ class TestNGramCorpus(unittest.TestCase):
         self.assertEqual(simple(query_string),
                          simple(target_string))
 
+    def test_query_string_medial_null_placeholder(self):
+        """
+        Tests issue #292
+        """
+        query = TokenQuery("a* _NULL b*", self.Session)
+        query_string = self.resource.get_query_string(
+            query.query_list[0], ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   NULL AS coq_word_label_2,
+                   COQ_WORD_3.Word AS coq_word_label_3,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+            FROM CorpusNgram
+            INNER JOIN Lexicon AS COQ_WORD_1 ON COQ_WORD_1.WordId = WordId1
+            INNER JOIN Lexicon AS COQ_WORD_3 ON COQ_WORD_3.WordId = WordId2
+            WHERE (COQ_WORD_1.Word LIKE 'a%')
+              AND (COQ_WORD_3.Word LIKE 'b%')
+            """
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
+
 
 def mock_get_available_resources(configuration):
     path = os.path.join(os.path.expanduser("~"),
@@ -1668,7 +1753,8 @@ def mock_get_available_resources(configuration):
                                   path]}
 
 
-provided_tests = [TestCorpus, TestSuperFlat, TestCorpusWithExternal,
+provided_tests = [
+                  TestCorpus, TestSuperFlat, TestCorpusWithExternal,
                   TestNGramCorpus]
 
 
