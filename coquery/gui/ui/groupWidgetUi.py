@@ -68,6 +68,8 @@ class Ui_GroupWidget(object):
         self.gridLayout.addItem(spacerItem1, 0, 0, 2, 1)
         spacerItem2 = QtWidgets.QSpacerItem(0, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.gridLayout.addItem(spacerItem2, 0, 3, 2, 1)
+        self.gridLayout.setColumnStretch(0, 1)
+        self.gridLayout.setColumnStretch(3, 1)
         self.verticalLayout.addLayout(self.gridLayout)
         self.verticalLayout.setStretch(0, 1)
 
