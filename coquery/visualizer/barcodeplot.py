@@ -30,7 +30,7 @@ class BarcodePlot(vis.Visualizer):
     horizontal = True
     force_vertical = False
 
-    def get_custom_widgets(self):
+    def get_custom_widgets(self, *args, **kwargs):
         layout = QtWidgets.QHBoxLayout()
         label = QtWidgets.QApplication.instance().translate(
                     "BarcodePlot", "Plot horizontal by default", None)
@@ -121,14 +121,21 @@ class BarcodePlot(vis.Visualizer):
                 self._xlab = ""
         else:
             BarcodePlot.force_vertical = False
-            levels_y = levels_y[::-1]
-            ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
-                         "yticklabels": levels_y}
-
             if not y and BarcodePlot.horizontal:
                 func = plt.vlines
+
+                levels_x = levels_x[::-1]
+                ax_kwargs = {"xticks": 0.5 + pd.np.arange(len(levels_x)),
+                             "xticklabels": levels_x}
+
             else:
                 func = plt.hlines
+
+                levels_y = levels_y[::-1]
+                ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
+                             "yticklabels": levels_y}
+
+
 
             if rug:
                 if "top" in rug:
