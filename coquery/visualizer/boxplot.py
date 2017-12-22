@@ -86,8 +86,6 @@ class BoxPlot(vis.Visualizer):
             return False
         if len(cat) == 0:
             return False
-        if len(cat) == 1 and vis.Visualizer.dtype(data_z, df) == object:
-            return False
         return True
 
 class ViolinPlot(BoxPlot):
