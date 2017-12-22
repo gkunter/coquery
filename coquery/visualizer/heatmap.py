@@ -224,7 +224,7 @@ class Heatmap(vis.Visualizer):
             #vmax=vmax,
             linewidths=1)
 
-    def get_custom_widgets(self):
+    def get_custom_widgets(self, *args, **kwargs):
         layout = QtWidgets.QHBoxLayout()
         label = QtWidgets.QApplication.instance().translate(
                     "HeatMap", "Normalization", None)
@@ -243,7 +243,7 @@ class Heatmap(vis.Visualizer):
         Heatmap.combo_normalize = QtWidgets.QComboBox()
         Heatmap.combo_normalize.addItems(
             [no_normalization, rowwise, columnwise, tablewise])
-        Heatmap.combo_normalize.setCurrentIndex(0)
+        Heatmap.combo_normalize.setCurrentIndex(Heatmap.normalization)
         Heatmap.button_apply = QtWidgets.QPushButton(button)
         Heatmap.button_apply.setDisabled(True)
         Heatmap.button_apply.clicked.connect(
@@ -258,7 +258,6 @@ class Heatmap(vis.Visualizer):
         layout.setStretch(1, 0)
         layout.setStretch(2, 0)
         return [layout]
-
 
     @classmethod
     def update_figure(cls, self, i):
