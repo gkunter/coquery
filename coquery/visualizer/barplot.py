@@ -431,6 +431,18 @@ class StackedBars(BarPlot):
         return grp[numeric].cumsum()
 
     def plot_facet(self, **kwargs):
+        if kwargs.get("z"):
+            x = kwargs.get("x")
+            y = kwargs.get("y")
+            if x and kwargs.get("data")[x].dtypes[x] == object:
+                kwargs["y"] = kwargs["z"]
+                kwargs["levels_y"] = kwargs["levels_z"]
+            else:
+                kwargs["x"] = kwargs["z"]
+                kwargs["levels_x"] = kwargs["levels_z"]
+            kwargs["z"] = None
+            kwargs["levels_z"] = None
+
         params = self.get_parameters(**kwargs)
         data = params["data"]
         x = params["x"]
@@ -465,9 +477,14 @@ class StackedBars(BarPlot):
                 self._xlab = numeric
                 self._ylab = y
             split = hue
+
         else:
+            print(1)
             data = data.sort_values(axis)
+            print(2)
             data[numeric] = self.transform(data[numeric])
+            print(data)
+            print(3)
             levels = params["order"][::-1]
             if x == numeric:
                 kwargs = {"x": x, "y": None}
@@ -478,10 +495,10 @@ class StackedBars(BarPlot):
                 self._xlab = x
                 self._ylab = self._default
             split = axis
+            print(4)
 
         col = sns.color_palette(params["palette"],
                                 n_colors=len(levels))[::-1]
-
         for n, val in enumerate(levels):
             if split != axis:
                 d = {axis: params["order"], split: val}
@@ -497,7 +514,7 @@ class StackedBars(BarPlot):
                 sns.barplot(data=df,
                             color=col[n], ax=params["ax"], **kwargs)
             except TypeError as e:
-                print(e)
+                print(str(e))
                 print(df)
                 print(df.dtypes)
                 print(kwargs)
@@ -514,10 +531,12 @@ class StackedBars(BarPlot):
         cat, num, none = vis.Visualizer.count_parameters(
             data_x, data_y, data_z, df, session)
 
-        if len(num) > 1 or len(cat) == 0:
+        if len(num) > 1:
             return False
-        if len(num) == 1 and len(cat) == 1:
+
+        if len(cat) == 0 or len(cat) > 2:
             return False
+
         return True
 
 
