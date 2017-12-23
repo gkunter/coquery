@@ -23,6 +23,7 @@ from coquery.functions import (Freq, FreqPMW, FreqNorm, Proportion, Percent)
 from coquery.visualizer import visualizer as vis
 from coquery import options
 from coquery.managers import get_manager
+from coquery.gui.pyqt_compat import QtWidgets
 
 
 class Visualizer(vis.BaseVisualizer):
@@ -423,12 +424,85 @@ class StackedBars(BarPlot):
     """
     Stacked bar chart
     """
+    focus = 0
+    sort = 0
+
+    def get_custom_widgets(self, **kwargs):
+        x = kwargs.get("x", None)
+        y = kwargs.get("y", None)
+        hue = kwargs.get("z", None)
+
+        levels_x = kwargs.get("levels_x", None)
+        levels_y = kwargs.get("levels_y", None)
+        levels_z = kwargs.get("levels_z", None)
+
+        layout = QtWidgets.QGridLayout()
+        tr = QtWidgets.QApplication.instance().translate
+
+        focus_label = QtWidgets.QLabel(tr("StackedBars", "Set focus:", None))
+        sort_label = QtWidgets.QLabel(tr("StackedBars", "Sort by:", None))
+        button = tr("StackedBars", "Apply", None)
+
+        StackedBars.combo_focus = QtWidgets.QComboBox()
+        StackedBars.combo_sort = QtWidgets.QComboBox()
+        StackedBars.button_apply = QtWidgets.QPushButton(button)
+        StackedBars.button_apply.setDisabled(True)
+
+        if levels_x and not levels_y:
+            entries = levels_x
+        else:
+            entries = levels_y
+
+        entries.insert(0, tr("StackedBars", "(none)", None))
+
+        StackedBars.combo_focus.addItems(entries)
+        StackedBars.combo_sort.addItems(entries)
+
+        StackedBars.button_apply.clicked.connect(
+            lambda: StackedBars.update_figure(
+                self,
+                StackedBars.combo_focus.currentIndex(),
+                StackedBars.combo_sort.currentIndex()))
+        StackedBars.combo_focus.currentIndexChanged.connect(
+            lambda x: StackedBars.button_apply.setEnabled(True))
+        StackedBars.combo_sort.currentIndexChanged.connect(
+            lambda x: StackedBars.button_apply.setEnabled(True))
+
+        self.focus = 0
+        self.sort = 0
+
+        layout.addWidget(focus_label, 0, 0)
+        layout.addWidget(sort_label, 1, 0)
+        layout.addWidget(StackedBars.combo_focus, 0, 1)
+        layout.addWidget(StackedBars.combo_sort, 1, 1)
+
+        h_layout = QtWidgets.QHBoxLayout()
+        h_layout.addWidget(QtWidgets.QLabel())
+        h_layout.addWidget(StackedBars.button_apply)
+        h_layout.addWidget(QtWidgets.QLabel())
+        h_layout.setStretch(0, 1)
+        h_layout.setStretch(2, 1)
+
+        layout.addLayout(h_layout, 2, 0, 1, 3)
+
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(1, 3)
+
+        return [layout]
 
     def transform(self, series):
         return series.values.cumsum()
 
     def group_transform(self, grp, numeric):
         return grp[numeric].cumsum()
+
+    @classmethod
+    def update_figure(cls, self, focus, sort):
+        cls.focus = focus
+        cls.sort = sort
+        cls.button_apply.setDisabled(True)
+        print(cls.focus)
+        self.updateRequested.emit()
 
     def plot_facet(self, **kwargs):
         if kwargs.get("z"):
@@ -497,8 +571,15 @@ class StackedBars(BarPlot):
             split = axis
             print(4)
 
-        col = sns.color_palette(params["palette"],
-                                n_colors=len(levels))[::-1]
+        if StackedBars.focus:
+            col0 = sns.color_palette(params["palette"],
+                                     n_colors=len(levels))[::-1]
+            col = [(0.5, 0.5, 0.5)] * len(levels)
+            col[StackedBars.focus - 1] = col0[StackedBars.focus - 1]
+        else:
+            col = sns.color_palette(params["palette"],
+                                    n_colors=len(levels))[::-1]
+
         for n, val in enumerate(levels):
             if split != axis:
                 d = {axis: params["order"], split: val}

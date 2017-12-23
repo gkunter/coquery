@@ -9,7 +9,6 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -226,18 +225,15 @@ class Heatmap(vis.Visualizer):
 
     def get_custom_widgets(self, *args, **kwargs):
         layout = QtWidgets.QHBoxLayout()
-        label = QtWidgets.QApplication.instance().translate(
-                    "HeatMap", "Normalization", None)
-        rowwise = QtWidgets.QApplication.instance().translate(
-                    "HeatMap", "By row", None)
-        columnwise = QtWidgets.QApplication.instance().translate(
-                    "HeatMap", "By column", None)
-        tablewise = QtWidgets.QApplication.instance().translate(
-                    "HeatMap", "Across all cells", None)
-        no_normalization = QtWidgets.QApplication.instance().translate(
-                    "HeatMap", "No normalization", None)
-        button = QtWidgets.QApplication.instance().translate(
-                    "HeatMap", "Apply", None)
+
+        tr = QtWidgets.QApplication.instance().translate
+
+        label = tr("HeatMap", "Normalization", None)
+        rowwise = tr("HeatMap", "By row", None)
+        columnwise = tr("HeatMap", "By column", None)
+        tablewise = tr("HeatMap", "Across all cells", None)
+        no_normalization = tr("HeatMap", "No normalization", None)
+        button = tr("HeatMap", "Apply", None)
 
         Heatmap.label_normalization = QtWidgets.QLabel(label)
         Heatmap.combo_normalize = QtWidgets.QComboBox()
