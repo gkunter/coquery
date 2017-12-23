@@ -565,7 +565,7 @@ class Visualizer(QtCore.QObject):
         self._xlab = "X"
         self._ylab = "Y"
 
-    def get_custom_widgets(self):
+    def get_custom_widgets(self, *args, **kwargs):
         """
         Return a list of widgets that add additional functionality to this
         visualizer.
@@ -761,9 +761,10 @@ class Visualizer(QtCore.QObject):
     def count_parameters(data_x, data_y, data_z, df, session):
         num_cols = df.select_dtypes(include=[pd.np.number]).columns
         cat_cols = df.select_dtypes(exclude=[pd.np.number]).columns
-        categorical = [x for x in (data_x, data_y, data_z) if x in cat_cols]
+        categorical = [x for x in (data_x, data_y) if x in cat_cols]
         numeric = [x for x in (data_x, data_y, data_z) if x in num_cols]
         empty = [x for x in (data_x, data_y, data_z) if x is None]
+
         return categorical, numeric, empty
 
     @staticmethod

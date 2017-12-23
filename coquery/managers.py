@@ -45,24 +45,25 @@ class Sorter(CoqObject):
 
 
 class Group(CoqObject):
-    def __init__(self, name="", columns=None, functions=None, distinct=False):
-        self.columns = []
-        self.functions = []
+    def __init__(self,
+                 name="", columns=None, functions=None, filters=None,
+                 distinct=False):
+        self.columns = columns or []
+        self.functions = functions or []
+        self.filters = filters or []
         self.show_distinct = distinct
-
-        if columns is not None:
-            self.columns = columns
-        if functions is not None:
-            self.functions = functions
-
         self.name = name
+        self.filtered_rows = None
+        self.unfiltered_rows = None
 
     def __repr__(self):
-        S = ("Group(name='{}', columns=[{}], functions=[{}], distinct={})")
+        S = ("Group(name='{}', columns=[{}], functions=[{}], "
+             "filters=[{}], distinct={})")
         return S.format(
             self.name,
             ", ".join(["'{}'".format(x) for x in self.columns]),
             ", ".join(["'{}'".format(x) for x in self.functions]),
+            ", ".join(["'{}'".format(x) for x in self.filters]),
             self.show_distinct)
 
     def process(self, df, session, manager):
@@ -71,11 +72,35 @@ class Group(CoqObject):
             df = (df.groupby(self.columns, as_index=False)
                     .apply(function_list.lapply,
                            session=session, manager=manager))
-            if self.show_distinct:
-                df = df.drop_duplicates(
-                    self.columns +
-                    [x.get_id() for x in function_list.get_list()])
             manager._exceptions += function_list.exceptions()
+        return df
+
+    def apply_filters(self, df, session):
+        if (len(df) == 0 or not self.filters):
+            return df
+
+        self.unfiltered_rows = len(df)
+        Print("\t\tgroup filter(), {} rows".format(len(df)))
+        for filt in self.filters:
+            df = filt.apply(df).reset_index(drop=True)
+        Print("\t\t\tdone, {} rows".format(len(df)))
+
+        self.filtered_rows = len(df)
+        return df
+
+    def remove_duplicates(self, df, session):
+        """
+        Remove all duplicate rows from the data group.
+
+        Duplicates are detected on the basis of the group columns and the
+        group functions. In other words, if the group column values and the
+        group function values of a row occur in another row, this row is
+        considered a duplicate and is removed from the data group.
+        """
+        function_list = FunctionList(self.get_functions())
+        df = df.drop_duplicates(self.columns +
+                                [x.get_id()
+                                 for x in function_list.get_list()])
         return df
 
     def get_functions(self):
@@ -233,6 +258,9 @@ class Manager(CoqObject):
 
         for group in self._groups:
             df = group.process(df, session=session, manager=self)
+            df = group.apply_filters(df, session)
+            if group.show_distinct:
+                df = group.remove_duplicates(df, session)
 
         Print("\tDone mutate_groups")
 
@@ -1178,7 +1206,7 @@ class ContrastMatrix(FrequencyList):
             else:
                 val = pd.Series([g2, p_g2])
             return val
-        except ValueError as e:
+        except ValueError:
             return pd.Series([0, 0])
 
     def get_cell_content(self, index, df, session):

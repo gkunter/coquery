@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'helpViewer.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -16,6 +16,7 @@ class Ui_HelpViewer(object):
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout.setContentsMargins(-1, -1, -1, 0)
+        self.verticalLayout.setSpacing(6)
         self.verticalLayout.setObjectName("verticalLayout")
         self.splitter = QtWidgets.QSplitter(self.centralwidget)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
@@ -60,7 +61,6 @@ class Ui_HelpViewer(object):
         icon = QtGui.QIcon.fromTheme("document-print")
         self.action_print.setIcon(icon)
         self.action_print.setObjectName("action_print")
-        self.toolBar.addSeparator()
         self.toolBar.addAction(self.action_prev)
         self.toolBar.addAction(self.action_next)
         self.toolBar.addAction(self.action_home)
@@ -87,5 +87,4 @@ class Ui_HelpViewer(object):
         self.action_zoom_out.setText(_translate("HelpViewer", "Zoom out"))
         self.action_reset_zoom.setText(_translate("HelpViewer", "Reset zoom"))
         self.action_print.setText(_translate("HelpViewer", "Print"))
-
 

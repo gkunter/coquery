@@ -11,11 +11,12 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-from unicodedata import lookup
+import os
+import re
 
-from coquery.corpusbuilder import *
-from coquery.unicode import utf8
-from coquery.bibliography import *
+from coquery.corpusbuilder import BaseCorpusBuilder
+from coquery.tables import Link, Identifier, Column
+#from coquery.bibliography import *
 
 REPLACE_TABLE = {
     }
@@ -69,7 +70,8 @@ class BuilderClass(BaseCorpusBuilder):
     source_title = "Title"
     source_category = "Category"
 
-    expected_files = ["lobth_{}.txt".format(x) for x in CATEGORY_NUMBERS.keys()]
+    expected_files = ["LOBTH_{}.TXT".format(x.upper()) 
+                      for x in CATEGORY_NUMBERS.keys()]
 
 
     def __init__(self, gui=False, *args):
@@ -79,13 +81,13 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(self.word_table,
             [Identifier(self.word_id, "MEDIUMINT(5) UNSIGNED NOT NULL"),
              Column(self.word_label, "VARCHAR(33) NOT NULL"),
-             Column(self.word_label, "VARCHAR(33) NOT NULL"),
+             Column(self.word_orth, "VARCHAR(33) NOT NULL"),
              Column(self.word_pos, "VARCHAR(20) NOT NULL")])
 
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "ENUM({}) NOT NULL".format(
-                 ",".join(["'{}'".format(x) for x in expected_files]))),
+                 ",".join(["'{}'".format(x) for x in self.expected_files]))),
              Column(self.file_path, "TINYTEXT NOT NULL")])
 
         self.create_table_description(self.source_table,
@@ -144,7 +146,7 @@ class BuilderClass(BaseCorpusBuilder):
             for line in open(filename, "r").readlines():
                 match = re.match("([A-R]\d\d)\.\s+(.*)", line.strip())
                 if match:
-                    SOURCE_TITLE["c{}".format(match.group(1).lower())] = match.group(2).strip()
+                    SOURCE_TITLE["C{}".format(match.group(1).upper())] = match.group(2).strip()
 
         elif base_name in self.expected_files:
             d = {self.source_label: base_name[1:].upper(),

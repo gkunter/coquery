@@ -595,6 +595,13 @@ class SQLResource(BaseResource):
                 getattr(self, "corpus_utterance_id", None))
 
     @classmethod
+    def get_sentence_feature(cls):
+        return (getattr(cls, "corpus_sentence", None) or
+                getattr(cls, "corpus_sentence_id", None) or
+                getattr(cls, "corpus_utterance", None) or
+                getattr(cls, "corpus_utterance_id", None))
+
+    @classmethod
     def get_origin_rc(cls):
         """
         Return the resource feature that identifies the origin of any given
@@ -981,7 +988,13 @@ class SQLResource(BaseResource):
 
     @staticmethod
     def penalize_query_item(x, i):
-        if x[1] == "*":
+        # FIXME:
+        # Currently, any query item that starts with an asterisk will trigger
+        # a full table scan because indexing is not possible. In the future,
+        # there should be reversed Word and Lemma columns that are queried in
+        # such cases. Then the following line should be changed to
+        # `if x[1] == "*":`
+        if x[1].startswith ("*"):
             return 9999
         else:
             return (len(x[1]) - 2 * x[1].count("["))
@@ -1685,7 +1698,6 @@ class SQLResource(BaseResource):
                 join_list += table_list
                 condition_list += ["({})".format(x) for x in where_list]
                 current_pos += 1
-
         return condition_list
 
     @classmethod
@@ -1730,7 +1742,7 @@ class SQLResource(BaseResource):
         if options.cfg.limit_matches and options.cfg.number_of_tokens:
             S = """{}
             LIMIT  {}
-            """.format(S, options.cfg.number_of_tokens)
+            """.format(S, int(options.cfg.number_of_tokens))
         return S
 
     def pos_check_function(self, l):
@@ -1792,14 +1804,19 @@ class SQLResource(BaseResource):
         left_span = left or options.cfg.context_left
         right_span = right or options.cfg.context_right
 
-        S = self.get_context_string(token_id, number_of_tokens,
-                                    left_span, right_span,
-                                    origin_id, sentence_id)
-        results = db_connection.execute(S)
+        if pd.np.isnan(origin_id):
+            results = ([(None, 0)] * left_span +
+                       [(None, 1)] * number_of_tokens +
+                       [(None, 2)] * right_span)
+        else:
+            S = self.get_context_string(token_id, number_of_tokens,
+                                        left_span, right_span,
+                                        origin_id, sentence_id)
+            results = db_connection.execute(S)
         word_lists = [[], [], []]
 
-        for x in results:
-            word_lists[x[-1]].append(x[0])
+        for word, pos in results:
+            word_lists[pos].append(word)
 
         return ([''] * (left_span - len(word_lists[0])) + word_lists[0],
                 word_lists[1],
@@ -1827,7 +1844,6 @@ class SQLResource(BaseResource):
                         word_table=word_table,
                         word=getattr(cls, word_feature)),
                    "{position}"]
-
         return template.format(
             columns=", ".join(columns),
             corpus=cls.get_subselect_corpus(1, 1),
@@ -1849,10 +1865,11 @@ class SQLResource(BaseResource):
                        corpus_origin=getattr(self, self.get_origin_rc()),
                        origin_id=origin_id)
 
-        if sentence_id and self._sentence_feature:
-            S = "{S} AND (COQ_CORPUS_1.{sentence}1 = {sentence_id})".format(
+        _sentence_feature = self.get_sentence_feature()
+        if sentence_id and _sentence_feature:
+            S = "{S} AND (COQ_CORPUS_1.{sentence}1 = '{sentence_id}')".format(
                 S=S,
-                sentence=self._sentence_feature, sentence_id=sentence_id)
+                sentence=_sentence_feature, sentence_id=sentence_id)
 
         position = """
             (CASE
@@ -1862,9 +1879,9 @@ class SQLResource(BaseResource):
             END) AS Position
             """.format(token_id=token_id, width=width)
 
-        return self._context_string_template.format(
+        return self.get_context_string_template().format(
             where=S,
-            length=end - start + 1,
+            length=int(end - start + 1),
             position=position)
 
     def get_origin_id(self, token_id):

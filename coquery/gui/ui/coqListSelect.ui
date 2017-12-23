@@ -22,6 +22,12 @@
    </property>
    <item>
     <layout class="QGridLayout" name="layout" columnstretch="1,0,1,0">
+     <property name="horizontalSpacing">
+      <number>-1</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>0</number>
+     </property>
      <item row="0" column="0">
       <widget class="QLabel" name="label_available">
        <property name="text">
@@ -65,13 +71,16 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>40</height>
+           <height>0</height>
           </size>
          </property>
         </spacer>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_6">
+         <property name="spacing">
+          <number>-1</number>
+         </property>
          <item>
           <widget class="QToolButton" name="button_remove">
            <property name="text">
@@ -96,7 +105,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>40</height>
+           <height>0</height>
           </size>
          </property>
         </spacer>
@@ -118,6 +127,9 @@
      </item>
      <item row="1" column="3">
       <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>-1</number>
+       </property>
        <item>
         <spacer name="verticalSpacer_3">
          <property name="orientation">
@@ -126,7 +138,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>40</height>
+           <height>0</height>
           </size>
          </property>
         </spacer>
@@ -153,7 +165,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>40</height>
+           <height>0</height>
           </size>
          </property>
         </spacer>

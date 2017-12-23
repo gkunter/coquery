@@ -79,7 +79,7 @@
         <number>4</number>
        </property>
        <item>
-        <widget class="CoqSearchLine" name="lineEdit"/>
+        <widget class="CoqSearchLine" name="edit_search_functions"/>
        </item>
        <item>
         <widget class="CoqLinkedLists" name="linked_functions">
@@ -90,6 +90,19 @@
           <bool>true</bool>
          </property>
         </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_filters">
+      <attribute name="title">
+       <string>Filters</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="margin">
+        <number>9</number>
+       </property>
+       <item>
+        <widget class="CoqEditFilters" name="widget_filters" native="true"/>
        </item>
       </layout>
      </widget>
@@ -122,6 +135,12 @@
    <class>CoqSearchLine</class>
    <extends>QLineEdit</extends>
    <header>..searchline</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqEditFilters</class>
+   <extends>QWidget</extends>
+   <header>..editfilters</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>

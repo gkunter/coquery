@@ -28,11 +28,12 @@ from coquery.defines import (DEFAULT_CONFIGURATION, SQL_MYSQL, SQL_SQLITE,
 from coquery.connections import (get_connection,
                                  MySQLConnection, SQLiteConnection)
 
-from .pyqt_compat import (QtCore, QtWidgets, QtGui,
-                          get_toplevel_window, STYLE_WARN)
+from .pyqt_compat import (QtCore, QtWidgets, QtGui, STYLE_WARN)
 from . import errorbox
 from .classes import CoqProgressDialog, CoqThread
 from .ui.connectionConfigurationUi import Ui_ConnectionConfig
+from .app import get_icon
+
 
 def check_valid_host(s):
     """
@@ -115,10 +116,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
         self.ui = Ui_ConnectionConfig()
         self.ui.setupUi(self)
-        self.ui.button_add.setIcon(
-            get_toplevel_window().get_icon("sign-add"))
-        self.ui.button_remove.setIcon(
-            get_toplevel_window().get_icon("sign-delete"))
+        self.ui.button_add.setIcon(get_icon("Plus"))
+        self.ui.button_remove.setIcon(get_icon("Minus"))
 
         self.ui.ok_button = self.ui.buttonBox.button(self.ui.buttonBox.Ok)
         self.add_new_placeholder()

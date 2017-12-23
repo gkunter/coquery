@@ -228,6 +228,41 @@ class Function(CoqObject):
         return resource
 
 #############################################################################
+## Conversion functions
+#############################################################################
+
+
+class ConversionFunction(Function):
+    @staticmethod
+    def get_description():
+        return "Conversion"
+
+
+class ToCategory(ConversionFunction):
+    _name = "CATEGORICAL"
+
+    def evaluate(self, df, **kwargs):
+        val = df[self.columns]
+        for col in val:
+            if val[col].dtype != object:
+                na_list = val[col].isnull()
+                val.loc[:,col] = val[col].astype(str)
+                val.loc[na_list,col] = None
+        return val
+
+
+class ToNumeric(ConversionFunction):
+    _name = "NUMERICAL"
+
+    def evaluate(self, df, **kwargs):
+        val = df[self.columns]
+        for col in val:
+            if val[col].dtype == object:
+                val.loc[:,col] = pd.to_numeric(val[col], errors="coerce")
+        return val
+
+
+#############################################################################
 ## String functions
 #############################################################################
 
@@ -428,14 +463,15 @@ class CalcFunction(NumFunction):
     arguments = {"float": [("value", "Value:", None)]}
 
     def evaluate(self, df, **kwargs):
-        if len(self.columns) == 1 and kwargs["value"] is None:
+        parameter = kwargs.get("value", None)
+        if len(self.columns) == 1 and not parameter:
             val = reduce(self._func, df[self.columns[0]].values)
         else:
             val = df[self.columns[0]].values
             for x in self.columns[1:]:
                 val = self._func(val, df[x].values)
-            if kwargs["value"] is not None:
-                const = self.coerce_value(df, kwargs["value"])
+            if parameter:
+                const = self.coerce_value(df, parameter)
                 val = self._func(val, const)
             if not self._ignore_na:
                 nan_rows = pd.np.any(pd.isnull(df[self.columns].values),
@@ -854,6 +890,7 @@ class FreqNorm(Freq):
 
 class RowNumber(Freq):
     _name = "statistics_row_number"
+    maximum_columns = 0
 
     def evaluate(self, df, **kwargs):
         val = pd.Series(range(1, len(df)+1), index=df.index)

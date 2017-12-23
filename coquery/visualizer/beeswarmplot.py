@@ -78,31 +78,52 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
     axes_style = "whitegrid"
 
     def plot_facet(self, data, color,
-                   x=None, y=None, levels_x=None, levels_y=None,
-                   palette=None, **kwargs):
-        ax = kwargs.get("ax", plt.gca())
+                   x=None, y=None, z=None,
+                   levels_x=None, levels_y=None, levels_z=None,
+                   palette="", **kwargs):
+
+        params = {"data": data}
         corpus_id = "coquery_invisible_corpus_id"
 
-        params = {"data": data, "palette": palette}
-        self.horizontal = True
         if not x and not y:
-            params.update({"x": corpus_id}),
-            self._xlab = x
+            self._xlab = self.DEFAULT_LABEL
             self._ylab = ""
-        elif x and not y:
-            params.update({"x": x, "y": corpus_id, "order": levels_x})
+            params.update({"x": corpus_id,
+                           "y": [""] * len(data),
+                           "palette": self.get_palette(palette, 1)})
+        elif y:
+            self._xlab = self.DEFAULT_LABEL
+            self._ylab = y
+            params.update({"x": corpus_id,
+                           "y": y,
+                           "order": levels_y})
+            if not x:
+                params.update({"palette": self.get_palette(palette,
+                                                           len(levels_y))})
+            else:
+                self.legend_title = x
+                self.legend_levels = levels_x
+                params.update({"hue": x,
+                               "hue_order": levels_x,
+                               "palette": self.get_palette(palette,
+                                                           len(levels_x))})
+        else:
             self.horizontal = False
             self._xlab = x
-            self._ylab = "Corpus position"
-        elif y and not x:
-            params.update({"y": y, "x": corpus_id, "order": levels_y})
-            self._xlab = "Corpus position"
-            self._ylab = y
-        elif x and y:
-            params.update({"x": corpus_id, "y": y, "hue": x,
-                           "order": levels_y, "hue_order": levels_x})
-            self._xlab = "Corpus position"
-            self._ylab = y
+            self._ylab = self.DEFAULT_LABEL
+            params.update({"x": x,
+                           "y": corpus_id,
+                           "order": levels_x,
+                           "palette": self.get_palette(palette,
+                                                       len(levels_x))})
+
+        if z and not (x and y):
+            self.legend_title = z
+            self.legend_levels = levels_z
+            params.update({"hue": z,
+                           "hue_order": levels_z,
+                           "palette": self.get_palette(palette,
+                                                       len(levels_z))})
 
         sns.swarmplot(**params)
-        return ax
+        return kwargs.get("ax", plt.gca())

@@ -21,7 +21,7 @@ class CoqListSelect(QtWidgets.QWidget):
     A QWidget that presents two exclusive list (a list of available and a
     list of selected items), with controls to move between the two.
     """
-    itemSelectionChanged = QtCore.Signal()
+    itemSelectionChanged = QtCore.Signal(list)
     currentItemChanged = QtCore.Signal(object)
 
     def __init__(self, *args, **kwargs):
@@ -144,7 +144,9 @@ class CoqListSelect(QtWidgets.QWidget):
             item = self.ui.list_available.takeItem(row)
             self.ui.list_selected.addItem(item)
             self.ui.list_selected.setCurrentItem(item)
-            self.itemSelectionChanged.emit()
+
+        self.itemSelectionChanged.emit(self.selectedItems())
+
         if self.trackSelected():
             self.ui.list_selected.setFocus()
             self.ui.list_available.setCurrentItem(None)
@@ -156,7 +158,9 @@ class CoqListSelect(QtWidgets.QWidget):
                 item = self.ui.list_selected.takeItem(row)
                 self.ui.list_available.addItem(item)
                 self.ui.list_available.setCurrentItem(item)
-                self.itemSelectionChanged.emit()
+
+        self.itemSelectionChanged.emit(self.selectedItems())
+
         if self.trackSelected():
             self.ui.list_available.setFocus()
             self.ui.list_selected.setCurrentItem(None)

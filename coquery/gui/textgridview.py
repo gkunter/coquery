@@ -19,13 +19,14 @@ import matplotlib as mpl
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
 
+import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.widgets import SpanSelector
 from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
 import seaborn as sns
-import scipy
 from scipy import signal
 
 from .pyqt_compat import QtWidgets, QtCore, QtGui
@@ -103,8 +104,12 @@ class CoqTextgridView(QtWidgets.QWidget):
         self.ax_waveform.set_ylim([-1, 1])
         self.ax_waveform.set_ylabel("Amplitude")
         self.ax_waveform.get_xaxis().set_visible(False)
+
         self.ax_spectrogram.set_ylabel("Frequency (Hz)")
         self.ax_spectrogram.get_xaxis().set_visible(False)
+        self.ax_spectrogram.grid(False)
+        self.ax_spectrogram.set_ylim([0, 5000])
+
         self.ax_textgrid.set_xlabel("Time (s)")
         self.ax_textgrid.xaxis.get_offset_text().set_visible(False)
 
@@ -125,13 +130,6 @@ class CoqTextgridView(QtWidgets.QWidget):
         #self.layout().addWidget(self.toolbar)
         self.layout().addWidget(self.canvas)
         self.layout().addWidget(self.scrollbar)
-
-    def clear(self):
-        #self.layout().removeWidget(self.toolbar)
-        self.layout().removeWidget(self.canvas)
-        #del self.toolbar
-        del self.canvas
-        del self.figure
 
     def on_key_press(self, *args, **kwargs):
         pass
@@ -239,15 +237,17 @@ class CoqTextgridView(QtWidgets.QWidget):
         self.plotSpectrogram()
 
     def _get_spectrogram(self, **kwargs):
-        NFFT = int(self.sound().framerate * self.windowLength())
-        noverlap = kwargs.get("noverlap", int(NFFT / 2))
-        data, ybins, xbins, im = self.ax_spectrogram.specgram(
+
+        Fs = self.sound().framerate
+        NFFT = int(Fs * self.windowLength())
+        noverlap = int(Fs * self.windowLength() / 2)
+
+        data, self._ydim, self._xdim, _ = plt.specgram(
             self.sound().astype(np.int32),
+            Fs=Fs,
             NFFT=NFFT,
-            Fs=self.sound().framerate,
             noverlap=noverlap,
             window=signal.gaussian(M=NFFT, std=noverlap))
-        self._extent = [xbins.min(), xbins.max(), ybins.min(), ybins.max()]
         self._spectrogram = self.transform(data)
 
     def transform(self, data):
@@ -286,12 +286,11 @@ class CoqTextgridView(QtWidgets.QWidget):
     def plotSpectrogram(self, cmap="gray_r"):
         if self._spectrogram is None:
             self._get_spectrogram()
-        self.ax_spectrogram.imshow(self._spectrogram,
-                                   extent=self._extent,
-                                   origin="lower", aspect="auto",
-                                   cmap=cmap,
-                                   norm=self.normalize())
-        self.ax_spectrogram.set_ylim([0, 5000])
+
+        self.ax_spectrogram.pcolormesh(self._xdim, self._ydim,
+                                       self._spectrogram,
+                                       cmap=cmap,
+                                       norm=self.normalize())
         self.canvas.draw()
 
     def plotWave(self):
@@ -329,24 +328,26 @@ class CoqTextgridView(QtWidgets.QWidget):
             [(i + 0.5) / n_tiers for i in range(n_tiers)])
         self.ax_textgrid.yaxis.set_ticklabels(reversed(tier_labels))
 
+    def plotTicks(self):
+        x_ticks = self.ax_textgrid.get_xticklabels()
+        x_ticks = [str(self.offset + float(x.get_text()))
+                   if x.get_text() else "" for x in x_ticks]
+        lower = self.offset + self.ax_textgrid.get_xlim()[0]
+        upper = self.offset + self.ax_textgrid.get_xlim()[1]
+        self.ax_textgrid.set_xticklabels(x_ticks)
+
     def display(self, **kwargs):
         self.offset = kwargs.get("offset", 0)
-        if self.sound():
-            self.plotWave()
-            self.plotSpectrogram()
-
-            self.ax_spectrogram.grid(False)
 
         if self._textgrid:
             self.plotTextgrid()
 
+        if self.sound():
+            self.plotWave()
+            self.plotSpectrogram()
+
         if self.offset:
-            x_ticks = self.ax_textgrid.get_xticklabels()
-            x_ticks = [str(self.offset + float(x.get_text()))
-                       if x.get_text() else "" for x in x_ticks]
-            lower = self.offset + self.ax_textgrid.get_xlim()[0]
-            upper = self.offset + self.ax_textgrid.get_xlim()[1]
-            self.ax_textgrid.set_xticklabels(x_ticks)
+            self.plotTicks()
 
         self.scrollbar.setMinimum(0)
         self.scrollbar.setMaximum(0)

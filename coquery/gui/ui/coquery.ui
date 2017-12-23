@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>689</width>
-    <height>693</height>
+    <width>697</width>
+    <height>733</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -275,7 +275,7 @@
           <property name="title">
            <string>Data &amp;management</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0,0">
+          <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
            <item>
             <widget class="QTableWidget" name="list_toolbox">
              <property name="sizePolicy">
@@ -419,19 +419,6 @@
             </widget>
            </item>
            <item>
-            <spacer name="verticalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
             <widget class="QStackedWidget" name="tool_widget">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -440,7 +427,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>5</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tool_widget_column_order">
               <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -462,11 +449,24 @@
                 <number>0</number>
                </property>
                <item>
-                <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0,0,0" columnstretch="2,1,1,2">
+                <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0,0,0,0,0,0" columnstretch="2,1,1,2">
                  <property name="margin">
                   <number>0</number>
                  </property>
                  <item row="1" column="1">
+                  <spacer name="verticalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item row="3" column="1">
                   <widget class="QSpinBox" name="context_left_span">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -485,14 +485,21 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="1" colspan="2">
+                 <item row="4" column="1" colspan="2">
+                  <widget class="Line" name="line_2">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="1" colspan="2">
                   <widget class="QCheckBox" name="check_restrict">
                    <property name="text">
                     <string>&amp;Restrict to sentences</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="2">
+                 <item row="3" column="2">
                   <widget class="QSpinBox" name="context_right_span">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -514,7 +521,46 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="1" colspan="2">
+                 <item row="6" column="1">
+                  <spacer name="verticalSpacer_4">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item row="3" column="3">
+                  <spacer name="horizontalSpacer_4">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item row="2" column="0">
+                  <spacer name="horizontalSpacer_3">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item row="2" column="1" colspan="2">
                   <widget class="QWidget" name="widget_context" native="true">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -575,39 +621,6 @@
                     </item>
                    </layout>
                   </widget>
-                 </item>
-                 <item row="2" column="1" colspan="2">
-                  <widget class="Line" name="line_2">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="0">
-                  <spacer name="horizontalSpacer_3">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="1" column="3">
-                  <spacer name="horizontalSpacer_4">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                 </layout>
                </item>
@@ -882,19 +895,6 @@
             </widget>
            </item>
            <item>
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
             <widget class="QWidget" name="button_box_reaggregate" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <property name="margin">
@@ -1071,8 +1071,8 @@ background-color: rgb(244, 165, 130);</string>
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Oxygen-Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans'; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Oxygen-Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="textInteractionFlags">
            <set>Qt::NoTextInteraction</set>
@@ -1093,8 +1093,8 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>689</width>
-     <height>26</height>
+     <width>697</width>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
