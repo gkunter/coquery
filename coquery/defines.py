@@ -378,16 +378,17 @@ msg_mysql_success = "Coquery is successfully connected to the MySQL server."
 msg_invalid_ip = "Invalid hostname or invalid IP address"
 
 msg_mysql_remove = """
-<p><b>There are corpora associated with a removed MySQL connection.</b></p>
-<p>You have chosen to remove the connection named '<b>{name}</b>'. The
-following {corpora} {are} available on that connection:</p>
+<p><b>There are still installed corpora on a MySQL connection about to be
+removed.</b></p>
+<p>You have chosen to remove the connection '<b>{name}</b>'. The following
+{corpora} {are} installed on that connection:</p>
 <p>{list}</p>
-<p>The databases associated with installed corpora <b>not</b> automatically
-deleted if a MySQL connection is removed. To completely wipe a MySQL
-connection, first remove all corpora for that connection using the Corpus
-Manager.</p>
-<p>If you still want to remove the MySQL connection, press <b>Yes</b>.</p>
-<p>If you do not want to remove the MySQL connection, press <b>No</b>."""
+<p>When removing a MySQL connection, the databases associated with the
+installed corpora are <b>not</b> automatically deleted. To completely wipe a
+MySQL connection including all databases, first remove all corpora for that
+connection using the Corpus Manager.</p>
+<p>If you really want to remove the MySQL connection, press <b>Yes</b>.</p>
+<p>If you want to keep the MySQL connection, press <b>No</b>."""
 
 msg_completely_remove = """
 <p><b>There are corpora associated with a removed connection.</b></p>
