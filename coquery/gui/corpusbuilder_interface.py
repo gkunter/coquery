@@ -22,7 +22,6 @@ import zipfile
 
 from coquery import options
 from coquery import sqlhelper
-from coquery import NAME
 from coquery.defines import (msg_install_abort,
                              msg_corpus_path_not_valid)
 from coquery.errors import SQLNoConfigurationError, DependencyError
@@ -51,9 +50,6 @@ class InstallerGui(QtWidgets.QDialog):
 
     def __init__(self, builder_class, parent=None):
         super(InstallerGui, self).__init__(parent)
-
-        self.logger = logging.getLogger(NAME)
-
         self.state = None
         self._testing = False
         self._onefile = False
@@ -406,7 +402,6 @@ class InstallerGui(QtWidgets.QDialog):
         else:
             self.builder = self.builder_class(gui=self)
 
-        self.builder.logger = self.logger
         self.builder.arguments = self.get_arguments_from_gui()
         self.builder.name = self.builder.arguments.name
 
@@ -472,8 +467,6 @@ class BuilderGui(InstallerGui):
 
     def __init__(self, builder_class, onefile=False, parent=None):
         super(BuilderGui, self).__init__(builder_class, parent)
-
-        self.logger = logging.getLogger(NAME)
 
         self._nltk_lemmatize = False
         self._nltk_tokenize = False
@@ -817,7 +810,11 @@ class BuilderGui(InstallerGui):
         namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
         namespace.use_meta = self.ui.check_use_metafile.checkState()
-        namespace.metadata = utf8(self.ui.label_metafile.text())
+
+        if self.ui.check_use_metafile.isChecked():
+            namespace.metadata = utf8(self.ui.label_metafile.text())
+        else:
+            namespace.metadata = None
         namespace.metadata_column = self._metafile_column
         namespace.metaoptions = self._meta_options
         namespace.db_name = "coq_{}".format(namespace.name).lower()
