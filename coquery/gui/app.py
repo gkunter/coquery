@@ -41,8 +41,7 @@ from coquery.defines import (
     SUMMARY_MODES,
     msg_corpus_no_documentation, msg_disk_error, msg_encoding_error,
     msg_filename_error, msg_initialization_error, msg_no_context_available,
-    msg_no_word_information, msg_query_running, msg_remove_corpus_disk_error,
-    msg_remove_corpus_error, msg_unsaved_data,
+    msg_no_word_information, msg_query_running, msg_unsaved_data,
     msg_userdata_unavailable, msg_userdata_warning, msg_warning_statistics)
 from coquery.errors import (
     CollocationNoContextError, SQLInitializationError,
