@@ -365,6 +365,28 @@ except NameError:
     unicode = str
     long = int
 
+msg_mysql_access_denied = """
+A MySQL server was found, but access was denied. Check the user name and
+password, or create a new MySQL user."""
+
+msg_mysql_invalid = """
+The current configuration does not appear to be valid. Please check the
+settings of the dialog."""
+
+msg_mysql_success = "Coquery is successfully connected to the MySQL server."
+
+msg_mysql_remove = """
+<p><b>There are corpora associated with a removed MySQL connection.</b></p>
+<p>You have chosen to remove the connection named '<b>{name}</b>'. The
+following {corpora} {are} available on that connection:</p>
+<p>{list}</p>
+<p>The databases associated with installed corpora <b>not</b> automatically
+deleted if a MySQL connection is removed. To completely wipe a MySQL
+connection, first remove all corpora for that connection using the Corpus
+Manager.</p>
+<p>If you still want to remove the MySQL connection, press <b>Yes</b>.</p>
+<p>If you do not want to remove the MySQL connection, press <b>No</b>."""
+
 msg_completely_remove = """
 <p><b>There are corpora associated with a removed connection.</b></p>
 <p>You have chosen to remove the connection named '<b>{name}</b>'. The
