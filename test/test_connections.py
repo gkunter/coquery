@@ -76,8 +76,10 @@ class TestConnection(unittest.TestCase):
 
     def test_remove_resource(self):
         res_name = "Corpus1"
+        db_name = "coq_corpus1"
         res = BaseResource()
         res.name = res_name
+        res.db_name = db_name
         cor = CorpusClass()
         con = Connection(self.name)
 
@@ -85,7 +87,6 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(con.count_resources(), 1)
         con.remove_resource(res_name)
         self.assertEqual(con.count_resources(), 0)
-
 
 
 class TestMySQLConnection(unittest.TestCase):
