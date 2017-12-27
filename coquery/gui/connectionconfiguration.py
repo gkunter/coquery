@@ -567,8 +567,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
     def update_connection(self, state, exc=None):
         def style_button(color):
-            S = 'QPushButton {{ background-color: {}; color: {}; }}'
-            return S.format(color)
+            S = 'QPushButton {{ background-color: {col}; color: {col}; }}'
+            return S.format(col=color)
         if state == "noConnection":
             match = re.search(r'\"(.*)\"', str(exc))
             if match:
