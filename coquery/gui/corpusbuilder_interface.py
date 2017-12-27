@@ -15,13 +15,11 @@ from __future__ import print_function
 import argparse
 import codecs
 import re
-import logging
 import os
 import sys
 import zipfile
 
 from coquery import options
-from coquery import NAME
 from coquery.defines import (msg_install_abort,
                              msg_corpus_path_not_valid)
 from coquery.errors import DependencyError
@@ -50,9 +48,6 @@ class InstallerGui(QtWidgets.QDialog):
 
     def __init__(self, builder_class, parent=None):
         super(InstallerGui, self).__init__(parent)
-
-        self.logger = logging.getLogger(NAME)
-
         self.state = None
         self._testing = False
         self._onefile = False
@@ -87,8 +82,11 @@ class InstallerGui(QtWidgets.QDialog):
                 self.ui.notes_label.setBackgroundRole(
                     QtGui.QPalette.ColorRole.Base)
             except:
-                print("corpusbuilder_interface.InstallerGui.__init__(): Could not set background color of installation note box")
-            self.ui.notes_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+                s = ("corpusbuilder_interface.InstallerGui.__init__(): Could "
+                     "not set background color of installation note box")
+                print(s)
+            self.ui.notes_label.setTextInteractionFlags(
+                QtCore.Qt.TextBrowserInteraction)
 
             self.ui.notes_scroll = QtWidgets.QScrollArea()
             self.ui.notes_scroll.setWidgetResizable(True)
@@ -104,8 +102,10 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.button_metafile.clicked.connect(self.select_metafile)
         self.ui.label_metafile.clicked.connect(self.select_metafile)
 
-        self.ui.radio_read_files.toggled.connect(lambda x: self.activate_read(True))
-        self.ui.radio_only_module.toggled.connect(lambda x: self.activate_read(False))
+        self.ui.radio_read_files.toggled.connect(
+            lambda x: self.activate_read(True))
+        self.ui.radio_only_module.toggled.connect(
+            lambda x: self.activate_read(False))
         self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
 
         self.installStarted.connect(self.show_progress)
@@ -380,14 +380,16 @@ class InstallerGui(QtWidgets.QDialog):
 
         if self.ui.radio_read_files.isChecked():
             l = self.builder_class.get_file_list(
-                    str(self.ui.input_path.text()), self.builder_class.file_filter)
+                    str(self.ui.input_path.text()),
+                    self.builder_class.file_filter)
             try:
                 self.builder_class.validate_files(l)
             except RuntimeError as e:
                 reply = QtWidgets.QMessageBox.question(
                     None, "Corpus path not valid – Coquery",
                     msg_corpus_path_not_valid.format(e),
-                    QtWidgets.QMessageBox.Ignore | QtWidgets.QMessageBox.Discard)
+                    (QtWidgets.QMessageBox.Ignore |
+                     QtWidgets.QMessageBox.Discard))
                 if reply == QtWidgets.QMessageBox.Discard:
                     return
 
@@ -405,7 +407,6 @@ class InstallerGui(QtWidgets.QDialog):
         else:
             self.builder = self.builder_class(gui=self)
 
-        self.builder.logger = self.logger
         self.builder.arguments = self.get_arguments_from_gui()
         self.builder.name = self.builder.arguments.name
 
@@ -467,8 +468,6 @@ class BuilderGui(InstallerGui):
     def __init__(self, builder_class, onefile=False, parent=None):
         super(BuilderGui, self).__init__(builder_class, parent)
 
-        self.logger = logging.getLogger(NAME)
-
         self._nltk_lemmatize = False
         self._nltk_tokenize = False
         self._nltk_tagging = False
@@ -492,7 +491,8 @@ class BuilderGui(InstallerGui):
         self._metafile_column = None
 
         if self._onefile:
-            self.ui.label_read_files.setText("Build new corpus from data table")
+            self.ui.label_read_files.setText(
+                "Build new corpus from data table")
             self.ui.label_input_path.setText("Use table file:")
             self.ui.button_input_path.setIcon(self.ui.button_metafile.icon())
             self.ui.button_input_path.setText("Change")
@@ -506,7 +506,8 @@ class BuilderGui(InstallerGui):
             self.ui.groupBox.hide()
 
         else:
-            self.ui.label_read_files.setText("Build new corpus from text files")
+            self.ui.label_read_files.setText(
+                "Build new corpus from text files")
             self.ui.label_input_path.setText("Path to text files:")
             self.ui.input_path.clicked.connect(self.select_path)
             self.ui.label_pos_tagging.show()
@@ -620,7 +621,9 @@ class BuilderGui(InstallerGui):
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_lemmatize = False
         except Exception as e:
-            self.nltk_exceptions.append("An unexpected error occurred when testing the lemmatizer:\n{}".format(sys.exc_info()))
+            self.nltk_exceptions.append(
+                ("An unexpected error occurred when testing the "
+                 "lemmatizer:\n{}".format(sys.exc_info())))
             raise e
         else:
             self._nltk_lemmatize = True
@@ -634,7 +637,9 @@ class BuilderGui(InstallerGui):
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_tokenize = False
         except Exception as e:
-            self.nltk_exceptions.append("An unexpected error occurred when testing the tokenizer:\n{}".format(sys.exc_info()))
+            self.nltk_exceptions.append(
+                ("An unexpected error occurred when testing the "
+                 "tokenizer:\n{}".format(sys.exc_info())))
             raise e
         else:
             self._nltk_tokenize = True
@@ -648,7 +653,9 @@ class BuilderGui(InstallerGui):
                 self.nltk_exceptions.append(match.group(1))
             self._nltk_tagging = False
         except Exception as e:
-            self.nltk_exceptions.append("An unexpected error occurred when testing the POS tagger:\n{}".format(sys.exc_info()))
+            self.nltk_exceptions.append(
+                ("An unexpected error occurred when testing the POS "
+                 "tagger:\n{}".format(sys.exc_info())))
             raise e
         else:
             self._nltk_tagging = True
@@ -809,7 +816,11 @@ class BuilderGui(InstallerGui):
         namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
         namespace.use_meta = self.ui.check_use_metafile.checkState()
-        namespace.metadata = utf8(self.ui.label_metafile.text())
+
+        if self.ui.check_use_metafile.isChecked():
+            namespace.metadata = utf8(self.ui.label_metafile.text())
+        else:
+            namespace.metadata = None
         namespace.metadata_column = self._metafile_column
         namespace.metaoptions = self._meta_options
         namespace.db_name = "coq_{}".format(namespace.name).lower()
