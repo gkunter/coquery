@@ -532,6 +532,7 @@ class CorpusManager(QtWidgets.QDialog):
                     if basename not in ("coq_install_generic_table",
                                         "coq_install_generic",
                                         "coq_install_generic_package"):
+                        entry.setBuilderClass(builder_class)
                         entry._adhoc = hasattr(builder_class, "_is_adhoc")
                         entry._builtin = self.built_in(module_path)
                         entry.setName(name)
