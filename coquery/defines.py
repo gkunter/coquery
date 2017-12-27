@@ -375,6 +375,8 @@ settings of the dialog."""
 
 msg_mysql_success = "Coquery is successfully connected to the MySQL server."
 
+msg_invalid_ip = "Invalid hostname or invalid IP address"
+
 msg_mysql_remove = """
 <p><b>There are corpora associated with a removed MySQL connection.</b></p>
 <p>You have chosen to remove the connection named '<b>{name}</b>'. The
