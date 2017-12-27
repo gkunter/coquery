@@ -1030,6 +1030,12 @@ settings = None
 
 
 def save_configuration():
+    """
+    Saves the current configuration.
+
+    Currently, two files are still used: an .ini text file that uses
+    sections, and a QSettings file. Eventually, the two should be merged.
+    """
     config = UnicodeConfigParser()
     if os.path.exists(cfg.config_path):
         with codecs.open(cfg.config_path, "r", "utf-8") as input_file:
