@@ -19,14 +19,13 @@ from .defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
 from .general import CoqObject, get_home_dir
 from .unicode import utf8
 
+
 class Connection(CoqObject):
     MODULE = 1 << 1
     INSTALLER = 1 << 2
     DATABASE = 1 << 3
 
     def __init__(self, name, db_type=None):
-        if name is None:
-            raise TypeError
         self.name = name
         self._resources = {}
         self._db_type = db_type
@@ -74,23 +73,32 @@ class Connection(CoqObject):
     def add_resource(self, resource, corpus):
         self._resources[resource.name] = (resource, corpus)
 
+    def remove_database(self, db_name):
+        # As the virtual Connection class does not allocate any databases,
+        # there is nothing to do here.
+        pass
+
     def remove_resource(self, name, flags=(MODULE | DATABASE | INSTALLER)):
-        resource = self.resources()[name][0]
-        db_name = resource.db_name
+        if flags & (Connection.DATABASE | Connection.MODULE):
+            resource = self.resources()[name][0]
+            db_name = resource.db_name
 
-        # remove database:
-        if flags & Connection.DATABASE:
-            self.remove_database(db_name)
+            # remove database:
+            if flags & Connection.DATABASE:
+                self.remove_database(db_name)
 
-        # remove corpus module:
-        if flags & Connection.MODULE:
-            module_path = os.path.join(self.resource_path(),
-                                       "{}.py".format(db_name))
-            if os.path.exists(module_path):
-                os.remove(module_path)
+            # remove corpus module:
+            if flags & Connection.MODULE:
+                module_path = os.path.join(self.resource_path(),
+                                           "{}.py".format(db_name))
+                if os.path.exists(module_path):
+                    os.remove(module_path)
 
-            # also remove the compiled python module:
-            os.remove("{}c".format(module_path))
+                # also remove the compiled python module:
+                try:
+                    os.remove("{}c".format(module_path))
+                except FileNotFoundError:
+                    pass
 
         # remove installer (only for adhoc corpora):
         if flags & Connection.INSTALLER:
@@ -99,19 +107,22 @@ class Connection(CoqObject):
                                       "coq_install_{}.py".format(db_name))
             if os.path.exists(adhoc_path):
                 os.remove(adhoc_path)
-            self._resources.pop(name)
+            try:
+                self._resources.pop(name)
+            except KeyError:
+                pass
 
     def get_resource(self, name):
         return self._resources.get(name, None)
 
     def rename(self, new_name):
+        old_path = self.base_path()
+        new_path = os.path.join(get_home_dir(), "connections", new_name)
+        os.rename(old_path, new_path)
         self.name = new_name
 
     def count_resources(self):
         return len(self._resources)
-
-    def __len__(self):
-        return len(self.resources())
 
     def get_engine(self, database=None):
         return sqlalchemy.create_engine(self.url(database))
@@ -138,21 +149,25 @@ class MySQLConnection(Connection):
         name : str
             The name of the connection
         host : str
-            The host address of the MySQL server, either by IP address or by name
+            The host address of the MySQL server, either by IP address or by
+            name
         port : int
             The port that the MySQL server listens to
         user : str
-            The user name that will be used to authenticate the MySQL connection
+            The user name that will be used to authenticate the MySQL
+            connection
         password : str
-            The password that will be used to authenticate the MySQL connection
+            The password that will be used to authenticate the MySQL
+            connection
         params : list of strings
-            A list of options that will be passed to the server on establishing
-            the connection, default: ["charset=utf8mb4", "local_infile=1"]
+            A list of options that will be passed to the server on
+            establishing the connection
+            Default: ["charset=utf8mb4", "local_infile=1"]
         """
         super(MySQLConnection, self).__init__(name, SQL_MYSQL)
         if (host is None or port is None or user is None or password is None):
             raise TypeError
-        self.host = host
+        self.host = host or "127.0.0.1"
         self.port = port
         self.user = user
         self.password = password
@@ -192,7 +207,7 @@ class MySQLConnection(Connection):
         return res
 
     def create_database(self, db_name):
-        engine = self.get_engine(db_name)
+        engine = self.get_engine()
         S = """
             CREATE DATABASE {}
             CHARACTER SET utf8mb4
@@ -206,7 +221,7 @@ class MySQLConnection(Connection):
         engine = self.get_engine(db_name)
         S = "DROP DATABASE {}".format(db_name)
         with engine.connect() as connection:
-            connection.execute(sql_string)
+            connection.execute(S)
         engine.dispose()
 
     def has_database(self, db_name):
@@ -216,15 +231,15 @@ class MySQLConnection(Connection):
             FROM INFORMATION_SCHEMA.SCHEMATA
             WHERE SCHEMA_NAME = '{}'
             """.format(db_name)
-        with engine.connect() as connection:
-            try:
+        try:
+            with engine.connect() as connection:
                 connection.execute(S)
-            except sqlalchemy.exc.InternalError as e:
-                engine.dispose()
-                return False
-            except Exception as e:
-                engine.dispose()
-                raise e
+        except sqlalchemy.exc.InternalError as e:
+            engine.dispose()
+            return False
+        except Exception as e:
+            engine.dispose()
+            raise e
         engine.dispose()
         return True
 
@@ -263,9 +278,6 @@ class SQLiteConnection(Connection):
 
         self.path = path
 
-    def rename(self, new_name):
-        raise NotImplementedError
-
     def url(self, db_name):
         template = "sqlite+pysqlite:///{path}"
         path = os.path.join(self.path, "{}.db".format(db_name))
@@ -291,6 +303,7 @@ class SQLiteConnection(Connection):
         path = os.path.join(self.path, "{}.db".format(db_name))
         return os.path.getsize(path)
 
+
 def get_connection(name, dbtype,
                    host=None, port=None, user=None, password=None,
                    path=None, **kwargs):
@@ -303,4 +316,3 @@ def get_connection(name, dbtype,
         return MySQLConnection(name, host, port, user, password)
     elif dbtype == SQL_SQLITE:
         return SQLiteConnection(name, path)
-
