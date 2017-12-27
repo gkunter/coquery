@@ -190,7 +190,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.csv_options = None
         self.query_thread = None
         self.last_results_saved = True
-        self.last_connection = None
+        self.last_connection_name = None
         self.last_connection_state = None
         self.user_columns = False
         self.last_index = None
@@ -215,7 +215,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self._first_corpus = False
 
-        if options.cfg.first_run and not len(options.cfg.current_connection):
+        if (options.cfg.first_run and
+                not options.cfg.current_connection.count_resources()):
             self._first_corpus = True
 
         # Retrieve font and metrics for the CoqItemDelegates
@@ -310,8 +311,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.ui.layout_aggregate.addLayout(layout)
 
         # add available resources to corpus dropdown box:
-        corpora = sorted(list(
-            options.cfg.current_connection.resources().keys()))
+        corpora = sorted(options.cfg.current_connection.resources())
         self.ui.combo_corpus.addItems(corpora)
 
         index = self.ui.combo_corpus.findText(options.cfg.corpus)
@@ -1629,10 +1629,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # remember last corpus name:
         last_corpus = utf8(self.ui.combo_corpus.currentText())
 
+        current_connection = options.cfg.current_connection
+        current_connection.find_resources()
+
         # add corpus names:
         self.ui.combo_corpus.clear()
-        self.ui.combo_corpus.addItems(
-            sorted(list(options.cfg.current_connection.resources().keys())))
+        self.ui.combo_corpus.addItems(sorted(current_connection.resources()))
 
         # try to return to last corpus name:
         new_index = self.ui.combo_corpus.findText(last_corpus)
@@ -2750,6 +2752,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             builder.display()
         except Exception:
             errorbox.ErrorBox.show(sys.exc_info())
+
         self.fill_combo_corpus()
         self.change_corpus()
         self.corpusListUpdated.emit()
@@ -2948,18 +2951,21 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         state : bool
             True if a connection is available, or False otherwise.
         """
-        if not options.cfg.current_connection.name:
+        current_connection = options.cfg.current_connection
+        if not current_connection:
             return False
         else:
             try:
-                state, _ = options.cfg.current_connection.test()
-            except ImportError:
+                state, _ = current_connection.test()
+            except ImportError as e:
                 state = False
 
-        current_connection = options.cfg.current_connection.name
+        current_name = current_connection.name
+
         # Only do something if the current connection status has changed:
         if (state != self.last_connection_state or
-                current_connection != self.last_connection):
+                current_name != self.last_connection_name):
+
             # Remember the item that has focus:
             active_widget = options.cfg.app.focusWidget()
 
@@ -2971,14 +2977,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
             self.ui.combo_config.blockSignals(True)
             # add new entry with suitable icon, remove old icon and reset index:
-            index = self.ui.combo_config.findText(current_connection)
+            index = self.ui.combo_config.findText(current_name)
             self.ui.combo_config.insertItem(
-                index + 1, icon, current_connection)
+                index + 1, icon, current_name)
             self.ui.combo_config.setCurrentIndex(index + 1)
             self.ui.combo_config.removeItem(index)
             self.ui.combo_config.setCurrentIndex(index)
             self.last_connection_state = state
-            self.last_connection = current_connection
+            self.last_connection_name = current_name
             self.last_index = index
             # reconnect currentIndexChanged signal:
             self.ui.combo_config.blockSignals(False)
@@ -2996,15 +3002,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def connection_settings(self):
         from .connectionconfiguration import ConnectionConfiguration
-        try:
-            name = options.cfg.current_connection.name
-            connections = options.cfg.connections
-            config_dict, name = ConnectionConfiguration.choose(
-                name, connections)
-        except TypeError as e:
-            raise e
-        else:
+        name = options.cfg.current_connection.name
+        connections = options.cfg.connections
+        result = ConnectionConfiguration.choose(name, connections)
+        if result:
+            config_dict, name = result
             options.cfg.connections = config_dict
+            self.fill_combo_connections(connections=config_dict)
             self.change_connection(name)
 
     def show_mysql_guide(self):
