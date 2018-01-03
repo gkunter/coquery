@@ -3,9 +3,11 @@ Interface
 * Provide POS tag helper dialog via the 'Help' menu
 * Regular expressions can be inserted from the regexp tester into input fields
 * User data columns are now available again (and can also be removed)
-* The database paths of non-MySQL connections can now be changed
 * Provide more visual feedback on actions that don't have a visible effect
 * Column selection dialogs: Switch order of available and selected
+* Revised connection dialog
+* Use new class model for database connections
+* The database paths of non-MySQL connections can now be changed
 
 Queries
 * Can restrict query files to a number of rows
@@ -35,14 +37,15 @@ Data management
 Functions
 * Errors in functions don't cause the whole function list to fail anymore
 * More flexible handling of function arguments
-* New functions: NOT, IF, IFANY, EMPTY, MISSING, Percentile, Log, Replace
+* New functions: NOT, IF, IFANY, TRUE, FALSE, EMPTY, MISSING, Percentile,
+  Log, Replace
 * Mathematical functions can now be applied column-wise
 
 EXPERIMENTAL features
 * Experimental mode can be activated in the Settings dialog
 * Support for N-gram lookup tables
 
-API changes
+Corpus API changes
 * Disposed of obsolete LexiconClass
 * Table.get_create_string() expects list of existing tables as second argument
 
