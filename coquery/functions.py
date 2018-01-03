@@ -103,7 +103,6 @@ class Function(CoqObject):
         self.columns = columns
         self.alias = alias
         self.group = group
-        #self.value = kwargs.get("value", None)
         self._label = label
         self.kwargs = kwargs
 
@@ -246,8 +245,8 @@ class ToCategory(ConversionFunction):
         for col in val:
             if val[col].dtype != object:
                 na_list = val[col].isnull()
-                val.loc[:,col] = val[col].astype(str)
-                val.loc[na_list,col] = None
+                val.loc[:, col] = val[col].astype(str)
+                val.loc[na_list, col] = None
         return val
 
 
@@ -258,7 +257,7 @@ class ToNumeric(ConversionFunction):
         val = df[self.columns]
         for col in val:
             if val[col].dtype == object:
-                val.loc[:,col] = pd.to_numeric(val[col], errors="coerce")
+                val.loc[:, col] = pd.to_numeric(val[col], errors="coerce")
         return val
 
 
@@ -709,20 +708,22 @@ class IfAny(If, Or):
     _name = "IFANY"
 
 
-#class IsTrue(LogicFunction):
-    #_name = "ISTRUE"
-    #parameters = 0
+class IsTrue(LogicFunction):
+    _name = "TRUE"
+    parameters = 0
 
-    #def _func(self, cols):
-        #return cols.apply(lambda x: bool(x))
+    def evaluate(self, df, **kwargs):
+        return pd.DataFrame(data=pd.np.vectorize(operator.truth)(df.values),
+                            index=df.index,
+                            columns=df.columns)
 
 
-#class IsFalse(LogicFunction):
-    #_name = "ISFALSE"
-    #parameters = 0
+class IsFalse(IsTrue):
+    _name = "FALSE"
+    parameters = 0
 
-    #def _func(self, cols):
-        #return cols.apply(lambda x: not bool(x))
+    def evaluate(self, df, **kwargs):
+        return ~super(IsFalse, self).evaluate(df, **kwargs)
 
 
 class Missing(LogicFunction):
@@ -762,6 +763,8 @@ class Freq(BaseFreq):
     no_column_labels = True
     drop_on_na = False
 
+    DUMMY_STR = pd.np.array(list(string.ascii_uppercase + string.digits))
+
     def evaluate(self, df, **kwargs):
         """
         Count the number of rows with equal values in the target columns.
@@ -793,6 +796,7 @@ class Freq(BaseFreq):
             # simply the length of the data frame:
             val = self.constant(df, len(df))
             return val
+
         # There is an ugly, ugly bug/feature in Pandas up to at least 0.18.0
         # which makes grouping unreliable if there are columns with missing
         # values.
@@ -801,32 +805,33 @@ class Freq(BaseFreq):
         # This is considered rather a bug in this Github issue:
         # https://github.com/pydata/pandas/issues/3729
 
-        # The replacement workaround is suggested here:
-        # http://stackoverflow.com/questions/18429491
-
+        # The replacement workaround based on this post:
+        # https://stackoverflow.com/a/18431417
         replace_dict = {}
         for x in columns:
             if df[x].isnull().any():
                 while True:
                     if df[x].dtype == object:
-                        # Random string implementation taken from here:
-                        # http://stackoverflow.com/a/2257449/5215507
-                        repl = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))
+                        repl = "".join(pd.np.random.choice(Freq.DUMMY_STR, 20))
                     elif df[x].dtype == int:
                         repl = random.randint(-sys.maxsize, +sys.maxsize)
                     elif df[x].dtype == float:
                         repl = random.random()
                     elif df[x].dtype == bool:
                         raise TypeError
+
                     if (df[x] != repl).all():
                         replace_dict[x] = repl
                         break
 
                 df[x] = df[x].fillna(replace_dict[x])
-        d = {columns[0]: "count"}
-        d.update(
-            {x: "first" for x in
-                [y for y in df.columns.values if y not in columns and not y.startswith(("coquery_invisible"))]})
+
+        d = {x: "first"
+             for x in [y for y in df.columns.values
+                       if y not in columns and
+                       not y.startswith(("coquery_invisible"))]}
+        d[columns[0]] = "count"
+
         val = df.merge(df.groupby(columns)
                          .agg(d)
                          .rename(columns={columns[0]: self.get_id()})
@@ -839,6 +844,7 @@ class Freq(BaseFreq):
 
         for x in replace_dict:
             df[x] = df[x].replace(replace_dict[x], pd.np.nan)
+
         return val
 
 
@@ -1040,7 +1046,8 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
 
         _df = pd.DataFrame({"freq1": freq, "freq2": ext_freq, "size": size})
         if len(word_columns) > 1:
-            logging.warning("LL calculation for more than one column is experimental!")
+            s = "LL calculation for more than one column is experimental!"
+            logging.warning(s)
         val = _df.apply(lambda x: self._func(x[["freq1", "freq2"]],
                                              size=x["size"],
                                              ext_size=ext_size,
@@ -1285,9 +1292,12 @@ class MutualInformation(Proportion):
 
     def evaluate(self, df, f_1, f_2, f_coll, size, span, **kwargs):
         try:
-            val = pd.np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) / pd.np.log(2)
+            val = (pd.np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) /
+                   pd.np.log(2))
         except (ZeroDivisionError, TypeError, Exception) as e:
-            print("Error while calculating mutual information:\nf1={} f2='{}' fcol='{}' size={} span={}".format(f_1, f_2, f_coll, size, span))
+            print(("Error while calculating mutual information:"
+                   "\nf1={} f2='{}' fcol='{}' size={} span={}").format(
+                       f_1, f_2, f_coll, size, span))
             print(df.head())
             print(e)
             return None
@@ -1447,17 +1457,19 @@ class ContextColumns(Function):
                     if col:
                         self._sentence_column = "coq_{}_1".format(col)
                         if self._sentence_column not in df.columns:
+                            sentence_col = "coquery_invisible_sentence_id"
                             fun = SentenceId(session=session)
                             val = fun.evaluate(df, session=session)
-                            df["coquery_invisible_sentence_id"] = val
-                            self._sentence_column = "coquery_invisible_sentence_id"
+                            df[sentence_col] = val
+                            self._sentence_column = sentence_col
 
                 get_toplevel_window().useContextConnection.emit(db_connection)
                 val = df.apply(lambda x: self._func(row=x,
                                                     session=session,
                                                     connection=db_connection),
                                axis="columns")
-                get_toplevel_window().closeContextConnection.emit(db_connection)
+                get_toplevel_window().closeContextConnection.emit(
+                    db_connection)
                 val.index = df.index
                 return val
 
@@ -1478,7 +1490,6 @@ class ContextColumns(Function):
         val = pd.Series(data=left + right,
                         index=self.left_cols + self.right_cols)
         return val
-
 
 
 class ContextKWIC(ContextColumns):
@@ -1539,6 +1550,7 @@ class ContextString(ContextColumns):
     #def get_description():
         #return "Query functions"
 
+
 #class QueryString(QueryFunction):
     #_name = "coquery_query_string"
 
@@ -1553,4 +1565,3 @@ class ContextString(ContextColumns):
         #print(val)
         #val.index = df.index
         #return val
-
