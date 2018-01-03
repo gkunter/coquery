@@ -1571,7 +1571,6 @@ class TestNGramCorpus(unittest.TestCase):
         options.cfg.query_case_sensitive = False
         options.cfg.experimental = True
         options.get_configuration_type = lambda: SQL_MYSQL
-        options.get_resource = _monkeypatch_get_resource
         options.cfg.no_ngram = False
         self.Session = MockOptions()
         self.Session.Resource = self.resource
