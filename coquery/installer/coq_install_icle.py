@@ -295,7 +295,7 @@ class BuilderClass(BaseCorpusBuilder):
             with codecs.open(filename, "r") as input_file:
                 batch = None
                 for row in input_file:
-                    if batch == None:
+                    if batch is None:
                         """
                         process batch name
                         """
