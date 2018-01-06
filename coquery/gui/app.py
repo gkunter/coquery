@@ -14,7 +14,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import sys
-import importlib
 import os
 import logging
 import pandas as pd
@@ -45,9 +44,7 @@ from coquery.defines import (
     msg_userdata_unavailable, msg_userdata_warning, msg_warning_statistics)
 from coquery.errors import (
     CollocationNoContextError, SQLInitializationError,
-    SQLNoConfigurationError, TokenParseError, UnsupportedQueryItemError,
-    VisualizationInvalidDataError, VisualizationInvalidLayout,
-    VisualizationModuleError, VisualizationNoDataError)
+    SQLNoConfigurationError, TokenParseError, UnsupportedQueryItemError)
 from coquery.unicode import utf8
 from coquery.links import get_by_hash
 
@@ -498,26 +495,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_add_column.triggered.connect(self.add_column)
         self.ui.action_add_function.triggered.connect(self.menu_add_function)
         self.ui.action_find.triggered.connect(lambda: self.ui.widget_find.show())
-
-        self.ui.action_barcode_plot.triggered.connect(lambda: self.visualize_data("barcodeplot"))
-        self.ui.action_beeswarm_plot.triggered.connect(lambda: self.visualize_data("beeswarmplot"))
-
-        self.ui.action_tree_map.triggered.connect(lambda: self.visualize_data("treemap"))
-        self.ui.action_heat_map.triggered.connect(lambda: self.visualize_data("heatmap"))
-        self.ui.action_bubble_chart.triggered.connect(lambda: self.visualize_data("bubbleplot"))
-
-        self.ui.menuDensity_plots.setEnabled(True)
-        self.ui.action_kde_plot.triggered.connect(lambda: self.visualize_data("densityplot"))
-        self.ui.action_ecd_plot.triggered.connect(lambda: self.visualize_data("densityplot", cumulative=True))
-        self.ui.action_scatter_plot.triggered.connect(lambda: self.visualize_data("scatterplot"))
-
-        self.ui.action_barchart_plot.triggered.connect(lambda: self.visualize_data("barplot"))
-        self.ui.action_percentage_bars.triggered.connect(lambda: self.visualize_data("barplot_perc", percentage=True, stacked=True))
-        self.ui.action_stacked_bars.triggered.connect(lambda: self.visualize_data("barplot", percentage=False, stacked=True))
-
-        self.ui.action_percentage_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=True, smooth=True))
-        self.ui.action_stacked_area_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=True, percentage=False, smooth=True))
-        self.ui.action_line_plot.triggered.connect(lambda: self.visualize_data("timeseries", area=False, percentage=False, smooth=True))
 
         self.ui.action_visualization_designer.triggered.connect(self.visualization_designer)
 
@@ -2549,7 +2526,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             alias = {col: self.Session.translate_header(col)
                      for col in df.columns}
 
-            dialog.setup_data(df, alias)
+            dialog.setup_data(df, self.Session, alias)
 
         if not options.use_seaborn:
             errorbox.alert_missing_module("Seaborn", self)
@@ -2576,46 +2553,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         set_data(dialog)
 
         dialog.show()
-
-    def visualize_data(self, name, **kwargs):
-        """
-        Visualize the current results table using the specified visualization
-        module.
-        """
-
-        if not options.use_seaborn:
-            errorbox.alert_missing_module("Seaborn", self)
-            return
-
-        from . import visualization
-
-        # try to import the specified visualization module:
-        name = "coquery.visualizer.{}".format(name)
-        try:
-            module = importlib.import_module(name)
-        except Exception as e:
-            msg = "<code style='color: darkred'>{type}: {code}</code>".format(
-                type=type(e).__name__, code=sys.exc_info()[1])
-            logging.error(msg)
-            QtWidgets.QMessageBox.critical(
-                self, "Visualization error – Coquery",
-                VisualizationModuleError(name, msg).error_message)
-            return
-
-        # try to do the visualization:
-        try:
-            dialog = visualization.VisualizerDialog()
-            dialog.Plot(
-                self.table_model,
-                self.ui.data_preview,
-                module.Visualizer,
-                parent=self,
-                **kwargs)
-
-        except (VisualizationNoDataError, VisualizationInvalidLayout, VisualizationInvalidDataError) as e:
-            QtWidgets.QMessageBox.critical(
-                self, "Visualization error – Coquery",
-                str(e))
 
     def save_configuration(self):
         self.getGuiValues()
