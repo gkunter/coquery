@@ -318,7 +318,7 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
         wrds_counter = 0
         txt_counter = 0
         diff = [x for x in diff if not(x.startswith("?")) and x.strip()]
-        if len(diff) <> len(txt):
+        if len(diff) != len(txt):
             print(filename)
             for i, x in enumerate(diff):
                 fields = x.split()
@@ -347,7 +347,7 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
         txt = [self.normalize(x) for x in self._word_list]
         
         diff = list(difflib.ndiff(wrds, txt))
-        if len(diff) <> len(txt):
+        if len(diff) != len(txt):
             print(filename)
             for i, x in enumerate(diff):
                 print(x)
