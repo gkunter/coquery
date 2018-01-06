@@ -281,8 +281,8 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         return val
 
     @staticmethod
-    def manage(df, raw, preset, columns=[], parent=None):
-        dialog = ColumnPropertiesDialog(df, raw, preset, columns,
-                                        parent=parent)
+    def manage(df, raw, preset, columns=None, parent=None):
+        dialog = ColumnPropertiesDialog(
+            df, raw, preset, columns or [], parent=parent)
         dialog.setVisible(True)
         return dialog.exec_()

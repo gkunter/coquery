@@ -2,7 +2,7 @@
 """
 orphanageddatabases.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -28,8 +28,9 @@ from .ui.orphanagedDatabasesUi import Ui_OrphanagedDatabases
 
 
 class OrphanagedDatabasesDialog(QtWidgets.QDialog):
-    def __init__(self, orphans=[], parent=None):
+    def __init__(self, orphans=None, parent=None):
         super(OrphanagedDatabasesDialog, self).__init__(parent)
+        orphans = orphans or []
         self._links = {}
 
         self.ui = Ui_OrphanagedDatabases()

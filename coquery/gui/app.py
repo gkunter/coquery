@@ -2,7 +2,7 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -1192,8 +1192,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     ### action methods
     ###
 
-    def column_properties(self, columns=[]):
+    def column_properties(self, columns=None):
         from .columnproperties import ColumnPropertiesDialog
+
+        columns = columns or []
         manager = self.Session.get_manager()
 
         #FIXME: the whole way column properties are handled needs to be
@@ -2034,10 +2036,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         logging.info("Done")
         print("run_query: done")
 
-    def get_output_column_menu(self, point=None, selection=[]):
+    def get_output_column_menu(self, point=None, selection=None):
+        item = None
         if point:
             item = self.ui.options_tree.itemAt(point)
-        else:
+        elif selection:
             item = selection[0]
 
         if not item:
@@ -2075,7 +2078,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             "{}_{}".format(table, feature),
             db_name, uniques=uniques, parent=self)
 
-    def get_column_submenu(self, selection=[], point=None, hidden=False):
+    def get_column_submenu(self, selection=None, point=None, hidden=False):
         """
         Create a submenu for one or more columns.
 
@@ -2099,7 +2102,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             True if a header from the hidden column panel is clicked, or
             False if a header from the data table is clicked.
         """
-
+        selection = selection or []
         if point:
             if hidden:
                 model = self.ui.hidden_columns

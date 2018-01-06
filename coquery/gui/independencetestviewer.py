@@ -93,7 +93,7 @@ class IndependenceTestViewer(QtWidgets.QDialog):
     Odds ratio $OR = {odds_ratio}$, (95~\\% confidence interval: {odds_ci_lower} to {odds_ci_upper}, $z = {odds_z}, p {odds_op} {p_odds}$). {odds_explain}.
     """
 
-    def __init__(self, data=dict(), parent=None, icon=None):
+    def __init__(self, data, parent=None, icon=None):
         def estimate_strength(phi):
             """
             Apply standard interpretation of effect sizes (Cohen 1988, 1992)

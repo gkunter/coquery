@@ -46,10 +46,10 @@ class CoqColorItem(QtWidgets.QListWidgetItem):
             self.setForeground(QtGui.QBrush(QtGui.QColor("white")))
 
 class FigureOptions(QtWidgets.QDialog):
-    def __init__(self, default=dict(), parent=None, icon=None):
+    def __init__(self, default=None, parent=None, icon=None):
         super(FigureOptions, self).__init__(parent)
 
-        self.options = default
+        self.options = default or {}
         self.parent = parent
         self.ui = Ui_FigureOptions()
         self.ui.setupUi(self)
@@ -330,8 +330,9 @@ class FigureOptions(QtWidgets.QDialog):
         return
 
     @staticmethod
-    def manage(default=dict(), parent=None, icon=None):
-        dialog = FigureOptions(default=dict(default), parent=parent, icon=icon)
+    def manage(default=None, parent=None, icon=None):
+        dialog = FigureOptions(
+            default=default or {}, parent=parent, icon=icon)
         result = dialog.exec_()
         if result == QtWidgets.QDialog.Accepted:
             return dialog.options

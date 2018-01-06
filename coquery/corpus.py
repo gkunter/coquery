@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -311,7 +311,7 @@ class BaseResource(CoqObject):
         return None
 
     @classmethod
-    def get_table_structure(cls, rc_table, rc_feature_list=[]):
+    def get_table_structure(cls, rc_table, rc_feature_list=None):
         """
         Return a table structure for the table 'rc_table'.
 
@@ -326,6 +326,8 @@ class BaseResource(CoqObject):
                             resource features from argument 'rc_feature_list'
                             that are contained in this table
         """
+        rc_feature_list = rc_feature_list or []
+
         D = {}
         D["parent"] = None
         rc_tab = rc_table.split("_")[0]
@@ -1220,7 +1222,7 @@ class SQLResource(BaseResource):
         return table_string
 
     @classmethod
-    def get_feature_joins(cls, n, selected, conditions={}, first_item=1):
+    def get_feature_joins(cls, n, selected, conditions=None, first_item=1):
         """
         Returns a list of table joins that are needed to satisfy the given
         list of selected features.
@@ -1266,6 +1268,7 @@ class SQLResource(BaseResource):
                 where_list += l2
             return table_list, where_list
 
+        conditions = conditions or {}
         table_list = []
         where_list = []
 
@@ -2047,7 +2050,7 @@ class CorpusClass(object):
                     l.append((table_name, D))
         return l
 
-    def get_corpus_size(self, filters=[]):
+    def get_corpus_size(self, filters=None):
         """
         Return the number of tokens in the corpus.
 
@@ -2064,6 +2067,8 @@ class CorpusClass(object):
         size : int
             The number of tokens in the corpus, or in the filtered corpus.
         """
+        filters = filters or []
+
         if not filters and getattr(self.resource, "number_of_tokens", None):
             return self.resource.number_of_tokens
 
@@ -2152,7 +2157,7 @@ class CorpusClass(object):
         return self._subcorpus_size_cache[tup]
 
     @staticmethod
-    def reverse_substitution(column, value, subst={}):
+    def reverse_substitution(column, value, subst=None):
         """
         Return a list of values that could have been the raw value before
         substitution.
@@ -2161,12 +2166,13 @@ class CorpusClass(object):
         column. It returns a list of all values that could have been mapped
         onto the given value.
         """
+        subst = subst or {}
         l = [key for key, val in subst.get(column, {}).items()
              if value == val]
         l.append(value)
         return l
 
-    def get_subcorpus_range(self, row=[]):
+    def get_subcorpus_range(self, row=None):
         """
         Return the lowest and the highest corpus id in the subcorpus specified
         by the values in `row`.
@@ -2182,6 +2188,7 @@ class CorpusClass(object):
             The lowest and the highest corpus id that share the values in
             `row'.
         """
+        row = row or pd.Series()
         cache_key = (tuple(row.index), tuple(row.values))
         if cache_key in self._corpus_range_cache:
             return self._corpus_range_cache[cache_key]
@@ -2307,9 +2314,10 @@ class CorpusClass(object):
         except KeyError:
             return s
 
-    def tag_to_html(self, tag, attributes={}):
+    def tag_to_html(self, tag, attributes=None):
         """ Translate a tag to a corresponding HTML/QHTML tag by checking
         the tag_translate dictionary."""
+        attributes = attributes or {}
         try:
             if tag == "hi":
                 if attributes.get("rend") == "it":
