@@ -846,7 +846,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         if options.cfg.experimental:
             self.plot_thread = classes.CoqThread(
-                self.run_plot, **values, parent=self)
+                self.run_plot, parent=self, **values)
             self.plot_thread.taskStarted.connect(self.start_plot)
             self.plot_thread.taskFinished.connect(self.finalize_plot)
             self.plot_thread.taskException.connect(self.exception_plot)
