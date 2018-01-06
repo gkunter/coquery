@@ -25,6 +25,8 @@ Visualizations
 * Hide Visualizations menu
 * Bring time series visualization to the visualization designer
 * Add button to refresh the data frame used by the visualization designer
+* Optionally hide figure types that are not available for current variables
+* Make several figure types more customizable
 
 Data management
 * Allow sampling: show only a random number of matches from the results table
@@ -45,9 +47,12 @@ EXPERIMENTAL features
 * Experimental mode can be activated in the Settings dialog
 * Support for N-gram lookup tables
 
-Corpus API changes
+API changes
 * Disposed of obsolete LexiconClass
 * Table.get_create_string() expects list of existing tables as second argument
+* Visualization modules now use 'provides_visualization' list to inform the
+  visualization designer of the classes they provide
+* Visualization classes provide a 'name' and 'icon' property
 
 0.10.0 May 23, 2017
 
