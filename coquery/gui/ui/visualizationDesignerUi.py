@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'visualizationDesigner.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -219,6 +219,10 @@ class Ui_VisualizationDesigner(object):
         self.list_figures.setViewMode(QtWidgets.QListView.IconMode)
         self.list_figures.setObjectName("list_figures")
         self.verticalLayout_3.addWidget(self.list_figures)
+        self.check_only_available = QtWidgets.QCheckBox(self.group_figures)
+        self.check_only_available.setChecked(True)
+        self.check_only_available.setObjectName("check_only_available")
+        self.verticalLayout_3.addWidget(self.check_only_available)
         self.horizontalLayout.addWidget(self.group_figures)
         self.horizontalLayout.setStretch(0, 1)
         self.horizontalLayout.setStretch(1, 2)
@@ -586,6 +590,7 @@ class Ui_VisualizationDesigner(object):
         self.check_wrap_layout.setText(_translate("VisualizationDesigner", "&Wrap columns"))
         self.group_custom.setTitle(_translate("VisualizationDesigner", "Figure options"))
         self.group_figures.setTitle(_translate("VisualizationDesigner", "&Figure types"))
+        self.check_only_available.setText(_translate("VisualizationDesigner", "Hide &unavailable"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_layout), _translate("VisualizationDesigner", "Design"))
         self.label_16.setText(_translate("VisualizationDesigner", "&Figure font:"))
         self.group_main.setTitle(_translate("VisualizationDesigner", "Main"))

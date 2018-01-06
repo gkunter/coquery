@@ -433,6 +433,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="check_only_available">
+            <property name="text">
+             <string>Hide &amp;unavailable</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
