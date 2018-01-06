@@ -2,7 +2,7 @@
 """
 sound.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -33,7 +33,7 @@ ERROR = "Could not load audio module '{}'."
 
 
 def _warn(S):
-    logging.warn(S)
+    logging.warning(S)
     print(S)
 
 

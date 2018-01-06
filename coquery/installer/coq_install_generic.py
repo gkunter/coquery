@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -169,7 +169,7 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in PDF file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
+                logging.warning("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
                     file_name))
                 return ""
 
@@ -181,7 +181,7 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in MS Word file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
+                logging.warning("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
                     file_name))
                 return ""
 
@@ -193,7 +193,7 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
+                logging.warning("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
                     file_name))
                 return ""
 
@@ -205,18 +205,18 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in HTML file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
+                logging.warning("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
                     file_name))
                 return ""
         elif file_type == FT_PLAIN:
             raw_text = plain_to_str(file_name)
         else:
             # Unsupported format, e.g. BINARY.
-            logging.warn("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
+            logging.warning("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
             return ""
 
         if raw_text == "":
-            logging.warn("No text could be retrieved from {} file {}".format(file_type, file_name))
+            logging.warning("No text could be retrieved from {} file {}".format(file_type, file_name))
         else:
             logging.info("Read {} file {}, {} characters".format(
                 file_type, file_name, len(raw_text)))
@@ -253,7 +253,7 @@ class BuilderClass(BaseCorpusBuilder):
             df = self.arguments.metaoptions.read_file(self.arguments.metadata)
         for x in capt:
             s = "File {} – {}".format(self.arguments.path, x)
-            logging.warn(s)
+            logging.warning(s)
             print(s)
         meta_columns = []
         for i, col in enumerate(df.columns):
@@ -380,7 +380,7 @@ class BuilderClass(BaseCorpusBuilder):
         if not self.has_metadata(basename) and self.arguments.use_meta:
             s = "{} not in meta data.".format(basename)
             print(s)
-            logging.warn(s)
+            logging.warning(s)
 
         raw_text = self._read_text(file_name)
 

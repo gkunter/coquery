@@ -2,7 +2,7 @@
 """
 connections.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017, 2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -56,7 +56,7 @@ class Connection(CoqObject):
                      "The corpus is not available for queries.").format(
                          corpus_name, str(e))
                 print(s)
-                logging.warn(s)
+                logging.warning(s)
             else:
                 try:
                     tup = (module.Resource, module.Corpus, module_name)
@@ -64,7 +64,7 @@ class Connection(CoqObject):
                 except AttributeError as e:
                     full_path = module_name
                     s = "{} does not appear to be a valid corpus module."
-                    logging.warn(s.format(full_path))
+                    logging.warning(s.format(full_path))
                     print(s.format(full_path))
 
     def resources(self):

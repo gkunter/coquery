@@ -2,7 +2,7 @@
 """
 queries.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -160,7 +160,7 @@ class TokenQuery(object):
                             except Exception:
                                 error = ("Exception raised when executing "
                                          "{}").format(S)
-                                logging.warn(error)
+                                logging.warning(error)
 
                     try:
                         results = (connection

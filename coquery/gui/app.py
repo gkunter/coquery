@@ -3071,7 +3071,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     parent = node.parent()
                 except AttributeError:
                     print("Warning: Node has no parent")
-                    logging.warn("Warning: Node has no parent")
+                    logging.warning("Warning: Node has no parent")
                     return checked
                 if parent and parent.isLinked():
                     checked.append((parent.link, node.rc_feature))

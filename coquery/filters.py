@@ -2,7 +2,7 @@
 """
 link.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -212,7 +212,7 @@ class Filter(CoqObject):
             except SyntaxError as e:
                 S = "Could not apply filter {}: {}".format(self, str(e))
                 print(S)
-                logging.warn(S)
+                logging.warning(S)
                 return df
             except TypeError as e:
                 S = "Could not apply filter {}: are there missing values in your data?"

@@ -2,7 +2,7 @@
 """
 sqlwrap.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -358,7 +358,7 @@ class SqlDB(object):
         with capt:
             df = pd.read_csv(file_name, engine="c", **kwargs)
         for x in capt:
-            logging.warn("File {} – {}".format(file_name, x))
+            logging.warning("File {} – {}".format(file_name, x))
             print("File {} – {}".format(file_name, x))
 
         if fillna is not None:

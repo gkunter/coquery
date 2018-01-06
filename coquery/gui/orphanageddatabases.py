@@ -83,7 +83,7 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
         count = 0
         total = 0
         for file_path, size in orphans:
-            logging.warn("Removed {}".format(file_path))
+            logging.warning("Removed {}".format(file_path))
             print("rm {}".format(file_path))
             os.remove(file_path)
             count += 1

@@ -2,7 +2,7 @@
 """
 corpusbuilder.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -1866,8 +1866,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
             except Exception as e:
                 for x in get_error_repr(sys.exc_info()):
                     print(x)
-                    logging.warn(x)
-                logging.warn(str(e))
+                    logging.warning(x)
+                logging.warning(str(e))
                 print(str(e))
                 self.remove_build()
                 self.DB.connection.close()

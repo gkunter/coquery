@@ -2286,7 +2286,7 @@ class CorpusClass(object):
             try:
                 df = pd.read_sql(S, engine)
             except Exception as e:
-                logging.warn(str(e))
+                logging.warning(str(e))
                 print(str(e))
             else:
                 if freq is None:

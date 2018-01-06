@@ -2,7 +2,7 @@
 """
 textgrids.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -247,7 +247,7 @@ class TextgridWriter(object):
                         try:
                             tier.add_interval(interval)
                         except ValueError as e:
-                            logger.warn("{}: {} ({})".format(
+                            logger.warning("{}: {} ({})".format(
                                 self.session.translate_header(tier.name),
                                 e, grid_id))
             if interval:

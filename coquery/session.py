@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -223,7 +223,7 @@ class Session(object):
         try:
             for i, current_query in enumerate(self.query_list):
                 if current_query.query_string in _queried and not to_file:
-                    logging.warn("Duplicate query string detected: {}".format(
+                    logging.warning("Duplicate query string detected: {}".format(
                         current_query.query_string))
                     continue
                 _queried.append(current_query.query_string)
@@ -318,7 +318,7 @@ class Session(object):
                                                 .encode("utf-8"))
                     except Exception as e:
                         print(e)
-                        logging.warn(e)
+                        logging.warning(e)
 
         ## FIXME: reimplement row visibility
         #self.reset_row_visibility(queries.TokenQuery, self.data_table)
