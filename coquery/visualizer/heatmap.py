@@ -17,6 +17,10 @@ from coquery.gui.pyqt_compat import QtWidgets
 
 
 def _annotate_heatmap(self, ax, mesh):
+    """
+    This function monkey-patches an issue with annotations in heatmaps in
+    seaborn versions earlier than 0.7.0.
+    """
     import colorsys
 
     """Add textual labels with the value in each cell."""
