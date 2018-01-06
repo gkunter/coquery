@@ -114,7 +114,9 @@ class TextgridWriter(object):
             rc_feat = "{}_{}".format(tab, feature)
             if hashed is not None:
                 link, res = get_by_hash(hashed)
-                tier_name = "{}.{}_{}".format(res.db_name, link.rc_to)
+                # FIXME: the tier name for external fields is wrong!
+                tier_name = "{}.{}_{}".format(
+                    res.db_name, link.rc_to, link.rc_to)
             else:
                 tier_name = rc_feat
             if (rc_feat not in [start_label, end_label] and
