@@ -578,6 +578,16 @@ msg_visualization_error = """
 <p><code>{}</code></p>
 <p>The visualization may be incorrect. Please contact the Coquery maintainers.</p>
 """
+msg_visualization_module_error = """
+<p><b>Could not the load visualization module '{module}'</b></p>
+<p>The following error occurred when attempting to open the visualization
+module '{module}':</p>
+<p><span style='color: darkred'><code>{msg}</code></span></p>
+If you have downloaded this module from an external source, you may want to
+see if an updated version is available. Otherwise, either contact the author
+of the module, or report this error on the Coquery bug tracker.</p>
+"""
+
 msg_no_lemma_information = """
 <p><b>The current resource does not provide lemma information.</b></p>
 <p>Your last query makes use of the lemma search syntax by enclosing query
