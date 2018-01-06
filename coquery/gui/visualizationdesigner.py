@@ -15,11 +15,12 @@ import imp
 import logging
 import sys
 import os
+import glob
 
 from .. import options
-from coquery.errors import VisualizationModuleError
 from coquery.unicode import utf8
-from coquery.defines import msg_visualization_error
+from coquery.defines import (msg_visualization_error,
+                             msg_visualization_module_error)
 
 from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
 
@@ -42,27 +43,6 @@ mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
 
 app = get_toplevel_window()
-
-visualizer_mapping = (
-    # Entry order: (Display name, icon name, module, class name)
-    ("Beeswarm plot", "Beeswarm_plot", "beeswarmplot", "BeeswarmPlot"),
-    ("Barcode plot", "Barcode_plot", "barcodeplot", "BarcodePlot"),
-    ("Heatbar plot", "Barcode_plot", "barcodeplot", "HeatbarPlot"),
-    ("Barplot", "Barchart", "barplot", "BarPlot"),
-    ("Stacked bars", "Barchart_stacked", "barplot", "StackedBars"),
-    ("Percentage bars", "Barchart_percent", "barplot", "PercentBars"),
-    ("Line plot", "Lines", "linechart", "LineChart"),
-    ("Change over time (lines)", "Lines", "timeseries", "TimeSeries"),
-    ("Change over time (stacked)", "Areas_stacked", "timeseries", "StackedArea"),
-    ("Change over time (percent)", "Areas_percent", "timeseries", "PercentageArea"),
-    ("Heat map", "Heatmap", "heatmap", "Heatmap"),
-    ("Box-Whisker plot", "Boxplot", "boxplot", "BoxPlot"),
-    ("Violin plot", "Violinplot", "boxplot", "ViolinPlot"),
-    ("Kernel density", "Normal Distribution Histogram", "densityplot", "DensityPlot"),
-    ("Cumulative distribution", "Positive Dynamic", "densityplot", "CumulativePlot"),
-    ("Scatterplot", "Scatterplot", "scatterplot", "ScatterPlot"),
-    ("Regression plot", "Regressionplot", "scatterplot", "RegressionPlot"),
-    )
 
 
 class MyTool(SubplotToolQt):
@@ -114,7 +94,7 @@ class NavigationToolbar(NavigationToolbar2QT):
 
 
 class VisualizationDesigner(QtWidgets.QDialog):
-    moduleLoaded = QtCore.Signal(str, str)
+    moduleLoaded = QtCore.Signal(str, str, object)
     allLoaded = QtCore.Signal()
     dataRequested = QtCore.Signal()
     visualizers = {}
@@ -135,6 +115,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.label_38.hide()
         #self.ui.spin_number.hide()
         #self.ui.label_37.hide()
+
+        self.df = None
 
         self.populate_figure_types()
 
@@ -181,12 +163,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
                              row=len(self.df))
         return label
 
-    def setup_data(self, df, alias=None):
+    def setup_data(self, df, session, alias=None):
         self.blockSignals(True)
 
         self.ui.table_categorical.clear()
         self.ui.table_numerical.clear()
         self.df = df
+        self.session = session
         self.alias = alias or {}
         for i, x in enumerate(df.columns):
             if self.df[x].dtype == bool:
@@ -224,7 +207,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_clear_columns.setIcon(get_icon("Clear Symbol"))
         self.ui.button_clear_rows.setIcon(get_icon("Clear Symbol"))
 
-    def add_figure_type(self, label, icon):
+    def add_figure_type(self, label, icon, vis_class):
+        self.figure_types.append((label, icon, vis_class))
+
+    def get_figure_item(self, label, icon, vis_class):
         item = QtWidgets.QListWidgetItem(label)
         try:
             item.setIcon(get_icon(icon, small_n_flat=False))
@@ -236,30 +222,30 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         item.setSizeHint(size)
         item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
-        self.ui.list_figures.addItem(item)
+        item.setData(QtCore.Qt.UserRole, vis_class)
+        return item
 
     def load_figure_types(self):
-        for x in visualizer_mapping:
-            if len(x) == 4:
-                label, icon, module_name, vis_class = x
-            else:
-                label, icon, module_name = x
-                vis_class = "Visualizer"
-
-            if label not in VisualizationDesigner.visualizers:
-                module = get_visualizer_module(module_name)
-                if module:
-                    visualizer = getattr(module, vis_class)
-                    VisualizationDesigner.visualizers[label] = visualizer
-            self.moduleLoaded.emit(label, icon)
+        for module_name in find_visualizer_modules():
+            module = get_visualizer_module(module_name)
+            visualizations = getattr(module, "provided_visualizations", [])
+            for vis_class in visualizations:
+                name = getattr(vis_class, "name",
+                               "Unnamed ({})".format(module_name))
+                icon = getattr(vis_class, "icon", "Grid")
+                VisualizationDesigner.visualizers[name] = vis_class
+                self.moduleLoaded.emit(name, icon, vis_class)
         self.allLoaded.emit()
 
     def populate_figure_types(self):
+        self.figure_types = []
         self.moduleLoaded.connect(self.add_figure_type)
         self.allLoaded.connect(self.check_figure_types)
-        self.figure_loader = QtCore.QThread(self)
-        self.figure_loader.run = self.load_figure_types
-        self.figure_loader.start()
+        #self.figure_loader = QtCore.QThread(self)
+        #self.figure_loader.run = self.load_figure_types
+        #self.figure_loader.start()
+        self.load_figure_types()
+        self.allLoaded.emit()
 
     def populate_variable_lists(self):
         d = self.get_gui_values()
@@ -400,6 +386,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.tray_data_x.featureCleared.connect(self.check_figure_types)
         self.ui.tray_data_y.featureCleared.connect(self.check_figure_types)
         self.ui.tray_data_z.featureCleared.connect(self.check_figure_types)
+
+        self.ui.check_hide_unavailable.toggled.connect(self.check_figure_types)
 
         # Hook up checks for clear button enable state.
         # The enable state of clear buttons is checked if the feature in the
@@ -567,31 +555,46 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 self.ui.tray_rows.clear()
 
     def check_figure_types(self):
-        last_item = self.ui.list_figures.currentItem()
-        restored_position = None
+        if self.df is None:
+            return
+
+        current_item = self.ui.list_figures.currentItem()
+        if current_item:
+            last_class = current_item.data(QtCore.Qt.UserRole)
+        else:
+            last_class = None
 
         data_x = self.ui.tray_data_x.data()
         data_y = self.ui.tray_data_y.data()
         data_z = self.ui.tray_data_z.data()
 
+        hide_unavailable = self.ui.check_hide_unavailable.isChecked()
+
         self.ui.list_figures.blockSignals(True)
-        for i in range(self.ui.list_figures.count()):
-            item = self.ui.list_figures.takeItem(i)
+
+        self.ui.list_figures.clear()
+
+        for label, icon, vis_class in self.figure_types:
+            item = self.get_figure_item(label, icon, vis_class)
             visualizer = VisualizationDesigner.visualizers[item.text()]
             if (visualizer.validate_data(data_x, data_y, data_z,
                                          self.df, self.session) and
                     not ((data_x or data_y) and (data_x == data_y))):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
-                if last_item and item.text() == last_item.text():
-                    restored_position = i
+                self.ui.list_figures.addItem(item)
             else:
                 item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEnabled)
-            self.ui.list_figures.insertItem(i, item)
-        if restored_position is not None:
-            self.ui.list_figures.setCurrentItem(
-                self.ui.list_figures.item(restored_position))
-        else:
-            self.ui.list_figures.setCurrentItem(None)
+                if not hide_unavailable:
+                    self.ui.list_figures.addItem(item)
+
+        # try to restore last position:
+        for i in range(self.ui.list_figures.count()):
+            current_item = self.ui.list_figures.item(i)
+            vis_class = current_item.data(QtCore.Qt.UserRole)
+            if vis_class == last_class:
+                self.ui.list_figures.setCurrentItem(current_item)
+                break
+
         self.ui.list_figures.blockSignals(False)
 
     def show_palette(self):
@@ -648,6 +651,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         val = options.settings.value("visualizationdesigner_show_legend", "true")
         val = val == "true"
         self.ui.check_show_legend.setChecked(val)
+
+        val = options.settings.value("visualizationdesigner_hide_unavailable", "true")
+        val = val == "true"
+        self.ui.check_hide_unavailable.setChecked(val)
 
         family = options.settings.value(
             "visualizationdesigner_figure_font", None)
@@ -979,6 +986,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
         val = "true" if self.ui.check_show_legend.isChecked() else "false"
         options.settings.setValue("visualizationdesigner_show_legend", val)
 
+        val = "true" if self.ui.check_hide_unavailable.isChecked() else "false"
+        options.settings.setValue("visualizationdesigner_hide_unavailable", val)
+
         options.settings.setValue("visualizationdesigner_legend_columns",
                                   self.legend_columns)
 
@@ -1013,12 +1023,25 @@ def get_visualizer_module(name):
         module = imp.load_module(name, *find)
         return module
     except Exception as e:
-        print(e)
-        msg = "<code style='color: darkred'>{type}: {code}</code>".format(
-            type=type(e).__name__, code=sys.exc_info()[1])
+        msg = "{type} in line {line}: {code}".format(
+            type=type(e).__name__,
+            code=sys.exc_info()[1],
+            line=sys.exc_info()[2].tb_lineno)
         logging.error(msg)
-        QtWidgets.QMessageBox.critical(
-            None, "Visualization error – Coquery",
-            VisualizationModuleError(name, msg).error_message)
+        s = msg_visualization_module_error.format(
+                module=name,
+                msg=msg)
+        QtWidgets.QMessageBox.critical(None, "Visualization error – Coquery", s)
         return None
+
+
+def find_visualizer_modules():
+    """
+    Finds the list of potential visualization modules.
+    """
+    visualizer_path = os.path.join(options.cfg.base_path, "visualizer")
+
+    l = [os.path.splitext(os.path.basename(file_name))[0]
+         for file_name in glob.glob(os.path.join(visualizer_path, "*.py"))]
+    return l
 
