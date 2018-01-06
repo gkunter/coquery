@@ -232,8 +232,7 @@ class TestSessionMethods(unittest.TestCase):
 
         self.session.Resource = TestResource(None, self.corpus)
         self.manager = Manager()
-        options.cfg.managers = {}
-        options.cfg.managers["MockResource"] = {}
+        options.cfg.managers = {"MockResource": {}}
         options.cfg.managers["MockResource"][QUERY_MODE_TOKENS] = self.manager
 
     def test_translate_header_multicolumn_functions(self):

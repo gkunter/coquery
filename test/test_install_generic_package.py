@@ -46,9 +46,8 @@ class TestGenericPackage(unittest.TestCase):
                                 host="127.0.0.1",
                                 port=3306,
                                 user="coquery", password="coquery")
-        options.cfg.connections = {}
-        options.cfg.connections[DEFAULT_CONFIGURATIION] = default
-        options.cfg.conenctions[SQL_MYSQL] = mysql
+        options.cfg.connections = {DEFAULT_CONFIGURATIION: default,
+                                   SQL_MYSQL: mysql}
 
         options.cfg.database_path = os.path.expanduser("~/tmp")
         options.cfg.corpora_path = os.path.expanduser("~/tmp")

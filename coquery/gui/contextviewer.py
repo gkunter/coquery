@@ -2,7 +2,7 @@
 """
 contextview.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -269,15 +269,13 @@ class ContextView(QtWidgets.QWidget):
 
         weight = int(font.weight()) * 10
 
-        styles = []
-
-        styles.append('line-height: {}px'.format(font.pointSize() * 1.85))
-        styles.append('font-family: "{}", Times, Serif'.format(
-            font.family()))
-        styles.append("font-size: {}px".format(font.pointSize() * 1.25))
-        styles.append("font-style: {}".format(style))
-        styles.append("font-weight: {}".format(weight))
-        styles.append("font-strech: {}".format(stretch))
+        styles = ['line-height: {}px'.format(font.pointSize() * 1.85),
+                  'font-family: "{}", Times, Serif'.format(
+                      font.family()),
+                  "font-size: {}px".format(font.pointSize() * 1.25),
+                  "font-style: {}".format(style),
+                  "font-weight: {}".format(weight),
+                  "font-strech: {}".format(stretch)]
 
         text = self.context["text"]
 

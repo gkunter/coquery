@@ -3,7 +3,7 @@
 """
 coq_install_obc2.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017, 2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -582,18 +582,14 @@ class BuilderClass(TEICorpusBuilder):
                 continue
 
             self._source_id = self._source_id + 1
-            d_trial = {}
-            d_trial[self.source_offence] = ""
-            d_trial[self.source_verdict] = ""
-            d_trial[self.source_punishment] = ""
-            d_trial[self.source_offencesubtype] = ""
-            d_trial[self.source_verdictsubtype] = ""
-            d_trial[self.source_punishmentsubtype] = ""
-            d_trial[self.source_label] = trial.attrib["id"]
-
-            d_trial[self.source_type] = trial.attrib["type"]
-            d_trial[self.source_year] = year
-            d_trial[self.source_decade] = decade
+            d_trial = {self.source_offence: "", self.source_verdict: "",
+                       self.source_punishment: "",
+                       self.source_offencesubtype: "",
+                       self.source_verdictsubtype: "",
+                       self.source_punishmentsubtype: "",
+                       self.source_label: trial.attrib["id"],
+                       self.source_type: trial.attrib["type"],
+                       self.source_year: year, self.source_decade: decade}
 
             for join in trial.findall("./join"):
                 if join.attrib["result"] == "criminalCharge":

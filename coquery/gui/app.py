@@ -135,7 +135,7 @@ class keyFilter(QtCore.QObject):
     def __init__(self, k, *args, **kwargs):
         super(keyFilter, self).__init__(*args, **kwargs)
         if not hasattr(k, "__iter__"):
-            k = set([k])
+            k = {k}
         self.keys = k
 
     def eventFilter(self, obj, event):
@@ -811,12 +811,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.spin_collo_left.setEnabled(is_collocations)
         self.ui.spin_collo_right.setEnabled(is_collocations)
 
-        allow_sampling = selected in set([QUERY_MODE_TOKENS,
-                                          QUERY_MODE_TYPES,
-                                          QUERY_MODE_FREQUENCIES])
+        allow_sampling = selected in {QUERY_MODE_TOKENS,
+                                      QUERY_MODE_TYPES,
+                                      QUERY_MODE_FREQUENCIES}
         self.ui.check_sample_matches.setEnabled(allow_sampling)
         self.ui.spin_sample_size.setEnabled(allow_sampling)
-
 
     def toggle_limit_matches(self):
         options.cfg.limit_matches = not options.cfg.limit_matches
@@ -1564,7 +1563,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         if options.cfg.first_run:
             if self._first_corpus:
-                self.selected_features = set(["word_label"])
+                self.selected_features = {"word_label"}
                 self._first_corpus = False
 
         if self.ui.combo_corpus.count():

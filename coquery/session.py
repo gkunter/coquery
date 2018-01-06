@@ -290,12 +290,9 @@ class Session(object):
                     df = manager.process(df, session=self)
                     self.save_dataframe(df, append=True)
 
-                s_list = []
-                s_list.append(
-                    "{:.3f} seconds".format(time.time() - start_time))
-                s_list.append(
-                    "{} match{}".format(raw_length,
-                                        "es" if raw_length != 1 else ""))
+                s_list = ["{:.3f} seconds".format(time.time() - start_time),
+                          "{} match{}".format(raw_length,
+                                              "es" if raw_length != 1 else "")]
                 if len(df) != raw_length:
                     s_list.append(
                         "{} output_row{}".format(

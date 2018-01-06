@@ -1323,8 +1323,7 @@ class TestSuperFlat(unittest.TestCase):
                         self.resource.name, "corpus_word",
                         self.external.name, "word_label",
                         join="LEFT JOIN")
-        options.cfg.table_links = {}
-        options.cfg.table_links[DEFAULT_CONFIGURATION] = [self.link]
+        options.cfg.table_links = {DEFAULT_CONFIGURATION: [self.link]}
 
         default = MockConnection(name=DEFAULT_CONFIGURATION,
                                  host="127.0.0.1",
@@ -1483,8 +1482,7 @@ class TestCorpusWithExternal(unittest.TestCase):
                         self.resource.name, "word_label",
                         self.external.name, "word_label",
                         join="LEFT JOIN")
-        options.cfg.table_links = {}
-        options.cfg.table_links[DEFAULT_CONFIGURATION] = [self.link]
+        options.cfg.table_links = {DEFAULT_CONFIGURATION: [self.link]}
 
     def test_is_lexical(self):
         self.assertTrue(self.resource.is_lexical("word_label"))

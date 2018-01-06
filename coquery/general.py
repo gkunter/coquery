@@ -2,7 +2,7 @@
 """
 general.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -58,18 +58,15 @@ def collapse_words(word_list):
 
         if s.startswith("<span") or s.startswith("</span"):
             return False
-        if s in set(["</b>", "<b>", "</i>", "<i>", "</u>", "<u>",
-                     "</s>", "<s>", "<em>", "</em>"]):
+        if s in {"</b>", "<b>", "</i>", "<i>", "</u>", "<u>", "</s>", "<s>",
+                 "<em>", "</em>"}:
             return False
         return s.startswith("<") and s.endswith(">") and len(s) > 2
 
     token_list = []
     context_list = [x.strip() if hasattr(x, "strip") else x
                     for x in word_list]
-    open_quote = {}
-    open_quote['"'] = False
-    open_quote["'"] = False
-    open_quote["``"] = False
+    open_quote = {'"': False, "'": False, "``": False}
     last_token = ""
     for current_token in context_list:
         if (current_token and
@@ -150,7 +147,7 @@ def get_home_dir(create=True):
             basepath = os.environ["XDG_CONFIG_HOME"]
         except KeyError:
             basepath = os.path.expanduser("~/.config")
-    elif sys.platform in set(("win32", "cygwin")):
+    elif sys.platform in {"win32", "cygwin"}:
         try:
             basepath = os.environ["APPDATA"]
         except KeyError:

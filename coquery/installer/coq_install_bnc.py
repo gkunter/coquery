@@ -1020,7 +1020,7 @@ class BuilderClass(BaseCorpusBuilder):
         tag = element.tag
         # <u> is an utterance. This element has a who attribute that
         # specifies the speaker of the utterance.
-        if tag in set(("w", "c")):
+        if tag in {"w", "c"}:
             if element.text:
                 word_text = element.text.strip()
             else:

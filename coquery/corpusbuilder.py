@@ -746,17 +746,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 except ValueError:
                     continue
 
-                # create a dictionary containing the word label, plus
-                # additional labels if provided by the lexicon:
-                word_dict = {}
-                word_dict[self.word_label] = word
-                #if "LEX_LEMMA" in self.lexicon_features:
-                    #word_dict[self.word_lemma_id] = self.get_lemma_id(word)
-                #if "LEX_POS" in self.lexicon_features:
-                    #word_dict[self.word_pos] = self.get_pos_id(word)
-                #if "LEX_PHON" in self.lexicon_features:
-                    #word_dict[self.word_transcript_id] = self.get_transcript_id(word)
-
+                word_dict = {self.word_label: word}
                 # get a word id for the current word:
                 word_id = self.table(self.word_table).get_or_insert(word_dict)
 

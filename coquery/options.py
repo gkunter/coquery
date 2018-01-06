@@ -584,8 +584,8 @@ class Options(object):
                         connection_dict[number][variable] = int(value)
                     except ValueError:
                         continue
-                elif variable in set(("name", "host", "type",
-                                      "user", "password", "path")):
+                elif variable in {"name", "host", "type", "user", "password",
+                                  "path"}:
                     connection_dict[number][variable] = value
 
                     # for backward compatibility:

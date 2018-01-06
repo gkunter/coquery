@@ -328,8 +328,7 @@ class BaseResource(CoqObject):
         """
         rc_feature_list = rc_feature_list or []
 
-        D = {}
-        D["parent"] = None
+        D = {"parent": None}
         rc_tab = rc_table.split("_")[0]
 
         available_features = []

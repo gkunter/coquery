@@ -3,7 +3,7 @@
 """
 tokens.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -417,15 +417,15 @@ def parse_query_string(S, token_type):
                     state = ST_POS_SEPARATOR
                     token_closed = False
 
-            if current_char in set([token_type.negation_flag,
-                                    token_type.lemmatize_flag]):
+            if current_char in {token_type.negation_flag,
+                                token_type.lemmatize_flag}:
                 current_word = add(current_word, current_char)
                 continue
 
             # check for opening characters:
-            if current_char in set([token_type.transcript_open,
-                                    token_type.bracket_open,
-                                    token_type.quote_open]):
+            if current_char in {token_type.transcript_open,
+                                token_type.bracket_open,
+                                token_type.quote_open}:
 
                 if not stripped_word:
                     # set new state:

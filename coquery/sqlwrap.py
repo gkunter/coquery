@@ -217,10 +217,9 @@ class SqlDB(object):
                                         in explain_column_width])
             line_string = "-" * (sum(explain_column_width) - 3 +
                                  3 * len(explain_column_width))
-            log_rows = ["EXPLAIN %s" % S]
-            log_rows.append(line_string)
-            log_rows.append(format_string % tuple(explain_table_rows[0]))
-            log_rows.append(line_string)
+            log_rows = ["EXPLAIN {}".format(S), line_string,
+                        format_string % tuple(explain_table_rows[0]),
+                        line_string]
             for x in explain_table_rows[1:]:
                 log_rows.append(format_string % tuple(x))
             log_rows.append(line_string)
