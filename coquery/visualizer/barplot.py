@@ -318,6 +318,9 @@ class Visualizer(vis.BaseVisualizer):
 
 
 class BarPlot(vis.Visualizer):
+    name = "Barplot"
+    icon = "Barchart"
+
     axes_style = "whitegrid"
     _default = "Frequency"
 
@@ -424,6 +427,9 @@ class StackedBars(BarPlot):
     """
     Stacked bar chart
     """
+    name = "Stacked bars"
+    icon = "Barchart_stacked"
+
     focus = 0
     sort = 0
 
@@ -625,6 +631,9 @@ class PercentBars(StackedBars):
     """
     Stacked bar chart showing percentages
     """
+    name = "Percentage bars"
+    icon = "Barchart_percent"
+
     _default = "Percentage"
 
     def transform(self, series):
@@ -632,3 +641,6 @@ class PercentBars(StackedBars):
 
     def group_transform(self, grp, numeric):
         return (grp[numeric] * 100 / grp[numeric].sum()).cumsum()
+
+
+provided_visualizations = [BarPlot, StackedBars, PercentBars]

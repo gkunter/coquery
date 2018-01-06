@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from coquery.visualizer import visualizer as vis
+from coquery import options
 from coquery.gui.pyqt_compat import QtWidgets, QtCore
 
 
@@ -24,6 +25,9 @@ class BarcodePlot(vis.Visualizer):
     TOP = 0.975
     BOTTOM = 0.025
     COLOR = None
+
+    name = "Barcode plot"
+    icon = "Barcode_plot"
 
     DEFAULT_LABEL = "Corpus position"
 
@@ -210,6 +214,9 @@ class HeatbarPlot(BarcodePlot):
 
     """
 
+    name = "Heatbar plot"
+    icon = "Barcode_plot"
+
     TOP = 0.05
     BOTTOM = 0.0
     COLOR = "Black"
@@ -274,3 +281,9 @@ class HeatbarPlot(BarcodePlot):
         super(HeatbarPlot, self).plot_facet(data, color,
                                             rug=["top", "bottom"],
                                             **kwargs)
+
+
+provided_visualizations = [BarcodePlot]
+
+if options.cfg.experimental:
+    provided_visualizations.append(HeatbarPlot)

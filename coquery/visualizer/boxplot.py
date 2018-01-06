@@ -13,6 +13,9 @@ from coquery.visualizer import visualizer as vis
 import seaborn as sns
 
 class BoxPlot(vis.Visualizer):
+    name = "Box-Whisker plot"
+    icon = "Boxplot"
+
     axes_style = "whitegrid"
 
     def plot_fnc(self, *args, **kwargs):
@@ -89,5 +92,11 @@ class BoxPlot(vis.Visualizer):
         return True
 
 class ViolinPlot(BoxPlot):
+    name = "Violin plot"
+    icon = "Violinplot"
+
     def plot_fnc(self, *args, **kwargs):
         sns.violinplot(*args, **kwargs)
+
+
+provided_visualizations = [BoxPlot, ViolinPlot]

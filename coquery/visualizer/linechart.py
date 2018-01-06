@@ -21,6 +21,9 @@ from coquery.errors import *
 from coquery.gui.pyqt_compat import QtWidgets
 
 class LineChart(vis.Visualizer):
+    name = "Line plot"
+    icon = "Lines"
+
     axes_style = "whitegrid"
 
     def plot_facet(self, data, color, **kwargs):
@@ -88,3 +91,6 @@ class LineChart(vis.Visualizer):
         if len(cat) > 2:
             return False
         return True
+
+
+provided_visualizations = [LineChart]

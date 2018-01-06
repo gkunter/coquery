@@ -52,6 +52,9 @@ if sns.__version__ < "0.7.0" or True:
 
 
 class Heatmap(vis.Visualizer):
+    name = "Heatmap"
+    icon = "Heatmap"
+
     normalization = 0
 
     def plot_facet(self, data, color, **kwargs):
@@ -199,3 +202,6 @@ class Heatmap(vis.Visualizer):
             return False
         else:
             return True
+
+
+provided_visualizations = [Heatmap]

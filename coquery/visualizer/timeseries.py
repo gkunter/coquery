@@ -18,6 +18,9 @@ from coquery.gui.pyqt_compat import QtWidgets
 
 
 class TimeSeries(vis.Visualizer):
+    name = "Change over time (lines)"
+    icon = "Lines"
+
     axes_style = "whitegrid"
     _default = "Frequency"
     _unit = " units"
@@ -179,8 +182,12 @@ class TimeSeries(vis.Visualizer):
         cat, num, none = vis.Visualizer.count_parameters(
             data_x, data_y, data_z, df, session)
 
-        time = [x for x in [data_x, data_y] if
-                session.translate_header(x) in session.Resource.time_features]
+        try:
+            time_features = session.Resource.time_features
+            time = [x for x in [data_x, data_y] if
+                    session.translate_header(x) in time_features]
+        except AttributeError:
+            time = []
 
         if ((len(time) == 1 and len(num) == 1) or
                 (len(time) == 1 and len(num) == 0 and len(cat) == 1)):
@@ -193,6 +200,9 @@ class TimeSeries(vis.Visualizer):
 
 
 class StackedArea(TimeSeries):
+    name = "Change over time (stacked)"
+    icon = "Areas_stacked"
+
     kind = "area"
     stacked = True
 
@@ -210,6 +220,9 @@ class StackedArea(TimeSeries):
 
 
 class PercentageArea(StackedArea):
+    name = "Change over time (percent)"
+    icon = "Areas_percent"
+
     _default = "Percentage"
 
     def _transform(self, S=None, df=None):
@@ -225,3 +238,5 @@ class PercentageArea(StackedArea):
         super(PercentageArea, self).set_annotations(grid, values)
         grid.set(ylim=(0, 100))
 
+
+provided_visualizations = [TimeSeries, StackedArea, PercentageArea]

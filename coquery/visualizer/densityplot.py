@@ -24,6 +24,9 @@ sequential_palettes = ["Blues", "Reds", "Greens", "Oranges", "Purples",
 
 
 class DensityPlot(vis.Visualizer):
+    name = "Kernel density"
+    icon = "Normal Distribution Histogram"
+
     cumulative = False
     axes_style = "whitegrid"
     _default = "Density estimate"
@@ -129,6 +132,9 @@ class DensityPlot(vis.Visualizer):
 
 
 class CumulativePlot(DensityPlot):
+    name = "Cumulative distribution"
+    icon = "Positive Dynamic"
+
     cumulative = True
     _default = "Cumulative probability"
 
@@ -156,3 +162,4 @@ class CumulativePlot(DensityPlot):
         else:
             return True
 
+provided_visualizations = [DensityPlot, CumulativePlot]
