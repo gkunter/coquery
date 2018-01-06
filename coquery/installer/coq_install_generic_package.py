@@ -126,13 +126,13 @@ class BuilderClass(BaseCorpusBuilder):
                          r"\1\nfrom coquery.corpusbuilder import *",
                          content)
         content = re.sub(
-            "(    name = )'.*'",
+            "(\s+name = )'.*'",
             r"\1'{}'".format(self.arguments.name), content)
         content = re.sub(
-            "(    display_name = )'.*'",
+            "(\s+display_name = )'.*'",
             r"\1'{}'".format(self.arguments.name), content)
         content = re.sub(
-            "(    db_name = )'.*'",
+            "(\s+db_name = )'.*'",
             r"\1'{}'".format(self.arguments.db_name.lower()),
             content)
         self.module_content = content
