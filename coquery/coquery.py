@@ -190,7 +190,7 @@ def main():
         else:
             options.cfg.app.exec_()
         close_toplevel_widgets()
-        logger.info("--- Finished program (after {.3f} seconds) ---".format(
+        logger.info("--- Finished program (after {:.3} seconds) ---".format(
             time.time() - start_time))
 
     # Otherwise, run program as a command-line tool:
