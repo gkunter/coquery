@@ -433,32 +433,32 @@ class Session(object):
 
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
-        # if options.cfg.verbose: print("translate_header({})".format(header))
+        if options.cfg.verbose: print("translate_header({})".format(header))
         if not ignore_alias and header in options.cfg.column_names:
-            # if options.cfg.verbose: print(1)
+            if options.cfg.verbose: print(1)
             return options.cfg.column_names[header]
 
         # Retain the column header if the query string was from an input file
         if header == "coquery_query_string" and options.cfg.query_label:
-            # if options.cfg.verbose: print(2)
+            if options.cfg.verbose: print(2)
             return options.cfg.query_label
 
         if header.startswith("coquery_invisible"):
-            # if options.cfg.verbose: print(3)
+            if options.cfg.verbose: print(3)
             return header
 
         # treat frequency columns:
         if header == "statistics_frequency":
             if options.cfg.query_label:
-                # if options.cfg.verbose: print(4)
+                if options.cfg.verbose: print(4)
                 return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
             else:
-                # if options.cfg.verbose: print(5)
+                if options.cfg.verbose: print(5)
                 return "{}".format(COLUMN_NAMES[header])
 
         if header.startswith("statistics_g_test"):
             label = header.partition("statistics_g_test_")[-1]
-            # if options.cfg.verbose: print(6)
+            if options.cfg.verbose: print(6)
             return "G('{}', y)".format(label)
 
         if header.startswith("coq_userdata"):
@@ -477,12 +477,12 @@ class Session(object):
                 s = "L{}".format(header.split("coq_context_lc")[-1])
             elif header.startswith("coq_context_rc"):
                 s = "R{}".format(header.split("coq_context_rc")[-1])
-            # if options.cfg.verbose: print(7)
+            if options.cfg.verbose: print(7)
             return s
 
         # other features:
         if header in COLUMN_NAMES:
-            # if options.cfg.verbose: print(8)
+            if options.cfg.verbose: print(8)
             return COLUMN_NAMES[header]
 
         # deal with function headers:
@@ -493,14 +493,14 @@ class Session(object):
             match = re.search("(.*)\((.*)\)", header)
             if match:
                 s = match.group(1)
-                # if options.cfg.verbose: print(s, header)
+                if options.cfg.verbose: print(s, header)
                 fun = manager.get_function(s)
                 try:
                     # if options.cfg.verbose: print(9)
                     return "{}({})".format(fun.get_label(session=self),
                                            match.group(2))
                 except AttributeError:
-                    # if options.cfg.verbose: print(10)
+                    if options.cfg.verbose: print(10)
                     return header
             else:
                 match = re.search("(func_\w+_\w+)_(\d+)_(\d*)", header)
@@ -547,7 +547,7 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except (ValueError, AttributeError):
                 pass
-            # if options.cfg.verbose: print(14)
+            if options.cfg.verbose: print(14)
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
         # special treatment of lexicon features:
@@ -566,7 +566,7 @@ class Session(object):
                 pass
         # treat any other feature that is provided by the corpus:
         try:
-            # if options.cfg.verbose: print(16)
+            if options.cfg.verbose: print(16)
             return "{}{}".format(res_prefix,
                                  getattr(resource, str(rc_feature)).replace("__", " "))
         except AttributeError:
@@ -578,10 +578,10 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except (ValueError, AttributeError):
                 pass
-            # if options.cfg.verbose: print(17)
+            if options.cfg.verbose: print(17)
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
-        # if options.cfg.verbose: print(18)
+        if options.cfg.verbose: print(18)
         return header
 
 
