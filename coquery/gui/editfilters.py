@@ -226,6 +226,7 @@ class CoqEditFilters(QtWidgets.QWidget):
             radio = getattr(self.ui,
                             self.radio_operators[selected_filter.operator])
 
+            row_number = 0
             # get correct feature list entry:
             for i in range(self.ui.list_columns.count()):
                 item = self.ui.list_columns.item(i)
