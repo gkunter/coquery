@@ -550,20 +550,22 @@ class Session(object):
             if options.cfg.verbose: print(14)
             return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
 
-        # special treatment of lexicon features:
-        if (rc_feature in [x for x, _ in resource.get_lexicon_features()] or
-                resource.is_tokenized(rc_feature)):
-            try:
-                number = self.quantified_number_labels[int(number) - 1]
-            except (ValueError, AttributeError):
-                pass
-            # if options.cfg.verbose: print(15)
-            try:
+        try:
+            # special treatment of lexicon features:
+            if (rc_feature in [x for x, _ in resource.get_lexicon_features()] or
+                    resource.is_tokenized(rc_feature)):
+                try:
+                    number = self.quantified_number_labels[int(number) - 1]
+                except ValueError:
+                    pass
+
+                # if options.cfg.verbose: print(15)
                 return "{}{}{}".format(res_prefix,
                                    getattr(resource, str(rc_feature)).replace("__", " "),
                                    number)
-            except AttributeError:
-                pass
+        except AttributeError:
+            pass
+
         # treat any other feature that is provided by the corpus:
         try:
             if options.cfg.verbose: print(16)
