@@ -434,7 +434,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="check_only_available">
+           <widget class="QCheckBox" name="check_hide_unavailable">
             <property name="text">
              <string>Hide &amp;unavailable</string>
             </property>
