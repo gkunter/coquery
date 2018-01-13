@@ -134,10 +134,10 @@ class FunctionList(CoqObject):
             func.columns = [new.get_id() if col == old.get_id() else col
                             for col in func.columns]
 
-    def __iter__(self, *args, **kwargs):
-        return self._list.__iter__(*args, **kwargs)
+    def __iter__(self):
+        return self._list.__iter__()
 
-    def __repr__(self, *args, **kwargs):
-        s = super(FunctionList, self).__repr__(*args, **kwargs)
+    def __repr__(self):
+        s = super(FunctionList, self).__repr__()
         return "{}({})".format(
-            s, self._list.__repr__(*args, **kwargs))
+            s, self._list.__repr__())
