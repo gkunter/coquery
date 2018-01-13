@@ -683,7 +683,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             root_name, root_password, name, password = create_data
             host = utf8(self.ui.hostname.text())
             port = int(self.ui.port.value())
-            con = MySQLConnection(host=host, port=port,
+            con = MySQLConnection(name="",
+                                  host=host, port=port,
                                   user=root_name, password=root_password)
             try:
                 engine = con.get_engine()
