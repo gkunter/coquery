@@ -2,7 +2,7 @@
 """
 errorbox.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -134,13 +134,5 @@ class ExceptionBox(QtWidgets.QDialog):
 def catch_exceptions(cls, exception, tb):
     ExceptionBox(cls, exception, tb).exec_()
 
+
 sys.excepthook = catch_exceptions
-
-
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    viewer = ErrorBox(Exception())
-    viewer.exec_()
-
-if __name__ == "__main__":
-    main()
