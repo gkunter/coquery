@@ -189,6 +189,9 @@ class Table(object):
     def setDB(self, db):
         self._DB = db
 
+    def set_max_cache(self, new):
+        self._max_cache = new
+
     def commit(self):
         """
         Commit the table content to the data base.
