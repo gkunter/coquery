@@ -289,7 +289,7 @@ class Visualizer(vis.BaseVisualizer):
 
         if column_x is None:
             fun = func_x(columns=self._groupby, session=session)
-            value_label = fun.get_label(manager=manager, session=session)
+            value_label = fun.get_label(session=session)
             self.options["label_x_axis"] = value_label
         else:
             self.options["label_x_axis"] = "mean({})".format(column_x)
