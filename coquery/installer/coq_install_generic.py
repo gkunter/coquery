@@ -231,12 +231,14 @@ class BuilderClass(BaseCorpusBuilder):
         else:
             try:
                 # use the current lemmatizer to assign the token to a lemma:
-                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
+                lemma = self._lemmatize(token_string,
+                                        self._pos_translate(token_pos))
             except Exception:
-                lemma = token_string.lower()
+                lemma = token_string
 
         # get word id, and create new word if necessary:
-        word_dict = {self.word_lemma: lemma, self.word_label: token_string}
+        word_dict = {self.word_lemma: lemma.lower(),
+                     self.word_label: token_string}
         if token_pos and self.arguments.use_nltk:
             word_dict[self.word_pos] = token_pos
         word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
@@ -344,7 +346,7 @@ class BuilderClass(BaseCorpusBuilder):
             #
             # If NLTK is used, the lemmatizer will use the data from WordNet,
             # which will result in much better results.
-            self._lemmatize = lambda x: x.lower()
+            self._lemmatize = lambda x, y: x
             self._pos_translate = lambda x: x
 
     def process_file(self, file_name):
@@ -397,6 +399,15 @@ class BuilderClass(BaseCorpusBuilder):
                 # use NLTK tokenizer and POS tagger on this sentence:
                 tokens = nltk.word_tokenize(sentence)
                 pos_map = nltk.pos_tag(tokens)
+
+                # FIXME: the NLTK tokenizer doesn't seem to be very happy if
+                # sentences start with quotation marks. This is evidenced
+                # for instance in chapter_04.txt from the ALICE texts where
+                # <shall> in the string
+                #
+                # 'But then,' thought Alice, 'shall I NEVER get any older ...
+                #
+                # is not separated from the initial quotation mark.
 
                 for current_token, current_pos in pos_map:
                     # store each token:
