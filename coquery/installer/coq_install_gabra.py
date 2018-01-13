@@ -261,7 +261,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         file_list = sorted(self.get_file_list(self.arguments.path,
                                               self.file_filter))
-        files = [x for x in file_öist
+        files = [x for x in file_list
                  if os.path.basename(x).lower() in self.expected_files]
         if self._widget:
             self._widget.progressSet.emit(len(self.expected_files), "")
@@ -274,7 +274,7 @@ class BuilderClass(BaseCorpusBuilder):
 
             if filename == "wordforms.bson":
                 max_cache = 20000
-                self.table(self.corpus_table)._max_cache = max_cache
+                self.table(self.corpus_table).set_max_cache(max_cache)
                 self._widget.progressSet.emit(4520596 // max_cache,
                                               "Loading {}".format(filename))
                 self._widget.progressUpdate.emit(0)
