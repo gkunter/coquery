@@ -1911,7 +1911,8 @@ class CoqTagBox(QtWidgets.QWidget):
         self.edit_label = QtWidgets.QLabel(self._label)
         self.edit_tag = CoqTagEdit()
 
-        self.edit_layout = QtWidgets.QHBoxLayout(spacing=5)
+        self.edit_layout = QtWidgets.QHBoxLayout()
+        self.edit_layout.setSpacing(5)
         self.edit_layout.addWidget(self.edit_label)
         self.edit_layout.addWidget(self.edit_tag)
 
