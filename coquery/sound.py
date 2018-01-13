@@ -32,8 +32,8 @@ _audio_loaded = False
 ERROR = "Could not load audio module '{}'."
 
 
-def _warn(S):
-    logging.warning(S)
+def _warn(S, *args, **kwargs):
+    logging.warning(S, *args, **kwargs)
     print(S)
 
 
@@ -255,7 +255,7 @@ class _alsaaudio_SoundThread(_SoundThread):
 
 class _winsound_SoundThread(_SoundThread):
     def __init__(self, sound, start=0, end=None):
-        super(_winsound_SoundThread, self).__init__()
+        super(_winsound_SoundThread, self).__init__(sound, start, end)
         self.wav_buffer = io.BytesIO()
         _output = wave.open(self.wav_buffer, "wb")
         _output.setnchannels(self.sound.channels)
