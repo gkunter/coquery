@@ -159,22 +159,22 @@ class Function(CoqObject):
     def set_label(self, label):
         self._label = label
 
-    def _func(self, col):
+    def _func(self, series, *args, **kwargs):
         """
         Defines the function that is applied the columns in the data frame
         that is passed to this function.
 
         Parameters
         ----------
-        col : pandas.Series
+        series : pandas.Series
             A column from a data frame
 
         Returns
         -------
-        col : pandas.Series
+        series : pandas.Series
             The column after the function has been applied
         """
-        return col
+        return series
 
     def get_id(self):
         if self.alias:
