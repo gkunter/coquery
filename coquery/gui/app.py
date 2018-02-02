@@ -1189,7 +1189,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # properties are stored separately for each corpus:
         current_properties = properties.get(options.cfg.corpus, {})
         current_properties["hidden"] = manager.hidden_columns
-        prev_subst = current_properties.get("substitutions", {})
+        prev_subst = dict(current_properties.get("substitutions", {}))
         result = ColumnPropertiesDialog.manage(self.Session.output_object,
                                                manager.unique_values,
                                                current_properties,
