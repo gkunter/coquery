@@ -279,7 +279,6 @@ class BuilderClass(XMLCorpusBuilder):
 
     header_tag = "meta"
     body_tag = "text"
-    encoding = "latin-1"
 
     _REPLACE_LIST = [
         ("\xcf", "χ"),
