@@ -768,12 +768,19 @@ class Visualizer(QtCore.QObject):
         return categorical, numeric, empty
 
     @staticmethod
-    def get_palette(pal, n):
+    def get_palette(pal, n, nlevels=None):
+        nlevels = nlevels or n
         base, _, rev = pal.partition("_")
         col = sns.color_palette(base, n)
         if rev:
             col = col[::-1]
-        return col
+        if nlevels > n:
+            pal = (col * ((nlevels // n) + 1))[:nlevels]
+        else:
+            pal = col[:nlevels]
+
+        assert len(pal) == nlevels
+        return pal
 
 
 def get_grid_layout(n):
