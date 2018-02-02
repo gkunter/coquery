@@ -832,6 +832,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         data_columns = [values[x] for
                         x in ["x", "y", "z", "columns", "rows"]
                         if values[x]]
+        # remove duplicates:
+        data_columns = list(set(data_columns))
         data_columns.append("coquery_invisible_corpus_id")
         aliased_columns = [self.alias.get(x, x) for x in data_columns]
 
