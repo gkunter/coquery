@@ -229,8 +229,6 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
                         except ValueError:
                             if len(row.split()) > 3:
                                 print("[{}]".format(row))
-                                asd
-                            pass
                         else:
                             if label.rfind("/") > -1:
                                 label = label[:label.rfind("/")]
@@ -352,7 +350,6 @@ class BURSCBuilder(corpusbuilder.BaseCorpusBuilder):
             for i, x in enumerate(diff):
                 print(x)
 
-            asd
-    
+
 if __name__ == "__main__":
     BURSCBuilder().build()
