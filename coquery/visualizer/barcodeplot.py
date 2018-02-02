@@ -64,7 +64,6 @@ class BarcodePlot(vis.Visualizer):
     @classmethod
     def update_figure(cls, self, i):
         cls.horizontal = bool(i)
-        print(i, cls.horizontal)
         BarcodePlot.button_apply.setDisabled(True)
         self.updateRequested.emit()
 
@@ -87,73 +86,61 @@ class BarcodePlot(vis.Visualizer):
         corpus_id = data["coquery_invisible_corpus_id"]
 
         if x:
-            colors = self.get_palette(palette, len(levels_x))
-            val = data[x].apply(lambda x: levels_x.index(x))
-            cols = val.apply(lambda x: colors[x])
+            val = data[x].apply(lambda val: levels_x.index(val))
         elif y:
-            colors = self.get_palette(palette, len(levels_y))
             val = data[y].apply(lambda y: levels_y.index(y))
-            cols = val.apply(lambda y: colors[y])
         else:
-            cols = [self.get_palette(palette, 1)[0]] * len(data)
+            # neither x nor y is specified, plot default
             val = pd.Series([0] * len(data), index=data.index)
 
         # Take care of a hue variable:
         if z:
-            colors = self.get_palette(palette, len(levels_z))
+            colors = self.get_palette(palette,
+                                      kwargs["color_number"],
+                                      len(levels_z))
             cols = [colors[levels_z.index(d)] for d in data[z]]
             self.legend_title = z
             self.legend_levels = levels_z
+        else:
+            cols = self.get_palette(palette, kwargs["color_number"], 1)
 
-        ax_kwargs = {}
 
         if x and not y:
             BarcodePlot.force_vertical = True
             ax_kwargs = {"xticks": 0.5 + pd.np.arange(len(levels_x)),
-                         "xticklabels": levels_x}
-            if rug:
-                if "top" in rug:
-                    plt.hlines(corpus_id, val + 0.9, val + 1, cols)
-                if "bottom" in rug:
-                    plt.hlines(corpus_id, val, val + 0.1, cols)
-            else:
-                plt.hlines(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
-            if levels_x:
-                ax_kwargs["xlim"] = (0, len(levels_x))
-                self._xlab = x
-            else:
-                self._xlab = ""
-        else:
+                         "xticklabels": levels_x,
+                         "xlim": (0, len(levels_x))}
+            self._xlab = x
+            func = plt.hlines
+
+        elif y and not x:
             BarcodePlot.force_vertical = False
-            if not y and BarcodePlot.horizontal:
+            ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
+                         "yticklabels": levels_y,
+                         "ylim": (0, len(levels_y))}
+            self._ylab = y
+            func = plt.vlines
+
+        else:
+            if BarcodePlot.horizontal:
+                BarcodePlot.force_vertical = False
+                ax_kwargs = {"yticklabels": []}
+                self._ylab = ""
                 func = plt.vlines
 
-                levels_x = levels_x[::-1]
-                ax_kwargs = {"xticks": 0.5 + pd.np.arange(len(levels_x)),
-                             "xticklabels": levels_x}
-
             else:
+                BarcodePlot.force_vertical = True
+                ax_kwargs = {"xticklabels": []}
+                self._xlab = ""
                 func = plt.hlines
 
-                levels_y = levels_y[::-1]
-                ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
-                             "yticklabels": levels_y}
-
-
-
-            if rug:
-                if "top" in rug:
-                    func(corpus_id, val + 0.9, val + 1, cols)
-                if "bottom" in rug:
-                    func(corpus_id, val, val + 0.1, cols)
-            else:
-                func(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
-
-            if levels_y:
-                self._ylab = y
-                ax_kwargs["ylim"] = (0, len(levels_y))
-            else:
-                self._ylab = ""
+        if rug:
+            if "top" in rug:
+                func(corpus_id, val + 0.9, val + 1, cols)
+            if "bottom" in rug:
+                func(corpus_id, val, val + 0.1, cols)
+        else:
+            func(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
 
         ax = kwargs.get("ax", plt.gca())
         ax.set(**ax_kwargs)
