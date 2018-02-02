@@ -1473,6 +1473,8 @@ class SQLResource(BaseResource):
             d[tab].append(s)
             if token.lemmatize and label == QUERY_ITEM_POS:
                 pos_spec = s
+            else:
+                pos_spec = None
 
         if token.lemmatize:
             # rewrite token conditions so that the specifications are used to
@@ -1481,11 +1483,9 @@ class SQLResource(BaseResource):
             condition_template = cls.get_lemmatized_conditions(i, token)
             d = {"word": [
                 condition_template.format(where=" AND ".join(conditions))]}
-            try:
+            if pos_spec:
                 # add POS specification if provided:
                 d["word"].append(pos_spec)
-            except UnboundLocalError:
-                pass
 
         return d
 
@@ -1652,16 +1652,18 @@ class SQLResource(BaseResource):
         if origin_id:
             origin_str = "{name}{N} AS coquery_invisible_origin_id".format(
                     N=_first_item, name=origin_id)
+        else:
+            origin_str = None
 
         if to_file:
             if not columns or (options.cfg.context_mode != CONTEXT_NONE):
                 columns.append(id_str)
-            if (options.cfg.context_mode != CONTEXT_NONE):
+            if options.cfg.context_mode != CONTEXT_NONE and origin_str:
                 columns.append(origin_str)
         else:
             if id_str not in columns:
                 columns.append(id_str)
-            if origin_id:
+            if origin_str:
                 columns.append(origin_str)
 
         return columns
