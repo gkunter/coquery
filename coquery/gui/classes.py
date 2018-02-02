@@ -240,9 +240,19 @@ class CoqFeatureList(QtWidgets.QListWidget):
                             self.padding())
         self.takeItem(0)
 
+    def hasItem(self, which):
+        which_column = which.data(QtCore.Qt.UserRole)
+        for i in range(self.count()):
+            item = self.item(i)
+            column = item.data(QtCore.Qt.UserRole)
+            if which_column == column:
+                return True
+        return False
+
     def addItem(self, item):
-        item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
-        super(CoqFeatureList, self).addItem(item)
+        if not self.hasItem(item):
+            item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
+            super(CoqFeatureList, self).addItem(item)
         self.featureAdded.emit(item)
 
     def itemWidth(self):
@@ -264,7 +274,7 @@ class CoqFeatureList(QtWidgets.QListWidget):
 
     def dropEvent(self, e):
         super(CoqFeatureList, self).dropEvent(e)
-        e.setDropAction(QtCore.Qt.MoveAction)
+        #e.setDropAction(QtCore.Qt.MoveAction)
         e.accept()
 
 
