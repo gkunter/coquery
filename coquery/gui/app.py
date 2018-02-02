@@ -244,6 +244,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except TypeError:
             pass
         x = options.settings.value("splitter")
+        y = None
         try:
             y = x.toByteArray()
         except (TypeError, AttributeError):
@@ -1819,6 +1820,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     self.enable_apply_button()
 
     def save_results(self, selection=False, clipboard=False):
+        name = None
         if not clipboard:
             if selection:
                 caption = "Save selected query results – Coquery"
@@ -2716,6 +2718,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except AttributeError:
             connected = False
         except Exception as e:
+            connected = False
             print(e)
             warnings.warn(e)
 

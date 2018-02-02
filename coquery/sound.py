@@ -47,8 +47,8 @@ def _warn(S, *args, **kwargs):
 # Windows:    (1) simpleaudio (2) winsound
 
 if sys.platform.startswith("linux"):
+    _audio_module = "alsaaudio"
     try:
-        _audio_module = "alsaaudio"
         import alsaaudio
     except ImportError:
         _warn(ERROR.format(_audio_module))
@@ -66,8 +66,8 @@ if sys.platform.startswith("linux"):
                 _pcm_format = alsaaudio.PCM_FORMAT_S16_BE
 
 if not _audio_loaded:
+    _audio_module = "simpleaudio"
     try:
-        _audio_module = "simpleaudio"
         import simpleaudio
         import time
     except ImportError:
@@ -78,8 +78,8 @@ if not _audio_loaded:
 
 if not _audio_loaded:
     if sys.platform in ("win32", "cygwin"):
+        _audio_module = "winsound"
         try:
-            _audio_module = "winsound"
             import winsound
         except ImportError:
             _warn(ERROR.format(_audio_module))

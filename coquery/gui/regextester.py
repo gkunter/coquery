@@ -321,7 +321,7 @@ p, li { white-space: pre-wrap; }
         widgets = QtWidgets.QApplication.instance().inputFocusWidgets()
         widgets = [x for x in widgets
                    if x not in (self.ui.edit_regex, self.ui.edit_test_string)]
-
+        widget = None
         if widgets:
             for widget in widgets[::-1]:
                 if isinstance(widget, QtWidgets.QLineEdit):
@@ -333,7 +333,8 @@ p, li { white-space: pre-wrap; }
         else:
             widget = get_toplevel_window().ui.edit_query_string
             widget.textCursor().insertText(s)
-        CoqWidgetFader(widget).fade()
+        if widget:
+            CoqWidgetFader(widget).fade()
 
     @staticmethod
     def show(parent=None):

@@ -350,6 +350,7 @@ class Manager(CoqObject):
             try:
                 values = column.dropna().unique()
             except AttributeError:
+                values = column
                 print("substitute():", column.head())
             to_bool = values.astype(bool)
             if (to_bool == values).all():
@@ -472,6 +473,7 @@ class Manager(CoqObject):
             df_totals = df[df.index == COLUMN_NAMES["statistics_column_total"]]
         else:
             df_data = df
+            df_totals = None
 
         if len(columns) == 0:
             return df
@@ -483,7 +485,7 @@ class Manager(CoqObject):
 
         df_data = df_data.reset_index(drop=True)
 
-        if COLUMN_NAMES["statistics_column_total"] in df.index:
+        if df_totals is not None:
             # return sorted data frame plus a potentially totals row:
             df = pd.concat([df_data, df_totals])
         else:
@@ -789,6 +791,8 @@ class FrequencyList(Manager):
                 freq_exists = True
                 existing_func = fnc
                 break
+        else:
+            existing_func = lambda x: x
         if not freq_exists:
             #FIXME: add test that this actually works
             self.manager_functions = FunctionList([freq_function])

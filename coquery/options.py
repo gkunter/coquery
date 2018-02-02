@@ -889,10 +889,10 @@ class Options(object):
                     cols = columns.strip().split(",")
                 else:
                     cols = []
-                summary = Summary(name, cols, function_list)
+                self.args.summary_group.append(
+                    Summary(name, cols, function_list))
             if not sum_names:
-                summary = Summary("summary", [], [])
-            self.args.summary_group.append(summary)
+                self.args.summary_group.append(Summary("summary", [], []))
 
         # Use QSettings?
         if settings:

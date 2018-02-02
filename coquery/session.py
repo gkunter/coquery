@@ -477,6 +477,8 @@ class Session(object):
                 s = "L{}".format(header.split("coq_context_lc")[-1])
             elif header.startswith("coq_context_rc"):
                 s = "R{}".format(header.split("coq_context_rc")[-1])
+            else:
+                s = header
             if options.cfg.verbose: print(7)
             return s
 

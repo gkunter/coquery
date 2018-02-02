@@ -403,6 +403,8 @@ class Table(object):
             func_length = "length"
         elif self._DB.db_type == SQL_MYSQL:
             func_length = "CHAR_LENGTH"
+        else:
+            func_length = "UNDEFINED"
 
         col = self.get_column(name)
 

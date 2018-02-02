@@ -246,6 +246,8 @@ def get_error_repr(exc_info):
     trace = traceback.extract_tb(exc_tb)
     trace_string = ""
     indent = ""
+    text = ""
+    file_location = ""
     for file_name, line_no, func_name, text in trace:
         path, module_name = os.path.split(file_name)
         # only print exceptions from Coquery files:
@@ -253,7 +255,7 @@ def get_error_repr(exc_info):
             trace_string += "{} {}, line {}: {}\n".format(
                 indent, module_name, line_no, func_name.replace("<", "&lt;"))
             indent += "  "
-    file_location = "{}, line {}".format(file_name, line_no)
+        file_location = "{}, line {}".format(file_name, line_no)
     if text:
         trace_string += "%s> %s\n" % (indent[:-1], text)
     return (exc_type, exc_obj, trace_string, file_location)

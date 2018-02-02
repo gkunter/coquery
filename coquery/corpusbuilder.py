@@ -162,7 +162,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
     table_description = None
 
     arguments = None
-    name = None
     parser = None
     DB = None
     additional_stages = []
@@ -1206,7 +1205,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         # determine suitable NA value
         if hasattr(self, "corpus_word_id"):
             na_value = self._new_tables[self.word_table]._current_id + 1
-        elif hasattr(self, "corpus_word"):
+        else:
             na_value = DEFAULT_MISSING_VALUE
 
         step = 250000 // self.corpusngram_width

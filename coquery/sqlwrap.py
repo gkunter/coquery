@@ -237,6 +237,7 @@ class SqlDB(object):
             self.explain(S)
         logging.debug(S)
 
+        cursor = None
         if self.db_type == SQL_MYSQL:
             if not self.Con.open:
                 self.Con = self.get_connection()

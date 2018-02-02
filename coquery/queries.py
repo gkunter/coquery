@@ -137,7 +137,7 @@ class TokenQuery(object):
                     df = options.cfg.query_cache.get((self.Resource.name,
                                                       manager_hash, md5))
                 except KeyError:
-                    pass
+                    md5 = ""
 
             if df is None:
                 if not query_string:
@@ -179,7 +179,9 @@ class TokenQuery(object):
                     del results
 
                     if options.cfg.use_cache:
-                        options.cfg.query_cache.add((self.Resource.name, manager_hash, md5), df)
+                        options.cfg.query_cache.add(
+                            (self.Resource.name, manager_hash, md5),
+                            df)
 
             if not options.cfg.output_case_sensitive and len(df.index) > 0:
                 word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)

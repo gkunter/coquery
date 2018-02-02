@@ -268,6 +268,7 @@ class CoqEditFilters(QtWidgets.QWidget):
         dtype = self.ui.list_columns.currentItem().data(DtypeRole)
         value = utf8(self.ui.edit_value.text())
 
+        operator = None
         # determine which operator radio button is checked:
         for radio in self.radio_operators:
             if getattr(self.ui, self.radio_operators[radio]).isChecked():

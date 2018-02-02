@@ -627,8 +627,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                             new.path != old.path):
                         try:
                             self.move_connection(
-                                name, old.path, data.path)
-
+                                name, old.path, new.path)
                         except Exception as e:
                             errorbox.ErrorBox.show(sys.exc_info())
                             data = old
@@ -659,6 +658,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
     @staticmethod
     def choose(connection_name, connections, parent=None):
+        result = None
         try:
             dialog = ConnectionConfiguration(parent=parent)
             for connection in connections:
@@ -668,7 +668,6 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             result = dialog.exec_()
         except Exception as e:
             print(e)
-            result = None
             raise e
         finally:
             return result

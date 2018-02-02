@@ -300,6 +300,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
         an error with the current character setting, it tries to auto-detect
         a working encoding.
         """
+        df = pd.DataFrame()
         quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
             utf8(self.ui.quote_char.currentText())]
         if self.ui.file_has_headers.isChecked():

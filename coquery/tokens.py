@@ -358,6 +358,7 @@ def parse_query_string(S, token_type):
 
     tokens = []
     current_word = ""
+    pos_string = ""
 
     escaping = False
     token_closed = False
@@ -542,6 +543,9 @@ def parse_query_string(S, token_type):
         elif state == ST_IN_QUANTIFICATION:
             op = token_type.quantification_open
             cl = token_type.quantification_close
+        else:
+            op = "?"
+            cl = "?"
         S = msg_token_dangling_open.format(S, pos_string, cl, op)
         raise TokenParseError(S)
 
@@ -637,6 +641,7 @@ def preprocess_query(S, literal=False):
             if neg:
                 val = "~{}".format(val)
         inner = []
+        x = []
         # For each tuple, create a list of constant length
         # Each element contains a different number of
         # repetitions of the value of the tuple, padded
