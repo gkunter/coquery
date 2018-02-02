@@ -357,12 +357,10 @@ MODULE_INFORMATION = {
              "http://www.python-excel.org/"),
     }
 
-# for Python 3 compatibility:
-try:
-    unicode()
-except NameError:
-    # Python 3 does not have unicode and long, so define them here:
+# Python 3 does not have unicode and long, so define them here:
+if not hasattr(__builtins__, "unicode"):
     unicode = str
+if not hasattr(__builtins__, "long"):
     long = int
 
 msg_mysql_access_denied = """
