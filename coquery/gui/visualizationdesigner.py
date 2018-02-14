@@ -266,7 +266,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
             label = self.alias.get(col) or col
             new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
-            new_item.setToolTip(new_item.text())
             if label in self.session.Resource.time_features:
                 new_item.setIcon(get_icon("Clock"))
             self.ui.table_categorical.addItem(new_item)
