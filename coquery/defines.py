@@ -259,6 +259,8 @@ FUNCTION_DESC = {
 
         }
 
+PALETTE_BW = "Black and white"
+
 PREFERRED_ORDER = ["corpus_word", "word_label",
                    "corpus_pos", "word_pos", "pos_label",
                    "corpus_transcript", "word_transcript", "transcript_label",
@@ -339,6 +341,10 @@ MODULE_INFORMATION = {
             "0.7",
             "Create visualizations of your query results",
             "http://stanford.edu/~mwaskom/software/seaborn/"),
+    "squarify": ("squarify – Pure Python implementation of the squarify treemap layout algorithm",
+            "0.3.0",
+            "Create treemap visualizations",
+            "https://github.com/laserson/squarify"),
     "cachetools": ("cachetools — Extensible memoizing collections and decorators",
             "1.1.6",
             "Remember query results to speed up queries",

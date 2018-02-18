@@ -1394,7 +1394,7 @@ use_cachetools = has_module("cachetools")
 use_statsmodels = has_module("statsmodels")
 use_alsaaudio = has_module("alsaaudio")
 use_winsound = has_module("winsound")
-
+use_squarify = has_module("squarify")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas", "scipy", "PyQt5", "lxml"]:
