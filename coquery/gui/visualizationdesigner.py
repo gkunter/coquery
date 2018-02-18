@@ -10,6 +10,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+from __future__ import division
 
 import imp
 import logging
@@ -19,7 +20,8 @@ import glob
 
 from .. import options
 from coquery.unicode import utf8
-from coquery.defines import (msg_visualization_error,
+from coquery.defines import (PALETTE_BW,
+                             msg_visualization_error,
                              msg_visualization_module_error)
 
 from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
@@ -51,12 +53,19 @@ class MyTool(SubplotToolQt):
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Escape:
-            self.parent.keyPressEvent(event)
+            try:
+                self.parent().keyPressEvent(event)
+            except AttributeError:
+                try:
+                    self.parent().keyPressEvent(event)
+                except AttributeError:
+                    pass
         else:
             super(MyTool, self).keyPressEvent(event)
 
     def functight(self):
         return super(MyTool, self).functight()
+
 
 class NavigationToolbar(NavigationToolbar2QT):
     """
@@ -106,6 +115,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.ui = Ui_VisualizationDesigner()
         self.ui.setupUi(self)
+
+        self.ui.combo_qualitative.addItem(PALETTE_BW)
 
         # disable unsupported elements:
         self.ui.radio_custom.hide()
@@ -255,11 +266,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.categorical = [col for col in self.df.columns
                             if self.df.dtypes[col] in (object, bool) and
-                            not col in used and
+                            col not in used and
                             not col.startswith(("coquery_invisible"))]
         self.numerical = [col for col in self.df.columns
                           if self.df.dtypes[col] in (int, float) and
-                          not col in used and
+                          col not in used and
                           not col.startswith(("coquery_invisible"))]
 
         for col in self.categorical:
@@ -286,9 +297,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 #func.get_name()))
             #new_item.setData(QtCore.Qt.UserRole,
                                 #"func_{}".format(func._name))
-            #new_item.setData(QtCore.Qt.FontRole,
-                                #QtWidgets.QFont(QtWidgets.QLabel().font().family(),
-                                            #italic=True))
+            #new_item.setData(
+                #QtCore.Qt.FontRole,
+                #QtWidgets.QFont(QtWidgets.QLabel().font().family(),
+                                #italic=True))
             #self.ui.table_numerical.addItem(new_item)
 
     def setup_canvas(self, figure):
@@ -320,9 +332,23 @@ class VisualizationDesigner(QtWidgets.QDialog):
             print(e)
 
         self.tool = MyTool(self.canvas.figure, self)
-        self.tool.resetbutton.hide()
-        self.tool.donebutton.hide()
-        self.tool.tightlayout.setText("&Optimize margins")
+        opt_text = QtWidgets.QApplication.instance().translate(
+            "VisualizationDesigner", "&Optimize margins", None)
+
+        # Someone made the buttons in the tool private in one of the recent
+        # versions of matplotlib (2.1, I think). Thank you very much for that.
+        # Not.
+        if hasattr(self.tool, "resetbutton"):
+            self.tool.resetbutton.hide()
+            self.tool.donebutton.hide()
+            self.tool.tightlayout.setText(opt_text)
+        elif hasattr(self.tool, "_widgets"):
+            for widget in self.tool._widgets:
+                if widget in ("Close", "Reset", "Export values"):
+                    self.tool._widgets[widget].hide()
+                if widget == "Tight layout":
+                    self.tool._widgets[widget].setText(opt_text)
+
         self.tool.show()
         self.ui.layout_margins.insertWidget(0, self.tool)
 
@@ -366,11 +392,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
             lambda x: self.change_palette())
 
         # Hook up clear buttons.
-        self.ui.button_clear_x.clicked.connect(lambda: self.ui.tray_data_x.clear())
-        self.ui.button_clear_y.clicked.connect(lambda: self.ui.tray_data_y.clear())
-        self.ui.button_clear_z.clicked.connect(lambda: self.ui.tray_data_z.clear())
-        self.ui.button_clear_rows.clicked.connect(lambda: self.ui.tray_rows.clear())
-        self.ui.button_clear_columns.clicked.connect(lambda: self.ui.tray_columns.clear())
+        self.ui.button_clear_x.clicked.connect(self.ui.tray_data_x.clear)
+        self.ui.button_clear_y.clicked.connect(self.ui.tray_data_y.clear)
+        self.ui.button_clear_z.clicked.connect(self.ui.tray_data_z.clear)
+        self.ui.button_clear_rows.clicked.connect(self.ui.tray_rows.clear)
+        self.ui.button_clear_columns.clicked.connect(
+            self.ui.tray_columns.clear)
 
         # Change custom figure widgets if necessary:
         self.ui.list_figures.currentItemChanged.connect(
@@ -387,7 +414,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.tray_data_y.featureCleared.connect(self.check_figure_types)
         self.ui.tray_data_z.featureCleared.connect(self.check_figure_types)
 
-        self.ui.check_hide_unavailable.toggled.connect(self.check_figure_types)
+        self.ui.check_hide_unavailable.toggled.connect(
+            self.check_figure_types)
 
         # Hook up checks for clear button enable state.
         # The enable state of clear buttons is checked if the feature in the
@@ -439,7 +467,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.check_show_legend.toggled.connect(self.change_legend)
         self.ui.spin_columns.valueChanged.connect(self.change_legend)
         self.ui.spin_size_legend.valueChanged.connect(self.change_legend)
-        self.ui.spin_size_legend_entries.valueChanged.connect(self.change_legend)
+        self.ui.spin_size_legend_entries.valueChanged.connect(
+            self.change_legend)
 
         # Hook up figure plotting.
         # The figure will be plot only upon _explicit_ user actions. User
@@ -541,7 +570,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.button_clear_x.setEnabled(bool(self.ui.tray_data_x.text()))
         self.ui.button_clear_y.setEnabled(bool(self.ui.tray_data_y.text()))
         self.ui.button_clear_z.setEnabled(bool(self.ui.tray_data_z.text()))
-        self.ui.button_clear_columns.setEnabled(bool(self.ui.tray_columns.text()))
+        self.ui.button_clear_columns.setEnabled(
+            bool(self.ui.tray_columns.text()))
         self.ui.button_clear_rows.setEnabled(bool(self.ui.tray_rows.text()))
 
     def check_grid_layout(self):
@@ -602,7 +632,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self._color_number = self.ui.spin_number.value()
         self.ui.color_test_area.clear()
         name, _, rev = self._palette_name.partition("_")
-        test_palette = sns.color_palette(name, self._color_number)
+        if name == PALETTE_BW:
+            test_palette = [(0, 0, 0), (1, 1, 1)]
+        else:
+            test_palette = sns.color_palette(name, self._color_number)
         if rev == "r":
             test_palette = test_palette[::-1]
         for i, (r, g, b) in enumerate(test_palette):
@@ -641,18 +674,25 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.resize(options.settings.value("visualizationdesigner_size"))
         except TypeError:
             pass
-        self.viewer_size = options.settings.value("visualizationdesigner_viewer_size")
+        self.viewer_size = options.settings.value(
+            "visualizationdesigner_viewer_size")
         self.viewer_size = QtCore.QSize(640, 480)
 
-        self.data_x = options.settings.value("visualizationdesinger_data_x", None)
-        self.data_y = options.settings.value("visualizationdesigner_data_y", None)
-        self.layout_columns = options.settings.value("visualizationdesigner_layout_columns", None)
-        self.layout_rows = options.settings.value("visualizationdesigner_layout_rows", None)
-        val = options.settings.value("visualizationdesigner_show_legend", "true")
+        self.data_x = options.settings.value(
+            "visualizationdesinger_data_x", None)
+        self.data_y = options.settings.value(
+            "visualizationdesigner_data_y", None)
+        self.layout_columns = options.settings.value(
+            "visualizationdesigner_layout_columns", None)
+        self.layout_rows = options.settings.value(
+            "visualizationdesigner_layout_rows", None)
+        val = options.settings.value(
+            "visualizationdesigner_show_legend", "true")
         val = val == "true"
         self.ui.check_show_legend.setChecked(val)
 
-        val = options.settings.value("visualizationdesigner_hide_unavailable", "true")
+        val = options.settings.value(
+            "visualizationdesigner_hide_unavailable", "true")
         val = val == "true"
         self.ui.check_hide_unavailable.setChecked(val)
 
@@ -682,7 +722,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.spin_size_legend_entries.setValue(
             get_or_set_size("visualizationdesigner_size_legend_entries", 0.8))
 
-        val = options.settings.value("visualizationdesigner_reverse_palette", "true")
+        val = options.settings.value(
+            "visualizationdesigner_reverse_palette", "true")
         self._reversed = val == "true"
         self.ui.check_reverse.setChecked(self._reversed)
         val = options.settings.value("visualizationdesigner_color_number", 12)
@@ -853,6 +894,16 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                       sharex=True, sharey=True)
         logging.info("VIS: Grid initialized")
 
+        self.setup_canvas(self.grid.fig)
+        logging.info("VIS: canvas initialized")
+
+        w, h = self.dialog.size().width(), self.dialog.size().height()
+        dpi = self.grid.fig.dpi
+        self.grid.fig.set_size_inches(w / dpi, h / dpi)
+
+        logging.info("VIS: Grid size {}, {} inches".format(
+            w / dpi, h / dpi))
+
         if options.cfg.experimental:
             self.plot_thread = classes.CoqThread(
                 self.run_plot, parent=self, **values)
@@ -883,7 +934,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         logging.info("VIS: run_plot()")
         try:
             self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
-            self.grid.fig.tight_layout()
         except Exception as e:
             logging.error("VIS: run_plot(), exception {}".format(str(e)))
             raise e
@@ -902,17 +952,18 @@ class VisualizationDesigner(QtWidgets.QDialog):
             except AttributeError:
                 pass
 
-            self.setup_canvas(self.grid.fig)
             self.add_annotations()
             self.change_legend()
+
+            self.grid.fig.tight_layout()
 
             self.dialog.setWindowTitle("{} – Coquery".format(figure_title))
             self.dialog.show()
             self.dialog.raise_()
 
             if hasattr(self.vis, "on_pick"):
-                self.grid.fig.canvas.mpl_connect('button_press_event',
-                                                self.vis.on_pick)
+                self.grid.fig.canvas.mpl_connect(
+                    "button_press_event", self.vis.on_pick)
         except Exception as e:
             logging.error("VIS: finalize_plot(), exception {}".format(str(e)))
             raise e
@@ -920,7 +971,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def exception_plot(self, e):
         logging.error(e)
-        QtWidgets.QMessageBox.critical(self,
+        QtWidgets.QMessageBox.critical(
+            self,
             "Error while plotting – Coquery",
             msg_visualization_error.format(str(e)),
             QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
@@ -957,39 +1009,52 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.reject()
 
     def close(self, *args):
-        options.settings.setValue("visualizationdesigner_size", self.size())
-        options.settings.setValue("visualizationdesigner_viewer_size",
-                                  self.viewer_size)
-        options.settings.setValue("visualizationdesigner_data_x", self.data_x)
-        options.settings.setValue("visualizationdesigner_data_y", self.data_y)
-        options.settings.setValue("visualizationdesigner_layout_columns",
-                                  self.layout_columns)
-        options.settings.setValue("visualizationdesigner_layout_rows",
-                                  self.layout_rows)
+        options.settings.setValue(
+            "visualizationdesigner_size", self.size())
+        options.settings.setValue(
+            "visualizationdesigner_viewer_size", self.viewer_size)
+        options.settings.setValue(
+            "visualizationdesigner_data_x", self.data_x)
+        options.settings.setValue(
+            "visualizationdesigner_data_y", self.data_y)
+        options.settings.setValue(
+            "visualizationdesigner_layout_columns", self.layout_columns)
+        options.settings.setValue(
+            "visualizationdesigner_layout_rows", self.layout_rows)
 
-        options.settings.setValue("visualizationdesigner_figure_font",
+        options.settings.setValue(
+            "visualizationdesigner_figure_font",
             utf8(self.ui.combo_font_figure.currentText()))
 
-        options.settings.setValue("visualizationdesigner_size_title",
-                                  self.ui.spin_size_title.value())
-        options.settings.setValue("visualizationdesigner_size_x_label",
-                                  self.ui.spin_size_x_label.value())
-        options.settings.setValue("visualizationdesigner_size_x_ticklabels",
-                                  self.ui.spin_size_x_ticklabels.value())
-        options.settings.setValue("visualizationdesigner_size_y_label",
-                                  self.ui.spin_size_y_label.value())
-        options.settings.setValue("visualizationdesigner_size_y_ticklabels",
-                                  self.ui.spin_size_y_ticklabels.value())
-        options.settings.setValue("visualizationdesigner_size_legend",
-                                  self.ui.spin_size_legend.value())
-        options.settings.setValue("visualizationdesigner_size_legend_entries",
-                                  self.ui.spin_size_legend_entries.value())
+        options.settings.setValue(
+            "visualizationdesigner_size_title",
+            self.ui.spin_size_title.value())
+        options.settings.setValue(
+            "visualizationdesigner_size_x_label",
+            self.ui.spin_size_x_label.value())
+        options.settings.setValue(
+            "visualizationdesigner_size_x_ticklabels",
+            self.ui.spin_size_x_ticklabels.value())
+        options.settings.setValue(
+            "visualizationdesigner_size_y_label",
+            self.ui.spin_size_y_label.value())
+        options.settings.setValue(
+            "visualizationdesigner_size_y_ticklabels",
+            self.ui.spin_size_y_ticklabels.value())
+        options.settings.setValue(
+            "visualizationdesigner_size_legend",
+            self.ui.spin_size_legend.value())
+        options.settings.setValue(
+            "visualizationdesigner_size_legend_entries",
+            self.ui.spin_size_legend_entries.value())
 
         val = "true" if self.ui.check_show_legend.isChecked() else "false"
         options.settings.setValue("visualizationdesigner_show_legend", val)
 
-        val = "true" if self.ui.check_hide_unavailable.isChecked() else "false"
-        options.settings.setValue("visualizationdesigner_hide_unavailable", val)
+        val = ("true" if self.ui.check_hide_unavailable.isChecked()
+               else "false")
+        options.settings.setValue(
+            "visualizationdesigner_hide_unavailable", val)
 
         options.settings.setValue("visualizationdesigner_legend_columns",
                                   self.legend_columns)
@@ -998,7 +1063,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         options.settings.setValue("visualizationdesigner_reverse_palette",
                                   val)
         options.settings.setValue("visualizationdesigner_color_number",
-                                   self.ui.spin_number.value())
+                                  self.ui.spin_number.value())
 
         super(VisualizationDesigner, self).close(*args)
 
@@ -1033,7 +1098,8 @@ def get_visualizer_module(name):
         s = msg_visualization_module_error.format(
                 module=name,
                 msg=msg)
-        QtWidgets.QMessageBox.critical(None, "Visualization error – Coquery", s)
+        QtWidgets.QMessageBox.critical(None,
+                                       "Visualization error – Coquery", s)
         return None
 
 
@@ -1046,4 +1112,3 @@ def find_visualizer_modules():
     l = [os.path.splitext(os.path.basename(file_name))[0]
          for file_name in glob.glob(os.path.join(visualizer_path, "*.py"))]
     return l
-
