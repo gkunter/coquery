@@ -2,7 +2,7 @@
 """
 visualizer.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,22 +14,46 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import math
+import collections
 
 import pandas as pd
 import matplotlib as mpl
-mpl.use("Qt5Agg")
-mpl.rcParams["backend"] = "Qt5Agg"
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+mpl.use("Qt5Agg")
+mpl.rcParams["backend"] = "Qt5Agg"
 
 from coquery.gui.pyqt_compat import QtCore, QtGui, QtWidgets
 from coquery import options
 from coquery import managers
-from coquery.general import CoqObject
+from coquery.defines import PALETTE_BW
 from coquery.errors import (VisualizationInvalidLayout,
                             VisualizationNoDataError)
 from coquery.unicode import utf8
 from coquery.gui.classes import CoqTableModel
+
+
+class Aggregator(QtCore.QObject):
+    def __init__(self):
+        self._aggs_dict = collections.defaultdict(list)
+        self._names_dict = collections.defaultdict(list)
+
+        # pick first corpus id as aggregation
+        self.add("coquery_invisible_corpus_id", "first")
+
+    def add(self, column, fnc, name=None):
+        self._aggs_dict[column].append(fnc)
+        self._names_dict[column].append(name or column)
+
+    def process(self, df, grouping):
+        df = df.groupby(grouping).agg(self._aggs_dict)
+        agg_columns = []
+        for names in [self._names_dict[x] for x in df.columns.levels[0]]:
+            agg_columns += names
+        df.columns = agg_columns
+        df = df.reset_index()
+        return df
 
 
 class BaseVisualizer(QtCore.QObject):
@@ -150,17 +174,20 @@ class BaseVisualizer(QtCore.QObject):
         figure.
         """
 
+        ps = self.options["figure_font"].pointSize()
         if options.cfg.xkcd:
             fonts = QtGui.QFontDatabase().families()
             for x in ["Humor Sans", "DigitalStrip", "Comic Sans MS"]:
                 if x in fonts:
-                    self.options["figure_font"] = QtGui.QFont(x, pointSize=self.options["figure_font"].pointSize())
+                    self.options["figure_font"] = QtGui.QFont(
+                        x, pointSize=ps)
                     break
             else:
                 for x in ["comic", "cartoon"]:
                     for y in fonts:
                         if x.lower() in y.lower():
-                            self.options["figure_font"] = QtGui.QFont(x, pointSize=self.options["figure_font"].pointSize())
+                            self.options["figure_font"] = QtGui.QFont(
+                                x, pointSize=ps)
                             break
             plt.xkcd()
 
@@ -257,10 +284,12 @@ class BaseVisualizer(QtCore.QObject):
             raise VisualizationNoDataError
 
         session = options.cfg.main_window.Session
-        manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE,
+                                       session.Resource.name)
 
         header = self._view.horizontalHeader()
-        view_columns = [self._model.header[header.logicalIndex(i)] for i in range(header.count())]
+        view_columns = [self._model.header[header.logicalIndex(i)]
+                        for i in range(header.count())]
         view_columns = [x for x in view_columns if (
             x in options.cfg.main_window.Session.output_object.columns and
             x not in manager.hidden_columns)]
@@ -275,13 +304,12 @@ class BaseVisualizer(QtCore.QObject):
         except NameError:
             self._time_columns = []
 
-            # FIXME: reimplement row visibility
-            #self._table = session.data_table[session.row_visibility[queries.TokenQuery]]
         dtypes = session.output_object[column_order].dropna().dtypes
         self._table = CoqTableModel.format_content(
             source=session.output_object[column_order].dropna(),
             num_to_str=False)
-        self._table.columns = [session.translate_header(x) for x in self._table.columns]
+        self._table.columns = [session.translate_header(x)
+                               for x in self._table.columns]
         dtypes.index = self._table.columns.values
 
         # in order to prepare the layout of the figure, first determine
@@ -305,7 +333,9 @@ class BaseVisualizer(QtCore.QObject):
         else:
             self._groupby = []
 
-        self._levels = [sorted([utf8(y) for y in pd.unique(self._table[x].ravel())]) for x in self._groupby]
+        self._levels = [sorted([utf8(y) for y in
+                                pd.unique(self._table[x].ravel())])
+                        for x in self._groupby]
 
         if len(self._factor_columns) > self.dimensionality:
             self._col_factor = self._factor_columns[-self.dimensionality - 1]
@@ -372,42 +402,53 @@ class BaseVisualizer(QtCore.QObject):
         for ax in self.g.fig.axes:
             for element, font in [(ax.xaxis.label, "font_x_axis"),
                                   (ax.yaxis.label, "font_y_axis")]:
-                self.options[font] = self.options.get(font, QtGui.QFont(self.options["figure_font"].family()))
+                self.options[font] = self.options.get(
+                    font, QtGui.QFont(self.options["figure_font"].family()))
                 element.set_fontsize(self.options[font].pointSize())
 
             if not self.options.get("font_x_ticks"):
                 self.options["font_x_ticks"] = QtGui.QFont(
-                    self.options["font_x_axis"].family(), round(self.options["font_x_axis"].pointSize() / 1.2))
+                    self.options["font_x_axis"].family(),
+                    round(self.options["font_x_axis"].pointSize() / 1.2))
             for element in ax.get_xticklabels():
                 element.set_fontsize(self.options["font_x_ticks"].pointSize())
 
             if not self.options.get("font_y_ticks"):
                 self.options["font_y_ticks"] = QtGui.QFont(
-                    self.options["font_y_axis"].family(), round(self.options["font_y_axis"].pointSize() / 1.2))
+                    self.options["font_y_axis"].family(),
+                    round(self.options["font_y_axis"].pointSize() / 1.2))
             for element in ax.get_yticklabels():
                 element.set_fontsize(self.options["font_y_ticks"].pointSize())
 
         # Set font size of main title:
         if not self.options.get("font_main"):
             self.options["font_main"] = QtGui.QFont(
-                    self.options["figure_font"].family(), round(self.options["figure_font"].pointSize() * 1.2))
+                    self.options["figure_font"].family(),
+                    round(self.options["figure_font"].pointSize() * 1.2))
         if "label_main" in self.options:
-            plt.suptitle(utf8(self.options["label_main"]), size=self.options["font_main"].pointSize())
+            plt.suptitle(utf8(self.options["label_main"]),
+                         size=self.options["font_main"].pointSize())
 
         if not self.options.get("font_legend"):
-            self.options["font_legend"] = QtGui.QFont(self.options["figure_font"].family())
+            self.options["font_legend"] = QtGui.QFont(
+                self.options["figure_font"].family())
         if not self.options.get("font_legend_entries"):
             self.options["font_legend_entries"] = QtGui.QFont(
-                self.options["font_legend"].family(), round(self.options["font_legend"].pointSize() / 1.2))
+                self.options["font_legend"].family(),
+                round(self.options["font_legend"].pointSize() / 1.2))
 
         # set font size of legend:
         legend = plt.gca().get_legend()
         if legend:
-            legend.get_title().set_fontsize(self.options["font_legend"].pointSize())
-            legend.get_title().set_fontname(self.options["font_legend"].family())
+            legend.get_title().set_fontsize(
+                self.options["font_legend"].pointSize())
+            legend.get_title().set_fontname(
+                self.options["font_legend"].family())
             for x in legend.get_texts():
-                x.set_fontsize(self.options["font_legend_entries"].pointSize())
-                x.set_fontname(self.options["font_legend_entries"].family())
+                x.set_fontsize(
+                    self.options["font_legend_entries"].pointSize())
+                x.set_fontname(
+                    self.options["font_legend_entries"].family())
 
     def get_levels(self, name):
         """
@@ -564,6 +605,7 @@ class Visualizer(QtCore.QObject):
         self._last_legend_pos = None
         self._xlab = "X"
         self._ylab = "Y"
+        self._colorizer = None
 
     def get_custom_widgets(self, *args, **kwargs):
         """
@@ -586,8 +628,8 @@ class Visualizer(QtCore.QObject):
                 grid = sns.FacetGrid(**kwargs)
         return grid
 
-    def add_legend(self, grid, title=None, palette=None, levels=None, loc="lower left",
-                   **kwargs):
+    def add_legend(self, grid, title=None, palette=None, levels=None,
+                   loc="lower left", **kwargs):
         """
         Add a legend to the figure, using the current option settings.
         """
@@ -616,14 +658,15 @@ class Visualizer(QtCore.QObject):
 
             legend_bar = [plt.Rectangle((0, 0), 1, 1,
                                         fc=col[i], edgecolor="none")
-                        for i, _ in enumerate(self.legend_levels)]
+                          for i, _ in enumerate(self.legend_levels)]
             titlesize = kwargs.pop("titlesize")
-            grid.fig.legend(legend_bar,
-                    self.legend_levels,
-                    title=title or self.legend_title,
-                    frameon=True,
-                    framealpha=0.7,
-                    loc=loc, **kwargs).draggable()
+            grid.fig.legend(
+                legend_bar,
+                self.legend_levels,
+                title=title or self.legend_title,
+                frameon=True,
+                framealpha=0.7,
+                loc=loc, **kwargs).draggable()
 
             legend = grid.fig.legends[-1]
             legend.get_title().set_fontsize(titlesize)
@@ -631,7 +674,6 @@ class Visualizer(QtCore.QObject):
                 #grid.fig.legends[-1].set_bbox_to_anchor(
                     #self._last_legend_pos)
                 #self._last_legend_pos = None
-
 
         #grid.fig.get_axes()[-1].legend(
             #ncol=self.options.get("label_legend_columns", 1),
@@ -705,6 +747,13 @@ class Visualizer(QtCore.QObject):
         self.rotate_annotations(grid)
 
     @staticmethod
+    def get_figure_size():
+        fig = plt.gcf()
+        bbox = fig.get_window_extent().transformed(
+                    fig.dpi_scale_trans.inverted())
+        return bbox.width * fig.dpi, bbox.height * fig.dpi
+
+    @staticmethod
     def dtype(feature, df):
         if feature:
             if feature.startswith("func_"):
@@ -762,7 +811,7 @@ class Visualizer(QtCore.QObject):
         num_cols = df.select_dtypes(include=[pd.np.number]).columns
         cat_cols = df.select_dtypes(exclude=[pd.np.number]).columns
         categorical = [x for x in (data_x, data_y) if x in cat_cols]
-        numeric = [x for x in (data_x, data_y, data_z) if x in num_cols]
+        numeric = [x for x in (data_x, data_y) if x in num_cols]
         empty = [x for x in (data_x, data_y, data_z) if x is None]
 
         return categorical, numeric, empty
@@ -771,7 +820,12 @@ class Visualizer(QtCore.QObject):
     def get_palette(pal, n, nlevels=None):
         nlevels = nlevels or n
         base, _, rev = pal.partition("_")
-        col = sns.color_palette(base, n)
+
+        if base == PALETTE_BW:
+            col = ([(0, 0, 0), (1, 1, 1)] * (1 + n // 2))[:n]
+        else:
+            col = sns.color_palette(base, n)
+
         if rev:
             col = col[::-1]
         if nlevels > n:
@@ -801,5 +855,3 @@ def get_grid_layout(n):
         nrows = int(math.sqrt(n)) + 1
         ncols = int(n / nrows) + 1
         return (nrows, ncols)
-
-
