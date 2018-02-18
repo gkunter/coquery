@@ -229,9 +229,10 @@ class CoqFeatureList(QtWidgets.QListWidget):
 
     def __init__(self, parent=None):
         super(CoqFeatureList, self).__init__(parent)
-        self.setAcceptDrops(True)
         self.setDragDropMode(self.DragDrop)
         self.setSelectionMode(self.SingleSelection)
+        self.setAcceptDrops(False)
+
         # add (and remove) dummy item to determine usual size of entries:
         super(CoqFeatureList, self).addItem(QtWidgets.QListWidgetItem(""))
         self._item_height = (self.visualItemRect(self.item(0)).height() +
@@ -252,6 +253,9 @@ class CoqFeatureList(QtWidgets.QListWidget):
     def addItem(self, item):
         if not self.hasItem(item):
             item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
+            item.setToolTip(
+                "Drag feature '{}' to receiving feature tray".format(
+                    item.text()))
             super(CoqFeatureList, self).addItem(item)
         self.featureAdded.emit(item)
 
@@ -265,18 +269,6 @@ class CoqFeatureList(QtWidgets.QListWidget):
         return 4 * self.frameWidth()
         return 0
 
-    def dragEnterEvent(self, e):
-        if ("application/x-qabstractitemmodeldatalist" in
-                e.mimeData().formats()):
-            e.accept()
-        else:
-            super(CoqFeatureList, self).dragEnterEvent(e)
-
-    def dropEvent(self, e):
-        super(CoqFeatureList, self).dropEvent(e)
-        #e.setDropAction(QtCore.Qt.MoveAction)
-        e.accept()
-
 
 class CoqFeatureTray(CoqFeatureList):
     """
@@ -289,6 +281,7 @@ class CoqFeatureTray(CoqFeatureList):
 
     def __init__(self, parent=None):
         super(CoqFeatureTray, self).__init__(parent)
+        self.setAcceptDrops(True)
         self.setEditTriggers(self.NoEditTriggers)
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -335,6 +328,13 @@ class CoqFeatureTray(CoqFeatureList):
             self.send_back()
         super(CoqFeatureTray, self).clear()
         self.featureCleared.emit()
+
+    def addItem(self, item):
+        item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
+        item.setToolTip(
+            "Click on Clear button to remove '{}'".format(item.text()))
+        super(QtWidgets.QListWidget, self).addItem(item)
+        self.featureAdded.emit(item)
 
     def setItem(self, item, source):
         if self.count():

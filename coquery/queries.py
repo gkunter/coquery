@@ -39,6 +39,7 @@ from . import tokens
 from . import options
 from . import managers
 from . import NAME
+from coquery.unicode import utf8
 
 
 class TokenQuery(object):
@@ -109,14 +110,16 @@ class TokenQuery(object):
 
         self._max_number_of_tokens = 0
         for x in self.query_list:
-            self._max_number_of_tokens = max(self._max_number_of_tokens, len(x))
+            self._max_number_of_tokens = max(self._max_number_of_tokens,
+                                             len(x))
 
         tokens.QueryToken.set_pos_check_function(
             self.Resource.pos_check_function)
 
         for i, self._sub_query in enumerate(self.query_list):
-            self._current_number_of_tokens = len([x for _, x in self._sub_query if x])
-            self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
+            l = [utf8(x) for _, x in self._sub_query if x]
+            self._current_number_of_tokens = len(l)
+            self._current_subquery_string = " ".join(l)
 
             if len(self.query_list) > 1:
                 s = "Subquery #{} of {}: {}".format(

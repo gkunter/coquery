@@ -424,20 +424,7 @@ class Options(object):
 
         args, unknown = self.parser.parse_known_args()
 
-        try:
-            if args.corpus:
-                self.args.corpus = args.corpus
-            elif not self.args.corpus:
-                self.args.corpus = ""
-        except AttributeError:
-            self.args.corpus = ""
-
         self.args.corpus = utf8(self.args.corpus)
-        # if no corpus is selected and no GUI is requested, display the help
-        # and exit.
-        if not self.args.corpus and not (self.args.gui):
-            self.parser.print_help()
-            sys.exit(1)
 
         self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
 
@@ -902,7 +889,8 @@ class Options(object):
             finally:
                 settings.setValue("column_properties", column_properties)
             if column_properties:
-                current_properties = column_properties.get(self.args.corpus, {})
+                current_properties = column_properties.get(self.args.corpus,
+                                                           {})
             else:
                 current_properties = {}
             self.args.column_color = current_properties.get("colors", {})
@@ -911,6 +899,7 @@ class Options(object):
                 if x.startswith("column_width_"):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
+
 
 cfg = None
 settings = None

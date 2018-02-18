@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(697, 733)
+        MainWindow.resize(697, 745)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -403,6 +403,9 @@ class Ui_MainWindow(object):
         self.label.setObjectName("label")
         self.gridLayout_8.addWidget(self.label, 0, 1, 1, 1)
         self.spin_sample_size = QtWidgets.QSpinBox(self.tool_widget_page_summary)
+        self.spin_sample_size.setMinimum(1)
+        self.spin_sample_size.setMaximum(999999999)
+        self.spin_sample_size.setProperty("value", 10)
         self.spin_sample_size.setObjectName("spin_sample_size")
         self.gridLayout_8.addWidget(self.spin_sample_size, 1, 1, 1, 1)
         self.gridLayout_8.setColumnStretch(1, 1)
@@ -827,7 +830,7 @@ class Ui_MainWindow(object):
         self.label.setBuddy(self.spin_sample_size)
 
         self.retranslateUi(MainWindow)
-        self.tool_widget.setCurrentIndex(0)
+        self.tool_widget.setCurrentIndex(5)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.combo_corpus, self.radio_query_string)
         MainWindow.setTabOrder(self.radio_query_string, self.edit_query_string)

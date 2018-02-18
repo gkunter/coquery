@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>697</width>
-    <height>733</height>
+    <height>745</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -427,7 +427,7 @@
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>5</number>
              </property>
              <widget class="QWidget" name="tool_widget_column_order">
               <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -870,6 +870,15 @@
                     <widget class="QSpinBox" name="spin_sample_size">
                      <property name="suffix">
                       <string> match(es)</string>
+                     </property>
+                     <property name="minimum">
+                      <number>1</number>
+                     </property>
+                     <property name="maximum">
+                      <number>999999999</number>
+                     </property>
+                     <property name="value">
+                      <number>10</number>
                      </property>
                     </widget>
                    </item>
