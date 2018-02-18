@@ -39,6 +39,7 @@ class AvailableModulesDialog(QtWidgets.QDialog):
                 ("cachetools", options.use_cachetools),
                 ("PyMySQL", options.use_mysql),
                 ("Seaborn", options.use_seaborn),
+                ("squarify", options.use_squarify),
                 ("statsmodels", options.use_statsmodels),
                 ("NLTK", options.use_nltk),
                 ("tgt", options.use_tgt),
@@ -65,9 +66,9 @@ class AvailableModulesDialog(QtWidgets.QDialog):
             self._links[id(name_item)] = url
 
             if flag:
-                status_item.setIcon(get_icon("Checked Checkbox"))
+                status_item.setIcon(get_icon("Checkmark"))
             else:
-                status_item.setIcon(get_icon("Unchecked Checkbox"))
+                status_item.setIcon(get_icon("Delete"))
 
             self.ui.table_modules.setItem(i, 0, name_item)
             self.ui.table_modules.setItem(i, 1, status_item)
