@@ -430,6 +430,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.tray_columns.featureCleared.connect(self.check_clear_buttons)
         self.ui.tray_rows.featureCleared.connect(self.check_clear_buttons)
 
+        # Hook up checks for column and row trays so that they can't contain
+        # duplicates of either the x or the y feature tray:
+        self.ui.tray_columns.featureChanged.connect(self.check_duplicates)
+        self.ui.tray_rows.featureChanged.connect(self.check_duplicates)
+
         # Hook up checks for wrapping checkbox enable state.
         # The enable state of the wrapping checkbox is checked if there are
         # changes to the rows and columns tray.
@@ -564,6 +569,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 self.ui.check_wrap_layout.setChecked(self._last_wrap_state)
                 self.ui.check_wrap_layout.blockSignals(False)
                 del self._last_wrap_state
+
+    def check_duplicates(self):
+        columns = self.ui.tray_columns.data()
+        rows = self.ui.tray_rows.data()
+        x = self.ui.tray_data_x.data()
+        y = self.ui.tray_data_y.data()
+
+        if columns and (columns in [x, y]):
+            self.ui.tray_columns.clear()
+        if rows and (rows in [x, y]):
+            self.ui.tray_rows.clear()
 
     def check_clear_buttons(self):
         self.ui.button_clear_x.setEnabled(bool(self.ui.tray_data_x.text()))
