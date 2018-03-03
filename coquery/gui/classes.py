@@ -311,7 +311,7 @@ class CoqFeatureTray(CoqFeatureList):
             return None
 
     def data(self):
-        if self.count():
+        if self.count() and self.isEnabled():
             return utf8(self.item(0).data(QtCore.Qt.UserRole))
         else:
             return None
