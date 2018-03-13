@@ -22,11 +22,11 @@ import itertools
 import pandas as pd
 import io
 import ctypes
-import platform
 import logging
 
 from .unicode import utf8
 from .defines import LANGUAGES
+
 
 CONTRACTION = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
 PUNCT = '!\'),-./:;?^_`}’”]'
@@ -293,7 +293,6 @@ def sha1sum(path, chunk_size=io.DEFAULT_BUFFER_SIZE):
     return sha1
 
 
-
 def get_chunk(iterable, chunk_size=250000):
     """
     Yield a chunk from the big file given as 'iterable'.
@@ -342,13 +341,75 @@ def format_file_size(size):
         power = 0
     else:
         power = math.floor(math.log2(abs(size)) / 10)
-    unit = ['B','KiB','MiB','GiB','TiB','PiB'][power]
+    unit = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'][power]
     return "{:0.1f} {}".format(size / 1024 ** power, unit)
 
 
+def niceify_lower(x, add=1):
+    """
+    Find a nice floor value for 'x'
+    """
+    print("niceify_lower({})".format(x))
+    if x < 0:
+        return -niceify_upper(-x)
+    elif x == 0:
+        return 0
+    else:
+        exp = pd.np.floor(pd.np.log10(abs(x))) + add
+        niced = pd.np.floor(x / 10 ** exp) * 10 ** exp
+        print("\texp:   ", exp)
+        print("\tniced: ", niced)
+        return niced
+
+
+def niceify_upper(x, add=0):
+    """
+    Find a nice ceiling value for 'x'
+    """
+    print("niceify_upper({})".format(x))
+    if x < 0:
+        return -niceify_lower(-x, add=0)
+    elif x == 0:
+        return 0
+    else:
+        exp = pd.np.floor(pd.np.log10(x)) + add
+        niced = pd.np.ceil(x / 10 ** exp) * 10 ** exp
+        print("\texp:   ", exp)
+        print("\tniced: ", niced)
+        return niced
+
+
+def pretty(vrange, n):
+    """
+    Return a range of prettified values.
+
+    Parameters
+    ----------
+    vrange : tuple
+        A tuple (x, y) with x being the lower and y the upper end of the
+        range
+
+    n : int
+        The number of values to be generated
+
+    Returns
+    -------
+    l : list
+        A list with n equidistant values ranging from a prettified floor to a
+        prettified ceiling
+    """
+    vmin, vmax = vrange
+
+    if vmin > vmax:
+        vmax, vmin = vmin, vmax
+
+    pretty_min = niceify_lower(vmin)
+    pretty_max = niceify_upper(vmax)
+
+    return pd.np.linspace(pretty_min, pretty_max, n, endpoint=False)
+
+
 # Memory status functions:
-
-
 def memory_dump():
     import gc
     x = 0
