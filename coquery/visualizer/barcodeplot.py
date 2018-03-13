@@ -19,6 +19,9 @@ from coquery.visualizer import visualizer as vis
 from coquery import options
 from coquery.gui.pyqt_compat import QtWidgets, QtCore
 
+from coquery.visualizer.colorizer import (
+    Colorizer, ColorizeByFactor, ColorizeByFreq, ColorizeByNum)
+
 
 class BarcodePlot(vis.Visualizer):
     axes_style = "white"
@@ -71,6 +74,7 @@ class BarcodePlot(vis.Visualizer):
                    data, color,
                    x=None, y=None, z=None,
                    levels_x=None, levels_y=None, levels_z=None,
+                   range_x=None, range_y=None, range_z=None,
                    palette=None, rug=None, rug_color="Black",
                    **kwargs):
         """
@@ -95,15 +99,22 @@ class BarcodePlot(vis.Visualizer):
 
         # Take care of a hue variable:
         if z:
-            colors = self.get_palette(palette,
-                                      kwargs["color_number"],
-                                      len(levels_z))
-            cols = [colors[levels_z.index(d)] for d in data[z]]
-            self.legend_title = z
-            self.legend_levels = levels_z
+            if data[z].dtype == object:
+                self._colorizer = ColorizeByFactor(
+                    palette, kwargs["color_number"], levels_z)
+                if not (z == x or z == y):
+                    self.legend_levels = self._colorizer.legend_levels()
+                else:
+                    self.legend_levels = []
+            else:
+                self._colorizer = ColorizeByNum(
+                    palette, kwargs["color_number"], range_z, data[z].dtype)
+            cols = self._colorizer.get_hues(data=data[z])
         else:
-            cols = self.get_palette(palette, kwargs["color_number"], 1)
+            self._colorizer = Colorizer(palette, kwargs["color_number"], [])
+            cols = self._colorizer.get_hues()
 
+        self.legend_palette = self._colorizer.legend_palette()
 
         if x and not y:
             BarcodePlot.force_vertical = True
@@ -141,6 +152,8 @@ class BarcodePlot(vis.Visualizer):
                 func(corpus_id, val, val + 0.1, cols)
         else:
             func(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
+
+        self.legend_title = self._colorizer.legend_title(z)
 
         ax = kwargs.get("ax", plt.gca())
         ax.set(**ax_kwargs)
