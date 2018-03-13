@@ -24,7 +24,8 @@ from coquery.defines import (PALETTE_BW,
                              msg_visualization_error,
                              msg_visualization_module_error)
 
-from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
+from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window,
+                          COLOR_NAMES)
 
 import matplotlib as mpl
 
@@ -37,6 +38,7 @@ import pandas as pd
 import seaborn as sns
 
 from ..visualizer.visualizer import get_grid_layout
+from coquery.visualizer.colorizer import COQ_SINGLE
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 from . import classes
 from .app import get_icon
@@ -112,6 +114,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         super(VisualizationDesigner, self).__init__(parent)
         self.session = session
         self.vis = None
+        self.df = None
+        self._current_color = QtGui.QColor("#55aaff")
 
         self.ui = Ui_VisualizationDesigner()
         self.ui.setupUi(self)
@@ -126,8 +130,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.label_38.hide()
         #self.ui.spin_number.hide()
         #self.ui.label_37.hide()
-
-        self.df = None
 
         self.populate_figure_types()
 
@@ -180,6 +182,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.table_categorical.clear()
         self.ui.table_numerical.clear()
         self.df = df
+        self.df["coquery_invisible_index"] = self.df.index
         self.session = session
         self.alias = alias or {}
         for i, x in enumerate(df.columns):
@@ -290,6 +293,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 new_item.setIcon(get_icon("Clock"))
             self.ui.table_numerical.addItem(new_item)
 
+        if len(self.df):
+            # add "row number" variable
+            label = "Row number"
+            new_item = QtWidgets.QListWidgetItem(label)
+            new_item.setData(QtCore.Qt.UserRole, "coquery_invisible_index")
+            new_item.setToolTip(new_item.text())
+            self.ui.table_numerical.addItem(new_item)
+
         ## add functions
         #for func in [Freq]:
             #new_item = QtWidgets.QListWidgetItem("{} (generated)".format(
@@ -381,6 +392,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
             lambda: self.set_radio(self.ui.radio_sequential))
         self.ui.radio_diverging.pressed.connect(
             lambda: self.set_radio(self.ui.radio_diverging))
+        self.ui.radio_single_color.pressed.connect(
+            lambda: self.set_radio(self.ui.radio_single_color))
+
+        # Hook up single color button:
+        self.ui.button_change_color.clicked.connect(self.set_color)
 
         # Hook up reverse checkbox
         self.ui.check_reverse.toggled.connect(
@@ -647,7 +663,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self._color_number = self.ui.spin_number.value()
         self.ui.color_test_area.clear()
         name, _, rev = self._palette_name.partition("_")
-        if name == PALETTE_BW:
+        if name == COQ_SINGLE:
+            rgb = self._current_color.getRgb()[:-1]
+            test_palette = [tuple(x / 255 for x in rgb)] * self._color_number
+        elif name == PALETTE_BW:
             test_palette = [(0, 0, 0), (1, 1, 1)]
         else:
             test_palette = sns.color_palette(name, self._color_number)
@@ -666,6 +685,15 @@ class VisualizationDesigner(QtWidgets.QDialog):
         if (x != self._palette_name or n != self._color_number):
             self.show_palette()
             self.plot_figure()
+
+    def set_color(self):
+        if self._current_color:
+            color = QtWidgets.QColorDialog.getColor(self._current_color)
+        else:
+            color = QtWidgets.QColorDialog.getColor()
+        if color.isValid():
+            self._current_color = color
+            self.change_palette()
 
     def set_radio(self, radio):
         radio.blockSignals(True)
@@ -831,43 +859,47 @@ class VisualizationDesigner(QtWidgets.QDialog):
             d["levels_x"] = sorted(
                 set(self.df[d["x"]].values[
                     ~pd.isnull(self.df[d["x"]].values)]))
+            d["range_x"] = (d["x"].min(), d["x"].max())
         else:
             d["levels_x"] = []
+            d["range_x"] = None
 
         if d["y"]:
             d["levels_y"] = sorted(
                 set(self.df[d["y"]].values[
                     ~pd.isnull(self.df[d["y"]].values)]))
+            d["range_y"] = (d["y"].min(), d["y"].max())
         else:
             d["levels_y"] = []
+            d["range_y"] = None
 
         if d["z"]:
             d["levels_z"] = sorted(
                 set(self.df[d["z"]].values[
                     ~pd.isnull(self.df[d["z"]].values)]))
+            d["range_z"] = (d["z"].min(), d["z"].max())
         else:
             d["levels_z"] = []
+            d["range_z"] = None
 
         return d
 
     def get_palette_name(self):
-        for widget in dir(self.ui):
-            if widget.startswith("radio_"):
-                check = getattr(self.ui, widget)
-                _, ptype = widget.split("_")
-                if (ptype in ("qualitative", "sequential", "diverging") and
-                        check.isChecked()):
-                    combo_name = "combo_{}".format(ptype)
-                    combo = getattr(self.ui, combo_name)
-                    pal_name = utf8(combo.currentText())
-                    break
-        else:
-            return None
+        for ptype in ("qualitative", "sequential", "diverging", "single"):
+            if ptype == "single":
+                return "{}_{}".format(COQ_SINGLE, self._current_color.name())
+            widget_name = "radio_{}".format(ptype)
+            widget = getattr(self.ui, widget_name)
+            if widget.isChecked():
+                combo_name = "combo_{}".format(ptype)
+                combo = getattr(self.ui, combo_name)
+                pal_name = utf8(combo.currentText())
+                break
 
         if self.ui.check_reverse.isChecked():
-            return "{}_r".format(pal_name)
-        else:
-            return pal_name
+            pal_name = "{}_r".format(pal_name)
+
+        return pal_name
 
     def plot_figure(self):
         logging.info("VIS: plot_figure()")
