@@ -15,9 +15,13 @@ from __future__ import unicode_literals
 import pandas as pd
 import seaborn as sns
 
-from coquery.gui.pyqt_compat import QtCore
+from coquery.gui.pyqt_compat import QtCore, QtGui
 from coquery.defines import PALETTE_BW
+from coquery.general import pretty
 from coquery import options
+
+
+COQ_SINGLE = "COQSINGLE"
 
 
 class Colorizer(QtCore.QObject):
@@ -25,12 +29,16 @@ class Colorizer(QtCore.QObject):
         self.palette = palette
         self.ncol = ncol
         self.values = values
+        self._title_frm = ""
 
     def get_palette(self):
         base, _, rev = self.palette.partition("_")
 
         if base == PALETTE_BW:
             col = ([(0, 0, 0), (1, 1, 1)] * (1 + self.ncol // 2))[:self.ncol]
+        elif base == COQ_SINGLE:
+            color = QtGui.QColor(rev)
+            col = [tuple(x / 255 for x in color.getRgb()[:-1])] * self.ncol
         else:
             col = sns.color_palette(base, self.ncol)
 
@@ -46,48 +54,54 @@ class Colorizer(QtCore.QObject):
         return (self.get_palette() * ((n // self.ncol) + 1))[:n]
 
     def legend_title(self, z):
-        return ""
+        return self._title_frm.format(z=z)
 
     def legend_palette(self):
-        return self.get_palette()
+        return []
 
     def legend_levels(self):
-        return list(self.values)
+        return []
+
+    def set_title_frm(self, s):
+        self._title_frm = s
 
 
 class ColorizeByFactor(Colorizer):
-    def get_hues(self, data):
-        hues = super(ColorizeByFactor, self).get_hues(data)
-        return [hues[self.values.index(val)] for val in data]
+    def __init__(self, palette, ncol, values):
+        super(ColorizeByFactor, self).__init__(palette, ncol, values)
+        self.set_title_frm("{z}")
 
-    def legend_title(self, z):
-        return "Most frequent {z}".format(z=z)
+    def get_hues(self, data):
+        pal = self.get_palette()
+        color_indices = [self.values.index(val) % len(pal) for val in data]
+        return [pal[ix] for ix in color_indices]
+
+    def legend_palette(self):
+        n = len(self.values)
+        pal = self.get_palette()
+        return (pal * ((n // len(pal)) + 1))[:n]
+
+    def legend_levels(self):
+        return self.values
 
 
 class ColorizeByNum(Colorizer):
-    def __init__(self, palette, ncol, vmin, vmax, dtype):
+    def __init__(self, palette, ncol, vrange, dtype):
         super(ColorizeByNum, self).__init__(palette, ncol)
-        self.vmin = vmin
-        self.vmax = vmax
         self.dtype = dtype
-        self.bins = pd.np.linspace(self.vmin, self.vmax,
-                                   self.ncol,
-                                   endpoint=False)
+        self.bins = pretty(vrange, ncol)
+        self.set_title_frm("{z}")
 
     def get_hues(self, data):
         hues = super(ColorizeByNum, self).get_hues(n=self.ncol)[::-1]
         binned = pd.np.digitize(data, self.bins, right=False) - 1
         return [hues[val] for val in binned]
 
-    def legend_title(self, z):
-        return z
-
     def legend_levels(self):
         if self.dtype == int:
             frm_str = "{:.0f}"
         else:
             frm_str = options.cfg.float_format
-        print(frm_str)
         return ["≥ {}".format(frm_str.format(x)) for x in self.bins][::-1]
 
 
@@ -99,6 +113,3 @@ class ColorizeByFreq(Colorizer):
         hues = super(ColorizeByFreq, self).get_hues(n=self.ncol)
         binned = pd.np.digitize(data, self.bins, right=False) - 1
         return [hues[val] for val in binned]
-
-    def legend_title(self, z):
-        return ""
