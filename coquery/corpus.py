@@ -640,9 +640,6 @@ class BaseResource(CoqObject):
         else:
             return base
 
-    def audio_format_supported(self):
-        return False
-
 
 class SQLResource(BaseResource):
     _get_orth_str = None
