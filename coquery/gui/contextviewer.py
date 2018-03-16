@@ -74,7 +74,6 @@ class ContextView(QtWidgets.QWidget):
                     from coquery import sound
                     self.audio = sound.Sound(fields[label])
 
-
         words = options.settings.value("contextviewer_words", None)
         if words is not None:
             try:
@@ -201,9 +200,10 @@ class ContextView(QtWidgets.QWidget):
             self.context_thread.quit()
         self.next_value = self.ui.slider_context_width.value()
         if not self.context_thread.isRunning():
-            self.context_thread = classes.CoqThread(self.retrieve_context,
-                                                    next_value=self.next_value,
-                                                    parent=self)
+            self.context_thread = classes.CoqThread(
+                self.retrieve_context,
+                next_value=self.next_value,
+                parent=self)
             self.context_thread.taskFinished.connect(self.finalize_context)
             self.context_thread.taskException.connect(self.onException)
             self.ui.progress_bar.show()
@@ -269,9 +269,8 @@ class ContextView(QtWidgets.QWidget):
 
         weight = int(font.weight()) * 10
 
-        styles = ['line-height: {}px'.format(font.pointSize() * 1.85),
-                  'font-family: "{}", Times, Serif'.format(
-                      font.family()),
+        styles = ["line-height: {}px".format(font.pointSize() * 1.85),
+                  'font-family: "{}", Times, Serif'.format(font.family()),
                   "font-size: {}px".format(font.pointSize() * 1.25),
                   "font-style: {}".format(style),
                   "font-weight: {}".format(weight),
@@ -287,7 +286,6 @@ class ContextView(QtWidgets.QWidget):
         self.ui.context_area.setText(s)
 
         self.ui.progress_bar.hide()
-
 
     def prepare_textgrid(self, df, offset):
         if not use_tgt:
@@ -343,9 +341,9 @@ class ContextViewAudio(ContextView):
     def finalize_context(self):
         super(ContextViewAudio, self).finalize_context()
         audio = self.audio.extract_sound(self.context["start_time"],
-                                            self.context["end_time"])
+                                         self.context["end_time"])
         textgrid = self.prepare_textgrid(self.context["df"],
-                                            self.context["start_time"])
+                                         self.context["start_time"])
 
         self.ui.textgrid_area.setSound(audio)
         self.ui.textgrid_area.setTextgrid(textgrid)
