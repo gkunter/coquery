@@ -15,6 +15,8 @@ from __future__ import division
 import wave
 import logging
 import threading
+import tempfile
+import os
 import struct
 import sys
 import numpy as np
@@ -23,6 +25,13 @@ try:
     import StringIO as io
 except ImportError:
     import io as io
+
+_use_sphfile = False
+try:
+    import sphfile
+    _use_sphfile = True
+except ImportError:
+    pass
 
 _use_alsaaudio = False
 _use_winsound = False
@@ -95,12 +104,102 @@ else:
     print("Loaded audio module: {}".format(_audio_module))
 
 
-class Sound(object):
-    def __init__(self, source, start=0, end=None):
+def _read_as_wav(source):
+    try:
         if type(source) is bytes:
             in_wav = wave.open(io.BytesIO(source))
         else:
             in_wav = wave.open(source, "rb")
+    except wave.Error:
+        raise TypeError("WAV file not readable")
+    else:
+        return in_wav
+
+
+def _read_as_sph(source):
+    in_wav = None
+    if _use_sphfile:
+        try:
+            if type(source) is bytes:
+                raise NotImplementedError
+            else:
+                with open(source, "rb") as f:
+                    header = f.read(4)
+                    if header != "NIST":
+                        raise TypeError
+                sph_file = sphfile.SPHFile(source)
+                sph_file.open()
+
+                tmp = tempfile.NamedTemporaryFile()
+                temp_name = tmp.name
+                tmp.close()
+
+                try:
+                    sph_file.write_wav(temp_name)
+                    in_wav = _read_as_wav(tmp.name)
+                finally:
+                    os.remove(temp_name)
+
+        except (wave.Error, ValueError, TypeError) as e:
+            raise TypeError
+        else:
+            return in_wav
+    else:
+        raise TypeError("SPHFile not unsupported")
+
+
+class AudioReader(object):
+    """
+    This class provides the read() class method which can be used to read an
+    audio file. It takes the file name as an input, and returns a
+    wave.Wave_read instance, or None the audio file could not be read.
+
+    Support for different audio file formats is provided by adding a reader
+    method to the class module `reader_methods`.
+    """
+
+    reader_methods = [_read_as_wav, _read_as_sph]
+
+    def __init__(self, source=None):
+        self._n = len(self.reader_methods)
+        self._i = 0
+        self._source = source
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        if self._i < self._n:
+            reader = self.reader_methods[self._i]
+            self._i += 1
+
+            try:
+                result = reader(self._source)
+            except TypeError:
+                result = None
+            return result
+        else:
+            raise StopIteration
+
+    @classmethod
+    def read(cls, source):
+        for wav in cls(source):
+            if wav:
+                return wav
+        return None
+
+
+class Sound(object):
+    def __init__(self, source, start=0, end=None):
+
+        in_wav = AudioReader.read(source)
+
+        if not in_wav:
+            raise TypeError
+
         self.framerate = in_wav.getframerate()
         self.channels = in_wav.getnchannels()
         self.samplewidth = in_wav.getsampwidth()
@@ -176,7 +275,7 @@ class Sound(object):
     def write(self, target, start=0, end=None):
         start_pos = self.to_index(start)
         if end:
-            end_pos = self.to_index(time)
+            end_pos = self.to_index(end)
         else:
             end_pos = len(self.raw)
 
