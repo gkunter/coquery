@@ -18,7 +18,6 @@ import logging
 import tgt
 
 from . import options
-from . import NAME
 from .links import get_by_hash
 from .unicode import utf8
 
@@ -81,8 +80,8 @@ class TextgridWriter(object):
             features = options.cfg.selected_features
 
         tiers = set([])
-        for rc_feature in [x for x in features if (
-                            not x.startswith(("func_", "coquery_", "db_")))]:
+        for rc_feature in [x for x in features
+                           if not x.startswith(("func_", "coquery_", "db_"))]:
             hashed, tab, feature = (
                 self.resource.split_resource_feature(rc_feature))
 
@@ -96,8 +95,8 @@ class TextgridWriter(object):
                 # following the table path:
                 self.resource.joined_tables = ["corpus"]
                 self.resource.table_list = ["corpus"]
-                self.resource.add_table_path("corpus_id",
-                                                    "{}_id".format(tab))
+                self.resource.add_table_path("corpus_id", "{}_id".format(tab))
+
                 for current_tab in self.resource.joined_tables:
                     # check if timing information has been selected for the
                     # current table from the table path:
@@ -106,10 +105,11 @@ class TextgridWriter(object):
 
                     # if so, set the timing entry for the current feature
                     # to these timings:
-                    if (start_label in options.cfg.selected_features and
-                        end_label in options.cfg.selected_features) and not (
-                            rc_feature.endswith(("endtime", "starttime"))):
-                        self.feature_timing[rc_feature] = (start_label, end_label)
+                    if (not rc_feature.endswith(("endtime", "starttime")) and
+                            start_label in options.cfg.selected_features and
+                            end_label in options.cfg.selected_features):
+                        self.feature_timing[rc_feature] = (start_label,
+                                                           end_label)
 
             rc_feat = "{}_{}".format(tab, feature)
             if hashed is not None:
@@ -127,8 +127,8 @@ class TextgridWriter(object):
                     grids[x].add_tier(tgt.IntervalTier(name=tier_name))
                     tiers.add(tier_name)
 
-        for col in [x for x in features if x.startswith(
-                                            ("func", "coquery", "db"))]:
+        for col in [x for x in features
+                    if x.startswith(("func", "coquery", "db"))]:
             # FIXME:
             # db and func columns are never treated as lexicalized columns.
             # The fix for this is probably not quite trivial.
@@ -159,8 +159,8 @@ class TextgridWriter(object):
         """
         corpus_features = [x for x, _ in self.resource.get_corpus_features()]
 
-        data_columns = [x for x in df.columns if (
-                            "_starttime_" not in x and "_endtime_" not in x)]
+        data_columns = [x for x in df.columns
+                        if "_starttime_" not in x and "_endtime_" not in x]
 
         max_stop = end_time + left_padding + right_padding
 
@@ -224,9 +224,6 @@ class TextgridWriter(object):
                             # This can happen if no word boundaries are
                             # selected in a multi-word query.
                             pass
-                            #logger.warn("{}: {} ({})".format(
-                                #self.session.translate_header(tier.name),
-                                #e, grid_id))
                 else:
                     # segment features
                     start_label, end_label = self.feature_timing[tier_name]
@@ -249,7 +246,7 @@ class TextgridWriter(object):
                         try:
                             tier.add_interval(interval)
                         except ValueError as e:
-                            logger.warning("{}: {} ({})".format(
+                            logging.warning("{}: {} ({})".format(
                                 self.session.translate_header(tier.name),
                                 e, grid_id))
             if interval:
@@ -299,8 +296,10 @@ class TextgridWriter(object):
                 corpus_id = key
             else:
                 corpus_id = match_df["coquery_invisible_corpus_id"].values[0]
+
             f_row = self.file_data[
-                        self.file_data[self.resource.corpus_id] == corpus_id]
+                self.file_data[self.resource.corpus_id] == corpus_id]
+
             start_columns = [x for x in match_df.columns if "starttime_" in x]
             end_columns = [x for x in match_df.columns if "endtime_" in x]
 
@@ -330,7 +329,6 @@ class TextgridWriter(object):
     def write_grids(self, output_path, columns, one_grid_per_match,
                     sound_path, left_padding, right_padding, remember_time,
                     file_prefix):
-
         if "coquery_invisible_origin_id" not in self.df.columns:
             one_grid_per_match = True
 
@@ -346,7 +344,9 @@ class TextgridWriter(object):
             grid = grids[x]
             for i, tier in enumerate(grid.tiers):
                 try:
-                    hashed, tab, feature = self.resource.split_resource_feature(tier.name)
+                    tup = self.resource.split_resource_feature(tier.name)
+                    hashed, tab, feature = tup
+
                     if hashed is not None:
                         link, res = get_by_hash(hashed)
                         label = getattr(res, "{}_{}".format(tab, feature))
@@ -375,29 +375,31 @@ class TextgridWriter(object):
             textgrids[basename].append((grid, filename, self._offsets[x]))
 
         if sound_path:
-            import wave
-            from .sound import extract_sound
+            from .sound import Sound
 
-            # FIXME:
-            # there should be a resource method that matches sound file names
-            # and text grid names.
             for root, _, files in os.walk(sound_path):
                 for file_name in files:
                     basename, _ = os.path.splitext(file_name)
-                    if basename in textgrids:
-                        source = os.path.join(root, file_name)
-                        for grid, grid_name, offset in textgrids[basename]:
-                            target = os.path.join(
-                                        output_path,
-                                        "{}{}.wav".format(
-                                            file_prefix,
-                                            grid_name))
-                            start = max(0, offset - left_padding)
-                            end = offset - left_padding + grid.end_time
+                    sources = self.resource.audio_to_source(basename)
+
+                    for source in sources:
+
+                        if source in textgrids:
+                            source_path = os.path.join(root, file_name)
 
                             try:
-                                extract_sound(source, target, start, end)
-                            except wave.Error:
-                                pass
+                                sound = Sound(source_path)
+                            except TypeError:
+                                continue
 
-logger = logging.getLogger(NAME)
+                            for tup in textgrids.get(source, []):
+                                grid, grid_name, offs = tup
+                                wav_name = "{}{}.wav".format(file_prefix,
+                                                             grid_name)
+                                dest_path = os.path.join(output_path,
+                                                         wav_name)
+
+                                start = max(0, offs - left_padding)
+                                end = offs - left_padding + grid.end_time
+
+                                sound.write(dest_path, start, end)
