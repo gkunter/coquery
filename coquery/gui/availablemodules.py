@@ -50,6 +50,7 @@ class AvailableModulesDialog(QtWidgets.QDialog):
                 ("odfpy", options.use_odfpy),
                 ("BeautifulSoup", options.use_bs4),
                 ("xlrd", options.use_xlrd),
+                ("sphfile", options.use_sphfile),
                 ]
         if sys.platform.startswith("linux"):
             modules.insert(0, ("alsaaudio", options.use_alsaaudio))
