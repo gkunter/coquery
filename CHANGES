@@ -18,6 +18,7 @@ Corpora
   files
 * Packaging: corpora can be packaged, and packaged corpora can be installed
 * New corpora: Old Bailey Corpus 2.0, Korpus Malti
+* Initial support for NIST SPH audio
 
 Visualizations
 * Add Line Charts
