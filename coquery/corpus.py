@@ -34,7 +34,7 @@ from .defines import (
     PREFERRED_ORDER)
 
 from .general import collapse_words, CoqObject, html_escape
-from . import tokens, NAME
+from . import tokens
 from . import options
 from .links import get_by_hash
 
@@ -568,6 +568,81 @@ class BaseResource(CoqObject):
                 (rc_feature.startswith("corpus_") and
                  not rc_feature.endswith("_id")))
 
+    def audio_to_source(self, audio_name, strip_path=True):
+        """
+        Return the name of the source file that belongs to an audio file.
+
+        Parameters
+        ----------
+
+        audio_name : str
+            The name of the audio file.
+
+        strip_path : bool
+            Currently ignored.
+
+        Returns
+        -------
+
+        grid_name : list
+            A list of file names that are associated with the given audio file
+            name. The default behavior is to return a list with the base name
+            of the audio file name as the only element, but corpus installers
+            may override this behavior.
+
+            For example, the audio files in the Switchboard corpus are named
+            sw0XXXX, where XXXX is an integer digit. The corresponding source
+            files which are used to construct the corpus in Coquery are named
+            swXXXXY-ms98-a-word, where XXXX is the same integer digit as in
+            the audio file, and Y is either 'A' or 'B' depending on which
+            speaker is transcribed. Hence, for Switchboard, the call
+
+            audio_to_source("sw02317")
+
+            returns the list ["sw2317A-ms98-a-word", "sw2317B-ms98-a-word"].
+
+            If the resource does not support audio, None is returned.
+        """
+        path, file_name = os.path.split(audio_name)
+        base, ext = os.path.splitext(file_name)
+
+        if not self.audio_features:
+            return None
+        else:
+            return [base]
+
+    def source_to_audio(self, source_name, strip_path=True):
+        """
+        Return the name of the audio file that belongs to a source file.
+
+        Parameters
+        ----------
+
+        source_name : str
+            The name of the source file.
+
+        strip_path : bool
+            Currently ignored.
+
+        Returns
+        -------
+
+        audio_file : str
+            The file name of the associated audio file.
+
+            The default behavior is to return the same base name as the
+            source file.
+        """
+        path, file_name = os.path.split(source_name)
+        base, ext = os.path.splitext(file_name)
+        if not self.audio_features:
+            return None
+        else:
+            return base
+
+    def audio_format_supported(self):
+        return False
+
 
 class SQLResource(BaseResource):
     _get_orth_str = None
@@ -590,10 +665,10 @@ class SQLResource(BaseResource):
         self.attach_list = []
         self._context_string_template = self.get_context_string_template()
         self._sentence_feature = (
-                getattr(self, "corpus_sentence", None) or
-                getattr(self, "corpus_sentence_id", None) or
-                getattr(self, "corpus_utterance", None) or
-                getattr(self, "corpus_utterance_id", None))
+            getattr(self, "corpus_sentence", None) or
+            getattr(self, "corpus_sentence_id", None) or
+            getattr(self, "corpus_utterance", None) or
+            getattr(self, "corpus_utterance_id", None))
 
     @classmethod
     def get_sentence_feature(cls):
@@ -995,7 +1070,7 @@ class SQLResource(BaseResource):
         # there should be reversed Word and Lemma columns that are queried in
         # such cases. Then the following line should be changed to
         # `if x[1] == "*":`
-        if x[1].startswith ("*"):
+        if x[1].startswith("*"):
             return 9999
         else:
             return (len(x[1]) - 2 * x[1].count("["))
@@ -1071,10 +1146,10 @@ class SQLResource(BaseResource):
                          "ON {{id}}{{N}} = {comp}").format(
                              comp=comp.format(offs=offs))
                 s = s.format(
-                        corpus=cls.get_subselect_corpus(N, ref_N),
-                        id=cls.corpus_id,
-                        N=N, ref_N=ref_N,
-                        comp=comp)
+                    corpus=cls.get_subselect_corpus(N, ref_N),
+                    id=cls.corpus_id,
+                    N=N, ref_N=ref_N,
+                    comp=comp)
 
                 joins.append(s)
         return joins
@@ -1184,8 +1259,8 @@ class SQLResource(BaseResource):
         _, table, _ = res.split_resource_feature(link.rc_to)
         ext_table = getattr(res, "{}_table".format(table))
         return "{db_name}_{table}_{N}".format(
-                  db_name=res.db_name.upper(),
-                  table=ext_table, N=n+1).upper()
+            db_name=res.db_name.upper(),
+            table=ext_table, N=n+1).upper()
 
     @classmethod
     def get_external_join(cls, n, rc_feature):
@@ -1212,9 +1287,9 @@ class SQLResource(BaseResource):
         else:
             s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}"
         where_string = s.format(
-                    ext_alias=ext_alias, ext_column=ext_column,
-                    int_alias=int_alias, int_column=int_column,
-                    N=n+1)
+            ext_alias=ext_alias, ext_column=ext_column,
+            int_alias=int_alias, int_column=int_column,
+            N=n+1)
 
         table_string = "{} {} ON {}".format(
             link.join_type, table_string, where_string)
@@ -1362,7 +1437,7 @@ class SQLResource(BaseResource):
         # using the path, get a list of all lemma labels that belong to
         # the word ids from the list:
         inner_select = "SELECT DISTINCT {} FROM {} WHERE {{where}}".format(
-                lemma_column, " ".join(table_list))
+            lemma_column, " ".join(table_list))
 
         kwargs = {
             "lemma_alias": lemma_alias,
@@ -2472,7 +2547,7 @@ class CorpusClass(object):
         S = format_string.format(**kwargs)
 
         if options.cfg.verbose:
-            logger.info(S)
+            logging.info(S)
             print(S)
         engine = options.cfg.current_connection.get_engine(
             self.resource.db_name)
@@ -2633,5 +2708,3 @@ class CorpusClass(object):
         return {"text": s, "df": df,
                 "audio": audio,
                 "start_time": start_time, "end_time": end_time}
-
-logger = logging.getLogger(NAME)
