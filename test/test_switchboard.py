@@ -21,7 +21,8 @@ sys.path.append(os.path.join(sys.path[0], "../coquery"))
 
 from coquery.defines import SQL_MYSQL
 from coquery.coquery import options
-from coquery.installer.coq_install_switchboard import BuilderClass
+from coquery.installer.coq_install_switchboard import (
+    BuilderClass, resource_code)
 from coquery.tables import Table
 
 # Dummy data to mock the file call_con_tab.csv:
@@ -136,6 +137,24 @@ class TestSwitchboard(unittest.TestCase):
             sorted(l),
             sorted([os.path.join(self._temp_path, x)
                     for x in BuilderClass.expected_files]))
+
+    def test_audio_to_source(self):
+        resource = resource_code()
+        audio_name = "sw01001"
+        source_name_a = "sw1001A-ms98-a-word"
+        source_name_b = "sw1001B-ms98-a-word"
+
+        self.assertListEqual(
+            resource.audio_to_source(audio_name),
+            [source_name_a, source_name_b])
+
+    def test_source_to_audio(self):
+        resource = resource_code()
+        audio_name = "sw01001"
+        source_name_a = "sw1001A-ms98-a-word"
+        source_name_b = "sw1001B-ms98-a-word"
+        self.assertEqual(resource.source_to_audio(source_name_a), audio_name)
+        self.assertEqual(resource.source_to_audio(source_name_b), audio_name)
 
     def test_binary_files(self):
         installer = BuilderClass()
