@@ -641,38 +641,49 @@ class BaseCorpusBuilder(corpus.SQLResource):
         the class attribute self._resource_code. This function is needed
         to add resource-specific code the Python corpus module."""
         try:
-            lines = [x for x in inspect.getsourcelines(self._resource_code)[0] if not x.strip().startswith("class")]
+            lines = [x.strip("\n")
+                     for x in inspect.getsourcelines(self._resource_code)[0]
+                     if not x.strip().startswith("class")]
+            # make sure that there is a separating empty line:
+            if lines[0]:
+                lines.insert(0, "")
         except AttributeError:
             lines = []
+
+        lines.insert(0, "")
         lines.insert(0, "    time_features = {}".format(
-            "[{}]".format(", ".join(['"{}"'.format(x) for x in self._time_features]))))
-        lines.insert(0, "    number_of_tokens = {}\n".format(self._corpus_id))
+            "[{}]".format(", ".join(['"{}"'.format(x)
+                                     for x in self._time_features]))))
+        lines.insert(0, "    number_of_tokens = {}".format(self._corpus_id))
         if self._lexical_features:
-            lines.insert(0, "    lexical_features = {}\n".format(
+            lines.insert(0, "    lexical_features = {}".format(
                 "[{}]".format(", ".join(
                     ['"{}"'.format(x) for x in self._lexical_features]))))
         if self._speaker_features:
-            lines.insert(0, "    speaker_features = {}\n".format(
+            lines.insert(0, "    speaker_features = {}".format(
                 "[{}]".format(", ".join(
                     ['"{}"'.format(x) for x in self._speaker_features]))))
 
         if self._audio_features:
-            lines.insert(0, "    audio_features = {}\n".format(
+            lines.insert(0, "    audio_features = {}".format(
                 "[{}]".format(", ".join(
                     ['"{}"'.format(x) for x in self._audio_features]))))
         if self._video_features:
-            lines.insert(0, "    video_features = {}\n".format(
+            lines.insert(0, "    video_features = {}".format(
                 "[{}]".format(", ".join(
                     ['"{}"'.format(x) for x in self._video_features]))))
         if self._image_features:
-            lines.insert(0, "    image_features = {}\n".format(
+            lines.insert(0, "    image_features = {}".format(
                 "[{}]".format(", ".join(
                     ['"{}"'.format(x) for x in self._image_features]))))
 
         if self._annotations:
-            lines.insert(0, "    annotations = {}\n".format(self._annotations))
+            lines.insert(0, "    annotations = {}".format(self._annotations))
 
-        return "".join(lines)
+        if not lines:
+            return "\n"
+        else:
+            return "\n".join(lines)
 
     def get_method_code(self, method):
         pass
