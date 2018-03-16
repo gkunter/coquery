@@ -24,6 +24,21 @@ from coquery.bibliography import Book, PersonList, Person
 from coquery.tables import Column, Identifier, Link
 
 
+class resource_code():
+    def audio_to_source(self, audio_name):
+        path, file_name = os.path.split(audio_name)
+        base, ext = os.path.splitext(file_name)
+        n = base[3:]
+        return ["sw{}A-ms98-a-word".format(n),
+                "sw{}B-ms98-a-word".format(n)]
+
+    def source_to_audio(self, source_name):
+        path, file_name = os.path.split(source_name)
+        base, ext = os.path.splitext(file_name)
+        n = base[2:6]
+        return "sw0{}".format(n)
+
+
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "*.*"
 
@@ -33,8 +48,8 @@ class BuilderClass(BaseCorpusBuilder):
     word_uttered = "UtteredWord"
     word_columns = [
         Identifier(word_id, "SMALLINT(5) UNSIGNED NOT NULL"),
-        Column(word_label, "VARCHAR(32) NOT NULL"),
-        Column(word_uttered, "VARCHAR(128) NOT NULL")]
+        Column(word_label, "VARCHAR(33) NOT NULL"),
+        Column(word_uttered, "VARCHAR(33) NOT NULL")]
 
     file_table = "Files"
     file_id = "FileId"
@@ -43,8 +58,8 @@ class BuilderClass(BaseCorpusBuilder):
     file_duration = "Duration"
     file_audio_path = "AudioPath"
     file_columns = [
-        Identifier(file_id, "INT(3) UNSIGNED NOT NULL"),
-        Column(file_name, "VARCHAR(2048) NOT NULL"),
+        Identifier(file_id, "SMALLINT(3) UNSIGNED NOT NULL"),
+        Column(file_name, "VARCHAR(92) NOT NULL"),
         Column(file_duration, "REAL NOT NULL"),
         Column(file_path, "VARCHAR(2048) NOT NULL"),
         Column(file_audio_path, "VARCHAR(2048) NOT NULL")]
@@ -56,7 +71,7 @@ class BuilderClass(BaseCorpusBuilder):
     speaker_dialectarea = "DialectArea"
     speaker_education = "Education"
     speaker_columns = [
-        Identifier(speaker_id, "INT(4) UNSIGNED NOT NULL"),
+        Identifier(speaker_id, "SMALLINT(4) UNSIGNED NOT NULL"),
         Column(speaker_sex, "ENUM('FEMALE','MALE') NOT NULL"),
         Column(speaker_birth, "INT(4) UNSIGNED NOT NULL"),
         Column(speaker_dialectarea, "VARCHAR(13) NOT NULL"),
@@ -70,7 +85,7 @@ class BuilderClass(BaseCorpusBuilder):
     source_naturalness = "Naturalness"
     source_remarks = "Remarks"
     source_columns = [
-        Identifier(source_id, "INT(3) UNSIGNED NOT NULL"),
+        Identifier(source_id, "SMALLINT(3) UNSIGNED NOT NULL"),
         Column(source_topic, "VARCHAR(28) NOT NULL"),
         Column(source_difficulty, "INT(1) UNSIGNED"),
         Column(source_topicality, "INT(1) UNSIGNED"),
@@ -92,9 +107,9 @@ class BuilderClass(BaseCorpusBuilder):
         Link(corpus_word_id, word_table),
         Link(corpus_speaker_id, speaker_table),
         Link(corpus_source_id, source_table),
-        Column(corpus_sentence, "INT(3) UNSIGNED NOT NULL"),
-        Column(corpus_starttime, "DECIMAL(17,6) UNSIGNED NOT NULL"),
-        Column(corpus_endtime, "DECIMAL(17,6) NOT NULL")]
+        Column(corpus_sentence, "TINYINT(3) UNSIGNED NOT NULL"),
+        Column(corpus_starttime, "FLOAT(17,6) UNSIGNED NOT NULL"),
+        Column(corpus_endtime, "FLOAT(17,6) NOT NULL")]
 
     auto_create = ["word", "file", "speaker", "source", "corpus"]
 
@@ -114,6 +129,8 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_time_feature(self.speaker_birth)
         self.add_exposed_id("source")
         self.add_exposed_id("speaker")
+
+        self._resource_code = resource_code
 
         self._file_id = 1
         self._token_id = 0
