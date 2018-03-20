@@ -1402,6 +1402,14 @@ class TestSuperFlat(unittest.TestCase):
         self.assertListEqual(
             l, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'b%')"])
 
+    def test_where_conditions_2(self):
+        query = TokenQuery("a* bcd*", self.Session)
+        join_list = self.resource.get_corpus_joins(query.query_list[0])
+        l = self.resource.get_condition_list(
+            query.query_list[0], join_list, ["corpus_word"])
+        self.assertListEqual(
+            l, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'bcd%')", "ID2 > 0"])
+
     def test_get_external_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
         s = self.resource.get_external_join(0, ext_feature)
