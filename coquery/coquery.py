@@ -139,9 +139,13 @@ def main():
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
         from .gui.pyqt_compat import (
-            QtWidgets, QtGui, close_toplevel_widgets)
+            QtWidgets, QtGui, close_toplevel_widgets, QtCore)
 
         options.cfg.app = CoqApplication(sys.argv)
+        translator = QtCore.QTranslator()
+        translator.load("coquery_" + QtCore.QLocale.system().name())
+        options.cfg.app.installTranslator(translator)
+
         if configuration_error:
             if read_config_file:
                 s = msg_options_error.format(configuration_error)
