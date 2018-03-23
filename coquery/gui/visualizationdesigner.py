@@ -126,7 +126,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.radio_custom.hide()
         self.ui.combo_custom.hide()
         self.ui.button_remove_custom.hide()
-        self.ui.button_reverse_order.hide()
         self.ui.label_38.hide()
         #self.ui.spin_number.hide()
         #self.ui.label_37.hide()
@@ -831,56 +830,52 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def get_gui_values(self):
         """
         """
-        d = dict(
-                x=self.ui.tray_data_x.data(),
-                y=self.ui.tray_data_y.data(),
-                z=self.ui.tray_data_z.data(),
-                columns=self.ui.tray_columns.data(),
-                rows=self.ui.tray_rows.data(),
-                figure_type=self.ui.list_figures.currentItem(),
-                figure_font=utf8(self.ui.combo_font_figure.currentText()),
-                title=utf8(self.ui.edit_figure_title.text()),
-                xlab=utf8(self.ui.edit_x_label.text()),
-                ylab=utf8(self.ui.edit_y_label.text()),
-                size_title=self.ui.spin_size_title.value(),
-                size_xlab=self.ui.spin_size_x_label.value(),
-                size_ylab=self.ui.spin_size_y_label.value(),
-                size_xticks=self.ui.spin_size_x_ticklabels.value(),
-                size_yticks=self.ui.spin_size_y_ticklabels.value(),
-                session=self.session,
-                palette=self.get_palette_name(),
-                color_number=self.ui.spin_number.value(),
-                )
+        x = self.ui.tray_data_x.data()
+        y = self.ui.tray_data_y.data()
+        z = self.ui.tray_data_z.data()
 
-        # get levels by discarding NAs and then sorting the unique values,
-        # using a much more efficient but less transparent variant of
-        # sorted(self.df[var].dropna().unique().values()
-        if d["x"]:
+        d = dict(x=x, y=y, z=z,
+                 columns=self.ui.tray_columns.data(),
+                 rows=self.ui.tray_rows.data(),
+                 figure_type=self.ui.list_figures.currentItem(),
+                 figure_font=utf8(self.ui.combo_font_figure.currentText()),
+                 title=utf8(self.ui.edit_figure_title.text()),
+                 xlab=utf8(self.ui.edit_x_label.text()),
+                 ylab=utf8(self.ui.edit_y_label.text()),
+                 size_title=self.ui.spin_size_title.value(),
+                 size_xlab=self.ui.spin_size_x_label.value(),
+                 size_ylab=self.ui.spin_size_y_label.value(),
+                 size_xticks=self.ui.spin_size_x_ticklabels.value(),
+                 size_yticks=self.ui.spin_size_y_ticklabels.value(),
+                 session=self.session,
+                 palette=self.get_palette_name(),
+                 color_number=self.ui.spin_number.value())
+
+        d["levels_x"] = []
+        d["levels_y"] = []
+        d["levels_z"] = []
+        d["range_x"] = None
+        d["range_y"] = None
+        d["range_z"] = None
+
+
+        if x:
+            # get levels by discarding NAs and then sorting the unique
+            # values, using a much more efficient but less transparent
+            # variant of sorted(self.df[var].dropna().unique().values():
             d["levels_x"] = sorted(
-                set(self.df[d["x"]].values[
-                    ~pd.isnull(self.df[d["x"]].values)]))
-            d["range_x"] = (d["x"].min(), d["x"].max())
-        else:
-            d["levels_x"] = []
-            d["range_x"] = None
+                set(self.df[x].values[~pd.isnull(self.df[x].values)]))
+            d["range_x"] = (self.df[x].min(), self.df[x].max())
 
-        if d["y"]:
+        if y:
             d["levels_y"] = sorted(
-                set(self.df[d["y"]].values[
-                    ~pd.isnull(self.df[d["y"]].values)]))
-            d["range_y"] = (d["y"].min(), d["y"].max())
-        else:
-            d["levels_y"] = []
-            d["range_y"] = None
+                set(self.df[y].values[~pd.isnull(self.df[y].values)]))
+            d["range_y"] = (self.df[y].min(), self.df[y].max())
 
-        if d["z"]:
+        if z:
             d["levels_z"] = sorted(
-                set(self.df[d["z"]].values[
-                    ~pd.isnull(self.df[d["z"]].values)]))
-            d["range_z"] = (d["z"].min(), d["z"].max())
-        else:
-            d["levels_z"] = []
-            d["range_z"] = None
+                set(self.df[z].values[~pd.isnull(self.df[z].values)]))
+            d["range_z"] = (self.df[z].min(), self.df[z].max())
 
         return d
 
