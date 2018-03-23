@@ -96,7 +96,6 @@ class BarcodePlot(vis.Visualizer):
         else:
             # neither x nor y is specified, plot default
             val = pd.Series([0] * len(data), index=data.index)
-
         # Take care of a hue variable:
         if z:
             if data[z].dtype == object:
@@ -112,7 +111,7 @@ class BarcodePlot(vis.Visualizer):
             cols = self._colorizer.get_hues(data=data[z])
         else:
             self._colorizer = Colorizer(palette, kwargs["color_number"], [])
-            cols = self._colorizer.get_hues()
+            cols = self._colorizer.get_hues(n=len(data))
 
         self.legend_palette = self._colorizer.legend_palette()
 
