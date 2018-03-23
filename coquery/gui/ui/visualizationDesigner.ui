@@ -24,7 +24,7 @@
      </property>
      <widget class="QWidget" name="tab_layout">
       <attribute name="title">
-       <string>Design</string>
+       <string>&amp;Design</string>
       </attribute>
       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2,0">
        <property name="spacing">
@@ -36,7 +36,7 @@
        <item>
         <widget class="QGroupBox" name="group_variables">
          <property name="title">
-          <string>&amp;Data</string>
+          <string>Data</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_11">
           <property name="spacing">
@@ -51,7 +51,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>{} rows, {} columns</string>
+             <string/>
             </property>
            </widget>
           </item>
@@ -124,7 +124,7 @@
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Figure &amp;axes</string>
+            <string>Dimensions</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_7">
             <item>
@@ -209,7 +209,7 @@
          <item>
           <widget class="QGroupBox" name="group_layout">
            <property name="title">
-            <string>&amp;Grid layout</string>
+            <string>Grid layout</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <item>
@@ -370,7 +370,7 @@
          <item>
           <widget class="QGroupBox" name="group_custom">
            <property name="title">
-            <string>Figure options</string>
+            <string>Figure &amp;options</string>
            </property>
            <layout class="QVBoxLayout" name="layout_custom"/>
           </widget>
@@ -450,7 +450,7 @@
      </widget>
      <widget class="QWidget" name="tab_fonts">
       <attribute name="title">
-       <string>Labels</string>
+       <string>&amp;Labels</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_8">
        <property name="spacing">
@@ -511,7 +511,10 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_11">
             <property name="text">
-             <string>Title:</string>
+             <string>&amp;Title:</string>
+            </property>
+            <property name="buddy">
+             <cstring>edit_figure_title</cstring>
             </property>
            </widget>
           </item>
@@ -540,7 +543,10 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_9">
             <property name="text">
-             <string>X axis:</string>
+             <string>&amp;X axis:</string>
+            </property>
+            <property name="buddy">
+             <cstring>edit_x_label</cstring>
             </property>
            </widget>
           </item>
@@ -562,7 +568,10 @@
             <item>
              <widget class="QLabel" name="label">
               <property name="text">
-               <string>Size:</string>
+               <string>&amp;X label size:</string>
+              </property>
+              <property name="buddy">
+               <cstring>spin_size_x_label</cstring>
               </property>
              </widget>
             </item>
@@ -586,7 +595,10 @@
             <item>
              <widget class="QLabel" name="label_14">
               <property name="text">
-               <string>X tick size:</string>
+               <string>&amp;X tick size:</string>
+              </property>
+              <property name="buddy">
+               <cstring>spin_size_x_ticklabels</cstring>
               </property>
              </widget>
             </item>
@@ -608,7 +620,10 @@
           <item row="1" column="0">
            <widget class="QLabel" name="label_10">
             <property name="text">
-             <string>Y axis:</string>
+             <string>&amp;Y axis:</string>
+            </property>
+            <property name="buddy">
+             <cstring>edit_y_label</cstring>
             </property>
            </widget>
           </item>
@@ -633,7 +648,10 @@
             <item>
              <widget class="QLabel" name="label_2">
               <property name="text">
-               <string>Size:</string>
+               <string>&amp;Y label size:</string>
+              </property>
+              <property name="buddy">
+               <cstring>spin_size_y_label</cstring>
               </property>
              </widget>
             </item>
@@ -657,7 +675,10 @@
             <item>
              <widget class="QLabel" name="label_17">
               <property name="text">
-               <string>Y tick size:</string>
+               <string>&amp;Y tick size:</string>
+              </property>
+              <property name="buddy">
+               <cstring>spin_size_y_ticklabels</cstring>
               </property>
              </widget>
             </item>
@@ -735,7 +756,7 @@
               <item>
                <widget class="QCheckBox" name="check_show_legend">
                 <property name="text">
-                 <string>Show legend</string>
+                 <string>&amp;Show legend</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>
@@ -749,7 +770,10 @@
               <item>
                <widget class="QLabel" name="label_13">
                 <property name="text">
-                 <string>Number of columns:</string>
+                 <string>&amp;Number of columns:</string>
+                </property>
+                <property name="buddy">
+                 <cstring>spin_columns</cstring>
                 </property>
                </widget>
               </item>
@@ -779,7 +803,10 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Entry size:</string>
+                 <string>&amp;Entry size:</string>
+                </property>
+                <property name="buddy">
+                 <cstring>spin_size_legend_entries</cstring>
                 </property>
                </widget>
               </item>
@@ -807,7 +834,10 @@
             <item row="1" column="0">
              <widget class="QLabel" name="label_12">
               <property name="text">
-               <string>Title:</string>
+               <string>T&amp;itle:</string>
+              </property>
+              <property name="buddy">
+               <cstring>edit_legend_title</cstring>
               </property>
              </widget>
             </item>
@@ -833,7 +863,7 @@
      </widget>
      <widget class="QWidget" name="tab_colors">
       <attribute name="title">
-       <string>Colors</string>
+       <string>&amp;Colors</string>
       </attribute>
       <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="4,3">
        <property name="spacing">
@@ -883,7 +913,7 @@
             <item row="6" column="0">
              <widget class="QCheckBox" name="check_reverse">
               <property name="text">
-               <string>&amp;Reverse palette</string>
+               <string>Re&amp;verse palette</string>
               </property>
              </widget>
             </item>
@@ -984,7 +1014,7 @@
             <item row="5" column="2">
              <widget class="QPushButton" name="button_remove_custom">
               <property name="text">
-               <string>Remove</string>
+               <string>&amp;Remove</string>
               </property>
              </widget>
             </item>
@@ -1126,32 +1156,15 @@
        </item>
        <item>
         <widget class="QGroupBox" name="palette_preview">
-         <layout class="QVBoxLayout" name="verticalLayout_24">
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_24">
-            <item>
-             <widget class="QLabel" name="label_38">
-              <property name="text">
-               <string>Click to modify color, drag to change order:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_10">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
+         <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="0" colspan="3">
+           <widget class="QLabel" name="label_38">
+            <property name="text">
+             <string>Click to modify color, drag to change order:</string>
+            </property>
+           </widget>
           </item>
-          <item>
+          <item row="1" column="0" colspan="3">
            <widget class="QListWidget" name="color_test_area">
             <property name="dragEnabled">
              <bool>true</bool>
@@ -1173,46 +1186,38 @@
             </property>
            </widget>
           </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_23">
-            <item>
-             <widget class="QLabel" name="label_37">
-              <property name="text">
-               <string>Number of colors:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="spin_number">
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="value">
-               <number>6</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_9">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_reverse_order">
-              <property name="text">
-               <string>Reverse order</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_37">
+            <property name="text">
+             <string>&amp;Number of colors:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spin_number</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="spin_number">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="value">
+             <number>6</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>136</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
           </item>
          </layout>
         </widget>
@@ -1221,7 +1226,7 @@
      </widget>
      <widget class="QWidget" name="tab_margins">
       <attribute name="title">
-       <string>Margins</string>
+       <string>&amp;Margins</string>
       </attribute>
       <layout class="QVBoxLayout" name="layout_margins">
        <property name="margin">
@@ -1268,6 +1273,53 @@
    <header>..classes</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>tab_widget</tabstop>
+  <tabstop>button_refresh_data</tabstop>
+  <tabstop>table_categorical</tabstop>
+  <tabstop>table_numerical</tabstop>
+  <tabstop>button_clear_x</tabstop>
+  <tabstop>tray_data_x</tabstop>
+  <tabstop>button_clear_y</tabstop>
+  <tabstop>tray_data_y</tabstop>
+  <tabstop>button_clear_z</tabstop>
+  <tabstop>tray_data_z</tabstop>
+  <tabstop>button_clear_columns</tabstop>
+  <tabstop>tray_columns</tabstop>
+  <tabstop>button_clear_rows</tabstop>
+  <tabstop>tray_rows</tabstop>
+  <tabstop>check_wrap_layout</tabstop>
+  <tabstop>list_figures</tabstop>
+  <tabstop>check_hide_unavailable</tabstop>
+  <tabstop>combo_font_figure</tabstop>
+  <tabstop>edit_figure_title</tabstop>
+  <tabstop>spin_size_title</tabstop>
+  <tabstop>edit_x_label</tabstop>
+  <tabstop>spin_size_x_label</tabstop>
+  <tabstop>spin_size_x_ticklabels</tabstop>
+  <tabstop>edit_y_label</tabstop>
+  <tabstop>spin_size_y_label</tabstop>
+  <tabstop>spin_size_y_ticklabels</tabstop>
+  <tabstop>check_show_legend</tabstop>
+  <tabstop>edit_legend_title</tabstop>
+  <tabstop>spin_size_legend</tabstop>
+  <tabstop>spin_columns</tabstop>
+  <tabstop>spin_size_legend_entries</tabstop>
+  <tabstop>radio_qualitative</tabstop>
+  <tabstop>combo_qualitative</tabstop>
+  <tabstop>radio_sequential</tabstop>
+  <tabstop>combo_sequential</tabstop>
+  <tabstop>radio_diverging</tabstop>
+  <tabstop>combo_diverging</tabstop>
+  <tabstop>radio_single_color</tabstop>
+  <tabstop>button_change_color</tabstop>
+  <tabstop>radio_custom</tabstop>
+  <tabstop>combo_custom</tabstop>
+  <tabstop>button_remove_custom</tabstop>
+  <tabstop>check_reverse</tabstop>
+  <tabstop>color_test_area</tabstop>
+  <tabstop>spin_number</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

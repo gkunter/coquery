@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'createUser.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -111,6 +111,11 @@ class Ui_CreateUser(object):
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout_3.addWidget(self.buttonBox)
         self.verticalLayout_3.setStretch(4, 1)
+        self.label_4.setBuddy(self.new_password)
+        self.label_6.setBuddy(self.new_password_check)
+        self.label_5.setBuddy(self.new_name)
+        self.label_3.setBuddy(self.root_name)
+        self.label_2.setBuddy(self.root_password)
 
         self.retranslateUi(CreateUser)
         self.buttonBox.accepted.connect(CreateUser.accept)
@@ -127,18 +132,12 @@ class Ui_CreateUser(object):
         _translate = QtCore.QCoreApplication.translate
         CreateUser.setWindowTitle(_translate("CreateUser", "Create a new MySQL user – Coquery"))
         self.groupBox_2.setTitle(_translate("CreateUser", "New user"))
-        self.label_4.setText(_translate("CreateUser", "Password:"))
-        self.label_6.setText(_translate("CreateUser", "Retype password::"))
-        self.label_5.setText(_translate("CreateUser", "New user name:"))
-        self.label_7.setText(_translate("CreateUser", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Noto Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<ul style=\"margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;\"><li style=\" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">New users will be able to create, query, modify, and delete databases and tables</li>\n"
-"<li style=\" margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">New users will <span style=\" font-weight:600;\">not be able</span> to create or modify the privileges of other users</li></ul></body></html>"))
+        self.label_4.setText(_translate("CreateUser", "Pass&word:"))
+        self.label_6.setText(_translate("CreateUser", "&Retype password:"))
+        self.label_5.setText(_translate("CreateUser", "&New user name:"))
+        self.label_7.setText(_translate("CreateUser", "<html><head/><body><ul style=\"margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;\"><li style=\" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">New users will be able to create, query, modify, and delete databases and tables</li><li style=\" margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">New users will <span style=\" font-weight:600;\">not be able</span> to create or modify the privileges of other users </li></ul></body></html>"))
         self.groupBox_3.setTitle(_translate("CreateUser", "MySQL root"))
-        self.label_3.setText(_translate("CreateUser", "MySQL root user:"))
-        self.label_2.setText(_translate("CreateUser", "MySQL root password:"))
-        self.check_show_passwords.setText(_translate("CreateUser", "Show passwords"))
-
+        self.label_3.setText(_translate("CreateUser", "MySQL roo&t user:"))
+        self.label_2.setText(_translate("CreateUser", "MySQL root passwor&d:"))
+        self.check_show_passwords.setText(_translate("CreateUser", "&Show passwords"))
 

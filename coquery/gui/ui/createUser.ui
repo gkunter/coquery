@@ -44,21 +44,30 @@
         <item row="1" column="0">
          <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>Password:</string>
+           <string>Pass&amp;word:</string>
+          </property>
+          <property name="buddy">
+           <cstring>new_password</cstring>
           </property>
          </widget>
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="label_6">
           <property name="text">
-           <string>Retype password::</string>
+           <string>&amp;Retype password:</string>
+          </property>
+          <property name="buddy">
+           <cstring>new_password_check</cstring>
           </property>
          </widget>
         </item>
         <item row="0" column="0">
          <widget class="QLabel" name="label_5">
           <property name="text">
-           <string>New user name:</string>
+           <string>&amp;New user name:</string>
+          </property>
+          <property name="buddy">
+           <cstring>new_name</cstring>
           </property>
          </widget>
         </item>
@@ -96,12 +105,7 @@
       <item>
        <widget class="QLabel" name="label_7">
         <property name="text">
-         <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;New users will be able to create, query, modify, and delete databases and tables&lt;/li&gt;
-&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;New users will &lt;span style=&quot; font-weight:600;&quot;&gt;not be able&lt;/span&gt; to create or modify the privileges of other users&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;New users will be able to create, query, modify, and delete databases and tables&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;New users will &lt;span style=&quot; font-weight:600;&quot;&gt;not be able&lt;/span&gt; to create or modify the privileges of other users &lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -120,7 +124,10 @@ p, li { white-space: pre-wrap; }
       <item row="0" column="0">
        <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>MySQL root user:</string>
+         <string>MySQL roo&amp;t user:</string>
+        </property>
+        <property name="buddy">
+         <cstring>root_name</cstring>
         </property>
        </widget>
       </item>
@@ -140,7 +147,10 @@ p, li { white-space: pre-wrap; }
       <item row="1" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>MySQL root password:</string>
+         <string>MySQL root passwor&amp;d:</string>
+        </property>
+        <property name="buddy">
+         <cstring>root_password</cstring>
         </property>
        </widget>
       </item>
@@ -169,7 +179,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QCheckBox" name="check_show_passwords">
         <property name="text">
-         <string>Show passwords</string>
+         <string>&amp;Show passwords</string>
         </property>
        </widget>
       </item>
