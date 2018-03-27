@@ -425,9 +425,11 @@ class InstallerGui(QtWidgets.QDialog):
         namespace.use_nltk = False
         namespace.use_meta = False
         namespace.metadata = utf8(self.ui.label_metafile.text())
-        namespace.metadata_column = self._metafile_column
-        namespace.metaoptions = self._meta_options
-        print(self._meta_options)
+        if hasattr(self, "_metafile_column"):
+            namespace.metadata_column = self._metafile_column
+        if hasattr(self, "_meta_options"):
+            namespace.metaoptions = self._meta_options
+            print(self._meta_options)
         if self.ui.radio_only_module.isChecked():
             namespace.o = False
             namespace.i = False
