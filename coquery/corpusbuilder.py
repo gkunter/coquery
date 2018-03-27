@@ -1584,15 +1584,18 @@ class BaseCorpusBuilder(corpus.SQLResource):
             output_file.write(self.module_content)
             logging.info("Corpus module %s written." % path)
 
-    def setup_db(self):
+    def setup_db(self, keep_db):
         """
         Create a connection to the server, and creates the database if
         necessary.
         """
         con = options.cfg.current_connection
+        
         if con.has_database(self.arguments.db_name):
-            con.remove_database(self.arguments.db_name)
-        con.create_database(self.arguments.db_name)
+            if not keep_db:
+                con.remove_database(self.arguments.db_name)
+        else:
+            con.create_database(self.arguments.db_name)
 
         kwargs = dict(Host=getattr(con, "host", None),
                       Port=getattr(con, "port", None),
@@ -1781,7 +1784,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 self._widget.progressUpdate.emit(0)
 
         self.check_arguments()
-        self.setup_db()
+        self.setup_db(self.arguments.only_module)
 
         if self._widget:
             steps = 3 + (int(self.arguments.lookup_ngram) +
