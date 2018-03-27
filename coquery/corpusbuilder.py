@@ -1594,7 +1594,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         if con.has_database(self.arguments.db_name):
             if not keep_db:
                 con.remove_database(self.arguments.db_name)
-        else:
+        if not con.has_database(self.arguments.db_name):
             con.create_database(self.arguments.db_name)
 
         kwargs = dict(Host=getattr(con, "host", None),
