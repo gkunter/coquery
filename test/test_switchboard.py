@@ -153,8 +153,10 @@ class TestSwitchboard(unittest.TestCase):
         audio_name = "sw01001"
         source_name_a = "sw1001A-ms98-a-word"
         source_name_b = "sw1001B-ms98-a-word"
-        self.assertEqual(resource.source_to_audio(source_name_a), audio_name)
-        self.assertEqual(resource.source_to_audio(source_name_b), audio_name)
+        self.assertEqual(resource.convert_source_to_audio(source_name_a),
+                         audio_name)
+        self.assertEqual(resource.convert_source_to_audio(source_name_b),
+                         audio_name)
 
     def test_binary_files(self):
         installer = BuilderClass()
