@@ -864,7 +864,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(
             self.sentence_table,
             [Identifier(self.sentence_id, "MEDIUMINT UNSIGNED NOT NULL"),
-             Column(self.sentence_label, "VARCHAR(10) NOT NULL")])
+             Column(self.sentence_label, "VARCHAR(15) NOT NULL")])
 
         # Add the source table. Each row in this table represents a BNC
         # source. Each sentence from the sentence table is linked to exactly
