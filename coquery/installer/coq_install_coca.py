@@ -241,6 +241,8 @@ class BuilderClass(BaseCorpusBuilder):
                            self.source_genre, self.source_subgenre_id,
                            self.source_label, self.source_title),
                     table=self.source_table,
+                    na_values="",
+                    fillna=0,
                     skiprows=2))
 
             elif base_name == "Sub-genre codes.txt":
