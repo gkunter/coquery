@@ -32,7 +32,7 @@ class resource_code():
         return ["sw{}A-ms98-a-word".format(n),
                 "sw{}B-ms98-a-word".format(n)]
 
-    def source_to_audio(self, source_name):
+    def convert_source_to_audio(self, source_name):
         path, file_name = os.path.split(source_name)
         base, ext = os.path.splitext(file_name)
         n = base[2:6]
