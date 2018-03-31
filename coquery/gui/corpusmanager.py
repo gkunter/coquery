@@ -45,6 +45,9 @@ from .ui.corpusManagerUi import Ui_corpusManager
 from .app import get_icon
 
 
+translate = options.cfg.app.translate
+
+
 class CoqAccordionEntry(QtWidgets.QWidget):
     """ Define a QWidget that can be used as an entry in a accordion list."""
     def __init__(self, path=None, stack=None, *args, **kwargs):
@@ -337,7 +340,9 @@ class CoqAccordionEntry(QtWidgets.QWidget):
 class PackageEntry(CoqAccordionEntry):
     def __init__(self, *args, **kwargs):
         super(PackageEntry, self).__init__(*args, **kwargs)
-        self.setTitle("Build a corpus from a package file")
+        self.setTitle(translate("CorpusManager", 
+                                "Build a corpus from a package file", 
+                                None))
         self.setDescription(msg_adhoc_builder_package)
         self._is_adhoc = True
         self._is_builder = True
@@ -354,6 +359,30 @@ class PackageEntry(CoqAccordionEntry):
 
         return PackageGui(coq_install_generic_package.BuilderClass,
                           parent=get_toplevel_window())
+
+
+class TableEntry(CoqAccordionEntry):
+    def __init__(self, *args, **kwargs):
+        super(TableEntry, self).__init__(*args, **kwargs)
+        self.setTitle(translate("CorpusManager", 
+                                "Build a corpus from a data table file",
+                                None))
+        self.setDescription(msg_adhoc_builder_table)
+        self._is_adhoc = True
+        self._is_builder = True
+
+    def setup_buttons(self, *args, **kwargs):
+        super(TableEntry, self).setup_buttons(*args, **kwargs)
+        self.button_build.clicked.disconnect()
+        self.button_build.clicked.connect(
+            lambda: self._stack.launchBuilder.emit(self))
+
+    def get_builder_interface(self):
+        from coquery.installer import coq_install_generic_table
+        from .corpusbuilder_interface import TableGui
+
+        return TableGui(coq_install_generic_table.BuilderClass,
+                        parent=get_toplevel_window())
 
 
 class CorpusManager(QtWidgets.QDialog):
@@ -412,21 +441,12 @@ class CorpusManager(QtWidgets.QDialog):
         return (os.path.abspath(options.cfg.installer_path) in
                 os.path.abspath(path))
 
-    def get_table_entry(self):
-        entry = CoqAccordionEntry(stack=self)
-        entry._is_builder = True
-        entry._build_from_table = True
-        entry.setTitle("Build a new user corpus from a CSV table file")
-        entry.setDescription(msg_adhoc_builder_table)
-        detail_box = classes.CoqDetailBox(
-            "Build new corpus from table file...", entry)
-        entry.setup_buttons(False, detail_box)
-        return detail_box
-
     def get_generic_entry(self):
         entry = CoqAccordionEntry(stack=self)
         entry._is_builder = True
-        entry.setTitle("Build a new corpus from a collection of text files")
+        entry.setTitle(translate("CorpusManager", 
+                                 "Build a new corpus from a collection of text files",
+                                 None))
 
         l = ["Plain Text"]
         if options.use_pdfminer:
@@ -443,6 +463,16 @@ class CorpusManager(QtWidgets.QDialog):
         detail_box = classes.CoqDetailBox(
             "Build new corpus from text files...", entry)
         entry.setup_buttons(False, detail_box)
+        return detail_box
+
+    def get_table_entry(self):
+        entry = CoqAccordionEntry(stack=self)
+        entry = TableEntry(stack=self)
+        detail_box = classes.CoqDetailBox(
+            translate("CorpusManager", "Build new corpus from table file...", None), 
+            entry)
+        entry.setup_buttons(False, detail_box)
+        
         return detail_box
 
     def get_package_entry(self):

@@ -752,8 +752,8 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(
             self.word_table,
             [Identifier(self.word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-             Column(self.word_label, "VARCHAR(131) NOT NULL"),
-             Column(self.word_lemma, "VARCHAR(131) NOT NULL"),
+             Column(self.word_label, "VARCHAR(132) NOT NULL"),
+             Column(self.word_lemma, "VARCHAR(132) NOT NULL"),
              Column(self.word_pos,
                     ("ENUM('AJ0','AJ0-AV0','AJ0-NN1','AJ0-VVD','AJ0-VVG',"
                      "'AJ0-VVN','AJC','AJS','AT0','AV0','AV0-AJ0','AVP',"
@@ -832,7 +832,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(
             self.speaker_table,
             [Identifier(self.speaker_id, "SMALLINT(4) UNSIGNED NOT NULL"),
-             Column(self.speaker_label, "VARCHAR(8) NOT NULL"),
+             Column(self.speaker_label, "VARCHAR(9) NOT NULL"),
              Column(self.speaker_age,
                     ("ENUM('','-82+','0','1','10','10+','11','12','13','13+',"
                      "'14','14+','15','16','17','17+','18','19','2','20',"
@@ -864,7 +864,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.create_table_description(
             self.sentence_table,
             [Identifier(self.sentence_id, "MEDIUMINT UNSIGNED NOT NULL"),
-             Column(self.sentence_label, "VARCHAR(10) NOT NULL")])
+             Column(self.sentence_label, "VARCHAR(12) NOT NULL")])
 
         # Add the source table. Each row in this table represents a BNC
         # source. Each sentence from the sentence table is linked to exactly
@@ -1239,7 +1239,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_db_name():
-        return "bnc"
+        return "coq_bnc"
 
     @staticmethod
     def get_language():

@@ -228,8 +228,8 @@ class Table(object):
                     pass
 
             if not self.primary.unique:
-                df[self.primary.alias] = range(self._line_counter,
-                                               self._line_counter + len(df))
+                if self._DB.db_type == SQL_SQLITE:
+                    df[self.primary.alias] = range(self._line_counter, self._line_counter + len(df))
                 self._line_counter += len(df)
 
             df.to_sql(self.name, self._DB.engine, if_exists="append",

@@ -611,7 +611,7 @@ class BaseResource(CoqObject):
         else:
             return [base]
 
-    def source_to_audio(self, source_name, strip_path=True):
+    def convert_source_to_audio(self, source_name, strip_path=True):
         """
         Return the name of the audio file that belongs to a source file.
 

@@ -2,7 +2,7 @@
 """
 nltkdatafiles.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,7 +11,6 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import sys
 import os
 import zipfile
 import shutil
@@ -25,24 +24,31 @@ from .ui.nltkDatafilesUi import Ui_NLTKDatafiles
 
 _NLTK_dir = None
 
+
 class NLTKDatafiles(QtWidgets.QDialog):
     updateLabel = QtCore.Signal(str)
     progressTheBar = QtCore.Signal()
-    
+    packagesInstalled = QtCore.Signal()
+
     def __init__(self, missing, parent=None):
-        
+
         super(NLTKDatafiles, self).__init__(parent)
-        
+
         self.ui = Ui_NLTKDatafiles()
         self.ui.setupUi(self)
         self._missing = missing
-        self.ui.textBrowser.setText("<code>{}</code>".format("<br/>".join(missing)))
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Open).clicked.disconnect()
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Open).clicked.connect(self.from_directory)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Open).setText("From directory...")
+        s = "<code>{}</code>"
+        self.ui.textBrowser.setText(s.format("<br/>".join(missing)))
+
+        open_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Open)
+
+        open_button.clicked.disconnect()
+        open_button.clicked.connect(self.from_directory)
+        open_button.setText("From directory...")
+
         self.ui.progressBar.hide()
         self.download_dir = None
-        
+
         try:
             self.resize(options.settings.value("nltkdatafiles_size"))
         except (TypeError, AttributeError):
@@ -50,7 +56,12 @@ class NLTKDatafiles(QtWidgets.QDialog):
 
     def from_directory(self):
         global _NLTK_dir
-        name = QtWidgets.QFileDialog.getExistingDirectory(directory=options.cfg.textgrids_file_path, options=QtWidgets.QFileDialog.ReadOnly|QtWidgets.QFileDialog.ShowDirsOnly|QtWidgets.QFileDialog.HideNameFilterDetails)
+        name = QtWidgets.QFileDialog.getExistingDirectory(
+            directory=options.cfg.textgrids_file_path,
+            options=(QtWidgets.QFileDialog.ReadOnly |
+                     QtWidgets.QFileDialog.ShowDirsOnly |
+                     QtWidgets.QFileDialog.HideNameFilterDetails))
+
         if type(name) == tuple:
             name = name[0]
 
@@ -71,7 +82,7 @@ class NLTKDatafiles(QtWidgets.QDialog):
     def copy_packages(self):
         import nltk.data
         target_path = nltk.data.path[0]
-        
+
         for x in [comp for comp in self._missing if "/" in comp]:
             parts = x.split("/")
             subdir = os.path.join(target_path, parts[0])
@@ -86,25 +97,31 @@ class NLTKDatafiles(QtWidgets.QDialog):
             if os.path.exists(src):
                 shutil.copyfile(src, dst)
             else:
-                raise ValueError("Package file {}.zip not found in {}".format(package, _NLTK_dir))
+                s = "Package file {}.zip not found in {}"
+                raise ValueError(s.format(package, _NLTK_dir))
 
             with zipfile.ZipFile(dst) as zipped:
                 for member in zipped.infolist():
                     zipped.extract(member, subdir)
-            
+
             self.progressTheBar.emit()
 
     def download_packages(self):
         import nltk
-        
-        for x in [comp for comp in self._missing if "/" in comp]:
-            package = x.split("/")[1]
+        for package in self._missing:
+            if "/" in package:
+                package = package.split("/")[1]
+
             self.updateLabel.emit(package)
-            nltk.download(package, raise_on_error=True)
+            try:
+                nltk.download(package, raise_on_error=True)
+            except Exception as e:
+                raise e
             self.progressTheBar.emit()
 
     def download_finish(self):
         super(NLTKDatafiles, self).accept()
+        self.packagesInstalled.emit()
 
     def download_exception(self):
         errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
@@ -130,10 +147,8 @@ class NLTKDatafiles(QtWidgets.QDialog):
         self.updateLabel.connect(self.update_label)
         self.progressTheBar.connect(self.next_bar)
         self.thread.start()
-        
+
     @staticmethod
     def ask(missing, parent=None):
-        dialog = NLTKDatafiles(missing, parent=parent)        
+        dialog = NLTKDatafiles(missing, parent=parent)
         return dialog.exec_() == QtWidgets.QDialog.Accepted
-        
-
