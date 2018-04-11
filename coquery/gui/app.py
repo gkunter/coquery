@@ -2532,6 +2532,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             except (AttributeError, KeyError):
                 df = pd.DataFrame()
 
+            df["statistics_row_number"] = df.index + 1
             alias = {col: self.Session.translate_header(col)
                      for col in df.columns}
 
