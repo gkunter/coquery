@@ -737,10 +737,12 @@ class BaseCorpusBuilder(corpus.SQLResource):
         # read file using the specified encoding (default is 'utf-8), and
         # retry using 'ISO-8859-1'/'latin-1' in case of an error:
         try:
-            with codecs.open(file_name, "r", encoding=self.arguments.encoding) as input_file:
+            with codecs.open(file_name, "r",
+                             encoding=self.arguments.encoding) as input_file:
                 input_data = input_file.read()
         except UnicodeDecodeError:
-            with codecs.open(file_name, "r", encoding="ISO-8859-1") as input_file:
+            with codecs.open(file_name, "r",
+                             encoding="ISO-8859-1") as input_file:
                 input_data = input_file.read()
 
         input_data = input_data.splitlines()
@@ -1230,8 +1232,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
                                       ngram_table.columns)
         self.DB.create_table(
             self.corpusngram_table,
-            ngram_table.get_create_string(self.arguments.db_type,
-                                          self._new_tables.values()))
+            ngram_table.get_create_string(
+                options.cfg.current_connection.db_type(),
+                self._new_tables.values()))
 
         self._widget.progressSet.emit(
             1 + ((max_id-1) // step),
@@ -1590,7 +1593,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         necessary.
         """
         con = options.cfg.current_connection
-        
+
         if con.has_database(self.arguments.db_name):
             if not keep_db:
                 con.remove_database(self.arguments.db_name)
