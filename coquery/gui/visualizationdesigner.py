@@ -181,7 +181,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.table_categorical.clear()
         self.ui.table_numerical.clear()
         self.df = df
-        self.df["coquery_invisible_index"] = self.df.index
         self.session = session
         self.alias = alias or {}
         for i, x in enumerate(df.columns):
@@ -277,27 +276,37 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         for col in self.categorical:
             label = self.alias.get(col) or col
+
             new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
+            new_item.setToolTip(new_item.text())
             if label in self.session.Resource.time_features:
                 new_item.setIcon(get_icon("Clock"))
+
             self.ui.table_categorical.addItem(new_item)
 
         for col in self.numerical:
             label = self.alias.get(col) or col
+
             new_item = QtWidgets.QListWidgetItem(label)
             new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
             if label in self.session.Resource.time_features:
                 new_item.setIcon(get_icon("Clock"))
+
             self.ui.table_numerical.addItem(new_item)
 
         if len(self.df):
             # add "row number" variable
-            label = "Row number"
+            col = "statistics_row_number"
+            options.cfg.verbose = True
+            label = self.alias.get(col) or col
+            options.cfg.verbose = False
+
             new_item = QtWidgets.QListWidgetItem(label)
-            new_item.setData(QtCore.Qt.UserRole, "coquery_invisible_index")
+            new_item.setData(QtCore.Qt.UserRole, col)
             new_item.setToolTip(new_item.text())
+
             self.ui.table_numerical.addItem(new_item)
 
         ## add functions
