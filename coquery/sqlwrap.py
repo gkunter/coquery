@@ -61,7 +61,6 @@ class SqlDB(object):
             self.version = version
         else:
             self.version = ""
-        print(test, version)
         self.connection = None
 
     def use_database(self, db_name):
