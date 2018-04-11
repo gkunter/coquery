@@ -30,8 +30,9 @@ class Colorizer(QtCore.QObject):
         self.ncol = ncol
         self.values = values
         self._title_frm = ""
+        self._entry_frm = "{val}"
 
-    def get_palette(self):
+    def get_palette(self, n=None):
         base, _, rev = self.palette.partition("_")
 
         if base == PALETTE_BW:
@@ -44,6 +45,9 @@ class Colorizer(QtCore.QObject):
 
         if rev:
             col = col[::-1]
+
+        if n:
+            col = (col * (1 + n // len(col)))[:n]
 
         return col
 
@@ -65,16 +69,23 @@ class Colorizer(QtCore.QObject):
     def set_title_frm(self, s):
         self._title_frm = s
 
+    def set_entry_frm(self, s):
+        self._entry_frm = s
+
 
 class ColorizeByFactor(Colorizer):
     def __init__(self, palette, ncol, values):
         super(ColorizeByFactor, self).__init__(palette, ncol, values)
         self.set_title_frm("{z}")
 
-    def get_hues(self, data):
+    def get_hues(self, data=None, n=None):
+        if data is None:
+            data = (self.values * self.ncol)[:n]
+
         pal = self.get_palette()
         color_indices = [self.values.index(val) % len(pal) for val in data]
-        return [pal[ix] for ix in color_indices]
+        hues = [pal[ix] for ix in color_indices]
+        return hues
 
     def legend_palette(self):
         n = len(self.values)
@@ -82,28 +93,60 @@ class ColorizeByFactor(Colorizer):
         return (pal * ((n // len(pal)) + 1))[:n]
 
     def legend_levels(self):
-        return self.values
+        return [self._entry_frm.format(val=x) for x in self.values]
 
 
 class ColorizeByNum(Colorizer):
-    def __init__(self, palette, ncol, vrange, dtype):
-        super(ColorizeByNum, self).__init__(palette, ncol)
-        self.dtype = dtype
-        self.bins = pretty(vrange, ncol)
+    def __init__(self, palette, ncol, values, vrange=None):
+        super(ColorizeByNum, self).__init__(palette, ncol, values)
+
+        if not vrange:
+            vmin, vmax = values.min(), values.max()
+        else:
+            vmin, vmax = vrange
+
+        self.dtype = values.dtype
+
+        self._direct_mapping = (len(values) <= ncol and
+                                len(values) == len(values.unique()))
+
+        if self._direct_mapping:
+            self.bins = sorted(values)
+            self.set_entry_frm("{val}")
+        else:
+            self.bins = pretty((vmin, vmax), ncol)
+            self.set_entry_frm("≥ {val}")
+
         self.set_title_frm("{z}")
 
+    def set_entry_frm(self, s):
+        self._entry_frm = s
+
     def get_hues(self, data):
-        hues = super(ColorizeByNum, self).get_hues(n=self.ncol)[::-1]
+        hues = super(ColorizeByNum, self).get_hues(n=self.ncol)
+
+        if not self._direct_mapping:
+            hues = hues[::-1]
+
         binned = pd.np.digitize(data, self.bins, right=False) - 1
         return [hues[val] for val in binned]
+
+    def legend_palette(self):
+        return self.get_palette()
 
     def legend_levels(self):
         if self.dtype == int:
             frm_str = "{:.0f}"
         else:
             frm_str = options.cfg.float_format
-        return ["≥ {}".format(frm_str.format(x)) for x in self.bins][::-1]
 
+        l = [self._entry_frm.format(val=frm_str.format(x))
+             for x in self.bins]
+
+        if len(self.values) <= self.ncol:
+            return l
+        else:
+            return l[::-1]
 
 class ColorizeByFreq(Colorizer):
     def get_hues(self, data):
