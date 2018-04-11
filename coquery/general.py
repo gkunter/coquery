@@ -347,41 +347,7 @@ def format_file_size(size):
     return "{:0.1f} {}".format(size / 1024 ** power, unit)
 
 
-def niceify_lower(x, add=1):
-    """
-    Find a nice floor value for 'x'
-    """
-    print("niceify_lower({})".format(x))
-    if x < 0:
-        return -niceify_upper(-x)
-    elif x == 0:
-        return 0
-    else:
-        exp = pd.np.floor(pd.np.log10(abs(x))) + add
-        niced = pd.np.floor(x / 10 ** exp) * 10 ** exp
-        print("\texp:   ", exp)
-        print("\tniced: ", niced)
-        return niced
-
-
-def niceify_upper(x, add=0):
-    """
-    Find a nice ceiling value for 'x'
-    """
-    print("niceify_upper({})".format(x))
-    if x < 0:
-        return -niceify_lower(-x, add=0)
-    elif x == 0:
-        return 0
-    else:
-        exp = pd.np.floor(pd.np.log10(x)) + add
-        niced = pd.np.ceil(x / 10 ** exp) * 10 ** exp
-        print("\texp:   ", exp)
-        print("\tniced: ", niced)
-        return niced
-
-
-def pretty(vrange, n):
+def pretty(vrange, n, endpoint=False):
     """
     Return a range of prettified values.
 
@@ -394,6 +360,10 @@ def pretty(vrange, n):
     n : int
         The number of values to be generated
 
+    endpoint : bool
+        If True, the list includes the prettified upper end of the range. If
+        False (the default), the upper end is not included.
+
     Returns
     -------
     l : list
@@ -403,12 +373,41 @@ def pretty(vrange, n):
     vmin, vmax = vrange
 
     if vmin > vmax:
-        vmax, vmin = vmin, vmax
+        return pretty((vmax, vmin), n)
 
-    pretty_min = niceify_lower(vmin)
-    pretty_max = niceify_upper(vmax)
+    exp = None
+    exp_max = None
+    exp_min = None
 
-    return pd.np.linspace(pretty_min, pretty_max, n, endpoint=False)
+    if vmin >= 0 and vmax <= 1:
+        exp = abs(pd.np.ceil(pd.np.log10(abs(vmax))) + 2)
+
+        niced_min = pd.np.floor(vmin * 10 ** exp) / 10 ** exp
+        niced_max = pd.np.ceil(vmax * 10 ** exp) / 10 ** exp
+
+    elif vmin != 0:
+        exp_min = pd.np.floor(pd.np.log10(abs(vmin)))
+        pretty_min = pd.np.floor(vmin / 10 ** exp_min) * 10 ** exp_min
+
+        exp_max = pd.np.ceil(pd.np.log10(abs(vmax - pretty_min)))
+
+        exp = max(exp_max - exp_min, 1)
+        exp = exp_max - exp_min
+
+        pretty_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
+
+        return pretty((0, vmax - pretty_min), n) + pretty_min
+
+    else:
+        exp = pd.np.floor(pd.np.log10(abs(vmax)))
+
+        niced_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
+        niced_max = pd.np.ceil(vmax / 10 ** exp) * 10 ** exp
+
+    return pd.np.linspace(niced_min,
+                          niced_max,
+                          n,
+                          endpoint=endpoint)
 
 
 # Memory status functions:
@@ -450,5 +449,5 @@ try:
             psutil.Process().memory_info_ex().vms / (1024 * 1024)))
         summary.print_(summary.summarize(muppy.get_objects()), limit=1)
 except Exception as e:
-    def summarize_memory():
-        print("summarize_memory: {}".format(lambda: str(e)))
+    def summarize_memory(msg=str(e)):
+        print("summarize_memory: {}".format(msg))
