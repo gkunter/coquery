@@ -30,7 +30,7 @@ from .functions import (Freq,
                         MutualInformation, ConditionalProbability,
                         SubcorpusSize)
 from .functionlist import FunctionList
-from .general import CoqObject, get_visible_columns, Print
+from .general import CoqObject, Print
 from . import options
 from .defines import FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL
 
@@ -315,9 +315,6 @@ class Manager(CoqObject):
 
         # apply user functions, i.e. functions that were added to
         # individual columns:
-        kwargs = {"session": session,
-                  "manager": self,
-                  "df": df}
 
         self.stage_one_functions = []
         if stage == "first":
@@ -1261,3 +1258,34 @@ def get_manager(manager, resource):
         options.cfg.managers[resource][manager] = new_manager
     finally:
         return options.cfg.managers[resource][manager]
+
+
+def get_visible_columns(df, manager, session, hidden=False):
+    """
+    Return a list with column names from the data frame.
+
+    Internal columns, i.e. those whose name starts with the string
+    'coquery_invisible', are never returned. The parameter 'hidden' controls
+    if columns hidden by the data manager are included.
+
+    Parameters
+    ----------
+    manager : Manager object
+        The currently active manager.
+
+    session : Session object
+        The currently active session.
+
+    hidden : bool
+        True if columns hidden by the manager are included. False if columns
+        hidden by the manager are excluded.
+    """
+    if hidden:
+        l = [x for x in list(df.columns.values)
+             if not x.startswith("coquery_invisible_")]
+    else:
+        l = [x for x in list(df.columns.values)
+             if (not x.startswith("coquery_invisible_") and
+                 x not in manager.hidden_columns)]
+
+    return l

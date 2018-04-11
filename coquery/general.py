@@ -206,38 +206,6 @@ class CoqObject(object):
         return hashlib.md5(u"".join(l).encode()).hexdigest()
 
 
-def get_visible_columns(df, manager, session, hidden=False):
-    """
-    Return a list with column names from the data frame.
-
-    Internal columns, i.e. those whose name starts with the string
-    'coquery_invisible', are never returned. The parameter 'hidden' controls
-    if columns hidden by the data manager are included.
-
-    Parameters
-    ----------
-    manager : Manager object
-        The currently active manager.
-
-    session : Session object
-        The currently active session.
-
-    hidden : bool
-        True if columns hidden by the manager are included. False if columns
-        hidden by the manager are excluded.
-    """
-    if hidden:
-        l = [x for x in list(df.columns.values)
-             if not x.startswith("coquery_invisible_")]
-    else:
-        l = [x for x in list(df.columns.values)
-             if (not x.startswith("coquery_invisible_") and
-                 x not in manager.hidden_columns)]
-
-    #l = set_preferred_order(l)
-    return l
-
-
 def set_preferred_order(l, session):
     """
     Arrange the column names in l so that they occur in the preferred order.
