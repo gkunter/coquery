@@ -20,7 +20,7 @@ from coquery import options
 from coquery.gui.pyqt_compat import QtWidgets, QtCore
 
 from coquery.visualizer.colorizer import (
-    Colorizer, ColorizeByFactor, ColorizeByFreq, ColorizeByNum)
+    Colorizer, ColorizeByFactor, ColorizeByNum)
 
 
 class BarcodePlot(vis.Visualizer):
@@ -75,7 +75,8 @@ class BarcodePlot(vis.Visualizer):
                    x=None, y=None, z=None,
                    levels_x=None, levels_y=None, levels_z=None,
                    range_x=None, range_y=None, range_z=None,
-                   palette=None, rug=None, rug_color="Black",
+                   palette=None, color_number=None,
+                   rug=None, rug_color="Black",
                    **kwargs):
         """
         Plot a barcode plot.
@@ -96,24 +97,25 @@ class BarcodePlot(vis.Visualizer):
         else:
             # neither x nor y is specified, plot default
             val = pd.Series([0] * len(data), index=data.index)
+
         # Take care of a hue variable:
         if z:
             if data[z].dtype == object:
                 self._colorizer = ColorizeByFactor(
-                    palette, kwargs["color_number"], levels_z)
-                if not (z == x or z == y):
-                    self.legend_levels = self._colorizer.legend_levels()
-                else:
-                    self.legend_levels = []
+                    palette, color_number, levels_z)
             else:
                 self._colorizer = ColorizeByNum(
-                    palette, kwargs["color_number"], range_z, data[z].dtype)
+                    palette, color_number, data[z], vrange=range_z)
             cols = self._colorizer.get_hues(data=data[z])
         else:
-            self._colorizer = Colorizer(palette, kwargs["color_number"], [])
+            self._colorizer = Colorizer(palette, color_number, [])
             cols = self._colorizer.get_hues(n=len(data))
 
         self.legend_palette = self._colorizer.legend_palette()
+        if not (z == x or z == y):
+            self.legend_levels = self._colorizer.legend_levels()
+        else:
+            self.legend_levels = []
 
         if x and not y:
             BarcodePlot.force_vertical = True
