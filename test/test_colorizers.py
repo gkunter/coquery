@@ -217,89 +217,40 @@ class TestColorizeByFactor(unittest.TestCase):
 
 
 class TestColorizeByNum(unittest.TestCase):
-    #def test_bins_1(self):
-        #vrange = (0, 100)
-        #colorizer = ColorizeByNum("Paired", 5, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [0, 20, 40, 60, 80])
+    def test_get_hues_1(self):
+        data = [500, 500, 4500, 4500, 2500]
 
-    #def test_bins_1a(self):
-        #vrange = (5, 95)
-        #colorizer = ColorizeByNum("Paired", 5, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [0, 20, 40, 60, 80])
+        colorizer = ColorizeByNum("Greys", 5,
+                                  pd.Series(data), vrange=(0, 5000))
+        sns_pal = sns.color_palette("Greys", 5)[::-1]
 
-    #def test_bins_2(self):
-        #vrange = (0, 100)
-        #colorizer = ColorizeByNum("Paired", 4, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [0, 25, 50, 75])
+        expected = [sns_pal[0],
+                    sns_pal[0],
+                    sns_pal[4],
+                    sns_pal[4],
+                    sns_pal[2]]
+        hues = colorizer.get_hues(data=data)
 
-    #def test_bins_2a(self):
-        #vrange = (5, 95)
-        #colorizer = ColorizeByNum("Paired", 4, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [0, 25, 50, 75])
+        self.assertEqual(len(hues), len(data))
+        self.assertListEqual(hues, expected)
 
-    #def test_bins_3(self):
-        #vrange = (0, 1000)
-        #colorizer = ColorizeByNum("Paired", 10, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [0, 100, 200, 300, 400,
-                                    #500, 600, 700, 800, 900])
+    def test_legend_levels_1(self):
+        data = [500, 500, 4500, 4500, 2500]
 
-    #def test_bins_3a(self):
-        #vrange = (5, 995)
-        #colorizer = ColorizeByNum("Paired", 10, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [0, 100, 200, 300, 400,
-                                    #500, 600, 700, 800, 900])
+        colorizer = ColorizeByNum("Paired", 5,
+                                  pd.Series(range(5000)),
+                                  vrange=(0, 5000))
 
-    #def test_bins_3b(self):
-        #vrange = (50, 950)
-        #colorizer = ColorizeByNum("Paired", 10, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [0, 100, 200, 300, 400,
-                                    #500, 600, 700, 800, 900])
+        expected = ["≥ 4000",
+                    "≥ 3000",
+                    "≥ 2000",
+                    "≥ 1000",
+                    "≥ 0"]
 
-    #def test_bins_4(self):
-        #vrange = (-200, 200)
-        #colorizer = ColorizeByNum("Paired", 4, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [-200, -100, 0, 100])
+        levels = colorizer.legend_levels()
 
-    #def test_bins_4a(self):
-        #vrange = (-195, 195)
-        #colorizer = ColorizeByNum("Paired", 4, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [-200, -100, 0, 100])
-
-    #def test_bins_5(self):
-        #vrange = (-200, -100)
-        #colorizer = ColorizeByNum("Paired", 4, vrange, int)
-        #bins = list(colorizer.bins)
-        #self.assertListEqual(bins, [-200, -175, -150, -125])
-
-    def test_bins_6(self):
-        vrange = (100, 200)
-        colorizer = ColorizeByNum("Paired", 4, vrange, int)
-        bins = list(colorizer.bins)
-        self.assertListEqual(bins, [100, 125, 150, 175])
-
-    #def __init__(self, palette, ncol, vmin, vmax, dtype):
-        #super(ColorizeByNum, self).__init__(palette, ncol)
-        #self.vmin = vmin
-        #self.vmax = vmax
-        #self.dtype = dtype
-        #self.bins = pd.np.linspace(self.vmin, self.vmax,
-                                   #self.ncol,
-                                   #endpoint=False)
-        #self.set_title_frm("{z}")
-
-    #def get_hues(self, data):
-        #hues = super(ColorizeByNum, self).get_hues(n=self.ncol)[::-1]
-        #binned = pd.np.digitize(data, self.bins, right=False) - 1
-        #return [hues[val] for val in binned]
+        self.assertEqual(len(levels), len(data))
+        self.assertListEqual(levels, expected)
 
     #def legend_levels(self):
         #if self.dtype == int:

@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import unittest
 import sys
+import warnings
 from pprint import pprint
 
 def main():
@@ -26,6 +27,10 @@ def main():
     if not args or "celex" in args:
         from test.test_celex import TestCELEX
         test_list += [TestCELEX]
+
+    if not args or "colorizers" in args:
+        from test.test_colorizers import provided_tests
+        test_list += provided_tests
 
     if not args or "connections" in args:
         from test.test_connections import provided_tests
@@ -77,8 +82,12 @@ def main():
         test_list += provided_tests
 
     if not args or "textgrids" in args:
-        from test.test_textgrids import TestTextGridModuleMethods
-        test_list += [TestTextGridModuleMethods]
+        try:
+            from test.test_textgrids import TestTextGridModuleMethods
+        except ModuleNotFoundError as e:
+            warnings.warn(str(e))
+        else:
+            test_list += [TestTextGridModuleMethods]
 
     if not args or "tokens" in args:
         from test.test_tokens import (
