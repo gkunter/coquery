@@ -194,6 +194,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self._target_label = None
         self._hidden = None
         self._old_sizes = None
+        self._to_file = False
         self.reaggregating = False
         self._context_connections = []
         self.terminating = False
@@ -353,6 +354,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.dirModel.setFilter(QtCore.QDir.AllEntries |
                                 QtCore.QDir.NoDotAndDotDot)
 
+        self.toggle_to_file(False)
         self.disable_apply_button()
         self.ui.button_cancel_management.hide()
 
@@ -366,7 +368,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.change_corpus()
 
-        self.set_query_button(True)
+        self.enable_query_button(True)
         self.set_stop_button(False)
 
         self.set_button_labels()
@@ -459,6 +461,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_save_selection.setIcon(get_icon("Save"))
         self.ui.button_change_file.setIcon(get_icon("Open Folder"))
         self.ui.button_run_query.setIcon(get_icon("Circled Play"))
+        self.ui.button_run_query_to_file.setIcon(self.get_icon("Save"))
+
         self.ui.button_stop_query.setIcon(get_icon("Cancel"))
         self.ui.button_apply_management.setIcon(get_icon("Process"))
         self.ui.button_cancel_management.setIcon(get_icon("Stop"))
@@ -601,6 +605,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.combo_corpus.currentIndexChanged.connect(self.change_corpus)
         # hook run query button:
         self.ui.button_run_query.clicked.connect(self.run_query)
+        self.ui.button_run_query_to_file.clicked.connect(
+            lambda: self.run_query(to_file=True))
         self.ui.button_stop_query.clicked.connect(self.stop_query)
 
         self.ui.list_toolbox.currentCellChanged.connect(
@@ -643,7 +649,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.data_preview.clicked.connect(self.result_cell_clicked)
 
         self.ui.button_toggle_hidden.clicked.connect(self.toggle_hidden)
-        self.ui.hidden_columns.horizontalHeader().customContextMenuRequested.connect(
+        hidden_header = self.ui.hidden_columns.horizontalHeader()
+        hidden_header.customContextMenuRequested.connect(
             lambda x: self.show_header_menu(point=x, hidden=True))
 
         self.corpusListUpdated.connect(self.check_corpus_widgets)
@@ -673,12 +680,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         e.accept()
 
     def toggle_to_file(self, to_file):
-        if to_file:
-            self.ui.button_run_query.setText("&New query to file")
-            self.ui.button_run_query.setIcon(self.get_icon("Save"))
-        else:
-            self.ui.button_run_query.setText("&New query")
-            self.ui.button_run_query.setIcon(self.get_icon("Circled Play"))
+        self.ui.button_run_query.setDisabled(to_file)
+        self.ui.button_run_query.setHidden(to_file)
+        self.ui.button_run_query_to_file.setDisabled(not to_file)
+        self.ui.button_run_query_to_file.setHidden(not to_file)
+        self._to_file = to_file
 
     def help(self):
         from . import helpviewer
@@ -1474,7 +1480,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_apply_management.show()
         self.disable_apply_button()
         self.ui.button_cancel_management.hide()
-        self.set_query_button(True)
+        self.enable_query_button(True)
 
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)
@@ -1501,7 +1507,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         if self._target_label:
             self.jump_to_column(self._target_label)
             self._target_label = None
-        self.ui.button_run_query.blockSignals(False)
 
     def kill_reaggregation(self):
         self.terminating = True
@@ -1953,10 +1958,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.showMessage("Query failed.")
         else:
             self.showMessage("Aborted.")
-        self.set_query_button(True)
+        self.enable_query_button(True)
         self.set_stop_button(False)
         self.stop_progress_indicator()
-        self.ui.button_run_query.blockSignals(False)
 
     def _display_progress(self, n=None):
         self.ui.status_progress.setRange(0, 0)
@@ -1989,7 +1993,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.query_thread = None
         if to_file:
             self.showMessage("Query results written to {}.".format(options.cfg.output_path))
-            self.set_query_button(True)
+            self.enable_query_button(True)
             self.set_stop_button(False)
             self.stop_progress_indicator()
             options.cfg.app.alert(self, 0)
@@ -2349,7 +2353,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.stop_progress_indicator()
         self.show_query_status()
 
-    def set_query_button(self, state):
+    def enable_query_button(self, state):
+
+
         self.ui.button_run_query.setVisible(state)
         self.ui.button_run_query.setEnabled(state)
 
@@ -2378,18 +2384,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.query_thread.terminate()
                 self.query_thread.wait()
             self.showMessage("Last query interrupted.")
-            self.set_query_button(True)
+            self.enable_query_button(True)
             self.set_stop_button(False)
             self.stop_progress_indicator()
-            self.ui.button_run_query.blockSignals(False)
 
-    def run_query(self):
+    def run_query(self, to_file=False):
         from coquery.session import SessionCommandLine, SessionInputFile
         mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
-        options.cfg.to_file = (
-            (int(options.cfg.app.keyboardModifiers()) & mask) == mask)
 
-        if options.cfg.to_file:
+        if self._to_file:
             caption = "Choose output file... – Coquery"
             name = QtWidgets.QFileDialog.getSaveFileName(
                 caption=caption,
@@ -2401,6 +2404,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 return
             options.cfg.output_file_path = name
             options.cfg.output_path = name
+
         if self.user_columns:
             response = QtWidgets.QMessageBox.warning(
                 self, "You have entered user data", msg_userdata_warning,
@@ -2469,8 +2473,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
             self.set_stop_button(True)
-            self.set_query_button(False)
-            if not options.cfg.to_file:
+            self.ui.button_run_query.setDisabled(True)
+            self.ui.button_run_query.setVisible(False)
+            self.ui.button_run_query_to_file.setDisabled(True)
+            self.ui.button_run_query_to_file.setVisible(False)
+
+            if to_file:
                 if len(self.new_session.query_list) == 1:
                     self.showMessage("Running query...")
                 else:
@@ -2484,15 +2492,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.start_progress_indicator(n=len(self.new_session.query_list))
             self.query_thread = classes.CoqThread(
                 self.new_session.run_queries,
-                to_file=options.cfg.to_file,
+                to_file=to_file,
                 parent=self)
             self.query_thread.taskFinished.connect(
-                lambda: self.finalize_query(options.cfg.to_file))
+                lambda: self.finalize_query(to_file))
             self.query_thread.taskException.connect(
                 self.exception_during_query)
-            print("run_queries: start")
+            print("run_queries(to_file={}): start".format(to_file))
             self.query_thread.start()
-            self.ui.button_run_query.blockSignals(True)
 
     def run_statistics(self):
         from coquery.session import StatisticsSession

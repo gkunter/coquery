@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(697, 745)
+        MainWindow.resize(720, 745)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -125,6 +125,16 @@ class Ui_MainWindow(object):
         self.button_run_query.setDefault(True)
         self.button_run_query.setObjectName("button_run_query")
         self.horizontalLayout_3.addWidget(self.button_run_query)
+        self.button_run_query_to_file = QtWidgets.QPushButton(self.groupBox_2)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.button_run_query_to_file.sizePolicy().hasHeightForWidth())
+        self.button_run_query_to_file.setSizePolicy(sizePolicy)
+        self.button_run_query_to_file.setAutoDefault(True)
+        self.button_run_query_to_file.setDefault(True)
+        self.button_run_query_to_file.setObjectName("button_run_query_to_file")
+        self.horizontalLayout_3.addWidget(self.button_run_query_to_file)
         self.button_stop_query = QtWidgets.QPushButton(self.groupBox_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -521,7 +531,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 697, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 720, 26))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -857,6 +867,8 @@ class Ui_MainWindow(object):
         self.button_change_file.setShortcut(_translate("MainWindow", "Alt+B"))
         self.button_run_query.setText(_translate("MainWindow", "&New query"))
         self.button_run_query.setShortcut(_translate("MainWindow", "Ctrl+N"))
+        self.button_run_query_to_file.setText(_translate("MainWindow", "&New query to file"))
+        self.button_run_query_to_file.setShortcut(_translate("MainWindow", "Ctrl+N"))
         self.button_stop_query.setText(_translate("MainWindow", "&Stop"))
         self.group_management.setTitle(_translate("MainWindow", "Data &management"))
         __sortingEnabled = self.list_toolbox.isSortingEnabled()
@@ -894,8 +906,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Oxygen-Sans\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>"))
+"</style></head><body style=\" font-family:\'Oxygen-Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-weight:600;\">No match.</span></p></body></html>"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menuHelp.setTitle(_translate("MainWindow", "&Help"))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus"))
