@@ -36,13 +36,17 @@ from coquery.gui.classes import CoqTableModel
 
 class Aggregator(QtCore.QObject):
     def __init__(self):
-        self._aggs_dict = collections.defaultdict(list)
-        self._names_dict = collections.defaultdict(list)
-
+        self.reset()
         # pick first corpus id as aggregation
         self.add("coquery_invisible_corpus_id", "first")
 
+    def reset(self):
+        self._aggs_dict = collections.defaultdict(list)
+        self._names_dict = collections.defaultdict(list)
+
     def add(self, column, fnc, name=None):
+        if fnc == "mode":
+            fnc = self._get_most_frequent
         self._aggs_dict[column].append(fnc)
         self._names_dict[column].append(name or column)
 
@@ -54,6 +58,11 @@ class Aggregator(QtCore.QObject):
         df.columns = agg_columns
         df = df.reset_index()
         return df
+
+    @staticmethod
+    def _get_most_frequent(x):
+        return x.value_counts().index[0]
+
 
 
 class BaseVisualizer(QtCore.QObject):
@@ -607,6 +616,8 @@ class Visualizer(QtCore.QObject):
         self._ylab = "Y"
         self._colorizer = None
 
+        self.aggregator = Aggregator()
+
     def get_custom_widgets(self, *args, **kwargs):
         """
         Return a list of widgets that add additional functionality to this
@@ -633,21 +644,6 @@ class Visualizer(QtCore.QObject):
         """
         Add a legend to the figure, using the current option settings.
         """
-        #if levels:
-            #legend_bar = [
-                #plt.Rectangle(
-                    #(0, 0), 1, 1,
-                    #fc=self.options["color_palette_values"][i],
-                    #edgecolor="none") for i, _ in enumerate(levels)
-                #]
-            #self.g.fig.get_axes()[-1].legend(
-                #legend_bar, levels,
-                #ncol=self.options.get("label_legend_columns", 1),
-                #title=utf8(self.options.get("label_legend", "")),
-                #frameon=True,
-                #framealpha=0.7,
-                #loc=loc).draggable()
-        #else:
         grid.fig.legends = []
         if (title or self.legend_title) and self.legend_levels:
             if self.legend_palette:
@@ -674,14 +670,6 @@ class Visualizer(QtCore.QObject):
                 #grid.fig.legends[-1].set_bbox_to_anchor(
                     #self._last_legend_pos)
                 #self._last_legend_pos = None
-
-        #grid.fig.get_axes()[-1].legend(
-            #ncol=self.options.get("label_legend_columns", 1),
-            #title=utf8(self.options.get("label_legend", "")),
-            #title="Legendary",
-            #frameon=True,
-            #framealpha=0.7,
-            #loc=loc).draggable()
 
     def hide_legend(self, grid):
         try:
