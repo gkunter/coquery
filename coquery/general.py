@@ -206,23 +206,6 @@ class CoqObject(object):
         return hashlib.md5(u"".join(l).encode()).hexdigest()
 
 
-def set_preferred_order(l, session):
-    """
-    Arrange the column names in l so that they occur in the preferred order.
-
-    Columns not in the preferred order follow in an unspecified order.
-    """
-
-    resource_order = session.Resource.get_preferred_output_order()
-    for x in resource_order[::-1]:
-        lex_list = [y for y in l if x in y]
-        lex_list = sorted(lex_list)[::-1]
-        for lex in lex_list:
-            l.remove(lex)
-            l.insert(0, lex)
-    return l
-
-
 def is_language_name(code):
     return code in LANGUAGES["Language name"].values()
 

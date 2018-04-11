@@ -28,7 +28,6 @@ from .errors import (
     TokenParseError, IllegalArgumentError, SQLNoConnectorError,
     EmptyInputFileError, CorpusUnavailableQueryTypeError)
 from .defines import SQL_SQLITE, COLUMN_NAMES
-from .general import set_preferred_order
 from . import queries
 from . import managers
 from . import functionlist
@@ -302,9 +301,9 @@ class Session(object):
         finally:
             self.disconnect_from_db()
 
-        self.data_table = self.data_table[set_preferred_order(
-            list(self.data_table.columns),
-            self)]
+        ordered_columns = self.set_preferred_order(
+            list(self.data_table.columns))
+        self.data_table = self.data_table[ordered_columns]
 
         if sys.version_info < (3, 0):
             for col in self.data_table.columns:
@@ -351,6 +350,22 @@ class Session(object):
             return None
         else:
             return managers.get_manager(options.cfg.MODE, self.Resource.name)
+
+    def set_preferred_order(self, l):
+        """
+        Arrange the column names in l so that they occur in the preferred order.
+
+        Columns not in the preferred order follow in an unspecified order.
+        """
+        resource_order = self.Resource.get_preferred_output_order()
+        for x in resource_order[::-1]:
+            lex_list = [y for y in l if x in y]
+            lex_list = sorted(lex_list)[::-1]
+            for lex in lex_list:
+                l.remove(lex)
+                l.insert(0, lex)
+        return l
+
 
     def has_cached_data(self):
         return (self, self.get_manager()) in self._manager_cache
@@ -427,6 +442,8 @@ class Session(object):
         s : string
             The display name of the resource string
         """
+
+        # FIXME: This method is an abomination and needs revision. Badly.
 
         if header is None:
             return header
