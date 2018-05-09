@@ -51,11 +51,36 @@ class Colorizer(QtCore.QObject):
 
         return col
 
-    def get_hues(self, data=None, n=None):
+    def get_hues(self, data):
         base, _, rev = self.palette.partition("_")
-        if data is not None:
-            n = len(data)
+        n = len(data)
         return (self.get_palette() * ((n // self.ncol) + 1))[:n]
+
+    @staticmethod
+    def hex_to_rgb(l):
+        return [(int(s[1:3], 16), int(s[3:5], 16), int(s[5:7], 16))
+                for s in l]
+
+    @staticmethod
+    def rgb_to_hex(l):
+        return ["#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
+                for r, g, b in l]
+
+    @staticmethod
+    def rgb_to_mpt(l):
+        return [(r / 255, g / 255, b / 255) for r, g, b in l]
+
+    @staticmethod
+    def mpt_to_rgb(l):
+        return [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in l]
+
+    @staticmethod
+    def hex_to_mpt(l):
+        return Colorizer.rgb_to_mpt(Colorizer.hex_to_rgb(l))
+
+    @staticmethod
+    def mpt_to_hex(l):
+        return Colorizer.rgb_to_hex(Colorizer.mpt_to_rgb(l))
 
     def legend_title(self, z):
         return self._title_frm.format(z=z)
@@ -78,10 +103,7 @@ class ColorizeByFactor(Colorizer):
         super(ColorizeByFactor, self).__init__(palette, ncol, values)
         self.set_title_frm("{z}")
 
-    def get_hues(self, data=None, n=None):
-        if data is None:
-            data = (self.values * self.ncol)[:n]
-
+    def get_hues(self, data):
         pal = self.get_palette()
         color_indices = [self.values.index(val) % len(pal) for val in data]
         hues = [pal[ix] for ix in color_indices]
@@ -123,13 +145,13 @@ class ColorizeByNum(Colorizer):
         self._entry_frm = s
 
     def get_hues(self, data):
-        hues = super(ColorizeByNum, self).get_hues(n=self.ncol)
+        pal = self.get_palette(n=self.ncol)
 
         if not self._direct_mapping:
-            hues = hues[::-1]
+            pal = pal[::-1]
 
         binned = pd.np.digitize(data, self.bins, right=False) - 1
-        return [hues[val] for val in binned]
+        return [pal[val] for val in binned]
 
     def legend_palette(self):
         return self.get_palette()
@@ -153,6 +175,6 @@ class ColorizeByFreq(Colorizer):
         self.bins = pd.np.linspace(data.min(), data.max(),
                                    self.ncol,
                                    endpoint=False)
-        hues = super(ColorizeByFreq, self).get_hues(n=self.ncol)
+        pal = self.get_palette(n=self.ncol)
         binned = pd.np.digitize(data, self.bins, right=False) - 1
-        return [hues[val] for val in binned]
+        return [pal[val] for val in binned]
