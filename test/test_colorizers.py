@@ -9,6 +9,7 @@ coquery$ python -m test.test_colorizers
 """
 
 from __future__ import unicode_literals
+from __future__ import division
 
 import unittest
 import os
@@ -60,19 +61,6 @@ class TestColorizer(unittest.TestCase):
         pal = colorizer.get_palette()
         single_pal = [(1, 0, 0)] * 5
         self.assertListEqual(pal, single_pal)
-
-    def test_get_hues_by_n_1(self):
-        colorizer = Colorizer("Paired", 5)
-        hues = colorizer.get_hues(n=13)
-        sns_hues = (sns.color_palette("Paired", 5) * 2 +
-                    sns.color_palette("Paired", 5)[:3])
-        self.assertListEqual(hues, sns_hues)
-
-    def test_get_hues_by_n_2(self):
-        colorizer = Colorizer("Paired", 5)
-        hues = colorizer.get_hues(n=3)
-        sns_hues = sns.color_palette("Paired", 5)[:3]
-        self.assertListEqual(hues, sns_hues)
 
     def test_get_hues_by_data_1(self):
         colorizer = Colorizer("Paired", 5)
@@ -264,10 +252,58 @@ class TestColorizeByFreq(unittest.TestCase):
     pass
 
 
+class TestColorizeTransform(unittest.TestCase):
+    def setUp(self):
+        self.rgb = [(0, 0, 0),
+                    (127, 0, 0), (0, 127, 0), (0, 0, 127),
+                    (127, 127, 0), (127, 0, 127), (0, 127, 127),
+                    (127, 127, 127),
+                    (255, 0, 0), (0, 255, 0), (0, 0, 255),
+                    (255, 255, 0), (255, 0, 255), (0, 255, 255),
+                    (255, 255, 255)]
+        self.hex = ["#000000",
+                    "#7f0000", "#007f00", "#00007f",
+                    "#7f7f00", "#7f007f", "#007f7f",
+                    "#7f7f7f",
+                    "#ff0000", "#00ff00", "#0000ff",
+                    "#ffff00", "#ff00ff", "#00ffff",
+                    "#ffffff"]
+        self.mpt = [(0.0, 0.0, 0.0),
+                    (127 / 255, 0.0, 0.0),
+                    (0.0, 127 / 255, 0.0),
+                    (0.0, 0.0, 127 / 255),
+                    (127 / 255, 127 / 255, 0.0),
+                    (127 / 255, 0.0, 127 / 255),
+                    (0.0, 127 / 255, 127 / 255),
+                    (127 / 255, 127 / 255, 127 / 255),
+                    (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
+                    (1.0, 1.0, 0.0), (1.0, 0.0, 1.0), (0.0, 1.0, 1.0),
+                    (1.0, 1.0, 1.0)]
+
+    def test_hex_to_rgb(self):
+        self.assertListEqual(self.rgb, Colorizer.hex_to_rgb(self.hex))
+
+    def test_hex_to_mpt(self):
+        self.assertListEqual(self.mpt, Colorizer.hex_to_mpt(self.hex))
+
+    def test_rgb_to_hex(self):
+        self.assertListEqual(self.hex, Colorizer.rgb_to_hex(self.rgb))
+
+    def test_rgb_to_mpt(self):
+        self.assertListEqual(self.mpt, Colorizer.rgb_to_mpt(self.rgb))
+
+    def test_mpt_to_rgb(self):
+        self.assertListEqual(self.rgb, Colorizer.mpt_to_rgb(self.mpt))
+
+    def test_mpt_to_hex(self):
+        self.assertListEqual(self.hex, Colorizer.mpt_to_hex(self.mpt))
+
+
 provided_tests = (TestColorizer,
                   TestColorizeByFactor,
                   TestColorizeByNum,
-                  TestColorizeByFreq)
+                  TestColorizeByFreq,
+                  TestColorizeTransform)
 
 
 def main():
