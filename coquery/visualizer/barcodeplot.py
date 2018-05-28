@@ -2,7 +2,7 @@
 """
 barcodeplot.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -34,8 +34,7 @@ class BarcodePlot(vis.Visualizer):
 
     DEFAULT_LABEL = "Corpus position"
 
-    horizontal = True
-    force_vertical = False
+    force_horizontal = True
 
     def get_custom_widgets(self, *args, **kwargs):
         layout = QtWidgets.QHBoxLayout()
@@ -46,7 +45,7 @@ class BarcodePlot(vis.Visualizer):
 
         BarcodePlot.check_horizontal = QtWidgets.QCheckBox(label)
         BarcodePlot.check_horizontal.setCheckState(
-            QtCore.Qt.Checked if BarcodePlot.horizontal else
+            QtCore.Qt.Checked if BarcodePlot.force_horizontal else
             QtCore.Qt.Unchecked)
 
         BarcodePlot.button_apply = QtWidgets.QPushButton(button)
@@ -66,7 +65,7 @@ class BarcodePlot(vis.Visualizer):
 
     @classmethod
     def update_figure(cls, self, i):
-        cls.horizontal = bool(i)
+        cls.force_horizontal = bool(i)
         BarcodePlot.button_apply.setDisabled(True)
         self.updateRequested.emit()
 
@@ -88,6 +87,11 @@ class BarcodePlot(vis.Visualizer):
         self._xlab = self.DEFAULT_LABEL
         self._ylab = self.DEFAULT_LABEL
 
+        #if levels_x:
+            #levels_x = levels_x[::-1]
+        if levels_y:
+            levels_y = levels_y[::-1]
+
         corpus_id = data["coquery_invisible_corpus_id"]
 
         if x:
@@ -98,19 +102,11 @@ class BarcodePlot(vis.Visualizer):
             # neither x nor y is specified, plot default
             val = pd.Series([0] * len(data), index=data.index)
 
-        # Take care of a hue variable:
-        if z:
-            if data[z].dtype == object:
-                self._colorizer = ColorizeByFactor(
-                    palette, color_number, levels_z)
-            else:
-                self._colorizer = ColorizeByNum(
-                    palette, color_number, data[z], vrange=range_z)
-            cols = self._colorizer.get_hues(data=data[z])
-        else:
-            self._colorizer = Colorizer(palette, color_number, [])
-            cols = self._colorizer.get_hues(n=len(data))
+        self._colorizer = self.get_colorizer(data, palette, color_number,
+                                             z, levels_z, range_z)
+        cols = self.get_colors(data, self._colorizer, z)
 
+        self.legend_title = self._colorizer.legend_title(z)
         self.legend_palette = self._colorizer.legend_palette()
         if not (z == x or z == y):
             self.legend_levels = self._colorizer.legend_levels()
@@ -118,53 +114,50 @@ class BarcodePlot(vis.Visualizer):
             self.legend_levels = []
 
         if x and not y:
-            BarcodePlot.force_vertical = True
             ax_kwargs = {"xticks": 0.5 + pd.np.arange(len(levels_x)),
                          "xticklabels": levels_x,
                          "xlim": (0, len(levels_x))}
             self._xlab = x
-            func = plt.hlines
+            self._func = plt.hlines
+            self.horizontal = True
 
         elif y and not x:
-            BarcodePlot.force_vertical = False
             ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
                          "yticklabels": levels_y,
                          "ylim": (0, len(levels_y))}
             self._ylab = y
-            func = plt.vlines
+            self._func = plt.vlines
+            self.horizontal = False
 
         else:
-            if BarcodePlot.horizontal:
-                BarcodePlot.force_vertical = False
+            if BarcodePlot.force_horizontal:
                 ax_kwargs = {"yticklabels": []}
                 self._ylab = ""
-                func = plt.vlines
-
+                self._func = plt.vlines
+                self.horizontal = False
             else:
-                BarcodePlot.force_vertical = True
                 ax_kwargs = {"xticklabels": []}
                 self._xlab = ""
-                func = plt.hlines
+                self._func = plt.hlines
+                self.horizontal = True
 
         if rug:
             if "top" in rug:
-                func(corpus_id, val + 0.9, val + 1, cols)
+                self._func(corpus_id, val + 0.9, val + 1, cols)
             if "bottom" in rug:
-                func(corpus_id, val, val + 0.1, cols)
+                self._func(corpus_id, val, val + 0.1, cols)
         else:
-            func(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
-
-        self.legend_title = self._colorizer.legend_title(z)
+            self._func(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
 
         ax = kwargs.get("ax", plt.gca())
         ax.set(**ax_kwargs)
 
     def set_annotations(self, grid, values):
         lim = (0, self.session.Corpus.get_corpus_size())
-        if BarcodePlot.horizontal and not BarcodePlot.force_vertical:
-            grid.set(xlim=lim)
-        else:
+        if self.horizontal:
             grid.set(ylim=lim)
+        else:
+            grid.set(xlim=lim)
         vis.Visualizer.set_annotations(self, grid, values)
 
     @staticmethod
