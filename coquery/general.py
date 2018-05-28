@@ -335,31 +335,39 @@ def pretty(vrange, n, endpoint=False):
 
         niced_min = pd.np.floor(vmin * 10 ** exp) / 10 ** exp
         niced_max = pd.np.ceil(vmax * 10 ** exp) / 10 ** exp
-
     elif vmin != 0:
-        exp_min = pd.np.floor(pd.np.log10(abs(vmin)))
+        # limit the exponent of the lower boundary so that it does not exceed
+        # three, i.e. only the lowest three digits will be cleared (this may
+        # need revision):
+        exp_min = min(pd.np.floor(pd.np.log10(abs(vmin))), 3)
+
         pretty_min = pd.np.floor(vmin / 10 ** exp_min) * 10 ** exp_min
-
         exp_max = pd.np.ceil(pd.np.log10(abs(vmax - pretty_min)))
-
-        exp = max(exp_max - exp_min, 1)
         exp = exp_max - exp_min
 
         pretty_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
-
         return pretty((0, vmax - pretty_min), n) + pretty_min
 
     else:
         exp = pd.np.floor(pd.np.log10(abs(vmax)))
 
-        niced_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
-        niced_max = pd.np.ceil(vmax / 10 ** exp) * 10 ** exp
+        if pd.np.floor(10 ** exp) < vmax < pd.np.floor(1.5 * 10 ** exp):
+            # Special case for ranges such as (0, 125) or any multiple by
+            # ten: use   (0, 150) as boundary
+            # instead of (0, 200)
+            fiver_offset = 5 * 10 ** (exp - 1)
 
-    return pd.np.linspace(niced_min,
-                          niced_max,
-                          n,
-                          endpoint=endpoint)
+            niced_min = fiver_offset if vmin > fiver_offset else 0
+            niced_max = 1.5 * 10 ** exp
+        else:
+            niced_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
+            niced_max = pd.np.ceil(vmax / 10 ** exp) * 10 ** exp
 
+    val = pd.np.linspace(niced_min,
+                         niced_max,
+                         n,
+                         endpoint=endpoint)
+    return val
 
 # Memory status functions:
 def memory_dump():
