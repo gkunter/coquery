@@ -132,7 +132,6 @@ class TestPretty(unittest.TestCase):
     def test_pretty_10a(self):
         vrange = (0.05, 0.10)
         bins = pretty(vrange, 4)
-        print(bins)
         self.assertListEqual(bins,
                              [0.0, 0.025, 0.05, 0.075])
 
@@ -171,6 +170,14 @@ class TestPretty(unittest.TestCase):
         bins = pretty(vrange, 5)
         self.assertListEqual(list(bins),
                              [20000, 23000, 26000, 29000, 32000])
+
+    def test_pretty_16(self):
+        vrange = (75, 136)
+        bins = pretty(vrange, 7)
+        self.assertListEqual(list(bins),
+                             [70, 80, 90, 100, 110, 120, 130])
+
+
 
 
 provided_tests = [TestGeneral, TestPretty]
