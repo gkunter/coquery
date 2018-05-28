@@ -8,7 +8,6 @@ coquery$ python -m test.test_general
 
 """
 
-
 from __future__ import print_function
 import unittest
 import sys
@@ -35,7 +34,7 @@ class TestPretty(unittest.TestCase):
                 any([type(x) == object for x in l2])):
             return super(TestPretty, self).assertListEqual(l1, l2)
         else:
-            if not all(np.equal(l1, l2)):
+            if not np.allclose(l1, l2):
                 raise self.failureException(
                     "Lists not equal enough:\n\t{}\n\t{}".format(l1, l2))
             return all(np.equal(l1, l2))
@@ -133,20 +132,46 @@ class TestPretty(unittest.TestCase):
     def test_pretty_10a(self):
         vrange = (0.05, 0.10)
         bins = pretty(vrange, 4)
-        self.assertListEqual(list(bins),
+        print(bins)
+        self.assertListEqual(bins,
                              [0.0, 0.025, 0.05, 0.075])
 
     def test_pretty_11(self):
-        vrange = (13452, 32787)
-        bins = pretty(vrange, 2)
-        self.assertListEqual(list(bins),
-                             [13000, 23000])
-
-    def test_pretty_12(self):
         vrange = (0, 136)
         bins = pretty(vrange, 2)
         self.assertListEqual(list(bins),
                              [0, 75])
+
+    def test_pretty_12(self):
+        vrange = (13452, 32787)
+        bins = pretty(vrange, 2)
+        self.assertListEqual(list(bins),
+                             [13400, 23400])
+
+    def test_pretty_12a(self):
+        vrange = (13452, 32787)
+        bins = pretty(vrange, 4)
+        self.assertListEqual(list(bins),
+                             [13400, 18400, 23400, 28400])
+
+    def test_pretty_13(self):
+        vrange = (13452, 33061)
+        bins = pretty(vrange, 5)
+        self.assertListEqual(list(bins),
+                             [13400, 17400, 21400, 25400, 29400])
+
+    def test_pretty_14(self):
+        vrange = (134528, 330612)
+        bins = pretty(vrange, 5)
+        self.assertListEqual(list(bins),
+                             [134000, 174000, 214000, 254000, 294000])
+
+    def test_pretty_15(self):
+        vrange = (20033, 32399)
+        bins = pretty(vrange, 5)
+        self.assertListEqual(list(bins),
+                             [20000, 23000, 26000, 29000, 32000])
+
 
 provided_tests = [TestGeneral, TestPretty]
 
