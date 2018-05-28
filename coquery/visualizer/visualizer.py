@@ -33,6 +33,9 @@ from coquery.errors import (VisualizationInvalidLayout,
 from coquery.unicode import utf8
 from coquery.gui.classes import CoqTableModel
 
+from coquery.visualizer.colorizer import (
+    Colorizer, ColorizeByFactor, ColorizeByNum)
+
 
 class Aggregator(QtCore.QObject):
     def __init__(self):
@@ -62,7 +65,6 @@ class Aggregator(QtCore.QObject):
     @staticmethod
     def _get_most_frequent(x):
         return x.value_counts().index[0]
-
 
 
 class BaseVisualizer(QtCore.QObject):
@@ -167,10 +169,14 @@ class BaseVisualizer(QtCore.QObject):
                     raise VisualizationInvalidLayout
                 else:
                     return func(self)
-            if self._col_factor and len(pd.unique(self._table[self._col_factor].values.ravel())) > 16:
-                raise VisualizationInvalidLayout
-            if self._row_factor and len(pd.unique(self._table[self._row_factor].values.ravel())) > 16:
-                raise VisualizationInvalidLayout
+            if self._col_factor:
+                ncol = len(pd.np.unique(self._table[self._col_factor].values))
+                if ncol > 16:
+                    raise VisualizationInvalidLayout
+            if self._row_factor:
+                nrow = len(pd.pd.unique(self._table[self._row_factor].values))
+                if nrow > 16:
+                    raise VisualizationInvalidLayout
             return func(self)
         return func_wrapper
 
@@ -646,12 +652,7 @@ class Visualizer(QtCore.QObject):
         """
         grid.fig.legends = []
         if (title or self.legend_title) and self.legend_levels:
-            if self.legend_palette:
-                col = self.legend_palette
-            else:
-                col = sns.color_palette(palette,
-                                        n_colors=len(self.legend_levels))
-
+            col = self.legend_palette
             legend_bar = [plt.Rectangle((0, 0), 1, 1,
                                         fc=col[i], edgecolor="none")
                           for i, _ in enumerate(self.legend_levels)]
@@ -666,10 +667,6 @@ class Visualizer(QtCore.QObject):
 
             legend = grid.fig.legends[-1]
             legend.get_title().set_fontsize(titlesize)
-            #if self._last_legend_pos:
-                #grid.fig.legends[-1].set_bbox_to_anchor(
-                    #self._last_legend_pos)
-                #self._last_legend_pos = None
 
     def hide_legend(self, grid):
         try:
@@ -823,6 +820,26 @@ class Visualizer(QtCore.QObject):
 
         assert len(pal) == nlevels
         return pal
+
+    @staticmethod
+    def get_colorizer(data, palette, color_number,
+                      z, levels_z=None, range_z=None):
+        if z:
+            if data[z].dtype == object:
+                c = ColorizeByFactor(palette, color_number, levels_z)
+            else:
+                c = ColorizeByNum(palette, color_number, data[z],
+                                  vrange=range_z)
+        else:
+            c = Colorizer(palette, color_number)
+        return c
+
+    @staticmethod
+    def get_colors(data, colorizer, z):
+        if z:
+            return colorizer.get_hues(data[z])
+        else:
+            return colorizer.get_hues(data.iloc[:, 0])
 
 
 def get_grid_layout(n):
