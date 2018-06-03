@@ -548,6 +548,8 @@ The Coquery developers cannot be held liable for any copyright infringement
 or license violations that is caused by packaging and/or distributing a
 corpus.</p>"""
 
+msg_nltk_message_error = "Could not interpret the NLTK error message: {}"
+
 msg_invalid_filter = """
 <p><b>The corpus filter '{}' is not valid.</b></p>
 <p>One of your filters is not not valid for the currently selected corpus.
