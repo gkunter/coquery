@@ -21,6 +21,7 @@ import zipfile
 
 from coquery import options
 from coquery.defines import (msg_install_abort,
+                             msg_nltk_message_error,
                              msg_corpus_path_not_valid)
 from coquery.errors import DependencyError
 from coquery.unicode import utf8
@@ -59,7 +60,8 @@ class MetaGui(QtWidgets.QDialog):
             self.ui.progress_box.hide()
 
         if hasattr(self.ui, "buttonBox"):
-            self.ui.yes_button = self.ui.buttonBox.button(self.ui.buttonBox.Yes)
+            self.ui.yes_button = self.ui.buttonBox.button(
+                self.ui.buttonBox.Yes)
             self.ui.yes_button.setText(self.button_label)
             self.ui.yes_button.clicked.connect(self.start_install)
 
@@ -131,7 +133,8 @@ class MetaGui(QtWidgets.QDialog):
             target = "corpusinstaller_corpus_source"
 
         if hasattr(self.ui, "input_path"):
-            self.ui.input_path.setText(utf8(options.settings.value(target, "")))
+            val = options.settings.value(target, "")
+            self.ui.input_path.setText(utf8(val))
 
     def display(self):
         self.exec_()
@@ -311,8 +314,8 @@ class InstallerGui(MetaGui):
     showNLTKDownloader = QtCore.Signal(str)
 
     def __init__(self, builder_class, parent=None):
-        super(InstallerGui, self).__init__(builder_class,
-                                           gui=Ui_CorpusInstaller, parent=parent)
+        super(InstallerGui, self).__init__(
+            builder_class, gui=Ui_CorpusInstaller, parent=parent)
 
         self.ui.label_pos_tagging.hide()
         self.ui.use_pos_tagging.hide()
@@ -406,7 +409,6 @@ class InstallerGui(MetaGui):
         options.settings.setValue("corpusinstaller_ngram_width",
                                   self.ui.spin_n.value())
         return super(InstallerGui, self).accept()
-
 
     def validate_dialog(self, check_path=True):
         self.ui.input_path.setStyleSheet("")
@@ -719,13 +721,14 @@ class BuilderGui(InstallerGui):
         import nltk
         # test lemmatizer:
 
-        # This regular expression matches the error output of nltk.LookupError of the
-        # form
+        # This regular expression matches the error output of nltk.LookupError
+        # of the form
         #
         # Resource [ANSI|']resource_name[ANSI|'] not found
         #
-        # where ANSI can be any ANSI sequence, e.g. one used to change the color of
-        # the output. The ANSI part is based on https://stackoverflow.com/a/33925425
+        # where ANSI can be any ANSI sequence, e.g. one used to change the
+        # color of the output. The ANSI part is based on
+        # https://stackoverflow.com/a/33925425
 
         regstr = (r".*Resource\s*"
                   "(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
@@ -746,8 +749,7 @@ class BuilderGui(InstallerGui):
                 self.nltk_exceptions.append(match.group(1).strip("'"))
             else:
                 error_msg = str(e).replace("\n", "<br>")
-                raise RuntimeError(
-                    "Could not interpret the NLTK error message:{}".format(error_msg))
+                raise RuntimeError(msg_nltk_message_error.format(error_msg))
             self._nltk_lemmatize = False
         except Exception as e:
             self.nltk_exceptions.append(
@@ -767,8 +769,7 @@ class BuilderGui(InstallerGui):
                 self.nltk_exceptions.append(match.group(1).strip("'"))
             else:
                 error_msg = str(e).replace("\n", "<br>")
-                raise RuntimeError(
-                    "Could not interpret the NLTK error message:{}".format(error_msg))
+                raise RuntimeError(msg_nltk_message_error.format(error_msg))
             self._nltk_tokenize = False
         except Exception as e:
             self.nltk_exceptions.append(
@@ -788,8 +789,7 @@ class BuilderGui(InstallerGui):
                 self.nltk_exceptions.append(match.group(1).strip("'"))
             else:
                 error_msg = str(e).replace("\n", "<br>")
-                raise RuntimeError(
-                    "Could not interpret the NLTK error message:{}".format(error_msg))
+                raise RuntimeError(msg_nltk_message_error.format(error_msg))
             self._nltk_tagging = False
         except Exception as e:
             self.nltk_exceptions.append(
@@ -1123,6 +1123,9 @@ class PackageGui(BuilderGui):
     def get_arguments_from_gui(self):
         namespace = argparse.Namespace()
         namespace.only_module = self.ui.radio_only_module.isChecked()
+        namespace.lookup_ngram = False
+        namespace.ngram_width = None
+        namespace.metadata = None
         if self.ngram_width is not None:
             namespace.lookup_ngram = True
             namespace.ngram_width = self.ngram_width
