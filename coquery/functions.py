@@ -241,24 +241,21 @@ class ToCategory(ConversionFunction):
     _name = "CATEGORICAL"
 
     def evaluate(self, df, **kwargs):
-        val = df[self.columns]
-        for col in val:
-            if val[col].dtype != object:
-                na_list = val[col].isnull()
-                val.loc[:, col] = val[col].astype(str)
-                val.loc[na_list, col] = None
-        return val
+        d = {}
+
+        for col in self.columns:
+            d[col] = df[col].astype(str)
+            d[col][df[col].isnull()] = None
+
+        return pd.DataFrame(d)
 
 
 class ToNumeric(ConversionFunction):
     _name = "NUMERICAL"
 
     def evaluate(self, df, **kwargs):
-        val = df[self.columns]
-        for col in val:
-            if val[col].dtype == object:
-                val.loc[:, col] = pd.to_numeric(val[col], errors="coerce")
-        return val
+        return pd.DataFrame({col: pd.to_numeric(df[col], errors="coerce")
+                             for col in self.columns})
 
 
 #############################################################################
