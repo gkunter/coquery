@@ -310,10 +310,10 @@ class TestTables(unittest.TestCase):
         self.assertEqual(len(self.table._add_lookup), 6)
 
     def test_suggest_data_type(self):
-        raise NotImplementedError
+        raise unittest.SkipTest
 
     def test_find(self):
-        raise NotImplementedError
+        raise unittest.SkipTest
 
 
 provided_tests = TestColumns, TestIdentifier, TestLinks, TestTables
