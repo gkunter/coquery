@@ -2,7 +2,7 @@
 """
 Connectionconfiguration.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -27,7 +27,8 @@ from coquery.defines import (
     DEFAULT_CONFIGURATION, SQL_MYSQL, SQL_SQLITE,
     msg_not_enough_space, msg_completely_remove, msg_invalid_ip,
     msg_mysql_remove, msg_mysql_access_denied, msg_mysql_success,
-    msg_mysql_invalid)
+    msg_mysql_invalid,
+    msg_sql_new_user_fail, msg_sql_new_user_success, msg_sql_root_fail)
 from coquery.connections import (get_connection,
                                  MySQLConnection, SQLiteConnection)
 
@@ -173,6 +174,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                                self.ui.password, self.ui.input_db_path)
 
         for signal in (self.ui.hostname.textChanged,
+                       self.ui.radio_sqlite.toggled,
+                       self.ui.radio_mysql.toggled,
                        self.ui.user.textChanged,
                        self.ui.port.valueChanged,
                        self.ui.password.textChanged,
@@ -310,6 +313,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         data = item.data(QtCore.Qt.UserRole)
         self.set_connection(data)
         self._path_edited = False
+        self.check_connection()
 
     def block_input_signals(self):
         for widget in self._input_widgets:
@@ -680,7 +684,11 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
         if create_data:
             root_name, root_password, name, password = create_data
-            host = utf8(self.ui.hostname.text())
+
+            if self.ui.radio_local.isChecked():
+                host = "127.0.0.1"
+            else:
+                host = utf8(self.ui.hostname.text())
             port = int(self.ui.port.value())
             con = MySQLConnection(name="",
                                   host=host, port=port,
@@ -689,36 +697,24 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 engine = con.get_engine()
             except Exception as e:
                 QtWidgets.QMessageBox.critical(
-                    self,
-                    "Access as root failed",
-                    ("<p>A root access to the MySQL server could not be "
-                     "established.</p><p>Please check the MySQL root name "
-                     "and the MySQL root password, and try again to create "
-                     "a user."))
+                    self, "Access as root failed", msg_sql_root_fail)
                 return
-            S = """
-            CREATE USER '{user}'@'{host}' IDENTIFIED BY '{password}';
-            GRANT ALL PRIVILEGES ON * . * TO '{user}'@'{host}';
-            FLUSH PRIVILEGES;""".format(
-                user=name, password=password, host=host)
+            finally:
+                engine.dispose()
 
-            with engine.connect() as connection:
-                try:
-                    connection.execute(S)
-                except Exception as e:
-                    QtWidgets.QMessageBox.critical(
-                        self,
-                        "Error creating user",
-                        ("the user named '{}' could not be "
-                         "created on the MySQL server.").format(name))
-                    return
-                else:
-                    QtWidgets.QMessageBox.information(
-                        self,
-                        "User created",
-                        ("The user named '{}' was successfully created on the"
-                         "MySQL server.").format(name))
-            engine.dispose()
+            try:
+                con.create_user(name, password)
+            except Exception as e:
+                print(e)
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "User not created", msg_sql_new_user_fail.format(name))
+                return
+            else:
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "User created", msg_sql_new_user_success.format(name))
+
             self.ui.user.setText(name)
             self.ui.password.setText(password)
             self.check_connection()
