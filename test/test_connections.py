@@ -9,15 +9,20 @@ coquery$ python -m test.test_connections
 """
 
 from __future__ import unicode_literals
+from __future__ import print_function
 
 import unittest
 import os
+import sys
+import select
+import random
+import string
 
 from coquery.connections import (Connection,
                                  MySQLConnection,
                                  SQLiteConnection)
 from coquery.defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
-from coquery.corpus import BaseResource, SQLResource, CorpusClass
+from coquery.corpus import BaseResource, CorpusClass
 from coquery.general import get_home_dir
 
 
@@ -90,6 +95,9 @@ class TestConnection(unittest.TestCase):
 
 
 class TestMySQLConnection(unittest.TestCase):
+    skip_root = False
+    root_password = None
+
     def setUp(self):
         self.name = "test_mysql"
         self.host = "127.0.0.1"
@@ -97,6 +105,54 @@ class TestMySQLConnection(unittest.TestCase):
         self.user = "mysql"
         self.password = "abcde" # just because I can
         self.db_name = "coq_corpus"
+
+    @staticmethod
+    def input_timeout(prompt, timeout, no_echo=False):
+        print(prompt)
+
+        try:
+            if no_echo:
+                # disable echo:
+                try:
+                    os.system("stty -echo")
+                except Exception as e:
+                    pass
+
+            # get string
+            try:
+                val, _, _ = select.select([sys.stdin], [], [], timeout)
+            except Exception as e:
+                val = None
+        finally:
+            if no_echo:
+                # reactivate echo:
+                try:
+                    os.system("stty echo")
+                except Exception as e:
+                    pass
+
+        if val:
+            return sys.stdin.readline().strip("\n")
+        else:
+            return None
+
+    def get_root_password(self):
+        if TestMySQLConnection.skip_root:
+            raise unittest.SkipTest
+
+        if not TestMySQLConnection.root_password:
+            try:
+                pwd = self.input_timeout("Root password: ", 5.0, no_echo=True)
+            except Exception as e:
+                pass
+            else:
+                TestMySQLConnection.root_password = pwd
+
+        if not TestMySQLConnection.root_password:
+            TestMySQLConnection.skip_root = True
+            raise unittest.SkipTest
+        else:
+            return self.root_password
 
     def test_init(self):
         con = MySQLConnection(
@@ -136,6 +192,40 @@ class TestMySQLConnection(unittest.TestCase):
                               dbname=self.db_name)
 
         self.assertEqual(url, con.url(self.db_name))
+
+    def test_has_user(self):
+        root_password = self.get_root_password()
+
+        con = MySQLConnection(name="",
+                              host=self.host, port=self.port,
+                              user="root", password=root_password)
+
+        self.assertTrue(con.has_user("root"))
+        self.assertFalse(con.has_user("*\n ")) # assuming that this is illegal
+
+    def test_create_and_drop_user(self):
+        root_password = self.get_root_password()
+
+        con = MySQLConnection(name="",
+                              host=self.host, port=self.port,
+                              user="root", password=root_password)
+
+        # generate random name that doesn't exist as an MySQL user yet:
+        while True:
+            random_name = "".join(
+                [random.choice(string.ascii_letters) for _ in range(32)])
+            if not con.has_user(random_name):
+                break
+
+        # create and drop the random uer:
+        try:
+            con.create_user(random_name, "password")
+            self.assertTrue(con.has_user(random_name))
+        finally:
+            con.drop_user(random_name)
+
+        self.assertFalse(con.has_user(random_name))
+
 
     #def test_remove_resource(self):
         #cor = CorpusClass()

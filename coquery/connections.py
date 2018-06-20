@@ -254,6 +254,76 @@ class MySQLConnection(Connection):
         engine.dispose()
         return size
 
+    def has_user(self, user):
+        """
+        Checks if the user specified by the argument exists on the current
+        host.
+
+        This method assumes that the user account for which the connection has been created is privileged to query the currently existing users.
+        """
+        QUERY_USERS = "SELECT User, Host from mysql.user"
+
+        engine = self.get_engine()
+        with engine.connect() as connection:
+            results = connection.execute(QUERY_USERS)
+        engine.dispose()
+
+        local_hosts = ["127.0.0.1", "localhost"]
+
+        if self.host in local_hosts:
+            hosts = local_hosts
+        else:
+            hosts = [self.host]
+
+
+        for existing_user, host in results:
+            if user == existing_user and host in hosts:
+                return True
+        else:
+            return False
+
+    def create_user(self, user, pwd):
+        NEW_USER = "CREATE USER {user}@{host} IDENTIFIED BY {pwd}"
+        GRANT_PRIV = "GRANT ALL PRIVILEGES ON * . * TO {user}@{host}"
+        FLUSH_PRIV = "FLUSH PRIVILEGES"
+
+        engine = self.get_engine()
+        try:
+            with engine.connect() as connection:
+                connection.execute(
+                    NEW_USER.format(
+                        user="'{}'".format(user),
+                        host="'{}'".format(self.host),
+                        pwd="'{}'".format(pwd)))
+
+            # now that the user has been created, grant it all privileges
+            # it needs:
+            try:
+                with engine.connect() as connection:
+                    connection.execute(
+                        GRANT_PRIV.format(
+                            user="'{}'".format(user),
+                            host="'{}'".format(self.host)))
+                    connection.execute(FLUSH_PRIV)
+            except Exception as e:
+                self.drop_user(user)
+                raise RuntimeError("User not created:\n{}".format(str(e)))
+        finally:
+            engine.dispose()
+
+    def drop_user(self, user):
+        REMOVE_USER = "DROP USER {user}@{host}"
+
+        engine = self.get_engine()
+        try:
+            with engine.connect() as connection:
+                connection.execute(
+                    REMOVE_USER.format(
+                        user="'{}'".format(user),
+                        host="'{}'".format(self.host)))
+        finally:
+            engine.dispose()
+
 
 class SQLiteConnection(Connection):
     """
