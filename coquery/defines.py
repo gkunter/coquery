@@ -359,7 +359,8 @@ MODULE_INFORMATION = {
             "https://github.com/larsimmisch/pyalsaaudio/"),
     "sphfile": ("sphfile – Numpy-based NIST SPH audio-file reader",
                 "1.0.0",
-                "Handle audio files in the NIST SPH format, e.g. the Switchboard corpus",
+                ("Handle audio files in the NIST SPH format, e.g. the "
+                 "Switchboard corpus"),
                 "https://github.com/mcfletch/sphfile"),
     "xlrd": ("xlrd – Working with Excel Files in Python",
              "1.0",
@@ -372,6 +373,19 @@ if not hasattr(__builtins__, "unicode"):
     unicode = str
 if not hasattr(__builtins__, "long"):
     long = int
+
+msg_sql_new_user_success = """
+The user named '{}' was successfully created on the MySQL server."""
+
+msg_sql_new_user_fail = """
+<p><b>Error creating user</b></p>
+<p>The user named '{}' could not be created on the MySQL server.</p>"""
+
+msg_sql_root_fail = """
+<p><b>Access as root failed</b></p>
+<p>A root access to the MySQL server could not be "established.</p>
+<p>Please check the MySQL root name and the MySQL root password, and try again
+to create a new user.</p>"""
 
 msg_mysql_access_denied = """
 A MySQL server was found, but access was denied. Check the user name and
