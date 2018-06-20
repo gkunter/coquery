@@ -220,11 +220,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         options.cfg.font = options.cfg.app.font()
         options.cfg.metrics = QtGui.QFontMetrics(options.cfg.font)
         options.cfg.figure_font = options.settings.value(
-            "figure_font", QtWidgets.QLabel().font())
+            "font_figures", QtWidgets.QLabel().font())
         options.cfg.table_font = options.settings.value(
-            "table_font", QtWidgets.QLabel().font())
+            "font_table", QtWidgets.QLabel().font())
         options.cfg.context_font = options.settings.value(
-            "context_font", QtWidgets.QLabel().font())
+            "font_context", QtWidgets.QLabel().font())
 
         # ensure that the fonts are always set:
         if not utf8(options.cfg.figure_font.family()):
@@ -240,19 +240,16 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.setup_app()
         self.show()
 
-        try:
-            self.restoreState(options.settings.value("main_state"))
-        except TypeError:
-            pass
-        x = options.settings.value("splitter")
-        y = None
-        try:
-            y = x.toByteArray()
-        except (TypeError, AttributeError):
-            y = x
-        finally:
-            if y is not None:
-                self.ui.splitter.restoreState(y)
+        self.ui.centralwidget.adjustSize()
+        self.adjustSize()
+
+        for label, fun in (("main_state", self.restoreState),
+                           ("main_geometry", self.restoreGeometry),
+                           ("main_splitter", self.ui.splitter.restoreState)):
+            val = options.settings.value(label)
+            if val:
+                fun(val)
+
         # Taskbar icons in Windows require a workaround as described here:
         # https://stackoverflow.com/questions/1551605#1552105
         if sys.platform == "win32":
@@ -260,12 +257,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             CoqId = 'Coquery.Coquery.{}'.format(__version__)
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
                 CoqId)
-
-        try:
-            self.resize(options.settings.value("window_size"))
-        except TypeError:
-            self.ui.centralwidget.adjustSize()
-            self.adjustSize()
 
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -2793,14 +2784,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         def shutdown():
-            #options.settings.setValue("main_geometry", self.saveGeometry())
-            options.settings.setValue("window_size", self.size())
-            options.settings.setValue("main_state", self.saveState())
-            options.settings.setValue("figure_font", options.cfg.figure_font)
-            options.settings.setValue("table_font", options.cfg.table_font)
-            options.settings.setValue("context_font", options.cfg.context_font)
-            x = self.ui.splitter.saveState()
-            options.settings.setValue("splitter", x)
+
+            for tup in (("main_state", self.saveState()),
+                        ("main_geometry", self.saveGeometry()),
+                        ("main_splitter", self.ui.splitter.saveState()),
+                        ("font_figures", options.cfg.figure_font),
+                        ("font_table", options.cfg.table_font),
+                        ("font_context", options.cfg.context_font)):
+                options.settings.setValue(*tup)
 
             for widget in QtWidgets.qApp.topLevelWidgets():
                 widget.close()
