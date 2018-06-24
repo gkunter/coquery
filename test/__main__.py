@@ -99,6 +99,11 @@ def main():
         from test.test_unicode import TestUnicodeModuleMethods
         test_list += [TestUnicodeModuleMethods]
 
+    if not args or "visualizer" in args:
+        from test.test_vis_barplot import provided_tests
+        test_list += provided_tests
+        print("123")
+
     suite = unittest.TestSuite(
         [unittest.TestLoader().loadTestsFromTestCase(x)
          for x in test_list])
