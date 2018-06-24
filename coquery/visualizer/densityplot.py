@@ -17,10 +17,7 @@ import matplotlib.pyplot as plt
 from coquery.visualizer import visualizer as vis
 from coquery.gui.pyqt_compat import QtWidgets, QtCore
 
-
-sequential_palettes = ["Blues", "Reds", "Greens", "Oranges", "Purples",
-                       "BuGn", "BuPu", "RdPu", "OrRd", "YlGn",
-                       "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy"]
+from coquery.visualizer.colorizer import Colorizer
 
 
 class DensityPlot(vis.Visualizer):
@@ -28,16 +25,21 @@ class DensityPlot(vis.Visualizer):
     icon = "Normal Distribution Histogram"
 
     cumulative = False
+
     axes_style = "whitegrid"
     _default = "Density estimate"
+
+    shading = True
     alpha = 50
 
-    def get_custom_widgets(self):
-        layout = QtWidgets.QHBoxLayout()
+    def get_custom_widgets(self, *args, **kwargs):
+        layout = QtWidgets.QVBoxLayout()
         label = QtWidgets.QApplication.instance().translate(
                     "DensityPlot", "Transparency", None)
         button = QtWidgets.QApplication.instance().translate(
                     "DensityPlot", "Apply", None)
+        check = QtWidgets.QApplication.instance().translate(
+                    "DensityPlot", "Use shading", None)
 
         DensityPlot.label_transparency = QtWidgets.QLabel(label)
 
@@ -50,85 +52,107 @@ class DensityPlot(vis.Visualizer):
         DensityPlot.slider.setValue(DensityPlot.alpha)
         DensityPlot.slider.setTickPosition(DensityPlot.slider.TicksAbove)
 
-        DensityPlot.button_apply = QtWidgets.QPushButton(button)
-        DensityPlot.button_apply.setDisabled(True)
-        DensityPlot.button_apply.clicked.connect(
-            lambda: DensityPlot.update_figure(self,
-                                              DensityPlot.slider.value()))
-
+        DensityPlot.check_shading = QtWidgets.QCheckBox(check)
+        DensityPlot.check_shading.setChecked(DensityPlot.shading)
+        DensityPlot.check_shading.toggled.connect(
+            lambda x: DensityPlot.button_apply.setEnabled(True))
         DensityPlot.slider.valueChanged.connect(
             lambda x: DensityPlot.button_apply.setEnabled(True))
 
-        layout.addWidget(DensityPlot.label_transparency)
-        layout.addWidget(DensityPlot.slider)
+        DensityPlot.button_apply = QtWidgets.QPushButton(button)
+        DensityPlot.button_apply.setDisabled(True)
+        DensityPlot.button_apply.clicked.connect(
+            lambda: DensityPlot.update_figure(
+                self,
+                val=DensityPlot.slider.value(),
+                shading=DensityPlot.check_shading.isChecked()))
+
+        slide_layout = QtWidgets.QHBoxLayout()
+        slide_layout.addWidget(DensityPlot.label_transparency)
+        slide_layout.addWidget(DensityPlot.slider)
+        slide_layout.setStretch(0, 0)
+        slide_layout.setStretch(1, 1)
+
+        layout.addLayout(slide_layout)
+        layout.addWidget(DensityPlot.check_shading)
         layout.addWidget(DensityPlot.button_apply)
 
-        layout.setStretch(0, 0)
-        layout.setStretch(1, 1)
-        layout.setStretch(2, 0)
         return [layout]
 
     @classmethod
-    def update_figure(cls, self, i):
-        cls.alpha = i
+    def update_figure(cls, self, val, shading):
+        cls.alpha = val
+        cls.shading = shading
         DensityPlot.button_apply.setDisabled(True)
         self.updateRequested.emit()
 
+    def plt(self, *args, shade=None, alpha=None, **kwargs):
+        if shade:
+            sns.kdeplot(*args, shade=shade, alpha=alpha, **kwargs)
+        sns.kdeplot(*args, shade=False, **kwargs)
+
     def plot_facet(self, data, color, x=None, y=None, z=None,
-                   levels_z=None, palette=None, **kwargs):
+                   levels_x=None, levels_y=None, levels_z=None,
+                   color_number=None, palette=None, *args, **kwargs):
+
+        args = {"shade": DensityPlot.shading,
+                "alpha": 1 - DensityPlot.alpha / 100,
+                "ax": plt.gca()}
 
         self._xlab = x or self._default
         self._ylab = y or self._default
 
-        if z:
-            # Use hue
-            palette = self.get_palette(palette, len(levels_z))
-            for i, level in enumerate(levels_z):
-                df = data[data[z] == level]
-                if x and y:
-                    pal = sequential_palettes[i % len(sequential_palettes)]
-                    try:
-                        sns.kdeplot(df[x], df[y],
-                                    cmap=pal,
-                                    shade=True, shade_lowest=False,
-                                    alpha=DensityPlot.alpha / 100)
-                    except ValueError:
-                        pass
-                    self.legend_palette += sns.color_palette(pal, 1)
-                else:
-                    sns.kdeplot(df[x or y], vertical=y,
-                                color=palette[i],
-                                cumulative=self.cumulative)
-            self.legend_title = z
-            self.legend_levels = levels_z
+        if not (x and y):
+            # only one variable provided, create simple univariate plot
+            self._colorizer = Colorizer(palette, color_number)
+            self.plt(data[x or y], vertical=bool(y),
+                     color=self._colorizer.get_palette()[0],
+                     cumulative=self.cumulative, **args)
         else:
-            palette = self.get_palette(palette, kwargs["color_number"])
-            if x and y:
+            if data[x].dtype == object:
+                cat = x
+                levels = levels_x
+                self._xlab = self._default
+            elif data[y].dtype == object:
+                cat = y
+                levels = levels_y
+                self._ylab = self._default
+            else:
+                if levels_z:
+                    cat = z
+                    levels = levels_z
+                else:
+                    cat = None
+                    levels = [0]
+
+            self._colorizer = Colorizer(palette, color_number)
+            cols = self._colorizer.get_palette(n=len(levels))
+            colnames = self._colorizer.mpt_to_hex(cols)
+
+            for i, level in enumerate(levels):
+                df = data[data[cat] == level] if cat else data
                 try:
-                    sns.kdeplot(data[x], data[y],
-                                colors=palette,
-                                cmap=None,
-                                shade=True, shade_lowest=False,
-                                alpha=DensityPlot.alpha / 100)
+                    if cat == x or cat == y:
+                        self.plt(df[y if cat == x else x],
+                                 vertical=(cat == x),
+                                 color=cols[i],
+                                 cumulative=self.cumulative, **args)
+                    else:
+                        cmap = sns.light_palette(colnames[i], as_cmap=True)
+                        self.plt(df[x], df[y],
+                                 cmap=cmap,
+                                 shade_lowest=False, **args)
                 except ValueError:
                     pass
-            else:
-                sns.kdeplot(data[x or y], vertical=y,
-                            color=palette[0],
-                            cumulative=self.cumulative)
+
+            self.legend_title = cat
+            self.legend_levels = levels
+            self.legend_palette = cols
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
-        cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
-
-        if not (0 < len(num) < 3):
-            return False
-
-        if len(cat) > 0:
-            return False
-
-        return True
+    def validate_data(*args):
+        _, num, _ = vis.Visualizer.count_parameters(*args)
+        return len(num) > 0
 
 
 class CumulativePlot(DensityPlot):
@@ -142,24 +166,15 @@ class CumulativePlot(DensityPlot):
         super(CumulativePlot, self).plot_facet(data, color,
                                                x=x, y=y, **kwargs)
         ax = plt.gca()
-        if x:
+        if x and data[x].dtype != object:
             ax.set_ylim(0, 1)
         else:
             ax.set_xlim(0, 1)
 
-    def get_custom_widgets(self):
-        pass
-
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
-        cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+    def validate_data(*args):
+        _, num, _ = vis.Visualizer.count_parameters(*args)
+        return len(num) == 1
 
-        if len(num) != 1:
-            return False
-        if len(cat) > 0:
-            return False
-        else:
-            return True
 
 provided_visualizations = [DensityPlot, CumulativePlot]
