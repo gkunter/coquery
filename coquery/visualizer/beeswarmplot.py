@@ -27,52 +27,65 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
 
     def plot_facet(self, data, color,
                    x=None, y=None, z=None,
-                   levels_x=None, levels_y=None, levels_z=None,
-                   palette="", **kwargs):
-        params = {"data": data}
-        corpus_id = "coquery_invisible_corpus_id"
+                   levels_x=None, levels_y=None,
+                   levels_z=None, range_z=None,
+                   palette="", color_number=None, **kwargs):
 
         if not x and not y:
-            self._xlab = self.DEFAULT_LABEL
-            self._ylab = ""
-            params.update({"x": corpus_id,
-                           "y": [""] * len(data),
-                           "palette": self.get_palette(palette, 1)})
-        elif y:
-            self._xlab = self.DEFAULT_LABEL
-            self._ylab = y
-            params.update({"x": corpus_id,
-                           "y": y,
-                           "order": levels_y})
-            if not x:
-                params.update({"palette": self.get_palette(palette,
-                                                           len(levels_y))})
+            if not self.force_horizontal:
+                X = [""] * len(data)
+                Y = data["coquery_invisible_corpus_id"]
+                self._xlab = ""
+                self.horizontal = True
             else:
-                self.legend_title = x
-                self.legend_levels = levels_x
-                params.update({"hue": x,
-                               "hue_order": levels_x,
-                               "palette": self.get_palette(palette,
-                                                           len(levels_x))})
-        else:
-            self.horizontal = False
+                X = data["coquery_invisible_corpus_id"]
+                Y = [""] * len(data)
+                self._ylab = ""
+                self.horizontal = False
+            O = None
+        elif x:
+            X = data[x]
+            Y = data["coquery_invisible_corpus_id"]
+            O = levels_x
             self._xlab = x
+            self.horizontal = True
+        else:
+            X = data["coquery_invisible_corpus_id"]
+            Y = data[y]
+            O = levels_y
+            self._ylab = y
+            self.horizontal = False
+
+        if not self.horizontal:
+            self._xlab = self.DEFAULT_LABEL
+        else:
             self._ylab = self.DEFAULT_LABEL
-            params.update({"x": x,
-                           "y": corpus_id,
-                           "order": levels_x,
-                           "palette": self.get_palette(palette,
-                                                       len(levels_x))})
 
-        if z and not (x and y):
-            self.legend_title = z
-            self.legend_levels = levels_z
-            params.update({"hue": z,
-                           "hue_order": levels_z,
-                           "palette": self.get_palette(palette,
-                                                       len(levels_z))})
+        self._colorizer = self.get_colorizer(data, palette, color_number,
+                                                z, levels_z, range_z)
 
-        sns.swarmplot(**params)
+        if z:
+            palette = self._colorizer.get_palette(n=len(levels_z))
+            self._colorizer.set_reversed(True)
+            hue = self._colorizer.mpt_to_hex(
+                self.get_colors(data, self._colorizer, z))
+            self._colorizer.set_reversed(False)
+
+        else:
+            palette = self._colorizer.get_palette()
+            hue = self._colorizer.mpt_to_hex(
+                self.get_colors(data, self._colorizer, z))
+
+
+        self.legend_title = self._colorizer.legend_title(z)
+        self.legend_palette = palette[::-1]
+        if not (z == x or z == y):
+            self.legend_levels = self._colorizer.legend_levels()
+        else:
+            self.legend_levels = []
+
+        sns.swarmplot(x=X, y=Y, order=O, hue=hue, palette=palette)
         return kwargs.get("ax", plt.gca())
+
 
 provided_visualizations = [BeeswarmPlot]
