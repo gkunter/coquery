@@ -31,6 +31,7 @@ class Colorizer(QtCore.QObject):
         self.values = values
         self._title_frm = ""
         self._entry_frm = "{val}"
+        self._reversed = False
 
     def get_palette(self, n=None):
         base, _, rev = self.palette.partition("_")
@@ -51,10 +52,16 @@ class Colorizer(QtCore.QObject):
 
         return col
 
+    def set_reversed(self, rev):
+        self._reversed = rev
+
     def get_hues(self, data):
         base, _, rev = self.palette.partition("_")
         n = len(data)
-        return (self.get_palette() * ((n // self.ncol) + 1))[:n]
+        pal = self.get_palette()
+        if self._reversed:
+            pal = pal[::-1]
+        return (pal * ((n // self.ncol) + 1))[:n]
 
     @staticmethod
     def hex_to_rgb(l):
