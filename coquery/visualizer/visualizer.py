@@ -16,10 +16,12 @@ from __future__ import unicode_literals
 import math
 import collections
 
+import scipy.stats as st
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
+import logging
 
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
@@ -38,10 +40,9 @@ from coquery.visualizer.colorizer import (
 
 
 class Aggregator(QtCore.QObject):
-    def __init__(self):
+    def __init__(self, id_column=None):
         self.reset()
-        # pick first corpus id as aggregation
-        self.add("coquery_invisible_corpus_id", "first")
+        self._id_column = id_column or "coquery_invisible_corpus_id"
 
     def reset(self):
         self._aggs_dict = collections.defaultdict(list)
@@ -50,10 +51,23 @@ class Aggregator(QtCore.QObject):
     def add(self, column, fnc, name=None):
         if fnc == "mode":
             fnc = self._get_most_frequent
+        elif fnc == "ci":
+            fnc = self._get_interval
         self._aggs_dict[column].append(fnc)
         self._names_dict[column].append(name or column)
 
     def process(self, df, grouping):
+
+        # if there is an id column in the data frame, make sure that the
+        # aggregation samples the first ID
+        if not self._id_column in df.columns:
+            if self._id_column in self._aggs_dict:
+                self._aggs_dict.remove(self._id_column)
+            if self._id_column in self._names_dict:
+                self._names_dict.remove(self._id_column)
+        else:
+            self.add(self._id_column, "first")
+
         df = df.groupby(grouping).agg(self._aggs_dict)
         agg_columns = []
         for names in [self._names_dict[x] for x in df.columns.levels[0]]:
@@ -64,7 +78,13 @@ class Aggregator(QtCore.QObject):
 
     @staticmethod
     def _get_most_frequent(x):
-        return x.value_counts().index[0]
+        counts = x.value_counts()
+        val = counts[counts == counts.max()].sort_index().index[0]
+        return val
+
+    @staticmethod
+    def _get_interval(x):
+        return x.sem() * st.t.ppf(1 - 0.025, len(x))
 
 
 class BaseVisualizer(QtCore.QObject):
@@ -639,6 +659,7 @@ class Visualizer(QtCore.QObject):
         return
 
     def get_grid(self, **kwargs):
+        logging.warn("Visualizer.get_grid() is deprecated")
         kwargs["data"] = self.df
         with sns.axes_style(self.axes_style):
             with sns.plotting_context(self.plotting_context):
