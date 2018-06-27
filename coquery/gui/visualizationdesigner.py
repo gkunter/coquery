@@ -874,17 +874,20 @@ class VisualizationDesigner(QtWidgets.QDialog):
             # variant of sorted(self.df[var].dropna().unique().values():
             d["levels_x"] = sorted(
                 set(self.df[x].values[~pd.isnull(self.df[x].values)]))
-            d["range_x"] = (self.df[x].min(), self.df[x].max())
+            d["range_x"] = (self.df[x].dropna().min(),
+                            self.df[x].dropna().max())
 
         if y:
             d["levels_y"] = sorted(
                 set(self.df[y].values[~pd.isnull(self.df[y].values)]))
-            d["range_y"] = (self.df[y].min(), self.df[y].max())
+            d["range_y"] = (self.df[y].dropna().min(),
+                            self.df[y].dropna().max())
 
         if z:
             d["levels_z"] = sorted(
                 set(self.df[z].values[~pd.isnull(self.df[z].values)]))
-            d["range_z"] = (self.df[z].min(), self.df[z].max())
+            d["range_z"] = (self.df[z].dropna().min(),
+                            self.df[z].dropna().max())
 
         return d
 
