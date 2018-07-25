@@ -2,7 +2,7 @@
 """
 visualizationDesigner.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -24,8 +24,7 @@ from coquery.defines import (PALETTE_BW,
                              msg_visualization_error,
                              msg_visualization_module_error)
 
-from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window,
-                          COLOR_NAMES)
+from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window)
 
 import matplotlib as mpl
 
@@ -38,7 +37,8 @@ import pandas as pd
 import seaborn as sns
 
 from ..visualizer.visualizer import get_grid_layout
-from coquery.visualizer.colorizer import COQ_SINGLE
+from coquery.visualizer.colorizer import (
+    COQ_SINGLE, Colorizer, ColorizeByFactor, ColorizeByNum)
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 from . import classes
 from .app import get_icon
@@ -377,14 +377,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.ui.button_refresh_data.clicked.connect(
             lambda: self.dataRequested.emit())
-
-        ## Hook up palette combo boxes:
-        #self.ui.combo_qualitative.currentIndexChanged.connect(
-            #lambda x: self.change_palette())
-        #self.ui.combo_sequential.currentIndexChanged.connect(
-            #lambda x: self.change_palette())
-        #self.ui.combo_diverging.currentIndexChanged.connect(
-            #lambda x: self.change_palette())
 
         self.ui.combo_qualitative.currentIndexChanged.connect(
             lambda x: self.set_radio(self.ui.radio_qualitative))
@@ -867,7 +859,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         d["range_y"] = None
         d["range_z"] = None
 
-
         if x:
             # get levels by discarding NAs and then sorting the unique
             # values, using a much more efficient but less transparent
@@ -908,6 +899,24 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         return pal_name
 
+    def get_colorizer(self, x, y, z, df,
+                      palette, color_number, vis, **kwargs):
+
+        z = z or vis.get_subordinated(x=x, y=y)
+        if z:
+            if df[z].dtype == object:
+                levels = sorted(set(df[z].values[~pd.isnull(df[z].values)]))
+                colorizer = ColorizeByFactor(palette, color_number, levels)
+                if z not in [x, y]:
+                    colorizer.set_title_frm(vis.get_factor_frm())
+            else:
+                colorizer = ColorizeByNum(palette, color_number, df[z])
+                colorizer.set_title_frm(vis.get_num_frm())
+        else:
+            colorizer = Colorizer(palette, color_number, None)
+            colorizer.set_title_frm("{z}")
+        return colorizer
+
     def plot_figure(self):
         logging.info("VIS: plot_figure()")
         values = self.get_gui_values()
@@ -940,6 +949,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         logging.info("VIS: Data initialized")
         self.vis = vis_class(df, self.session)
+        self.colorizer = self.get_colorizer(df=df, vis=self.vis, **values)
+
         logging.info("VIS: Visualizer initialized")
         self.grid = self.vis.get_grid(col=values["columns"],
                                       row=values["rows"],
@@ -987,7 +998,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def run_plot(self, **kwargs):
         logging.info("VIS: run_plot()")
         try:
-            self.grid.map_dataframe(self.vis.plot_facet, **kwargs)
+            self.grid.map_dataframe(self.vis.draw,
+                                    colorizer=self.colorizer,
+                                    **kwargs)
         except Exception as e:
             logging.error("VIS: run_plot(), exception {}".format(str(e)))
             raise e
