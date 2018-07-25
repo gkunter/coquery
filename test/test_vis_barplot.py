@@ -12,15 +12,15 @@ import unittest
 import pandas as pd
 import seaborn as sns
 import scipy.stats as st
+import itertools
 
-from coquery.visualizer.barplot import BarPlot
-from coquery.visualizer.colorizer import ColorizeByFactor, ColorizeByNum
+from coquery.visualizer.barplot import BarPlot, StackedBars
 
 
 NUM_COLUMN = BarPlot.NUM_COLUMN
 COL_COLUMN = BarPlot.COL_COLUMN
 SEM_COLUMN = BarPlot.SEM_COLUMN
-RGB_COLUMN = BarPlot.RGB_COLUMN
+
 
 # helper functions that simulate code used in the visualization aggregator:
 def count(df, grouping):
@@ -58,7 +58,7 @@ def ci(df, grouping, target, name=None):
               .rename(columns={target: name}))
 
 
-#helper function that maps a categorical value onto RGB values
+# helper function that maps a categorical value onto RGB values
 def map_to_pal(palette, levels, data):
     palette = sns.color_palette("Paired", n_colors=len(levels))
     return [palette[levels.index(val)] for val in data]
@@ -78,14 +78,24 @@ class CoqTestCase1(unittest.TestCase):
         This overrides assertDictEqual so that any DataFrame value of the
         dictionaries is transformed to a dictionary before comparing.
         """
+
+        D1 = d1.copy()
+        D2 = d2.copy()
+
+        d_df1 = {}
+        d_df2 = {}
+
         for key, val in d1.items():
             if isinstance(val, pd.DataFrame):
-                d1[key] = val.sort_values(by=val.columns.tolist()).to_dict()
+                d_df1[key] = D1.pop(key)
         for key, val in d2.items():
             if isinstance(val, pd.DataFrame):
-                d2[key] = val.sort_values(by=val.columns.tolist()).to_dict()
+                d_df2[key] = D2.pop(key)
 
-        super(CoqTestCase1, self).assertDictEqual(d1, d2)
+        super(CoqTestCase1, self).assertDictEqual(D1, D2)
+
+        for key in d_df1.keys():
+            pd.testing.assert_frame_equal(d_df1[key], d_df2[key])
 
 
 class CoqTestCase2(CoqTestCase1):
@@ -113,20 +123,15 @@ class TestBarPlotSimple(CoqTestCase1):
         levels = sorted(self.df[category].unique())
         data = count(self.df, [category])
         data[COL_COLUMN] = data[category]
-        data[RGB_COLUMN] = map_to_pal("Paired", levels, data[COL_COLUMN])
 
         target = {"x": category, "order": levels,
                   "y": numeric,
                   "hue": None, "hue_order": None,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(levels), values=levels)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=category, y=None, z=None,
-                                     levels_x=levels, levels_y=None,
-                                     colorizer=colorizer)
+                                     levels_x=levels, levels_y=None)
 
         self.assertDictEqual(args, target)
 
@@ -141,20 +146,15 @@ class TestBarPlotSimple(CoqTestCase1):
         levels = sorted(self.df[category].unique())
         data = count(self.df, [category])
         data[COL_COLUMN] = data[category]
-        data[RGB_COLUMN] = map_to_pal("Paired", levels, data[COL_COLUMN])
 
         target = {"x": numeric,
                   "y": category, "order": levels,
                   "hue": None, "hue_order": None,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(levels), values=levels)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=None, y=category, z=None,
-                                     levels_x=None, levels_y=levels,
-                                     colorizer=colorizer)
+                                     levels_x=None, levels_y=levels)
         self.assertDictEqual(args, target)
 
     def test_prepare_argument_X_no_horiz(self):
@@ -220,20 +220,15 @@ class TestBarPlotComplex(CoqTestCase1):
         numeric = NUM_COLUMN
         data = count(self.df, [category, hue])
         data[COL_COLUMN] = data[hue]
-        data[RGB_COLUMN] = map_to_pal("Paired", hue_order, data[COL_COLUMN])
 
         target = {"x": category, "order": order,
                   "y": numeric,
                   "hue": hue, "hue_order": hue_order,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(hue_order), values=hue_order)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=category, y=hue, z=None,
-                                     levels_x=order, levels_y=hue_order,
-                                     colorizer=colorizer)
+                                     levels_x=order, levels_y=hue_order)
 
         self.assertDictEqual(args, target)
 
@@ -251,20 +246,15 @@ class TestBarPlotComplex(CoqTestCase1):
         numeric = NUM_COLUMN
         data = count(self.df, [category, hue])
         data[COL_COLUMN] = data[hue]
-        data[RGB_COLUMN] = map_to_pal("Paired", hue_order, data[COL_COLUMN])
 
         target = {"x": numeric,
                   "y": category, "order": order,
                   "hue": hue, "hue_order": hue_order,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(hue_order), values=hue_order)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=category, y=hue, z=None,
-                                     levels_x=order, levels_y=hue_order,
-                                     colorizer=colorizer)
+                                     levels_x=order, levels_y=hue_order)
 
         self.assertDictEqual(args, target)
 
@@ -279,28 +269,21 @@ class TestBarPlotNum(CoqTestCase1):
         category = "X"
         numeric = "NUM"
         order = sorted(self.df[category].unique())
-        hue = None
-        hue_order = None
 
         data = pd.merge(
             means(self.df, [category], target=numeric, name=NUM_COLUMN),
             ci(self.df, [category], target=numeric, name=SEM_COLUMN),
             on=[category])
         data[COL_COLUMN] = data[category]
-        data[RGB_COLUMN] = map_to_pal("Paired", order, data[COL_COLUMN])
 
         target = {"x": category, "y": NUM_COLUMN,
                   "order": order,
                   "hue": None, "hue_order": None,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(order), values=order)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=category, y=numeric, z=None,
-                                     levels_x=order, levels_y=None,
-                                     colorizer=colorizer)
+                                     levels_x=order, levels_y=None)
 
         self.assertDictEqual(args, target)
 
@@ -310,28 +293,21 @@ class TestBarPlotNum(CoqTestCase1):
         category = "Y"
         numeric = "NUM"
         order = sorted(self.df[category].unique())
-        hue = None
-        hue_order = None
 
         data = pd.merge(
             means(self.df, [category], target=numeric, name=NUM_COLUMN),
             ci(self.df, [category], target=numeric, name=SEM_COLUMN),
             on=[category])
         data[COL_COLUMN] = data[category]
-        data[RGB_COLUMN] = map_to_pal("Paired", order, data[COL_COLUMN])
 
         target = {"x": category, "y": NUM_COLUMN,
                   "order": order,
                   "hue": None, "hue_order": None,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(order), values=order)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=category, y=numeric, z=None,
-                                     levels_x=order, levels_y=None,
-                                     colorizer=colorizer)
+                                     levels_x=order, levels_y=None)
 
         self.assertDictEqual(args, target)
 
@@ -348,25 +324,18 @@ class TestBarPlotColorCat(CoqTestCase1):
         semantics = "Z"
         numeric = NUM_COLUMN
         levels_x = sorted(self.df[category].unique())
-        levels_z = sorted(self.df[semantics].unique())
         data = pd.merge(
             count(self.df, [category]),
             most_frequent(self.df, [category], semantics))
-        data[RGB_COLUMN] = map_to_pal("Paired", levels_z, data[COL_COLUMN])
 
         target = {"x": category, "order": levels_x,
                   "y": numeric,
                   "hue": None, "hue_order": None,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(levels_z),
-                                     values=levels_z)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=category, y=None, z=semantics,
-                                     levels_x=levels_x, levels_y=None,
-                                     colorizer=colorizer)
+                                     levels_x=levels_x, levels_y=None)
 
         self.assertDictEqual(args, target)
 
@@ -378,26 +347,19 @@ class TestBarPlotColorCat(CoqTestCase1):
         semantics = "Z"
         order = sorted(self.df[category].unique())
         hue_order = sorted(self.df[hue].unique())
-        levels_z = sorted(self.df[semantics].unique())
         numeric = NUM_COLUMN
         data = pd.merge(
             count(self.df, [category, hue]),
             most_frequent(self.df, [category, hue], semantics))
-        data[RGB_COLUMN] = map_to_pal("Paired", levels_z, data[COL_COLUMN])
 
         target = {"x": category, "order": order,
                   "y": numeric,
                   "hue": hue, "hue_order": hue_order,
                   "data": data}
 
-        colorizer = ColorizeByFactor(palette="Paired",
-                                     ncol=len(levels_z),
-                                     values=levels_z)
-
         args = vis.prepare_arguments(data=self.df,
                                      x=category, y=hue, z=semantics,
-                                     levels_x=order, levels_y=hue_order,
-                                     colorizer=colorizer)
+                                     levels_x=order, levels_y=hue_order)
 
         self.assertDictEqual(args, target)
 
@@ -413,7 +375,6 @@ class TestBarPlotColorNum(CoqTestCase1):
         category = "X"
         semantics = "NUM"
         numeric = NUM_COLUMN
-        color = COL_COLUMN
         levels = sorted(self.df[category].unique())
         data = pd.merge(
             count(self.df, [category]),
@@ -439,7 +400,6 @@ class TestBarPlotColorNum(CoqTestCase1):
         order = sorted(self.df[category].unique())
         hue_order = sorted(self.df[hue].unique())
         numeric = NUM_COLUMN
-        color = COL_COLUMN
         data = pd.merge(
             count(self.df, [category, hue]),
             means(self.df, [category, hue], semantics))
@@ -484,9 +444,140 @@ class TestBarPlotColorCatDefective(TestBarPlotColorCat, CoqTestCase2):
     """
 
 
-class TestBarPlotColorNumDefective(TestBarPlotColorCat, CoqTestCase2):
+class TestBarPlotColorNumDefective(TestBarPlotColorNum, CoqTestCase2):
     """
     Run the TestBarPlotColorNum tests with a data frame that lacks some
+    combinations
+    """
+
+
+# STACKED BAR PLOT TESTS
+class TestStackedPlotSimple(CoqTestCase1):
+    def test_prepare_argument_X_only(self):
+        """
+        Basic test: only a single categorical variable on the `X` axis
+        """
+        vis = StackedBars(None, None)
+
+        category = "X"
+        numeric = NUM_COLUMN
+        levels = sorted(self.df[category].unique())
+        data = (self.df.groupby(category)
+                       .size()
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data[COL_COLUMN] = data[category]
+
+        target = {"x": category, "y": numeric,
+                  "levels": levels, "data": data}
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=category, y=None, z=None,
+                                     levels_x=levels, levels_y=None)
+
+        self.assertDictEqual(args, target)
+
+    def test_prepare_argument_Y_only(self):
+        """
+        Basic test: only a single categorical variable on the `Y` axis
+        """
+        vis = StackedBars(None, None)
+
+        category = "Y"
+        numeric = NUM_COLUMN
+        levels = sorted(self.df[category].unique())
+        data = (self.df.groupby(category)
+                       .size()
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data[COL_COLUMN] = data[category]
+
+        target = {"x": numeric, "y": category,
+                  "levels": levels, "data": data}
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=None, y=category, z=None,
+                                     levels_x=None, levels_y=levels)
+
+        self.assertDictEqual(args, target)
+
+    def test_prepare_argument_X_incomplete(self):
+        """
+        A single categorical variable on a data frame where not all factor
+        levels are attested
+        """
+        vis = StackedBars(None, None)
+
+        category = "X"
+        numeric = NUM_COLUMN
+        levels = sorted(self.df[category].unique()) + ["C"]
+        data = (self.df.groupby(category)
+                       .size()
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data.loc[len(data)] = {category: "C", numeric: pd.np.nan}
+
+        data[COL_COLUMN] = data[category]
+
+        target = {"x": category, "y": numeric,
+                  "levels": levels, "data": data}
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=category, y=None, z=None,
+                                     levels_x=levels, levels_y=None)
+        self.assertDictEqual(args, target)
+
+
+class TestStackedPlotComplex(CoqTestCase1):
+
+    def test_prepare_argument_XY(self):
+        """
+        Basic test: only a single categorical variable on the `Y` axis
+        """
+        vis = StackedBars(None, None)
+
+        category = "X"
+        hue = "Y"
+        order = sorted(self.df[category].unique())
+        hue_order = sorted(self.df[hue].unique())
+        numeric = NUM_COLUMN
+        data = (self.df.groupby([category, hue])
+                       .size()
+                       .groupby([category])
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data[COL_COLUMN] = data[hue]
+
+        # ensure that all variable combinations are attested in the target
+        # frame:
+        expand = pd.DataFrame(data=list(itertools.product(order, hue_order)),
+                              columns=[category, COL_COLUMN])
+        data = data.merge(expand, how="right")
+
+        target = {"x": category, "y": numeric,
+                  "levels": hue_order, "data": data}
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=category, y=hue, z=None,
+                                     levels_x=order, levels_y=hue_order)
+
+        self.assertDictEqual(args, target)
+
+
+class TestStackedPlotSimpleDefective(TestStackedPlotSimple, CoqTestCase2):
+    """
+    Run the TestStackedPlotSimple test with a data frame that lacks some
+    combinations
+    """
+
+
+class TestStackedPlotComplexDefective(TestStackedPlotComplex, CoqTestCase2):
+    """
+    Run the TestStackedPlotComplex test with a data frame that lacks some
     combinations
     """
 
@@ -503,6 +594,12 @@ provided_tests = (
     TestBarPlotNumDefective,
     TestBarPlotColorCatDefective,
     TestBarPlotColorNumDefective,
+
+    TestStackedPlotSimple,
+    TestStackedPlotComplex,
+
+    TestStackedPlotSimpleDefective,
+    TestStackedPlotComplexDefective,
 
     )
 
