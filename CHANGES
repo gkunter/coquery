@@ -17,17 +17,18 @@ Corpora
 * Allow Excel files as input format for metadata files and as corpus input
   files
 * Packaging: corpora can be packaged, and packaged corpora can be installed
-* New corpora: Old Bailey Corpus 2.0, Korpus Malti
+* New corpora: Old Bailey Corpus 2.0, Korpus Malti, GloWbE
 * Initial support for NIST SPH audio
 
 Visualizations
 * Add Line Charts
 * Move Visualization Designer action to Results menu
-* Hide Visualizations menu
+* Remove Visualizations menu
 * Bring time series visualization to the visualization designer
 * Add button to refresh the data frame used by the visualization designer
 * Optionally hide figure types that are not available for current variables
 * Make several figure types more customizable
+* Rename the 'Z' data field as 'Colors', and interpret it accordingly
 
 Data management
 * Allow sampling: show only a random number of matches from the results table
