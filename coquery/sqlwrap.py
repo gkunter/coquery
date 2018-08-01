@@ -278,6 +278,7 @@ class SqlDB(object):
                   if_exists=if_exists,
                   index=bool(index_label),
                   index_label=index_label)
+        return len(df)
 
     def load_file(self, file_name, encoding, table, index,
                   if_exists="append", skip=None, chunksize=250000, **kwargs):
