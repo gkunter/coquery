@@ -57,6 +57,25 @@ def set_logger(log_file_path):
     return logger
 
 
+class CustomHandler(logging.StreamHandler):
+    """
+    This class is used by the logger to capture logging messages so that
+    they can be displayed in a dialog.
+    """
+    def __init__(self, *args):
+        super(CustomHandler, self).__init__(*args)
+        self.log_data = []
+        self.app = None
+        print("INIT")
+
+    def setGui(self, app):
+        self.app = app
+
+    def emit(self, record):
+        print("adding ", record, type(record))
+        self.log_data.append(record)
+
+
 def check_system():
     if options.missing_modules:
         missing_str = msg_missing_modules.format(
@@ -163,12 +182,12 @@ def main():
                 print(response)
                 sys.exit(1)
         from .gui.app import CoqMainWindow
-        from .gui.app import GuiHandler
 
-        options.cfg.gui_logger = GuiHandler()
+        options.cfg.gui_logger = CustomHandler()
         frm = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
         options.cfg.gui_logger.setFormatter(frm)
         logger.addHandler(options.cfg.gui_logger)
+        options.cfg.gui_logger.setLevel(logging.DEBUG)
 
         if sys.platform == "darwin":
             for old, new in (

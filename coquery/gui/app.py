@@ -143,23 +143,6 @@ class keyFilter(QtCore.QObject):
         return False
 
 
-class GuiHandler(logging.StreamHandler):
-    """
-    This class is used by the logger to capture logging messages so that
-    they can be displayed in a dialog.
-    """
-    def __init__(self, *args):
-        super(GuiHandler, self).__init__(*args)
-        self.log_data = []
-        self.app = None
-
-    def setGui(self, app):
-        self.app = app
-
-    def emit(self, record):
-        self.log_data.append(record)
-
-
 class CoqMainWindow(QtWidgets.QMainWindow):
     """ Coquery as standalone application. """
 
