@@ -132,7 +132,7 @@ class SqlDB(object):
 
         Returns
         -------
-        l : list
+        results : list
             A list of tuples representing the results from the find.
         """
 
@@ -158,8 +158,8 @@ class SqlDB(object):
                 S = "{} COLLATE NOCASE".format(S)
 
         S = S.replace("\\", "\\\\")
-        l = self.connection.execute(S).fetchall()
-        return l
+        results = self.connection.execute(S).fetchall()
+        return results
 
     def kill_connection(self):
         try:
@@ -343,7 +343,6 @@ class SqlDB(object):
                     kwargs["names"] = columns
                     kwargs["header"] = None
                 kwargs["skiprows"] = None
-
 
         return count
 
