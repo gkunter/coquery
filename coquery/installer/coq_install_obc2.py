@@ -73,7 +73,6 @@ class BuilderClass(TEICorpusBuilder):
         Column(event_printer, "VARCHAR(128) NOT NULL"),
         Column(event_length, "SMALLINT UNSIGNED NOT NULL")]
 
-
     source_table = "Trials"
     source_id = "TrialId"
     source_label = "Source"
@@ -118,15 +117,8 @@ class BuilderClass(TEICorpusBuilder):
         Link(corpus_source_id, source_table),
         Link(corpus_event_id, event_table)]
 
-    auto_create = ["word", "file", "speaker", "event", "offence", "source", "corpus"]
-
-    #_source_map = {
-        #"offenceDescription": source_offence,
-        #"verdictDescription": source_verdict,
-        #"punishmentDescription": source_punishment,
-        #"defendantName": source_defendant,
-        #"placeName": source_place,
-        #"victimName": source_victim}
+    auto_create = ["word", "file", "speaker", "event", "offence", "source",
+                   "corpus"]
 
     expected_files = [
      "OBC2POS-17200427.xml", "OBC2POS-17550116.xml", "OBC2POS-18210912.xml",
@@ -405,8 +397,8 @@ class BuilderClass(TEICorpusBuilder):
 
     @classmethod
     def get_file_list(cls, *args, **kwargs):
-        l = super(BuilderClass, cls).get_file_list(*args, **kwargs)
-        return l
+        lst = super(BuilderClass, cls).get_file_list(*args, **kwargs)
+        return lst
 
     @classmethod
     def _get_text(cls, node):
@@ -451,7 +443,7 @@ class BuilderClass(TEICorpusBuilder):
         data = "\n".join(data)
         try:
             tree = ET.XML(bytes(data, encoding="utf8"))
-        except:
+        except Exception:
             tree = ET.XML(data)
         return tree
 
@@ -466,11 +458,12 @@ class BuilderClass(TEICorpusBuilder):
             label = u.attrib.get("hiscoLabel", None) or ""
             role = u.attrib.get("role", None) or "?"
 
-            hisclass = u.attrib.get("hisclass", None)
+            hisclass = u.attrib.get("hisclass", 0)
             try:
                 hisclass = int(hisclass)
             except ValueError:
-                hisclass = None
+                hisclass = 0
+
             class_cat = ("?" if hisclass is None else
                          "lower (6-13)" if hisclass > 6 else
                          "upper (1-5)")
@@ -498,7 +491,6 @@ class BuilderClass(TEICorpusBuilder):
                 self._speaker_id += 1
                 d_speaker[self.speaker_id] = self._speaker_id
                 self._new_people[speaker] = d_speaker
-
 
             printer = u.attrib.get("printer", None) or "?"
             publisher = u.attrib.get("publisher", None) or "?"
