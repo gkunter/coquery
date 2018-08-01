@@ -271,6 +271,11 @@ class SqlDB(object):
             exist. If "replace", any existing table is replaced by the
             rows from the dataframe. If "fail", the dataframe is NOT
             loaded into the table.
+
+        Returns
+        -------
+        lines : int
+            The number of lines that have been loaded into the table.
         """
         df.index = pd.RangeIndex(start=1, stop=len(df)+1, step=1)
         df.to_sql(table_name,
