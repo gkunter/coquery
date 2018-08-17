@@ -26,6 +26,7 @@ COQ_SINGLE = "COQSINGLE"
 
 class Colorizer(QtCore.QObject):
     def __init__(self, palette, ncol, values=None):
+        super(Colorizer, self).__init__()
         self.palette = palette
         self.ncol = ncol
         self.values = values
@@ -140,6 +141,8 @@ class ColorizeByNum(Colorizer):
                                 len(values) == len(values.unique()))
 
         if self._direct_mapping:
+            # Use direct mapping if there are not more categories than
+            # colors
             self.bins = sorted(values)
             self.set_entry_frm("{val}")
         else:
@@ -169,13 +172,14 @@ class ColorizeByNum(Colorizer):
         else:
             frm_str = options.cfg.float_format
 
-        l = [self._entry_frm.format(val=frm_str.format(x))
-             for x in self.bins]
+        lst = [self._entry_frm.format(val=frm_str.format(x))
+               for x in self.bins]
 
         if len(self.values) <= self.ncol:
-            return l
+            return lst
         else:
-            return l[::-1]
+            return lst[::-1]
+
 
 class ColorizeByFreq(Colorizer):
     def get_hues(self, data):
