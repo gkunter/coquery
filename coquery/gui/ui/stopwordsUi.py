@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'stopwords.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -64,4 +64,4 @@ class Ui_Stopwords(object):
         self.label_2.setText(_translate("Stopwords", "&Language:"))
         self.button_add_list.setText(_translate("Stopwords", "A&dd preset list"))
 
-from ..classes import CoqTagBox
+from ..widgets.coqtagbox import CoqTagBox

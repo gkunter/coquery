@@ -97,7 +97,7 @@
   <customwidget>
    <class>CoqTagBox</class>
    <extends>QListWidget</extends>
-   <header>..classes</header>
+   <header>..widgets.coqtagbox</header>
   </customwidget>
  </customwidgets>
  <resources/>
