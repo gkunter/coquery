@@ -118,6 +118,7 @@ def check_fs_case_sensitive(path):
     except PermissionError:
         return sys.platform.startswith("linux")
 
+
 def get_home_dir(create=True):
     """
     Return the path to the Coquery home directory. Also, create all required
@@ -182,7 +183,7 @@ class CoqObject(object):
     instance attributes.
     """
     def get_hash(self):
-        l = [self.__class__.__name__]
+        lst = [self.__class__.__name__]
         dir_super = dir(super(CoqObject, self))
         for x in sorted([x for x in dir(self) if x not in dir_super]):
             if (not x.startswith("_") and
@@ -193,17 +194,17 @@ class CoqObject(object):
                     s = str([x.get_hash()
                              if isinstance(x, CoqObject) else str(x)
                              for x in attr])
-                    l.append(s)
+                    lst.append(s)
                 elif isinstance(attr, dict):
                     for key in sorted(attr.keys()):
                         val = attr[key]
                         if isinstance(val, CoqObject):
-                            l.append("{}{}".format(x, val.get_hash()))
+                            lst.append("{}{}".format(x, val.get_hash()))
                         else:
-                            l.append("{}{}".format(x, str(val)))
+                            lst.append("{}{}".format(x, str(val)))
                 else:
-                    l.append(str(attr))
-        return hashlib.md5(u"".join(l).encode()).hexdigest()
+                    lst.append(str(attr))
+        return hashlib.md5(u"".join(lst).encode()).hexdigest()
 
 
 def is_language_name(code):
@@ -369,8 +370,11 @@ def pretty(vrange, n, endpoint=False):
                          endpoint=endpoint)
     return val
 
-# Memory status functions:
+
 def memory_dump():
+    """
+    Dump a list of 'large' objects (i.e. larger than 50Kbyte) to stdout.
+    """
     import gc
     x = 0
     for obj in gc.get_objects():
@@ -379,24 +383,31 @@ def memory_dump():
         # referrers = [id(o) for o in gc.get_referrers(obj)]
         try:
             cls = str(obj.__class__)
-        except:
+        except Exception:
             cls = "<no class>"
-        if size > 1024 * 50:
+        if size > 1024 * 25:
             referents = set([id(o) for o in gc.get_referents(obj)])
             x += 1
-            print(x, {'id': i,
-                      'class': cls,
-                      'size': size,
-                      "ref": len(referents)})
-            if len(referents) < 2000:
-                print(obj)
+            print(x, "{id:5} {id} {class} {ref}".format(
+                **{'id': i, 'class': cls, 'size': size,
+                   'len': len(obj), "ref": len(referents)}))
+            if len(obj) > 1:
+                if hasattr(obj, "items"):
+                    if "__module__" in obj:
+                        print("\tMODULE", obj["__module__"])
+                    else:
+                        print(list(obj.items())[:5])
+                else:
+                    try:
+                        print(list(obj)[:5])
+                    except Exception:
+                        pass
 
 
 def Print(*args, **kwargs):
     from .options import cfg
     if cfg.verbose:
-        print(*args, **kwargs)
-        logging.info(*args, **kwargs)
+        logging.debug(*args, **kwargs)
 
 
 try:
