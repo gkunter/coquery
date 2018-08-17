@@ -34,7 +34,8 @@ from coquery.connections import (get_connection,
 
 from .pyqt_compat import (QtCore, QtWidgets, QtGui, STYLE_WARN)
 from . import errorbox
-from .classes import CoqProgressDialog, CoqThread
+from .classes import CoqProgressDialog
+from .threads import CoqThread
 from .ui.connectionConfigurationUi import Ui_ConnectionConfig
 from .app import get_icon
 

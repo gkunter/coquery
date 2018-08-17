@@ -17,8 +17,8 @@ import shutil
 
 from coquery import options
 from coquery.unicode import utf8
-from . import classes
 from . import errorbox
+from .threads import CoqThread
 from .pyqt_compat import QtCore, QtWidgets
 from .ui.nltkDatafilesUi import Ui_NLTKDatafiles
 
@@ -139,9 +139,9 @@ class NLTKDatafiles(QtWidgets.QDialog):
         self.ui.progressBar.setMaximum(len(self._missing))
         self.ui.progressBar.setValue(0)
         if not _NLTK_dir:
-            self.thread = classes.CoqThread(self.download_packages, self)
+            self.thread = CoqThread(self.download_packages, self)
         else:
-            self.thread = classes.CoqThread(self.copy_packages, self)
+            self.thread = CoqThread(self.copy_packages, self)
         self.thread.taskFinished.connect(self.download_finish)
         self.thread.taskException.connect(self.download_exception)
         self.updateLabel.connect(self.update_label)

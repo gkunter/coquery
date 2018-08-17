@@ -22,7 +22,8 @@ except ImportError:
 from coquery import options
 from coquery.unicode import utf8
 from . import classes
-from coquery.gui.widgets.coqstaticbox import CoqStaticBox
+from .threads import CoqThread
+from .widgets.coqstaticbox import CoqStaticBox
 from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.contextViewerUi import Ui_ContextView
 
@@ -201,10 +202,9 @@ class ContextView(QtWidgets.QWidget):
             self.context_thread.quit()
         self.next_value = self.ui.slider_context_width.value()
         if not self.context_thread.isRunning():
-            self.context_thread = classes.CoqThread(
-                self.retrieve_context,
-                next_value=self.next_value,
-                parent=self)
+            self.context_thread = CoqThread(self.retrieve_context,
+                                            next_value=self.next_value,
+                                            parent=self)
             self.context_thread.taskFinished.connect(self.finalize_context)
             self.context_thread.taskException.connect(self.onException)
             self.ui.progress_bar.show()

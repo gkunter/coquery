@@ -40,7 +40,7 @@ from ..visualizer.visualizer import get_grid_layout
 from coquery.visualizer.colorizer import (
     COQ_SINGLE, Colorizer, ColorizeByFactor, ColorizeByNum)
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
-from . import classes
+from .threads import CoqThread
 from .app import get_icon
 
 mpl.use("Qt5Agg")
@@ -970,7 +970,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             w / dpi, h / dpi))
 
         if options.cfg.experimental:
-            self.plot_thread = classes.CoqThread(
+            self.plot_thread = CoqThread(
                 self.run_plot, parent=self, **values)
             self.plot_thread.taskStarted.connect(self.start_plot)
             self.plot_thread.taskFinished.connect(self.finalize_plot)
@@ -1176,6 +1176,6 @@ def find_visualizer_modules():
     """
     visualizer_path = os.path.join(options.cfg.base_path, "visualizer")
 
-    l = [os.path.splitext(os.path.basename(file_name))[0]
+    lst = [os.path.splitext(os.path.basename(file_name))[0]
          for file_name in glob.glob(os.path.join(visualizer_path, "*.py"))]
-    return l
+    return lst
