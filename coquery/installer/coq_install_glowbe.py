@@ -3,7 +3,7 @@
 """
 coq_install_glowbe.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -59,7 +59,7 @@ class BuilderClass(BaseCorpusBuilder):
         Identifier(source_id, "MEDIUMINT UNSIGNED NOT NULL"),
         Column(source_nwords, "TINYINT UNSIGNED NOT NULL"),
         Column(source_country, "VARCHAR(2) NOT NULL"),
-        Column(source_genre, "CHAR(1)NOT NULL"),
+        Column(source_genre, "CHAR(1) NOT NULL"),
         Column(source_url, "TINYTEXT NOT NULL"),
         Column(source_title, "TINYTEXT NOT NULL")]
 
@@ -91,7 +91,7 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_db_name():
-        return "glowbe"
+        return "coq_glowbe"
 
     @staticmethod
     def get_language():
@@ -104,11 +104,6 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_title():
         return "Corpus of Global Web-Based English"
-
-    @staticmethod
-    def get_modules():
-        return [("odo", "Odo",
-                 "http://odo.pydata.org/en/latest/project-info.html")]
 
     @staticmethod
     def get_description():
@@ -138,11 +133,6 @@ class BuilderClass(BaseCorpusBuilder):
         return "GloWbE is available under the terms of a commercial license."
 
     def build_load_files(self):
-        from odo import odo
-        import datashape
-        datashape.coretypes._canonical_string_encodings.update(
-            {"utf8mb4_unicode_ci": "U8"})
-
         file_list = self.get_file_list(self.arguments.path, self.file_filter)
         files = sorted(file_list)
 
@@ -224,10 +214,13 @@ class BuilderClass(BaseCorpusBuilder):
                 # In sources.txt, the country and the genre column are stored
                 # in a single column, but we want to store them as two:
                 if base_name == "sources.zip":
-                    df[self.source_genre] = (
-                        df[self.source_country].str.strip().slice(-1))
-                    df[self.source_country] = (
-                        df[self.source_country].str.strip().slice(stop=2))
+                    country_id = df[self.source_country].str.strip().str
+                    df[self.source_genre] = country_id.slice(-1)
+                    df[self.source_country] = country_id.slice(stop=2)
+                    df[self.source_nwords] = 0
+                    # FIXME: The number of words in the source file is not
+                    # processed correctly at the moment
+
                     df = df[[self.source_id,
                              self.source_nwords,
                              self.source_country,
@@ -238,9 +231,9 @@ class BuilderClass(BaseCorpusBuilder):
                 s = "Writing '{}' to database".format(text_name)
                 self._widget.labelSet.emit(s)
 
-                # use odo to write the data frame to the database:
-                odo(df,
-                    "{}::{}".format(self.DB.sql_url, table),
-                    encoding="utf-8")
+                self.DB.load_dataframe(df, table, None)
+
+                if table == self.corpus_table:
+                    self.store_filename(base_name)
 
             self._widget.progressUpdate.emit(count + 1)

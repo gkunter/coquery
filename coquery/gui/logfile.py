@@ -31,7 +31,6 @@ class LogfileViewer(QtWidgets.QDialog):
         self.setWindowIcon(options.cfg.icon)
 
         self.log_table = LogTableModel(options.cfg.log_messages, self)
-
         self.log_proxy = LogProxyModel()
         self.log_proxy.setSourceModel(self.log_table)
         self.log_proxy.sortCaseSensitivity = False

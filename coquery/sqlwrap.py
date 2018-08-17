@@ -132,7 +132,7 @@ class SqlDB(object):
 
         Returns
         -------
-        l : list
+        results : list
             A list of tuples representing the results from the find.
         """
 
@@ -158,8 +158,8 @@ class SqlDB(object):
                 S = "{} COLLATE NOCASE".format(S)
 
         S = S.replace("\\", "\\\\")
-        l = self.connection.execute(S).fetchall()
-        return l
+        results = self.connection.execute(S).fetchall()
+        return results
 
     def kill_connection(self):
         try:
@@ -271,6 +271,11 @@ class SqlDB(object):
             exist. If "replace", any existing table is replaced by the
             rows from the dataframe. If "fail", the dataframe is NOT
             loaded into the table.
+
+        Returns
+        -------
+        lines : int
+            The number of lines that have been loaded into the table.
         """
         df.index = pd.RangeIndex(start=1, stop=len(df)+1, step=1)
         df.to_sql(table_name,
@@ -278,6 +283,7 @@ class SqlDB(object):
                   if_exists=if_exists,
                   index=bool(index_label),
                   index_label=index_label)
+        return len(df)
 
     def load_file(self, file_name, encoding, table, index,
                   if_exists="append", skip=None, chunksize=250000, **kwargs):
@@ -337,7 +343,6 @@ class SqlDB(object):
                     kwargs["names"] = columns
                     kwargs["header"] = None
                 kwargs["skiprows"] = None
-
 
         return count
 
