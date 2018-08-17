@@ -1434,30 +1434,22 @@ class LogTableModel(QtCore.QAbstractTableModel):
     """
     Define a QAbstractTableModel class that stores logging messages.
     """
-    def __init__(self, parent, *args):
+    def __init__(self, data, parent, *args):
         super(LogTableModel, self).__init__(parent, *args)
-        try:
-            self.content = options.cfg.gui_logger.log_data
-        except AttributeError:
-            self.content = []
+        self.content = data
         self.header = ["Date", "Time", "Level", "Message"]
 
     def data(self, index, role):
         if not index.isValid():
             return None
-        row = index.row()
-        column = index.column()
 
-        record = self.content[row]
+        record = self.content[index.row()]
         if role == QtCore.Qt.DisplayRole:
-            if column == 0:
-                return record.asctime.split()[0]
-            elif column == 1:
-                return record.asctime.split()[1]
-            elif column == 2:
-                return record.levelname
-            elif column == 3:
-                return record.message
+            day, time = record.asctime.split()
+            return (day,
+                    time,
+                    record.levelname,
+                    record.message)[index.column()]
         elif role == QtCore.Qt.ForegroundRole:
             if record.levelno in [logging.ERROR, logging.CRITICAL]:
                 return QtGui.QBrush(QtCore.Qt.white)
@@ -1493,7 +1485,9 @@ class LogProxyModel(QtCore.QSortFilterProxyModel):
             S = "---"
         else:
             S = "|".join(options.cfg.show_log_messages)
-        regexp = QtCore.QRegExp(S, QtCore.Qt.CaseInsensitive, QtCore.QRegExp.RegExp)
+        regexp = QtCore.QRegExp(S,
+                                QtCore.Qt.CaseInsensitive,
+                                QtCore.QRegExp.RegExp)
         self.setFilterRegExp(regexp)
         self.setFilterKeyColumn(2)
 
