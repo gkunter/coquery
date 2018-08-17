@@ -18,8 +18,8 @@ import datetime
 import fileinput
 import codecs
 import warnings
-import re
 import logging
+import re
 
 import pandas as pd
 
@@ -28,6 +28,7 @@ from .errors import (
     TokenParseError, IllegalArgumentError, SQLNoConnectorError,
     EmptyInputFileError, CorpusUnavailableQueryTypeError)
 from .defines import SQL_SQLITE, COLUMN_NAMES
+from .general import Print
 from . import queries
 from . import managers
 from . import functionlist
@@ -95,14 +96,6 @@ class Session(object):
         # applied after the summary
         self.summary_group = options.cfg.summary_group[0]
 
-        # row_visibility stores for each query type a pandas Series object
-        # with the same index as the respective output object, and boolean
-        # values. If the value is False, the row in the output object is
-        # hidden, otherwise, it is visible.
-
-        ## FIXME: reimplement row visibility
-        #self.row_visibility = {}
-
     def get_max_token_count(self):
         """
         Return the maximal number of tokens that may be produced by the
@@ -129,15 +122,17 @@ class Session(object):
             else:
                 file_mode = "w"
                 if options.cfg.verbose:
-                    logging.info("Writing query results to file {}".format(
-                        options.cfg.output_path))
+                    info = "Writing query results to file {}".format(
+                        options.cfg.output_path)
+                    logging.info(info)
 
             output_file = codecs.open(
                 options.cfg.output_path,
                 file_mode,
                 encoding=options.cfg.output_encoding)
 
-        columns = [x for x in df.columns.values if not x.startswith("coquery_invisible")]
+        columns = [x for x in df.columns.values
+                   if not x.startswith("coquery_invisible")]
         if self._first_saved_dataframe:
             header = [self.translate_header(x) for x in columns]
         else:
@@ -180,7 +175,8 @@ class Session(object):
             if self.query_type:
                 new_query = self.query_type(query_string, self)
             else:
-                raise CorpusUnavailableQueryTypeError(options.cfg.corpus, options.cfg.MODE)
+                raise CorpusUnavailableQueryTypeError(options.cfg.corpus,
+                                                      options.cfg.MODE)
             self.query_list.append(new_query)
 
     def run_queries(self, to_file=False, **kwargs):
@@ -222,8 +218,9 @@ class Session(object):
         try:
             for i, current_query in enumerate(self.query_list):
                 if current_query.query_string in _queried and not to_file:
-                    logging.warning("Duplicate query string detected: {}".format(
-                        current_query.query_string))
+                    warnings.warn(
+                        "Duplicate query string detected: {}".format(
+                            current_query.query_string))
                     continue
                 _queried.append(current_query.query_string)
                 self.queries[i] = current_query
@@ -236,8 +233,9 @@ class Session(object):
                         for i in range(self.get_max_token_count())]
                 start_time = time.time()
                 if number_of_queries > 1:
-                    logging.info("Start query ({} of {}): '{}'".format(
-                        i+1, number_of_queries, current_query.query_string))
+                    info = "Start query ({} of {}): '{}'".format(
+                        i+1, number_of_queries, current_query.query_string)
+                    logging.info(info)
                 else:
                     logging.info("Start query: '{}'".format(
                         current_query.query_string))
@@ -273,13 +271,13 @@ class Session(object):
                                     dtype_list[x] = self.data_table[x].dtype
                             elif dtype_list[x] == object:
                                 if not self.data_table[x].any():
-                                    self.data_table[x] = [pd.np.nan] * len(self.data_table)
+                                    dummy = [pd.np.nan] * len(self.data_table)
+                                    self.data_table[x] = dummy
                                     dtype_list[x] = df[x].dtype
                 else:
                     dtype_list = df.dtypes
 
                 df = current_query.insert_static_data(df)
-                #df["coquery_invisible_query_number"] = i
 
                 self.to_file = to_file
 
@@ -290,14 +288,16 @@ class Session(object):
                     self.save_dataframe(df, append=True)
 
                 s_list = ["{:.3f} seconds".format(time.time() - start_time),
-                          "{} match{}".format(raw_length,
-                                              "es" if raw_length != 1 else "")]
+                          "{} match{}".format(
+                              raw_length,
+                              "es" if raw_length != 1 else "")]
                 if len(df) != raw_length:
                     s_list.append(
                         "{} output_row{}".format(
                             len(df),
                             "s" if len(df) != 1 else ""))
-                logging.info("Query executed ({})".format(", ".join(s_list)))
+                logging.info(
+                    "Query executed ({})".format(", ".join(s_list)))
         finally:
             self.disconnect_from_db()
 
@@ -316,9 +316,6 @@ class Session(object):
                         print(e)
                         logging.warning(e)
 
-        ## FIXME: reimplement row visibility
-        #self.reset_row_visibility(queries.TokenQuery, self.data_table)
-
         if not options.cfg.gui:
             self.aggregate_data()
             if not options.cfg.output_path:
@@ -334,7 +331,8 @@ class Session(object):
                     file_mode,
                     encoding=options.cfg.output_encoding)
 
-            columns = [x for x in self.output_object.columns.values if not x.startswith("coquery_invisible")]
+            columns = [x for x in self.output_object.columns.values
+                       if not x.startswith("coquery_invisible")]
 
             self.output_object[columns].to_csv(
                 output_file,
@@ -353,7 +351,8 @@ class Session(object):
 
     def set_preferred_order(self, l):
         """
-        Arrange the column names in l so that they occur in the preferred order.
+        Arrange the column names in l so that they occur in the preferred
+        order.
 
         Columns not in the preferred order follow in an unspecified order.
         """
@@ -365,7 +364,6 @@ class Session(object):
                 l.remove(lex)
                 l.insert(0, lex)
         return l
-
 
     def has_cached_data(self):
         return (self, self.get_manager()) in self._manager_cache
@@ -395,19 +393,12 @@ class Session(object):
         prop = column_properties.get(options.cfg.corpus, {})
         manager.set_column_substitutions(prop.get("substitutions", {}))
 
-        self.output_object = manager.process(self.data_table, self, recalculate)
-
-        #self._manager_cache[(self, manager)] = self.output_object
+        self.output_object = manager.process(self.data_table,
+                                             self,
+                                             recalculate)
 
     def drop_cached_aggregates(self):
         self._manager_cache = {}
-
-    ## FIXME: reimplement row visibility
-    #def reset_row_visibility(self, query_type, df=pd.DataFrame()):
-        #if df.empty:
-            #df = self.output_object
-        #self.row_visibility[query_type] = pd.Series(
-            #data=[True] * len(df.index), index=df.index)
 
     def retranslate_header(self, label):
         """
@@ -450,32 +441,33 @@ class Session(object):
 
         # If the column has been renamed by the user, that name has top
         # priority, unless ignore_alias is used:
-        if options.cfg.verbose: print("translate_header({})".format(header))
+        Print("translate_header({})".format(header))
         if not ignore_alias and header in options.cfg.column_names:
-            if options.cfg.verbose: print(1)
+            Print(1)
             return options.cfg.column_names[header]
 
         # Retain the column header if the query string was from an input file
         if header == "coquery_query_string" and options.cfg.query_label:
-            if options.cfg.verbose: print(2)
+            Print(2)
             return options.cfg.query_label
 
         if header.startswith("coquery_invisible"):
-            if options.cfg.verbose: print(3)
+            Print(3)
             return header
 
         # treat frequency columns:
         if header == "statistics_frequency":
             if options.cfg.query_label:
-                if options.cfg.verbose: print(4)
-                return "{}({})".format(COLUMN_NAMES[header], options.cfg.query_label)
+                Print(4)
+                return "{}({})".format(COLUMN_NAMES[header],
+                                       options.cfg.query_label)
             else:
-                if options.cfg.verbose: print(5)
+                Print(5)
                 return "{}".format(COLUMN_NAMES[header])
 
         if header.startswith("statistics_g_test"):
             label = header.partition("statistics_g_test_")[-1]
-            if options.cfg.verbose: print(6)
+            Print(6)
             return "G('{}', y)".format(label)
 
         if header.startswith("coq_userdata"):
@@ -483,9 +475,11 @@ class Session(object):
 
         if header.startswith("coq_context"):
             if header == "coq_context_left":
-                s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_left)
+                s = "{}({})".format(
+                    COLUMN_NAMES[header], options.cfg.context_left)
             elif header == "coq_context_right":
-                s = "{}({})".format(COLUMN_NAMES[header], options.cfg.context_right)
+                s = "{}({})".format(
+                    COLUMN_NAMES[header], options.cfg.context_right)
             elif header == "coq_context_string":
                 s = "{}({}L, {}R)".format(COLUMN_NAMES[header],
                                           options.cfg.context_left,
@@ -496,12 +490,12 @@ class Session(object):
                 s = "R{}".format(header.split("coq_context_rc")[-1])
             else:
                 s = header
-            if options.cfg.verbose: print(7)
+            Print(7)
             return s
 
         # other features:
         if header in COLUMN_NAMES:
-            if options.cfg.verbose: print(8)
+            Print(8)
             return COLUMN_NAMES[header]
 
         # deal with function headers:
@@ -512,14 +506,14 @@ class Session(object):
             match = re.search("(.*)\((.*)\)", header)
             if match:
                 s = match.group(1)
-                if options.cfg.verbose: print(s, header)
+                Print(s, header)
                 fun = manager.get_function(s)
                 try:
-                    # if options.cfg.verbose: print(9)
+                    # Print(9)
                     return "{}({})".format(fun.get_label(session=self),
                                            match.group(2))
                 except AttributeError:
-                    if options.cfg.verbose: print(10)
+                    Print(10)
                     return header
             else:
                 match = re.search("(func_\w+_\w+)_(\d+)_(\d*)", header)
@@ -531,10 +525,10 @@ class Session(object):
 
                 fun = manager.get_function(header)
                 if fun is None:
-                    # if options.cfg.verbose: print(11)
+                    # Print(11)
                     return header
                 else:
-                    # if options.cfg.verbose: print(12)
+                    # Print(12)
                     label = fun.get_label(session=self, unlabel=ignore_alias)
                     if not num:
                         return label
@@ -566,30 +560,35 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except (ValueError, AttributeError):
                 pass
-            if options.cfg.verbose: print(14)
-            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
+            Print(14)
+            return "{}{}{}".format(res_prefix,
+                                   COLUMN_NAMES[rc_feature],
+                                   number)
 
         try:
             # special treatment of lexicon features:
-            if (rc_feature in [x for x, _ in resource.get_lexicon_features()] or
+            if (rc_feature in [x for x, _
+                               in resource.get_lexicon_features()] or
                     resource.is_tokenized(rc_feature)):
                 try:
                     number = self.quantified_number_labels[int(number) - 1]
                 except ValueError:
                     pass
 
-                # if options.cfg.verbose: print(15)
-                return "{}{}{}".format(res_prefix,
-                                   getattr(resource, str(rc_feature)).replace("__", " "),
-                                   number)
+                # Print(15)
+                return "{}{}{}".format(
+                    res_prefix,
+                    getattr(resource, str(rc_feature)).replace("__", " "),
+                    number)
         except AttributeError:
             pass
 
         # treat any other feature that is provided by the corpus:
         try:
-            if options.cfg.verbose: print(16)
-            return "{}{}".format(res_prefix,
-                                 getattr(resource, str(rc_feature)).replace("__", " "))
+            Print(16)
+            return "{}{}".format(
+                res_prefix,
+                getattr(resource, str(rc_feature)).replace("__", " "))
         except AttributeError:
             pass
 
@@ -599,10 +598,12 @@ class Session(object):
                 number = self.quantified_number_labels[int(number) - 1]
             except (ValueError, AttributeError):
                 pass
-            if options.cfg.verbose: print(17)
-            return "{}{}{}".format(res_prefix, COLUMN_NAMES[rc_feature], number)
+            Print(17)
+            return "{}{}{}".format(res_prefix,
+                                   COLUMN_NAMES[rc_feature],
+                                   number)
 
-        if options.cfg.verbose: print(18)
+        Print(18)
         return header
 
 
@@ -623,7 +624,8 @@ class SessionCommandLine(Session):
     def __init__(self):
         super(SessionCommandLine, self).__init__()
         if len(options.cfg.query_list) > 1:
-            logging.info("{} queries".format(len(options.cfg.query_list)))
+            logging.info(
+                "{} queries".format(len(options.cfg.query_list)))
         self.max_number_of_input_columns = 0
 
 
@@ -655,7 +657,9 @@ class SessionInputFile(Session):
             for current_line in input_file.iterrows():
                 current_line = list(current_line[1])
                 if options.cfg.query_column_number > len(current_line):
-                    raise IllegalArgumentError("Column number for queries too big (-n %s)" % options.cfg.query_column_number)
+                    raise IllegalArgumentError(
+                        "Column number for queries too big (-n {})".format(
+                            options.cfg.query_column_number))
 
                 if read_lines >= options.cfg.skip_lines:
                     try:
@@ -675,9 +679,16 @@ class SessionInputFile(Session):
                 read_lines += 1
             self.input_columns = ["coq_{}".format(x) for x in self.header]
 
-        logging.info("Input file: {} ({} {})".format(options.cfg.input_path, len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
+        logging.info(
+            "Input file: {} ({} {})".format(
+                options.cfg.input_path,
+                len(self.query_list),
+                "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
-            logging.info("Skipped first {}.".format("query" if options.cfg.skip_lines == 1 else "{} queries".format(options.cfg.skip_lines)))
+            logging.info(
+                "Skipped first {}.".format(
+                    ("query" if options.cfg.skip_lines == 1
+                     else "{} queries".format(options.cfg.skip_lines))))
 
 
 class SessionStdIn(Session):
@@ -686,17 +697,25 @@ class SessionStdIn(Session):
 
         for current_string in fileinput.input("-"):
             read_lines = 0
-            current_line = [x.strip() for x in current_string.split(options.cfg.input_separator)]
+            current_line = [x.strip() for x
+                            in current_string.split(
+                                options.cfg.input_separator)]
             if current_line:
                 if options.cfg.file_has_headers and not self.header:
                     self.header = current_line
                 else:
                     if read_lines >= options.cfg.skip_lines:
-                        query_string = current_line.pop(options.cfg.query_column_number - 1)
+                        query_string = current_line.pop(
+                            options.cfg.query_column_number - 1)
                         new_query = self.query_type(query_string, self)
                         self.query_list.append(new_query)
-                self.max_number_of_input_columns = max(len(current_line), self.max_number_of_input_columns)
+                self.max_number_of_input_columns = max(
+                    len(current_line), self.max_number_of_input_columns)
             read_lines += 1
-        logging.info("Reading standard input ({} {})".format(len(self.query_list), "query" if len(self.query_list) == 1 else "queries"))
+        logging.info("Reading standard input ({} {})".format(
+            len(self.query_list),
+            "query" if len(self.query_list) == 1 else "queries"))
         if options.cfg.skip_lines:
-            logging.info("Skipping first %s %s." % (options.cfg.skip_lines, "query" if options.cfg.skip_lines == 1 else "queries"))
+            logging.info("Skipping first {} {}.".format(
+                options.cfg.skip_lines,
+                "query" if options.cfg.skip_lines == 1 else "queries"))
