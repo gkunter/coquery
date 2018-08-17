@@ -9,18 +9,15 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import print_function
 from __future__ import unicode_literals
+
+import math
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
 from coquery.visualizer import visualizer as vis
-from coquery import options
 from coquery.gui.pyqt_compat import QtWidgets, QtCore
-
-from coquery.visualizer.colorizer import (
-    Colorizer, ColorizeByFactor, ColorizeByNum)
 
 
 class BarcodePlot(vis.Visualizer):
@@ -28,6 +25,8 @@ class BarcodePlot(vis.Visualizer):
     TOP = 0.975
     BOTTOM = 0.025
     COLOR = None
+
+    NUM_COLUMN = "coquery_invisible_corpus_id"
 
     name = "Barcode plot"
     icon = "Barcode_plot"
@@ -61,6 +60,7 @@ class BarcodePlot(vis.Visualizer):
         layout.addWidget(BarcodePlot.button_apply)
         layout.setStretch(0, 1)
         layout.setStretch(1, 0)
+        self._layout = layout
         return [layout]
 
     @classmethod
@@ -69,88 +69,109 @@ class BarcodePlot(vis.Visualizer):
         BarcodePlot.button_apply.setDisabled(True)
         self.updateRequested.emit()
 
-    def plot_facet(self,
-                   data, color,
-                   x=None, y=None, z=None,
-                   levels_x=None, levels_y=None, levels_z=None,
-                   range_x=None, range_y=None, range_z=None,
-                   palette=None, color_number=None,
-                   rug=None, rug_color="Black",
-                   **kwargs):
+    def prepare_ax_kwargs(self, data, x, y, z, levels_x, levels_y, **kwargs):
+        if x and not y:
+            ax_kwargs = {
+                "xticks": 0.5 + pd.np.arange(len(levels_x)),
+                "xticklabels": levels_x,
+                "xlim": (0, len(levels_x))}
+        elif y and not x:
+            ax_kwargs = {
+                "yticks": 0.5 + pd.np.arange(len(levels_y)),
+                "yticklabels": levels_y[::-1],
+                "ylim": (0, len(levels_y))}
+        else:
+            if self.force_horizontal:
+                ax_kwargs = {"yticklabels": []}
+            else:
+                ax_kwargs = {"xticklabels": []}
+        return ax_kwargs
+
+    def prepare_arguments(self, data, x, y, z, levels_x, levels_y, **kwargs):
+        if x or y:
+            levels = levels_x if x else levels_y[::-1]
+            val = data[x or y].apply(lambda val: levels.index(val))
+        else:
+            # neither x nor y is specified, plot default
+            val = pd.Series([0] * len(data), index=data.index)
+            levels = [None]
+
+        kwargs = {"values": data[self.NUM_COLUMN], "pos": val}
+
+        if x and not y:
+            kwargs["horizontal"] = True
+            kwargs["func"] = plt.hlines
+
+        elif y and not x:
+            kwargs["horizontal"] = False
+            kwargs["func"] = plt.vlines
+
+        else:
+            if self.force_horizontal:
+                kwargs["horizontal"] = False
+                kwargs["func"] = plt.vlines
+            else:
+                kwargs["horizontal"] = True
+                kwargs["func"] = plt.hlines
+
+        return kwargs
+
+    def prepare_colors(self, data, x, y, z, levels_x, levels_y, **kwargs):
+        if z:
+            cols = self.colorizer.get_hues(data[z])
+        else:
+            if x:
+                levels = levels_x
+                rgb = self.colorizer.get_hues(levels)
+                cols = data[x].apply(lambda val: rgb[levels.index(val)])
+            elif y:
+                levels = levels_y[::-1]
+                rgb = self.colorizer.get_hues(levels)
+                cols = data[y].apply(lambda val: rgb[levels.index(val)])
+            else:
+                rgb = self.colorizer.get_palette()
+                cols = [rgb[0]] * len(data)
+        return cols
+
+    def plot_facet(self, data, color, rug=None, **kwargs):
         """
         Plot a barcode plot.
 
         In a barcode plot, each token is represented by a line drawn at the
         location of the corresponding corpus id.
         """
+        params = self.prepare_arguments(data, **kwargs)
+        _func = params["func"]
+        self.horizontal = params["horizontal"]
 
-        self._xlab = self.DEFAULT_LABEL
-        self._ylab = self.DEFAULT_LABEL
-
-        #if levels_x:
-            #levels_x = levels_x[::-1]
-        if levels_y:
-            levels_y = levels_y[::-1]
-
-        corpus_id = data["coquery_invisible_corpus_id"]
-
-        if x:
-            val = data[x].apply(lambda val: levels_x.index(val))
-        elif y:
-            val = data[y].apply(lambda y: levels_y.index(y))
-        else:
-            # neither x nor y is specified, plot default
-            val = pd.Series([0] * len(data), index=data.index)
-
-        self._colorizer = self.get_colorizer(data, palette, color_number,
-                                             z, levels_z, range_z)
-        cols = self.get_colors(data, self._colorizer, z)
-
-        self.legend_title = self._colorizer.legend_title(z)
-        self.legend_palette = self._colorizer.legend_palette()
-        if not (z == x or z == y):
-            self.legend_levels = self._colorizer.legend_levels()
-        else:
-            self.legend_levels = []
-
-        if x and not y:
-            ax_kwargs = {"xticks": 0.5 + pd.np.arange(len(levels_x)),
-                         "xticklabels": levels_x,
-                         "xlim": (0, len(levels_x))}
-            self._xlab = x
-            self._func = plt.hlines
-            self.horizontal = True
-
-        elif y and not x:
-            ax_kwargs = {"yticks": 0.5 + pd.np.arange(len(levels_y)),
-                         "yticklabels": levels_y,
-                         "ylim": (0, len(levels_y))}
-            self._ylab = y
-            self._func = plt.vlines
-            self.horizontal = False
-
-        else:
-            if BarcodePlot.force_horizontal:
-                ax_kwargs = {"yticklabels": []}
-                self._ylab = ""
-                self._func = plt.vlines
-                self.horizontal = False
-            else:
-                ax_kwargs = {"xticklabels": []}
-                self._xlab = ""
-                self._func = plt.hlines
-                self.horizontal = True
+        cols = self.prepare_colors(data, **kwargs)
 
         if rug:
             if "top" in rug:
-                self._func(corpus_id, val + 0.9, val + 1, cols)
+                _func(params["values"],
+                      params["pos"] + 0.9, params["pos"] + 1,
+                      cols)
             if "bottom" in rug:
-                self._func(corpus_id, val, val + 0.1, cols)
+                _func(params["values"],
+                      params["pos"], params["pos"] + 0.1,
+                      cols)
         else:
-            self._func(corpus_id, val + self.BOTTOM, val + self.TOP, cols)
+            _func(params["values"],
+                  params["pos"] + self.BOTTOM, params["pos"] + self.TOP,
+                  cols)
 
         ax = kwargs.get("ax", plt.gca())
+        ax_kwargs = self.prepare_ax_kwargs(data, **kwargs)
         ax.set(**ax_kwargs)
+
+    def suggest_legend(self):
+        return self.z
+
+    def get_factor_frm(self):
+        return self.get_default_frm()
+
+    def get_num_frm(self):
+        return self.get_default_frm()
 
     def set_annotations(self, grid, values):
         lim = (0, self.session.Corpus.get_corpus_size())
@@ -159,6 +180,22 @@ class BarcodePlot(vis.Visualizer):
         else:
             grid.set(xlim=lim)
         vis.Visualizer.set_annotations(self, grid, values)
+
+    def set_titles(self):
+        self._xlab = ""
+        self._ylab = ""
+
+        if self.x:
+            self._xlab = self.x
+            self._ylab = self.DEFAULT_LABEL
+        elif self.y:
+            self._ylab = self.y
+            self._xlab = self.DEFAULT_LABEL
+        else:
+            if self.horizontal:
+                self._ylab = self.DEFAULT_LABEL
+            else:
+                self._xlab = self.DEFAULT_LABEL
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
@@ -176,36 +213,6 @@ class BarcodePlot(vis.Visualizer):
 class HeatbarPlot(BarcodePlot):
     """
     Produce a heat bar instead of single bars.
-
-    Assuming that 'matches' is an array containing the corpus ids of the
-    tokens in the match, this code produces a heat bar:
-
-    import numpy as np
-    from matplotlib import pyplot as plt
-    import statsmodels
-
-    corpus_size = 50000
-    matches = pd.np.unique(
-                pd.np.concatenate(
-                    (np.random.normal(1000, 250, 10).astype(int),
-                     pd.np.random.normal(32500, 2000, 20).astype(int),
-                     pd.np.random.uniform(0, corpus_size, 20).astype(int))))
-
-    # KDE from statsmodels:
-    from statsmodels.nonparametric.kde import KDEUnivariate
-    kde = KDEUnivariate(matches.astype(float))
-    kde.fit(bw="scott")
-
-    # alternative KDE from scipy.stats:
-    # from scipy.stats import gaussian_kde
-    # kde = scipy.stats.gaussian_kde(matches, "silverman")
-
-    values = kde.evaluate(range(corpus_size))
-    #values =kde.density
-
-    plt.pcolormesh([values], cmap="Blues_r")
-    plt.vlines(matches, 0, 1)
-
     """
 
     name = "Heatbar plot"
@@ -215,10 +222,173 @@ class HeatbarPlot(BarcodePlot):
     BOTTOM = 0.0
     COLOR = "Black"
 
+    custom_bandwidth = None
+    plot_rug = False
+    normalize = False
+
     def __init__(self, *args, **kwargs):
-        from statsmodels.nonparametric.kde import KDEUnivariate
-        HeatbarPlot.kde = KDEUnivariate
-        BarcodePlot.__init__(self, *args, **kwargs)
+        super(HeatbarPlot, self).__init__(*args, **kwargs)
+
+    def get_custom_widgets(self, *args, **kwargs):
+        layout = QtWidgets.QVBoxLayout()
+        label = QtWidgets.QApplication.instance().translate(
+                    "HeatbarPlot", "Plot horizontal by default", None)
+        button = QtWidgets.QApplication.instance().translate(
+                    "Visualizer", "Apply", None)
+        bandwidth_text = QtWidgets.QApplication.instance().translate(
+            "HeatbarPlot", "Use custom bandwidth:", None)
+        suffix_text = QtWidgets.QApplication.instance().translate(
+            "HeatbarPlot", " words", None)
+        rug_text = QtWidgets.QApplication.instance().translate(
+            "HeatbarPlot", "Add coloured rugs", None)
+        normalize_text = QtWidgets.QApplication.instance().translate(
+            "HeatbarPlot", "Normalize within groups", None)
+
+        HeatbarPlot.check_bandwidth = QtWidgets.QCheckBox(bandwidth_text)
+        HeatbarPlot.spin_bandwidth = QtWidgets.QSpinBox(
+            HeatbarPlot.custom_bandwidth)
+        HeatbarPlot.spin_bandwidth.setDisabled(True)
+        HeatbarPlot.spin_bandwidth.setSuffix(suffix_text)
+        HeatbarPlot.spin_bandwidth.setMaximum(99999999)
+        HeatbarPlot.spin_bandwidth.setMinimum(5)
+        HeatbarPlot.spin_bandwidth.setSingleStep(1)
+
+        spin_layout = QtWidgets.QHBoxLayout()
+        spin_layout.addWidget(HeatbarPlot.check_bandwidth)
+        spin_layout.addWidget(HeatbarPlot.spin_bandwidth)
+
+        HeatbarPlot.check_normalize = QtWidgets.QCheckBox(normalize_text)
+        HeatbarPlot.check_normalize.setCheckState(
+            QtCore.Qt.Checked if HeatbarPlot.normalize else
+            QtCore.Qt.Unchecked)
+
+        HeatbarPlot.check_rug = QtWidgets.QCheckBox(rug_text)
+        HeatbarPlot.check_rug.setCheckState(
+            QtCore.Qt.Checked if HeatbarPlot.plot_rug else
+            QtCore.Qt.Unchecked)
+
+        HeatbarPlot.check_horizontal = QtWidgets.QCheckBox(label)
+        HeatbarPlot.check_horizontal.setCheckState(
+            QtCore.Qt.Checked if HeatbarPlot.force_horizontal else
+            QtCore.Qt.Unchecked)
+
+        HeatbarPlot.button_apply = QtWidgets.QPushButton(button)
+        HeatbarPlot.button_apply.setDisabled(True)
+        HeatbarPlot.button_apply.clicked.connect(
+            lambda: HeatbarPlot.update_figure(
+                self,
+                HeatbarPlot.check_horizontal.checkState(),
+                None if HeatbarPlot.check_bandwidth.checkState() else
+                HeatbarPlot.spin_bandwidth.value()))
+
+        for signal in (HeatbarPlot.check_horizontal.stateChanged,
+                       HeatbarPlot.check_bandwidth.stateChanged,
+                       HeatbarPlot.check_rug.stateChanged,
+                       HeatbarPlot.check_normalize.stateChanged,
+                       HeatbarPlot.spin_bandwidth.valueChanged):
+            signal.connect(
+                lambda x: HeatbarPlot.button_apply.setEnabled(True))
+            signal.connect(self.update_widgets)
+
+        layout.addWidget(HeatbarPlot.check_horizontal)
+        layout.addLayout(spin_layout)
+        layout.addWidget(HeatbarPlot.check_rug)
+        layout.addWidget(HeatbarPlot.check_normalize)
+        layout.addWidget(HeatbarPlot.button_apply)
+        return [layout]
+
+    def update_widgets(self):
+        HeatbarPlot.spin_bandwidth.setEnabled(
+            HeatbarPlot.check_bandwidth.checkState())
+        if HeatbarPlot.check_bandwidth.checkState():
+            HeatbarPlot.custom_bandwidth = int(
+                HeatbarPlot.spin_bandwidth.value())
+        HeatbarPlot.force_horizontal = bool(
+            HeatbarPlot.check_horizontal.checkState())
+
+    @classmethod
+    def update_figure(cls, self, i, bw):
+        HeatbarPlot.button_apply.setDisabled(True)
+        self.updateRequested.emit()
+
+    def prepare_im_arguments(self, data, x, y, z, levels_x, levels_y,
+                             size, bw,
+                             **kwargs):
+        """
+        Returns the arguments required for a subsequent call to plt.imshow().
+
+        The following arguments are produced:
+
+            aspect: "auto"
+            interpolation: "gaussian"
+            extent: (None, None, 0, MAX) or (0, MAX, None, None) (for
+                    horizontal or vertical plots, respectively)
+
+        In addition, the argument `M` is produced, which is a list of arrays
+        that contain the image data used by plt.imshow().
+        """
+        kwargs = {"aspect": "auto", "interpolation": "gaussian"}
+
+        M = []
+
+        if x or y:
+            self.horizontal = bool(x)
+
+            for val in levels_x or levels_y:
+                binned = [0.0] * (1 + (size // bw))
+                values = (data[self.NUM_COLUMN][data[x or y] == val]).values
+                for i in sorted(values):
+                    pct_in_bin, target_bin = math.modf(i / bw)
+                    target_bin = int(target_bin)
+
+                    if pct_in_bin <= 0.5:
+                        binned[target_bin] += 0.5 + pct_in_bin
+                    else:
+                        binned[target_bin] += 1.5 - pct_in_bin
+
+                    if target_bin > 0:
+                        binned[target_bin - 1] += max(0, 0.5 - pct_in_bin)
+                    if target_bin < len(binned) - 1:
+                        binned[target_bin + 1] += max(0, pct_in_bin - 0.5)
+
+                M.append(pd.np.array(binned))
+        else:
+            self.horizontal = not self.force_horizontal
+            values = data[self.NUM_COLUMN].values
+            binned = [0.0] * (1 + (size // bw))
+            for i in sorted(values):
+                pct_in_bin, target_bin = math.modf(i / bw)
+                target_bin = int(target_bin)
+
+                if pct_in_bin <= 0.5:
+                    binned[target_bin] += 0.5 + pct_in_bin
+                else:
+                    binned[target_bin] += 1.5 - pct_in_bin
+
+                if target_bin > 0:
+                    binned[target_bin - 1] += max(0, 0.5 - pct_in_bin)
+                if target_bin < len(binned) - 1:
+                    binned[target_bin + 1] += max(0, pct_in_bin - 0.5)
+
+            M.append(pd.np.array(binned))
+
+        width = len(binned) * bw - 1
+        if x:
+            kwargs["extent"] = (None, None, 0, width)
+        elif y:
+            kwargs["extent"] = (0, width, None, None)
+        elif self.force_horizontal:
+            kwargs["extent"] = (0, width, None, None)
+        else:
+            kwargs["extent"] = (None, None, 0, width)
+
+        kwargs["M"] = pd.np.array(M)
+        return kwargs
+
+    def set_bandwidth(self, bw):
+        HeatbarPlot.spin_bandwidth.blockSignals(True)
+        HeatbarPlot.spin_bandwidth.setValue(bw)
+        HeatbarPlot.spin_bandwidth.blockSignals(False)
 
     def plot_facet(self, data, color, **kwargs):
         """
@@ -228,56 +398,47 @@ class HeatbarPlot(BarcodePlot):
         heat map plotted under the lines.
         """
 
-        x = kwargs.get("x", None)
-        y = kwargs.get("y", None)
-        levels_x = kwargs.get("levels_x", None)
-        levels_y = kwargs.get("levels_y", None)
+        size = self.session.Corpus.get_corpus_size()
 
-        corpus_size = self.session.Corpus.get_corpus_size()
-        M = []
-        if x and not y:
-            self.horizontal = False
-            for current_x in levels_x:
-                dsub = data[data[x] == current_x]
-                matches = dsub.coquery_invisible_corpus_id
-                density = self.kde(matches.astype(float))
-                density.fit(bw="scott")
-                values = density.evaluate(range(corpus_size))[::-1]
-                M.append(len(matches) * values)
-            plt.imshow(pd.np.array(M).T,
-                       aspect="auto", cmap="Greys",
-                       extent=(0, len(levels_x), 0, corpus_size))
-        elif y and not x:
-            self.horizontal = True
-            for current_y in levels_y:
-                dsub = data[data[y] == current_y]
-                matches = dsub.coquery_invisible_corpus_id
-                density = self.kde(matches.astype(float))
-                try:
-                    density.fit(bw="scott")
-                except:
-                    values = pd.np.array([0] * corpus_size)
-                else:
-                    values = density.evaluate(range(corpus_size))
-                    values = values / values.max()
-                M.append(len(matches) * values)
-            plt.imshow(pd.np.array(M),
-                       aspect="auto", cmap="Greys",
-                       extent=(0, corpus_size, 0, len(levels_y)))
+        if not HeatbarPlot.spin_bandwidth.isEnabled():
+            self.set_bandwidth(max(size / 250, 5))
+
+        bw = HeatbarPlot.spin_bandwidth.value()
+        param = self.prepare_im_arguments(data, bw=bw, size=size,
+                                          **kwargs)
+
+        M = param.pop("M")
+
+        left, right, bottom, top = param["extent"]
+
+        if HeatbarPlot.check_normalize.isChecked():
+            M = pd.np.array([[val / max(X) for val in X] for X in M])
+
+        if not self.horizontal:
+            M = M[::-1]
+
+        for i, x in enumerate(M):
+            if left is None and right is None:
+                param["extent"] = (i, i+1, bottom, top)
+                x = pd.np.array([x[::-1]]).T
+            else:
+                param["extent"] = (left, right, i, i+1)
+                x = pd.np.array([x])
+
+            plt.imshow(x, vmax=M.max(), **param)
+
+        if HeatbarPlot.check_rug.isChecked():
+            super(HeatbarPlot, self).plot_facet(
+                data, color, rug=("top", "bottom"), **kwargs)
+
+        ax = kwargs.get("ax", plt.gca())
+        ax_kwargs = self.prepare_ax_kwargs(data, **kwargs)
+        ax.set(**ax_kwargs)
+
+        if self.horizontal:
+            plt.xlim(0, len(M))
         else:
-            matches = data["coquery_invisible_corpus_id"]
-            density = self.kde(matches.astype(float))
-            density.fit(bw="scott")
-            M = [density.evaluate(range(corpus_size))]
-            plt.imshow(M,
-                       aspect="auto", cmap="Greys",
-                       extent=(0, corpus_size, 0, 1))
-        super(HeatbarPlot, self).plot_facet(data, color,
-                                            rug=["top", "bottom"],
-                                            **kwargs)
+            plt.ylim(0, len(M))
 
 
-provided_visualizations = [BarcodePlot]
-
-if options.cfg.experimental:
-    provided_visualizations.append(HeatbarPlot)
+provided_visualizations = [BarcodePlot, HeatbarPlot]
