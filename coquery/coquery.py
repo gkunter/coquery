@@ -38,21 +38,31 @@ from .errors import (print_exception,
 from . import options
 from .defines import (msg_missing_modules, msg_options_error,
                       msg_error_in_config,
-                      QUERY_MODE_STATISTICS)
+                      QUERY_MODE_STATISTICS, LOG_STRING)
 from .unicode import utf8
 
 from .gui.classes import CoqApplication
 
 
-def set_logger(log_file_path):
-    fstr = "%(asctime)s %(levelname)-8s %(message)s"
-    logging.basicConfig(
-        filename=log_file_path,
-        level=logging.INFO,
-        format=fstr)
+class CoqLogHandler(logging.StreamHandler):
+    """
+    This class is used by the logger to capture logging messages so that
+    they can be displayed in a dialog.
+    """
+    def __init__(self, *args):
+        super(CoqLogHandler, self).__init__(*args)
+        self.log_data = []
 
-    logger = logging.getLogger(NAME)
+    def emit(self, record):
+        self.log_data.append(record)
+
+
+def setup_logger(log_file_path):
+    logging.basicConfig(filename=log_file_path, format=LOG_STRING)
     logging.captureWarnings(True)
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
     return logger
 
@@ -72,7 +82,7 @@ def check_system():
 
 def main():
     coquery_home = general.get_home_dir()
-    logger = set_logger(os.path.join(coquery_home, "coquery.log"))
+    logger = setup_logger(os.path.join(coquery_home, "coquery.log"))
 
     check_system()
     read_config_file = True
@@ -102,7 +112,6 @@ def main():
     logger.info("{}".format(sys.version))
     try:
         options.cfg.coquery_home = coquery_home
-        options.cfg.log_file_path = os.path.join(coquery_home, "coquery.log")
 
         # Check if a valid corpus was specified, but only if no GUI is
         # requested (the GUI will handle corpus selection later):
@@ -121,15 +130,14 @@ def main():
         print_exception(e)
         sys.exit(1)
 
-    # In verbose mode, debugging messages will be printed as well. Also, all
-    # logging messages will be printed to the console, and not only to the
-    # log file.
-    if options.cfg.verbose:
-        logger.setLevel(logging.DEBUG)
-        stream_handler = logging.StreamHandler()
-        frm = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
-        stream_handler.setFormatter(frm)
-        logger.addHandler(stream_handler)
+    options.cfg.logger = logger
+    logger.setLevel(logging.DEBUG if options.cfg.verbose else
+                    logging.INFO)
+    log_handler_stdout = logging.StreamHandler()
+    log_handler_stdout.setLevel(logging.DEBUG if options.cfg.verbose else
+                                logging.WARNING)
+    log_handler_stdout.setFormatter(logging.Formatter(LOG_STRING))
+    logger.addHandler(log_handler_stdout)
 
     if options.cfg.comment:
         logger.info(options.cfg.comment)
@@ -162,13 +170,12 @@ def main():
                     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                 print(response)
                 sys.exit(1)
-        from .gui.app import CoqMainWindow
-        from .gui.app import GuiHandler
 
-        options.cfg.gui_logger = GuiHandler()
-        frm = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
-        options.cfg.gui_logger.setFormatter(frm)
-        logger.addHandler(options.cfg.gui_logger)
+        from .gui.app import CoqMainWindow
+
+        #options.cfg.gui_logger = CoqLogHandler()
+        #logger.addHandler(options.cfg.gui_logger)
+        #warnings_logger.addHandler(options.cfg.gui_logger)
 
         if sys.platform == "darwin":
             for old, new in (
@@ -182,12 +189,19 @@ def main():
 
         Coq = CoqMainWindow(session)
         options.cfg.gui = Coq
-        options.cfg.gui_logger.setGui(Coq)
         Coq.setGUIDefaults()
+
+        log_handler_ram = CoqLogHandler()
+        log_handler_ram.setLevel(logging.DEBUG if options.cfg.verbose else
+                                 logging.INFO)
+        log_handler_ram.setFormatter(logging.Formatter(LOG_STRING))
+        logger.addHandler(log_handler_ram)
+        options.cfg.log_messages = log_handler_ram.log_data
 
         options.cfg.icon = Coq.get_icon("coquerel_icon.png",
                                         small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
+
         if options.cfg.profile:
             import cProfile
             cProfile.runctx("options.cfg.app.exec_()", globals(), locals())

@@ -11,6 +11,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
+
+LOG_STRING = "%(asctime)s %(levelname)-8s %(message)s"
+
+
 DEFAULT_MISSING_VALUE = "<NA>"
 
 # The following labels are used to refer to the different types of query
