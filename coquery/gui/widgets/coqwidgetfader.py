@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from coquery.gui.pyqt_compat import QtCore, QtGui, QtWidgets
 
+
 class CoqWidgetFader(QtCore.QObject):
     def __init__(self, widget, duration=250):
         def blend(left, right, i, steps):
@@ -47,5 +48,3 @@ class CoqWidgetFader(QtCore.QObject):
                                      lambda: self.fade_widget(step + 1))
         else:
             self._widget.setStyleSheet("")
-
-

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CoqStaticBox.py is part of Coquery.
+coqstaticbox.py is part of Coquery.
 
 Copyright (c) 2018 Gero Kunter (gero.kunter@coquery.org)
 
