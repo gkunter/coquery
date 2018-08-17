@@ -2,7 +2,7 @@
 """
 uniqueviewer.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -21,25 +21,46 @@ from coquery.defines import msg_disk_error, msg_encoding_error
 
 from . import errorbox
 from . import classes
+from .threads import CoqThread
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from .ui.uniqueViewerUi import Ui_UniqueViewer
 
+
+translate = QtWidgets.QApplication.instance().translate
+
+
 class UniqueViewer(QtWidgets.QDialog):
-    def __init__(self, rc_feature=None, db_name=None, uniques=True, parent=None):
+    def __init__(self, rc_feature=None, db_name=None, uniques=True,
+                 parent=None):
         super(UniqueViewer, self).__init__(parent)
 
         self.ui = Ui_UniqueViewer()
         self.ui.setupUi(self)
 
-        self.ui.button_details = classes.CoqDetailBox(str("Corpus: {}   Column: {}"))
+        self.ui.button_details = classes.CoqDetailBox(
+            str("Corpus: {}   Column: {}"))
         self.ui.verticalLayout.insertWidget(0, self.ui.button_details)
 
         if uniques:
-            self.ui.label = QtWidgets.QLabel("Number of values: {}")
+            label_template = "{label_values}: {{}}"
         else:
-            self.ui.label = QtWidgets.QLabel("<table><tr><td>Number of values:</td><td>{}</td></tr><tr><td>Number of unique values:</td><td>{}</td></tr>")
-            self.ui.label.setWordWrap(True)
             self.setWindowTitle("Entry viewer – Coquery")
+            label_template = """
+                <table>
+                    <tr>
+                        <td>{label_values}:</td><td>{{}}</td>
+                    </tr>
+                    <tr>
+                        <td>{label_uniques}:</td><td>{{}}</td>
+                    </tr>
+                </table>"""
+        label = label_template.format(
+            label_values=translate(
+                "UniqueViewer", "Number of values", None),
+            label_uniques=translate(
+                "UniqueViewer", "Number of unique values", None))
+        self.ui.label = QtWidgets.QLabel(label)
+        self.ui.label.setWordWrap(True)
         self.ui.detail_layout = QtWidgets.QHBoxLayout()
         self.ui.detail_layout.addWidget(self.ui.label)
         self.ui.button_details.box.setLayout(self.ui.detail_layout)
@@ -52,7 +73,8 @@ class UniqueViewer(QtWidgets.QDialog):
 
         self.ui.buttonBox.setDisabled(True)
         self.ui.button_details.setDisabled(True)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).clicked.connect(self.save_list)
+        save_button = self.ui.buttonBox.button(self.ui.buttonBox.Save)
+        save_button.clicked.connect(self.save_list)
 
         self.rc_feature = rc_feature
         self.db_name = db_name
@@ -95,7 +117,7 @@ class UniqueViewer(QtWidgets.QDialog):
         if not self.db_name:
             return
 
-        engine = options.cfg.current_connection.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         if self._uniques:
             S = "SELECT DISTINCT {} FROM {}".format(self.column, self.table)
             self.df = pd.read_sql(S, engine)
@@ -113,8 +135,7 @@ class UniqueViewer(QtWidgets.QDialog):
             self.ui.tableWidget.setItem(row, 0, item)
 
     def finalize(self):
-        #self.ui.progress_spinner.stop()
-        self.ui.progress_bar.setRange(1,0)
+        self.ui.progress_bar.setRange(1, 0)
         self.ui.progress_bar.hide()
         self.ui.tableWidget.show()
         self.ui.button_details.show()
@@ -176,11 +197,12 @@ class UniqueViewer(QtWidgets.QDialog):
         if name:
             options.cfg.uniques_file_path = os.path.dirname(name)
             try:
-                self.df[self.column].to_csv(name,
-                           sep=options.cfg.output_separator,
-                           index=False,
-                           header=["{}.{}".format(self.table, self.column)],
-                           encoding=options.cfg.output_encoding)
+                self.df[self.column].to_csv(
+                    name,
+                    sep=options.cfg.output_separator,
+                    index=False,
+                    header=["{}.{}".format(self.table, self.column)],
+                    encoding=options.cfg.output_encoding)
             except IOError:
                 QtWidgets.QMessageBox.critical(
                     self, "Disk error", msg_disk_error)
@@ -189,15 +211,12 @@ class UniqueViewer(QtWidgets.QDialog):
                     self, "Encoding error", msg_encoding_error)
 
     def get_uniques(self):
-        self.ui.progress_bar.setRange(0,0)
-
-        #self.ui.progress_spinner.start()
-
+        self.ui.progress_bar.setRange(0, 0)
         self.ui.tableWidget.hide()
         self.ui.button_details.hide()
         self.ui.label.hide()
 
-        self.thread = classes.CoqThread(self.get_unique, self)
+        self.thread = CoqThread(self.get_unique, self)
         self.thread.taskFinished.connect(self.finalize)
         self.thread.taskException.connect(self.onException)
         self.thread.start()
