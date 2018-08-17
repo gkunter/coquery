@@ -143,23 +143,6 @@ class keyFilter(QtCore.QObject):
         return False
 
 
-class GuiHandler(logging.StreamHandler):
-    """
-    This class is used by the logger to capture logging messages so that
-    they can be displayed in a dialog.
-    """
-    def __init__(self, *args):
-        super(GuiHandler, self).__init__(*args)
-        self.log_data = []
-        self.app = None
-
-    def setGui(self, app):
-        self.app = app
-
-    def emit(self, record):
-        self.log_data.append(record)
-
-
 class CoqMainWindow(QtWidgets.QMainWindow):
     """ Coquery as standalone application. """
 
@@ -1178,7 +1161,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # Get the column properties from the settings file, and save them
         # immediately afterwards so that the settings file always contains
         # an up-to-date property set
-        properties = {}
+
         try:
             properties = options.settings.value("column_properties", {})
         finally:
@@ -1706,11 +1689,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.last_results_saved = False
 
         # make sure that the right column colors are used
-        properties = {}
-        try:
-            properties = options.settings.value("column_properties", {})
-        finally:
-            options.settings.setValue("column_properties", properties)
+        properties = options.settings.value("column_properties", {})
+
         current_properties = properties.get(options.cfg.corpus, {})
         options.cfg.column_color = current_properties.get("colors", {})
         options.cfg.column_names = current_properties.get("alias", {})
