@@ -12,9 +12,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 from coquery import options
-from coquery.gui.classes import LogTableModel, LogProxyModel
-from coquery.pyqt_compat import QtCore, QtWidgets
-from coquery.ui.logfileUi import Ui_logfileDialog
+from .classes import LogTableModel, LogProxyModel
+from .pyqt_compat import QtCore, QtWidgets
+from .ui.logfileUi import Ui_logfileDialog
 
 BUTTON_MAP = {"ERROR": "check_errors",
               "WARNING": "check_warnings",
