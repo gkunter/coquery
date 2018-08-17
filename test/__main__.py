@@ -102,7 +102,8 @@ def main():
     if not args or "visualizer" in args:
         from test.test_vis_barplot import provided_tests
         test_list += provided_tests
-        print("123")
+        from test.test_vis_barcodeplot import provided_tests
+        test_list += provided_tests
 
     suite = unittest.TestSuite(
         [unittest.TestLoader().loadTestsFromTestCase(x)
