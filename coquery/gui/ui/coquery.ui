@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>819</width>
+    <width>821</width>
     <height>684</height>
    </rect>
   </property>
@@ -1105,12 +1105,23 @@ p, li { white-space: pre-wrap; }
     </item>
    </layout>
   </widget>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>819</width>
+     <width>821</width>
      <height>26</height>
     </rect>
    </property>
@@ -1166,60 +1177,6 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_toggle_columns"/>
     <addaction name="action_toggle_management"/>
    </widget>
-   <widget class="QMenu" name="menuAnalyse">
-    <property name="title">
-     <string>&amp;Visualizations</string>
-    </property>
-    <widget class="QMenu" name="menuFrequencies">
-     <property name="title">
-      <string>&amp;Bar charts</string>
-     </property>
-     <addaction name="action_percentage_bars"/>
-     <addaction name="action_stacked_bars"/>
-     <addaction name="action_barchart_plot"/>
-    </widget>
-    <widget class="QMenu" name="menuFrequency_maps">
-     <property name="title">
-      <string>&amp;Frequency maps</string>
-     </property>
-     <addaction name="action_heat_map"/>
-     <addaction name="action_tree_map"/>
-     <addaction name="action_word_cloud"/>
-     <addaction name="action_bubble_chart"/>
-    </widget>
-    <widget class="QMenu" name="menuCorpus_locations">
-     <property name="title">
-      <string>&amp;Corpus locations</string>
-     </property>
-     <addaction name="action_barcode_plot"/>
-     <addaction name="action_beeswarm_plot"/>
-    </widget>
-    <widget class="QMenu" name="menuDensity_plots">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="title">
-      <string>&amp;Numeric plots</string>
-     </property>
-     <addaction name="action_kde_plot"/>
-     <addaction name="action_ecd_plot"/>
-     <addaction name="action_scatter_plot"/>
-    </widget>
-    <widget class="QMenu" name="menuTime_data">
-     <property name="title">
-      <string>&amp;Time data</string>
-     </property>
-     <addaction name="action_percentage_area_plot"/>
-     <addaction name="action_stacked_area_plot"/>
-     <addaction name="action_line_plot"/>
-    </widget>
-    <addaction name="menuCorpus_locations"/>
-    <addaction name="menuFrequencies"/>
-    <addaction name="menuTime_data"/>
-    <addaction name="menuFrequency_maps"/>
-    <addaction name="menuDensity_plots"/>
-    <addaction name="separator"/>
-   </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
      <string>&amp;Results</string>
@@ -1236,33 +1193,9 @@ p, li { white-space: pre-wrap; }
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
    <addaction name="menu_Results"/>
-   <addaction name="menuAnalyse"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar">
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <property name="sizeGripEnabled">
-    <bool>false</bool>
-   </property>
-  </widget>
-  <action name="action_open_input_file">
-   <property name="icon">
-    <iconset theme="document-open">
-     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Open input file...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
-   </property>
-  </action>
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
@@ -1278,26 +1211,6 @@ p, li { white-space: pre-wrap; }
   <action name="action_about_coquery">
    <property name="text">
     <string>&amp;About Coquery</string>
-   </property>
-  </action>
-  <action name="actionDummy">
-   <property name="text">
-    <string>Dummy</string>
-   </property>
-  </action>
-  <action name="action_distinct_tokens">
-   <property name="text">
-    <string>Distinct tokens</string>
-   </property>
-  </action>
-  <action name="action_frequency">
-   <property name="text">
-    <string>Frequency</string>
-   </property>
-  </action>
-  <action name="action_all_tokens">
-   <property name="text">
-    <string>All tokens</string>
    </property>
   </action>
   <action name="action_statistics">
@@ -1339,33 +1252,6 @@ p, li { white-space: pre-wrap; }
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="action_build_corpus">
-   <property name="icon">
-    <iconset theme="document-new">
-     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Build new corpus...</string>
-   </property>
-   <property name="toolTip">
-    <string>Build a new corpus from text files in a folder</string>
-   </property>
-  </action>
-  <action name="action_remove_corpus">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset theme="edit-delete">
-     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Remove corpus...</string>
-   </property>
-   <property name="toolTip">
-    <string>Permanently and irrevocably remove corpus database</string>
-   </property>
-  </action>
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
@@ -1381,50 +1267,6 @@ p, li { white-space: pre-wrap; }
     <string>Ctrl+M</string>
    </property>
   </action>
-  <action name="action_tree_map">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Tree map</string>
-   </property>
-  </action>
-  <action name="action_heat_map">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Heat map</string>
-   </property>
-  </action>
-  <action name="action_word_cloud">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Word cloud</string>
-   </property>
-  </action>
-  <action name="action_barcode_plot">
-   <property name="text">
-    <string>&amp;Barcode plot</string>
-   </property>
-  </action>
-  <action name="action_beeswarm_plot">
-   <property name="text">
-    <string>Bee&amp;swarm plot</string>
-   </property>
-  </action>
-  <action name="action_barchart_plot">
-   <property name="text">
-    <string>&amp;Bars</string>
-   </property>
-  </action>
-  <action name="action_time_series_plot">
-   <property name="text">
-    <string>T&amp;ime series</string>
-   </property>
-  </action>
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
@@ -1434,79 +1276,9 @@ p, li { white-space: pre-wrap; }
     <string>&amp;Documentation...</string>
    </property>
   </action>
-  <action name="action_percentage_area_plot">
-   <property name="text">
-    <string>&amp;Percentage areas</string>
-   </property>
-  </action>
-  <action name="action_stacked_area_plot">
-   <property name="text">
-    <string>&amp;Stacked areas</string>
-   </property>
-  </action>
-  <action name="action_line_plot">
-   <property name="text">
-    <string>&amp;Lines</string>
-   </property>
-  </action>
-  <action name="actionStop_words">
-   <property name="text">
-    <string>Stop words...</string>
-   </property>
-  </action>
-  <action name="actionStop_words_2">
-   <property name="text">
-    <string>&amp;Stop words...</string>
-   </property>
-  </action>
-  <action name="action_percentage_bars">
-   <property name="text">
-    <string>&amp;Percentage bars</string>
-   </property>
-  </action>
-  <action name="action_stacked_bars">
-   <property name="text">
-    <string>&amp;Stacked bars</string>
-   </property>
-  </action>
   <action name="action_view_log">
    <property name="text">
     <string>View session &amp;log...</string>
-   </property>
-  </action>
-  <action name="action_mysql_server_help">
-   <property name="text">
-    <string>MySQL server help</string>
-   </property>
-  </action>
-  <action name="action_Column_context_menu">
-   <property name="text">
-    <string>[Column context menu]</string>
-   </property>
-  </action>
-  <action name="action_Row_context_menu">
-   <property name="text">
-    <string>[Row context menu]</string>
-   </property>
-  </action>
-  <action name="actionCopy_to_clipboard">
-   <property name="text">
-    <string>Copy to clipboard</string>
-   </property>
-  </action>
-  <action name="actionSave_results">
-   <property name="text">
-    <string>Save</string>
-   </property>
-  </action>
-  <action name="action_Selection_menu">
-   <property name="text">
-    <string>[Selection menu]</string>
-   </property>
-  </action>
-  <action name="action_bubble_chart">
-   <property name="text">
-    <string>&amp;Bubble chart</string>
    </property>
   </action>
   <action name="action_save_results">
@@ -1531,16 +1303,6 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
-   </property>
-  </action>
-  <action name="action_kde_plot">
-   <property name="text">
-    <string>&amp;Kernel Density Estimate</string>
-   </property>
-  </action>
-  <action name="action_ecd_plot">
-   <property name="text">
-    <string>&amp;Estimated cumulative distribution</string>
    </property>
   </action>
   <action name="action_save_selection">
@@ -1582,116 +1344,6 @@ p, li { white-space: pre-wrap; }
   <action name="action_available_modules">
    <property name="text">
     <string>Available &amp;modules...</string>
-   </property>
-  </action>
-  <action name="actionKWIC_Keywords_in_context">
-   <property name="text">
-    <string>KWIC (Keywords in context)</string>
-   </property>
-  </action>
-  <action name="actionSingle_string">
-   <property name="text">
-    <string>Single context string</string>
-   </property>
-  </action>
-  <action name="actionContext_columns">
-   <property name="text">
-    <string>Context columns</string>
-   </property>
-  </action>
-  <action name="actionEdit_stop_word_list">
-   <property name="text">
-    <string>Edit stop word list..</string>
-   </property>
-  </action>
-  <action name="actionAdd_or_remove_grouping_column">
-   <property name="text">
-    <string>Add or remove grouping column...</string>
-   </property>
-  </action>
-  <action name="actionUse_grouping_functions">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Apply group functions</string>
-   </property>
-  </action>
-  <action name="actionUse_group_filters">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Use group filters</string>
-   </property>
-  </action>
-  <action name="actionFrequency_list">
-   <property name="text">
-    <string>Frequency list</string>
-   </property>
-  </action>
-  <action name="actionContingency_table">
-   <property name="text">
-    <string>Contingency table</string>
-   </property>
-  </action>
-  <action name="actionCollocations">
-   <property name="text">
-    <string>Collocations</string>
-   </property>
-  </action>
-  <action name="actionG_test_matrix">
-   <property name="text">
-    <string>G-test matrix</string>
-   </property>
-  </action>
-  <action name="actionUse_summary_functions">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Apply summary functions</string>
-   </property>
-  </action>
-  <action name="actionSelect_summary_functions">
-   <property name="text">
-    <string>Select summary functions...</string>
-   </property>
-  </action>
-  <action name="actionAdd_edit_or_remove_row_filter">
-   <property name="text">
-    <string>Add, edit or remove row filter...</string>
-   </property>
-  </action>
-  <action name="actionApply_row_filters">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Apply row filters</string>
-   </property>
-  </action>
-  <action name="actionDrop_duplicate_rows">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Drop duplicate rows</string>
-   </property>
-  </action>
-  <action name="actionAdd_edit_or_remove_group_filters">
-   <property name="text">
-    <string>Add, edit or remove group filters...</string>
-   </property>
-  </action>
-  <action name="actionSelect_group_functions">
-   <property name="text">
-    <string>Select group functions...</string>
-   </property>
-  </action>
-  <action name="actionContext_options">
-   <property name="text">
-    <string>Context options...</string>
    </property>
   </action>
   <action name="action_reference_corpus">
@@ -1740,11 +1392,6 @@ p, li { white-space: pre-wrap; }
   <action name="action_show_hidden">
    <property name="text">
     <string>Show &amp;hidden columns</string>
-   </property>
-  </action>
-  <action name="action_scatter_plot">
-   <property name="text">
-    <string>&amp;Scatter plot</string>
    </property>
   </action>
   <action name="action_add_column">
