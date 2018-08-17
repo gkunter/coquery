@@ -135,7 +135,7 @@ def main():
                     logging.INFO)
     log_handler_stdout = logging.StreamHandler()
     log_handler_stdout.setLevel(logging.DEBUG if options.cfg.verbose else
-                                logging.WARNING)
+                                logging.ERROR)
     log_handler_stdout.setFormatter(logging.Formatter(LOG_STRING))
     logger.addHandler(log_handler_stdout)
 
