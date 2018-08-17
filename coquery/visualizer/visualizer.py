@@ -214,6 +214,7 @@ class Visualizer(QtCore.QObject):
         self.z = kwargs.get("z")
         self.levels_x = kwargs.get("levels_x")
         self.levels_y = kwargs.get("levels_y")
+        self.levels_z = kwargs.get("levels_z")
         self.colorizer = kwargs.get("colorizer")
         self.plot_facet(data, color, **kwargs)
         self.set_titles()
