@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from coquery import __version__, DATE
 from .pyqt_compat import QtCore, QtWidgets
 from .ui.citeUi import Ui_CiteDialog
-from .classes import CoqWidgetFader
+from .widgets.coqwidgetfader import CoqWidgetFader
 
 
 class CiteDialog(QtWidgets.QDialog):

@@ -21,7 +21,7 @@ from coquery.unicode import utf8
 
 from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
 from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
-from .classes import CoqWidgetFader
+from .widgets.coqwidgetfader import CoqWidgetFader
 
 
 class IndependenceTestViewer(QtWidgets.QDialog):
@@ -301,4 +301,4 @@ class IndependenceTestViewer(QtWidgets.QDialog):
             cb.setText(self._latex)
             button = self.ui.button_copy_latex
 
-        CoqWidgetFader(button, 125).fade()
+        CoqWidgetFader(self.ui.textBrowser, 125).fade()

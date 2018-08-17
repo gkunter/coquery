@@ -13,7 +13,7 @@ from __future__ import division
 
 from .pyqt_compat import (QtCore, QtWidgets, get_toplevel_window, STYLE_WARN)
 from .ui.posHelperDialogUi import Ui_PosHelperDialog
-from .classes import CoqWidgetFader
+from .widgets.coqwidgetfader import CoqWidgetFader
 
 from coquery.unicode import utf8
 from coquery import options
