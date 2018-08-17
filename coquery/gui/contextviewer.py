@@ -22,6 +22,7 @@ except ImportError:
 from coquery import options
 from coquery.unicode import utf8
 from . import classes
+from coquery.gui.widgets.coqstaticbox import CoqStaticBox
 from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui.contextViewerUi import Ui_ContextView
 
@@ -319,7 +320,7 @@ class ContextViewAudio(ContextView):
         if ContextViewAudio._run_first:
             s = "Initializing sound system.<br><br>Please wait..."
             title = "Initializing sound system – Coquery"
-            msg_box = classes.CoqStaticBox(title, s, parent=self)
+            msg_box = CoqStaticBox(title, s, parent=self)
 
         from .textgridview import CoqTextgridView
 

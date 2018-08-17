@@ -49,6 +49,7 @@ from coquery.unicode import utf8
 from coquery.links import get_by_hash
 
 from . import classes
+from coquery.gui.widgets.coqstaticbox import CoqStaticBox
 from . import errorbox
 from .pyqt_compat import QtCore, QtWidgets, QtGui
 from .ui import coqueryUi
@@ -2409,7 +2410,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
                 s = "Reading query strings from <br><br><code>{}</code><br><br>Please wait...".format(options.cfg.input_path)
                 title = "Reading input file – Coquery"
-                msg_box = classes.CoqStaticBox(title, s)
+                msg_box = CoqStaticBox(title, s)
                 try:
                     self.new_session.prepare_queries()
                 except TokenParseError as e:
@@ -2517,7 +2518,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self._first_visualization_call = False
             title = "Loading visualization modules – Coquery"
             content = "Loading the visualization modules. Please wait..."
-            msg_box = classes.CoqStaticBox(title, content)
+            msg_box = CoqStaticBox(title, content)
         else:
             msg_box = None
 
