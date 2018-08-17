@@ -2,17 +2,15 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import (unicode_literals, print_function,
+                        absolute_import, division)
 
 import logging
 import os
@@ -24,7 +22,6 @@ from collections import deque
 from coquery import general
 from coquery import options
 from coquery import managers
-from coquery import session
 from coquery.unicode import utf8
 
 from .pyqt_compat import (QtCore, QtGui, QtWidgets,
@@ -106,7 +103,8 @@ class CoqThread(QtCore.QThread):
                 import cProfile
                 profiler = cProfile.Profile()
                 try:
-                    result = profiler.runcall(self.FUN, *self.args, **self.kwargs)
+                    result = profiler.runcall(self.FUN,
+                                              *self.args, **self.kwargs)
                 finally:
                     profiler.dump_stats(os.path.join(
                         general.get_home_dir(),
@@ -212,6 +210,7 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
         super(CoqHorizontalHeader, self).reset()
         self._selected_columns = []
 
+
 class CoqHelpBrowser(QtWidgets.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
         self.help_engine = help_engine
@@ -221,7 +220,8 @@ class CoqHelpBrowser(QtWidgets.QTextBrowser):
         if name.scheme() == "qthelp":
             return self.help_engine.fileData(name)
         else:
-            return super(CoqHelpBrowser, self).loadResource(resource_type, name)
+            return super(CoqHelpBrowser, self).loadResource(
+                resource_type, name)
 
 
 class CoqFeatureList(QtWidgets.QListWidget):
@@ -252,7 +252,8 @@ class CoqFeatureList(QtWidgets.QListWidget):
 
     def addItem(self, item):
         if not self.hasItem(item):
-            item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
+            item.setSizeHint(QtCore.QSize(self.itemWidth(),
+                                          self.itemHeight()))
             item.setToolTip(
                 "Drag feature '{}' to receiving feature tray".format(
                     item.text()))
@@ -447,6 +448,7 @@ class CoqClickableLabel(QtWidgets.QLabel):
         super(CoqClickableLabel, self).setText(s)
         self.textChanged.emit()
 
+
 class CoqWidgetFader(QtCore.QObject):
     def __init__(self, widget, duration=250):
         def blend(left, right, i, steps):
@@ -488,7 +490,8 @@ class CoqWidgetFader(QtCore.QObject):
 class CoqSwitch(QtWidgets.QWidget):
     toggled = QtCore.Signal()
 
-    def __init__(self, state=None, on="on", off="off", text="", *args, **kwargs):
+    def __init__(self, state=None, on="on", off="off", text="",
+                 *args, **kwargs):
         super(CoqSwitch, self).__init__(*args, **kwargs)
 
         self._layout = QtWidgets.QHBoxLayout(self)
@@ -513,7 +516,8 @@ class CoqSwitch(QtWidgets.QWidget):
         self._inner_layout.addWidget(self._check)
         #self._slider = QtWidgets.QSlider(self)
         #self._slider.setOrientation(QtCore.Qt.Horizontal)
-        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                           #QtWidgets.QSizePolicy.Preferred)
         #sizePolicy.setHorizontalStretch(0)
         #sizePolicy.setVerticalStretch(0)
         #self._slider.setSizePolicy(sizePolicy)
@@ -588,7 +592,8 @@ class CoqSwitch(QtWidgets.QWidget):
             #self._slider.setValue(1)
             self._label.setText(self._on_text)
 
-            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal,
+                                                  #QtGui.QPalette.Highlight)
             #s = """
             #{style_handle}
 
@@ -605,7 +610,8 @@ class CoqSwitch(QtWidgets.QWidget):
             self._check.setCheckState(QtCore.Qt.Unchecked)
             self._label.setText(self._off_text)
 
-            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Dark)
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal,
+                                                  #QtGui.QPalette.Dark)
             #s = """
             #{style_handle}
 
@@ -698,7 +704,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
         CoqGroupBox {{
             font: {title_weight};
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+                                              stop: 0 {button_button},
+                                              stop: 1 {button_midlight});
             border: 1px solid gray;
             border-radius: 2px;
             border-style: inset;
@@ -709,7 +716,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
             font: {title_weight};
 
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 {button_midlight}, stop: 1 {button_button});
+                                            stop: 0 {button_midlight},
+                                            stop: 1 {button_button});
             border-top: 1px;
             border-left: 1px;
             border-right: 1px;
@@ -753,7 +761,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
         CoqGroupBox::title {{
             font: {title_weight};
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+                                            stop: 0 {button_button},
+                                            stop: 1 {button_midlight});
             border-top: 1px;
             border-left: 1px;
             border-right: 1px;
@@ -796,7 +805,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
         if "title_weight" not in kwargs:
             kwargs["title_weight"] = "normal"
         palette = options.cfg.app.palette()
-        s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
+        s = s.format(path=os.path.join(options.cfg.base_path, "icons",
+                                       "small-n-flat", "PNG"),
                      sign_up="sign-minimize.png",
                      sign_down="sign-maximize.png",
                      icon_size=icon_size, header_size=header_size,
@@ -916,10 +926,12 @@ class CoqDetailBox(QtWidgets.QWidget):
             self.box = box
 
         self.frame = QtWidgets.QFrame(self)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
         self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
@@ -928,12 +940,15 @@ class CoqDetailBox(QtWidgets.QWidget):
         self.header_layout.setSpacing(4)
 
         self.header = QtWidgets.QPushButton(self.frame)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                           QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.header.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.header.sizePolicy().hasHeightForWidth())
         self.header.setSizePolicy(sizePolicy)
-        self.header.setStyleSheet("text-align: left; padding: 4px; padding-left: 1px;")
+        self.header.setStyleSheet(
+            "text-align: left; padding: 4px; padding-left: 1px;")
         self.header.clicked.connect(self.onClick)
         self.header_layout.addWidget(self.header)
 
@@ -1024,13 +1039,19 @@ class CoqDetailBox(QtWidgets.QWidget):
                     None))
                 self.header.setToolTip(s)
 
+                highlight = options.cfg.app.palette().color(
+                    QtGui.QPalette.Highlight)
+                darker_highlight = QtGui.QColor(highlight)
+                darker_highlight.setAlpha(0.5)
+
                 kwargs = {
                     "border": get_pal(QtGui.QPalette.Button),
-                    "hoverborder": get_pal(QtGui.QPalette.Highlight),
-                    "hoverhighlight": get_pal(QtGui.QPalette.Midlight),
-                    "hoverlowlight": get_pal(QtGui.QPalette.Button),
+                    "hoverborder": get_pal(QtGui.QPalette.Midlight),
+                    "hoverhighlight": get_pal(QtGui.QPalette.Highlight),
+                    "hoverlowlight": darker_highlight.name(),
                     "presshighlight": get_pal(QtGui.QPalette.Button),
-                    "presslowlight": get_pal(QtGui.QPalette.Midlight)}
+                    "presslowlight": get_pal(QtGui.QPalette.Midlight),
+                    "hovercolor": get_pal(QtGui.QPalette.HighlightedText)}
                 self.header.setStyleSheet("""
                     QPushButton {{
                         text-align: left;
@@ -1042,6 +1063,7 @@ class CoqDetailBox(QtWidgets.QWidget):
                         padding: 4px;
                         padding-left: 1px;
                         border: 1px solid {hoverborder};
+                        color: {hovercolor};
                         background-color: qLineargradient(
                             x1: 0, y1: 0, x2: 0, y2: 1,
                             stop: 0 {hoverhighlight},
@@ -1526,53 +1548,28 @@ class CoqTextEdit(QtWidgets.QTextEdit):
 
     def dropEvent(self, e):
         # get the relative position from the mime data
-        if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
+        if ("application/x-qabstractitemmodeldatalist"
+                in e.mimeData().formats()):
             label = e.mimeData().text()
             if label == "word_label":
                 self.insertPlainText("*")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "word_pos":
-                self.insertPlainText(".[*]")
+                self.insertPlainText("*.[*]")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "lemma_label":
                 self.insertPlainText("[*]")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "lemma_transcript":
                 self.insertPlainText("[/*/]")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "word_transcript":
                 self.insertPlainText("/*/")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
         elif e.mimeData().hasText():
             self.insertPlainText(e.mimeData().text())
             e.setDropAction(QtCore.Qt.CopyAction)
-            e.accept()
-        #x, y = map(int, mime.split(','))
 
-        #if e.keyboardModifiers() & QtCore.Qt.ShiftModifier:
-            ## copy
-            ## so create a new button
-            #button = Button('Button', self)
-            ## move it to the position adjusted with the cursor position at drag
-            #button.move(e.pos()-QtCore.QPoint(x, y))
-            ## show it
-            #button.show()
-            ## store it
-            #self.buttons.append(button)
-            ## set the drop action as Copy
-            #e.setDropAction(QtCore.Qt.CopyAction)
-        #else:
-            ## move
-            ## so move the dragged button (i.e. event.source())
-            #e.source().move(e.pos()-QtCore.QPoint(x, y))
-            ## set the drop action as Move
-            #e.setDropAction(QtCore.Qt.MoveAction)
-        # tell the QDrag we accepted it
         e.accept()
 
 
@@ -1947,7 +1944,9 @@ class CoqTagBox(QtWidgets.QWidget):
             e.pos() + self.drag.pixmap().rect().bottomRight() - self.drag.hotSpot())
 
         for i, tag in enumerate(self.cloud_area.itemList):
-            if tag.geometry().contains(current_rect.topLeft()) or             tag.geometry().contains(current_rect.bottomLeft()) and abs(i - self.ghost_index) == 1:
+            if (tag.geometry().contains(current_rect.topLeft()) or
+                    tag.geometry().contains(current_rect.bottomLeft()) and
+                    abs(i - self.ghost_index) == 1):
                 self.cloud_area.removeWidget(self.ghost_tag)
                 self.cloud_area.insertWidget(i, self.ghost_tag)
                 self.ghost_tag.show()
@@ -2121,18 +2120,20 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         super(CoqTableModel, self).__init__(parent, *args)
         self._parent = parent
 
-        self.content = df[[x for x in df.columns if not x.startswith("coquery_invisible")]]
-        self.invisible_content = df[[x for x in df.columns if x.startswith("coquery_invisible")]]
+        self.content = df[[x for x in df.columns
+                           if not x.startswith("coquery_invisible")]]
+        self.invisible_content = df[[x for x in df.columns
+                                     if x.startswith("coquery_invisible")]]
         self.header = self.content.columns
         self._session = session
-        self._manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+        self._manager = managers.get_manager(options.cfg.MODE,
+                                             session.Resource.name)
         self._align = []
         self._dtypes = []
 
         columns = self.header
         if len(columns) != len(columns.unique()):
-            logger.warn("Duplicate column headers: {}".format(columns))
-            print("Duplicate column headers: {}".format(columns))
+            logging.warn("Duplicate column headers: {}".format(columns))
             columns = columns.unique()
 
         # prepare look-up lists that speed up data retrieval:
@@ -2176,13 +2177,14 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def setData(self, index, value, role):
         col = self.content.columns[index.column()]
         row = self.content.index[index.row()]
+        tab = self._session.data_table
         if (role == QtCore.Qt.EditRole and
                 col.startswith("coq_userdata")):
             self.content[col][row] = value
             self.formatted[col][row] = value
             corpus_id = self.invisible_content.iloc[index.row()]["coquery_invisible_corpus_id"]
-            which = self._session.data_table.coquery_invisible_corpus_id == corpus_id
-            self._session.data_table[col][which] = value
+            which = tab.coquery_invisible_corpus_id == corpus_id
+            tab[col][which] = value
             self.dataChanged.emit(index, index)
             return True
         return False
@@ -2213,40 +2215,45 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
                 if num_to_str:
                     if all(as_int == source[col]):
-                        df[col] = as_int.apply(lambda x: str(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
+                        df[col] = as_int.apply(
+                            lambda x: str(x) if (
+                                x is not None and
+                                x is not pd.np.nan) else None)
                     else:
                         if col.startswith("statistics_g_test"):
                             val = abs(source[col])
                         else:
                             val = source[col]
 
-                        df[col] = val.apply(lambda x: options.cfg.float_format.format(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
+                        df[col] = val.apply(
+                            lambda x: options.cfg.float_format.format(x) if (
+                                x is not None and
+                                x is not pd.np.nan) else None)
                 else:
                     if all(as_int == source[col]):
-                        df[col] = as_int.apply(lambda x: int(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
+                        df[col] = as_int.apply(
+                            lambda x: int(x) if (
+                                x is not None and
+                                x is not pd.np.nan) else None)
                     else:
                         df[col] = source[col]
 
             # int
             elif dtype in (int, pd.np.int64):
                 if num_to_str:
-                    df[col] = source[col].apply(lambda x: str(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
+                    df[col] = source[col].apply(
+                        lambda x: str(x) if (
+                            x is not None and
+                            x is not pd.np.nan) else None)
                 else:
                     df[col] = source[col]
 
             # bool
             elif dtype == bool:
-                df[col] = source[col].apply(lambda x: ["no", "yes"][bool(x)] if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
+                df[col] = source[col].apply(
+                    lambda x: ["no", "yes"][bool(x)] if (
+                        x is not None and
+                        x is not pd.np.nan) else None)
             # object
             elif dtype == object:
                 df[col] = source[col]
@@ -2376,6 +2383,7 @@ class CoqHiddenTableModel(CoqTableModel):
             return self.formatted.values[index.row()][index.column()]
         else:
             return super(CoqHiddenTableModel, self).data(index, role)
+
 
 class CoqWidgetListView(QtWidgets.QListView):
     """
