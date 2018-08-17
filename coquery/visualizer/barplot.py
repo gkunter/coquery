@@ -16,12 +16,10 @@ from __future__ import unicode_literals
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
+import itertools
 
 from coquery.visualizer import visualizer as vis
 from coquery.gui.pyqt_compat import QtWidgets, QtCore
-
-from coquery.visualizer.colorizer import (
-    Colorizer, ColorizeByFactor, ColorizeByNum)
 
 
 class BarPlot(vis.Visualizer):
@@ -33,27 +31,26 @@ class BarPlot(vis.Visualizer):
     COL_COLUMN = "COQ_HUE"
     NUM_COLUMN = "COQ_NUM"
     RGB_COLUMN = "COQ_RGB"
-    SEM_COLUMN = "COQ_SEM"
+    SEM_COLUMN = "COQ_SEM"   # this column contains the standard error
     vertical = True
 
     def plt_func(self, **kwargs):
-        #def _errorbar(mean, sem):
-            #upper = mean + sem
-            #lower = mean - sem
-        data = kwargs.get("data")
         ax = sns.barplot(**kwargs)
 
+        data = kwargs.get("data")
+        style = {"linestyle": "", "ecolor": "black"}
+        # add error bars if there is a standard error column in the data set
         if self.SEM_COLUMN in data.columns:
             if kwargs.get("y") == self.NUM_COLUMN:
                 ax.errorbar(x=list(range(len(data))),
                             y=data[self.NUM_COLUMN],
                             yerr=data[self.SEM_COLUMN],
-                            linestyle="")
+                            **style)
             elif kwargs.get("x") == self.NUM_COLUMN:
                 ax.errorbar(y=list(range(len(data))),
                             x=data[self.NUM_COLUMN],
                             xerr=data[self.SEM_COLUMN],
-                            linestyle="")
+                            **style)
         return ax
 
     def get_custom_widgets(self, *args, **kwargs):
@@ -90,8 +87,7 @@ class BarPlot(vis.Visualizer):
         self.updateRequested.emit()
 
     def prepare_arguments(self, data, x, y, z,
-                          levels_x, levels_y, z_statistic=None,
-                          colorizer=None):
+                          levels_x, levels_y, z_statistic=None):
         """
         Return a dictionary representing the arguments that will be passed on
         to plt_func().
@@ -99,8 +95,7 @@ class BarPlot(vis.Visualizer):
         aggregator = vis.Aggregator()
 
         if (x and y and (data[x].dtype != object or data[y].dtype != object)):
-            # one of the two given variable is numeric, let seaborn do most
-            # of the magic
+            # one of the two given variable is numeric
             if data[x].dtype == object:
                 ax_cat, ax_num = "x", "y"
                 grouping, target = x, y
@@ -137,7 +132,7 @@ class BarPlot(vis.Visualizer):
             else:
                 aggregator.add(grouping, "count", name=numeric)
 
-            # Add hue variable to aggregation:
+            # Add color variable to aggregation:
             if z:
                 if z_statistic is None:
                     z_statistic = ("mode" if data[z].dtype == object else
@@ -157,10 +152,7 @@ class BarPlot(vis.Visualizer):
                 elif y and not x:
                     data[self.COL_COLUMN] = data[y]
                 else:
-                    data[self.COL_COLUMN] = data[hue]
-
-        if colorizer:
-            data[self.RGB_COLUMN] = colorizer.get_hues(data[self.COL_COLUMN])
+                    data[self.COL_COLUMN] = data[y]
 
         args = {ax_cat: grouping, "order": order,
                 ax_num: numeric,
@@ -169,64 +161,70 @@ class BarPlot(vis.Visualizer):
 
         return args
 
-    def plot_facet(self,
-                   data, color,
-                   x=None, y=None, z=None,
-                   levels_x=None, levels_y=None, levels_z=None,
-                   range_x=None, range_y=None, range_z=None,
-                   palette=None, color_number=None,
-                   **kwargs):
+    def plot_facet(self, data, color, **kwargs):
+        self.args = self.prepare_arguments(data, self.x, self.y, self.z,
+                                           self.levels_x, self.levels_y)
+        ax = self.plt_func(**self.args, ax=plt.gca())
+        self.colorize_artists(ax)
 
-        self._xlab = self.DEFAULT_LABEL
-        self._ylab = self.DEFAULT_LABEL
+    def colorize_artists(self, ax):
+        if ((self.x and not self.y) or (self.y and not self.x) or
+                (self.df[self.x].dtype != object) or
+                (self.df[self.y].dtype != object)):
+            # colorize one categorical series (either with or without a
+            # numeric series):
+            if not self.z:
+                if self.x and self.df[self.x].dtype == object:
+                    levels = self.levels_x
+                else:
+                    levels = self.levels_y
 
-        if (x and y and (data[x].dtype != object or data[y].dtype != object)):
-            # one of the two given variable is numeric, let seaborn do most
-            # of the magic
-            self._xlab = x
-            self._ylab = y
-        else:
-            if (x and not y) or (x and y and not BarPlot.vertical):
-                self._xlab = x
+                rgb = self.colorizer.get_hues(levels)
             else:
-                self._ylab = y
+                df = self.args["data"]
+                rgb = self.colorizer.get_hues(df[self.COL_COLUMN])
 
-        args = self.prepare_arguments(data, x, y, z, levels_x, levels_y)
+            assert len(ax.containers[0]) == len(rgb)
 
-        # Take care of a hue variable:
-        if z:
-            if args["data"][self.COL_COLUMN].dtype == object:
-                self._colorizer = ColorizeByFactor(
-                    palette, color_number, levels_z)
-                self._colorizer.set_title_frm("Most frequent {z}")
-            else:
-                self._colorizer = ColorizeByNum(
-                    palette, color_number, args["data"][self.COL_COLUMN])
-                self._colorizer.set_title_frm("Mean {z}")
-            cols = self._colorizer.get_hues(args["data"][self.COL_COLUMN])
-            self.legend_title = self._colorizer.legend_title(z)
-            self.legend_levels = self._colorizer.legend_levels()
+            for i, art in enumerate(ax.containers[0]):
+                art.set_facecolor(rgb[i])
         else:
-            self._colorizer = Colorizer(palette, color_number, args["order"])
-            cols = self._colorizer.get_hues(args["data"][x if x else y])
-            self.legend_title = args["hue"]
-            self.legend_levels = args["hue_order"]
+            # colorize two categorical series
+            data = self.args["data"]
+            rgb = self.colorizer.get_hues(data[self.COL_COLUMN])
+            data[self.RGB_COLUMN] = rgb
 
-        #self.legend_palette = self._colorizer.get_palette(
-            #n=len(self.legend_levels))
-
-        print(args)
-        ax = self.plt_func(**args, palette=cols, ax=plt.gca())
-
-        # add fix for cases where the bar color is specified by teh same
-        # column as either the first or the second data column:
-        if z and x and y:
             for i, cont in enumerate(ax.containers):
+                val_y = self.levels_y[i]
                 for j, art in enumerate(cont):
-                    if z == y:
-                        art.set_facecolor(self.legend_palette[j])
-                    elif z == x:
-                        art.set_facecolor(self.legend_palette[i])
+                    val_x = self.levels_x[j]
+                    row = data[(data[self.x] == val_x) &
+                               (data[self.y] == val_y)]
+                    if len(row):
+                        color = row[self.RGB_COLUMN].tolist()[0]
+                        art.set_facecolor(color)
+
+    def set_titles(self):
+        self._xlab, self._ylab = BarPlot.DEFAULT_LABEL, BarPlot.DEFAULT_LABEL
+        if self.args["x"] != self.NUM_COLUMN:
+            self._xlab = self.x
+        else:
+            self._ylab = self.y
+
+    def get_subordinated(self, x, y):
+        if x and y:
+            if self.df[y].dtype == object:
+                return y
+            else:
+                return x
+        else:
+            return x or y
+
+    def suggest_legend(self):
+        return (self.z or
+                not ((self.x and not self.y) or
+                     (self.y and not self.x) or
+                     (self.df[self.x].dtype != self.df[self.y].dtype)))
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
@@ -317,122 +315,123 @@ class StackedBars(BarPlot):
 
     @staticmethod
     def transform(series):
-        return series.values.cumsum()
+        return series.cumsum()
 
     @staticmethod
     def group_transform(grp, numeric):
         return grp[numeric].cumsum()
 
-    def plt_func(self, x, y, hue, order, hue_order, data, palette, ax,
-                 *args, **kwargs):
+    def suggest_legend(self):
         """
-        Plot the stacked bars.
-
-        The method uses the aggregated tables produced by the normal bar plot.
-        Either 'x' or 'y' is numeric and contains the count data, while the
-        other variable is the main grouping variable. The 'hue' variable
-        contains the subordinate category (if applicable).
+        Stacked bars will always suggest a legend.
         """
-        print(x, y, hue)
+        return True
 
-        if data[x].dtype == object:
+    def colorize_artists(self, ax):
+        if self.x and not self.y:
+            cols = self.colorizer.get_palette(len(self.levels_x))
+        elif self.y and not self.x:
+            cols = self.colorizer.get_palette(len(self.levels_y))
+        else:
+            cols = self.colorizer.get_palette(len(self.levels_y))
+
+        for col, cont in zip(cols, ax.containers[::-1]):
+            for act in cont:
+                act.set_facecolor(col)
+
+    def set_titles(self):
+        self._xlab, self._ylab = BarPlot.DEFAULT_LABEL, BarPlot.DEFAULT_LABEL
+        if self.x and not self.y:
+            self._xlab = self.x
+        elif self.y and not self.x:
+            self._ylab = self.y
+        else:
+            if self.df[self.y].dtype == object:
+                if self.df[self.x].dtype == object:
+                    if self.vertical:
+                        self._xlab = self.x
+                    else:
+                        self._ylab = self.y
+                else:
+                    self._ylab = self.y
+            else:
+                self._xlab = self.x
+
+    def prepare_arguments(self, data, x, y, z,
+                          levels_x, levels_y, z_statistic=None):
+        args = super(StackedBars, self).prepare_arguments(
+            data, x, y, z, levels_x, levels_y, z_statistic)
+
+        if args["x"] != self.NUM_COLUMN:
             num = "y"
             cat = "x"
-            category = x
-            numeric = y
+            category = args["x"]
         else:
             num = "x"
             cat = "y"
-            category = y
-            numeric = x
+            category = args["y"]
 
-        if hue or len(order) == 1:
-            # If a subordinate category is given as the 'hue' argument,
+        if args["hue"] or len(args["order"]) == 1:
+            # If a subordinate category is given as the 'z' argument,
             # the data is split into groups defined by the main category.
             # Within each group, the numeric variable is transformed using
             # the group_transform() method, which calculates the cumulative
             # sum within each group.
-            data = data.sort_values([category, hue])
+
+            # FIXME: I'm pretty sure that the code used below to calculate the
+            # cumulative sums can be streamlined!
+
+            levels = args["hue_order"]
+
+            data = args["data"].sort_values([category, args["hue"]])
             data = data.reset_index(drop=True)
 
-            if len(order) > 1:
-                data[numeric] = (data.groupby(category)
-                                        .apply(self.group_transform, numeric)
-                                        .reset_index(0)[numeric])
+            if len(data[category].unique()) > 1:
+                df = (data.groupby(category)
+                          .apply(self.group_transform, self.NUM_COLUMN)
+                          .reset_index(0))
+                data[self.NUM_COLUMN] = df[self.NUM_COLUMN]
+            else:
+                data[self.NUM_COLUMN] = self.transform(data[self.NUM_COLUMN])
 
-            values = hue_order
+            expand = pd.DataFrame(
+                data=list(itertools.product(args["order"],
+                                            args["hue_order"])),
+                columns=[category, self.COL_COLUMN])
 
+            df = (data.merge(expand, how="right")
+                      .sort_values(by=[category]))
         else:
             # If no subordinate category is given, or if the subordinate
             # category has just one value, the numeric variable is just the
             # cumulative sum:
-            values = self.transform(data[numeric])
 
-        for val, col in reversed(list(zip(values, palette))):
-            if hue:
-                # Create a data frame that merges the counts for the current
-                # hue value with all expected subordinate category values.
-                # This data frame is then used to plot the bars of the current
-                # hue value.
-                df = pd.merge(data[data[hue] == val],
-                              pd.DataFrame({category: order, hue: val}),
-                              how="right")
-                df = df.fillna(pd.np.nan)
-                df = df.sort_values(by=category)
-                df = df.reset_index(drop=True)
-
-                kwargs = {num: numeric, cat: category, "data": df}
+            if cat == "x":
+                levels = levels_x
             else:
-                kwargs = {num: val}
+                levels = levels_y
+            df = pd.DataFrame({category: levels})
+            df = df.merge(args["data"], how="left")
+            df[self.NUM_COLUMN] = self.transform(df[self.NUM_COLUMN])
+            df[self.COL_COLUMN] = df[category]
 
-            _ax = sns.barplot(**kwargs, color=col, ax=ax)
+        args = {num: self.NUM_COLUMN, cat: category,
+                "levels": levels, "data": df}
+        return args
 
-        # add fix for cases where the bar color is specified by teh same
-        # column as either the first or the second data column:
-        print(hue, x, y, category)
-        if hue and x and y:
-            rev = self.legend_palette
-            for i, cont in enumerate(_ax.containers):
-                for j, art in enumerate(cont):
-                    if hue == y:
-                        art.set_facecolor((self.legend_palette)[j])
-                    else:
-                        print(i, rev[i])
-                        art.set_facecolor(rev[1])
+    def plt_func(self, **kwargs):
+        levels = kwargs.pop("levels")
+        df = kwargs.pop("data")
 
+        for val in levels[::-1]:
+            _ax = sns.barplot(data=df[df[self.COL_COLUMN] == val], **kwargs)
 
-        self._category = category
-        self._values = values
-
+        if not (self.x and self.y):
+            if kwargs["x"] != self.NUM_COLUMN:
+                _ax.set_xticklabels([])
+            else:
+                _ax.set_yticklabels([])
         return _ax
-
-    def plot_facet(self, data, color, **kwargs):
-        super(StackedBars, self).plot_facet(data, color, **kwargs)
-
-        if not self.legend_levels:
-            if self._category == kwargs.get("x"):
-                self.legend_levels = kwargs.get("levels_x")
-            else:
-                self.legend_levels = kwargs.get("levels_x")
-            self.legend_title = self._category
-            self.legend_palette = self._colorizer.get_palette(
-                len(self.legend_levels))
-
-        #if not(kwargs.get("x") and kwargs.get("y")):
-            #if self._category == kwargs.get("x"):
-                #levels = kwargs.get("levels_x")
-            #else:
-                #levels = kwargs.get("levels_y")
-
-            #if self.legend_levels:
-                #self.legend_levels = ["{}: {}".format(x, y)
-                                #for x, y in zip(levels, self.legend_levels)]
-                ##self.legend_title = "{}: {}".format(
-                    ##self._category, self.legend_title)
-
-            #else:
-                #self.legend_levels = levels
-                #self.legend_title = self._category
 
     @classmethod
     def update_figure(cls, self, focus, sort):
