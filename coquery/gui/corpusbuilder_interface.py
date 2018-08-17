@@ -2,7 +2,7 @@
 """
 corpusbuilder_interface.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -29,6 +29,7 @@ from coquery.unicode import utf8
 from . import classes
 from . import errorbox
 from . import csvoptions
+from .threads import CoqThread
 from .pyqt_compat import QtCore, QtWidgets, QtGui, STYLE_WARN
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
 from .ui.corpusTableUi import Ui_CorpusTable
@@ -282,6 +283,8 @@ class MetaGui(QtWidgets.QDialog):
         namespace.lookup_ngram = False
         namespace.metadata = False
 
+        # FIXME: check if the following one-letter variables are still used
+        # in CorpusBuilder.build().
         if (hasattr(self.ui, "radio_only_module") and
                 self.ui.radio_only_module.isChecked()):
             namespace.o = False
@@ -337,10 +340,11 @@ class InstallerGui(MetaGui):
             try:
                 self.ui.notes_label.setBackgroundRole(
                     QtGui.QPalette.ColorRole.Base)
-            except:
+            except Exception as e:
                 s = ("corpusbuilder_interface.InstallerGui.__init__(): Could "
                      "not set background color of installation note box")
                 print(s)
+                print(str(e))
             self.ui.notes_label.setTextInteractionFlags(
                 QtCore.Qt.TextBrowserInteraction)
 
@@ -523,11 +527,11 @@ class InstallerGui(MetaGui):
         """
 
         if self.ui.radio_read_files.isChecked():
-            l = self.builder_class.get_file_list(
-                    str(self.ui.input_path.text()),
-                    self.builder_class.file_filter)
+            lst = self.builder_class.get_file_list(
+                str(self.ui.input_path.text()),
+                self.builder_class.file_filter)
             try:
-                self.builder_class.validate_files(l)
+                self.builder_class.validate_files(lst)
             except RuntimeError as e:
                 reply = QtWidgets.QMessageBox.question(
                     None, "Corpus path not valid – Coquery",
@@ -551,7 +555,7 @@ class InstallerGui(MetaGui):
         self.ui.yes_button.setEnabled(False)
         self.ui.widget_options.setEnabled(False)
 
-        self.install_thread = classes.CoqThread(self.do_install, self)
+        self.install_thread = CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
         self.install_thread.taskFinished.connect(self.finish_install)
         self.install_thread.taskException.connect(self.install_exception)
@@ -699,8 +703,7 @@ class BuilderGui(InstallerGui):
 
         if options.use_nltk:
             self._testing = True
-            self.test_thread = classes.CoqThread(self.test_nltk_core,
-                                                 parent=self)
+            self.test_thread = CoqThread(self.test_nltk_core, parent=self)
             self.test_thread.taskFinished.connect(self.test_nltk_results)
             self.test_thread.taskException.connect(self.test_nltk_exception)
             self._label_text = str(self.ui.label_pos_tagging.text())
@@ -1088,7 +1091,7 @@ class PackageGui(BuilderGui):
 
         self.ui.yes_button.setDisabled(True)
 
-        self.install_thread = classes.CoqThread(self.do_install, self)
+        self.install_thread = CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
         self.install_thread.taskFinished.connect(self.finish_install)
         self.install_thread.taskException.connect(self.install_exception)
@@ -1267,11 +1270,11 @@ class TableGui(MetaGui):
 
     def start_install(self):
         if self.ui.radio_read_files.isChecked():
-            l = self.builder_class.get_file_list(
-                    str(self.ui.input_path.text()),
-                    self.builder_class.file_filter)
+            lst = self.builder_class.get_file_list(
+                str(self.ui.input_path.text()),
+                self.builder_class.file_filter)
             try:
-                self.builder_class.validate_files(l)
+                self.builder_class.validate_files(lst)
             except RuntimeError as e:
                 reply = QtWidgets.QMessageBox.question(
                     None, "Corpus path not valid – Coquery",
@@ -1295,7 +1298,7 @@ class TableGui(MetaGui):
         self.ui.yes_button.setEnabled(False)
         self.ui.widget_options.setEnabled(False)
 
-        self.install_thread = classes.CoqThread(self.do_install, self)
+        self.install_thread = CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
         self.install_thread.taskFinished.connect(self.finish_install)
         self.install_thread.taskException.connect(self.install_exception)
