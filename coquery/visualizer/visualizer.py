@@ -81,8 +81,6 @@ class Aggregator(QtCore.QObject):
 
 
 class Visualizer(QtCore.QObject):
-    updateRequested = QtCore.Signal()
-
     axes_style = None
     plotting_context = "notebook"
 
@@ -104,17 +102,30 @@ class Visualizer(QtCore.QObject):
 
     def get_custom_widgets(self, *args, **kwargs):
         """
-        Return a list of widgets that add additional functionality to this
-        visualizer.
+        Return a tuple containing a description of the custom widgets for
+        this visualizer.
 
-        The visualizer should connect the widget signals to appropriate
-        class methods so that the current values are available to the
-        visualizer.
+        The tuple contains three lists:
+        (1) a list of widgets or layouts that will be added to the custom
+            widget layout of the visualization designer
+        (2) a list of signals that will activate the Apply button by calling
+            enable_apply_button()
+        (3) a list of signals that will update the widgets by calling
+            update_widgets()
         """
-        return []
+        return ([], [], [])
 
-    def update_figure(self):
-        return
+    def update_values(self):
+        """
+        Update the visualizer-specific variables with values obtained from
+        custom widgets.
+        """
+
+    def update_widgets(self):
+        """
+        Update the custom widgets in response to a change of a visualizer-
+        specifc widget.
+        """
 
     def get_grid(self, **kwargs):
         """
