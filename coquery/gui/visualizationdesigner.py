@@ -544,10 +544,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         vis_class = VisualizationDesigner.visualizers[
             figure_type.text()]
 
-        #if self.vis is not None:
-            #self.vis.updateRequested.disconnect()
-
-        self.vis = vis_class(self.df, self.session)
+        self.vis = vis_class(self.df, self.session,
+                             id_column="coquery_invisible_corpus_id")
         self.add_custom_widgets(self.vis)
         self.vis.updateRequested.connect(self.plot_figure)
 

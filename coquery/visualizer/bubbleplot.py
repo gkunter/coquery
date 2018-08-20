@@ -13,7 +13,7 @@ from __future__ import unicode_literals
 from __future__ import division
 import math
 
-from coquery.visualizer import visualizer as vis
+from coquery.visualizer import legacy_visualizer as vis
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -265,6 +265,7 @@ class Bubbleplot(vis.Visualizer):
             ax.set_aspect(1)
 
             a = 0
+            n = 0
 
             self.pos = [(None, None)] * len(df_freq.index)
 

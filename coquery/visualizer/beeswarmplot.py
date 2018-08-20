@@ -14,9 +14,6 @@ from __future__ import print_function
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from coquery import options
-
-from coquery.visualizer import visualizer as vis
 from coquery.visualizer import barcodeplot
 
 
@@ -25,7 +22,75 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
     name = "Beeswarm plot"
     icon = "Beeswarm_plot"
 
-    def plot_facet(self, data, color,
+    NUM_COLUMN = "coquery_invisible_corpus_id"
+
+    def prepare_arguments(self, data, x, y, z,
+                          levels_x, levels_y):
+        if not x and not y:
+            if not self.force_horizontal:
+                X = [""] * len(data)
+                Y = data[self.NUM_COLUMN]
+                self.horizontal = True
+            else:
+                X = data[self.NUM_COLUMN]
+                Y = [""] * len(data)
+                self.horizontal = False
+            O = None
+        elif x:
+            X = data[x]
+            Y = data[self.NUM_COLUMN]
+            O = levels_x
+            self.horizontal = True
+        else:
+            X = data[self.NUM_COLUMN]
+            Y = data[y]
+            O = levels_y
+            self.horizontal = False
+
+        if z:
+            palette = self.colorizer.get_palette(n=len(self.levels_z))
+            self.colorizer.set_reversed(True)
+            hue = self.colorizer.mpt_to_hex(
+                self.get_colors(data, self.colorizer, z))
+            self.colorizer.set_reversed(False)
+
+        else:
+            palette = self.colorizer.get_palette()
+            hue = self.colorizer.mpt_to_hex(
+                self.get_colors(data, self.colorizer, z))
+
+        return {"x": X, "y": Y, "order": O, "hue": hue, "palette": palette}
+
+    def set_titles(self):
+        if not self.x and not self.y:
+            if not self.force_horizontal:
+                self._xlab = ""
+            else:
+                self._ylab = ""
+        elif self.x:
+            self._xlab = self.x
+        else:
+            self._ylab = self.y
+
+        if not self.horizontal:
+            self._xlab = self.DEFAULT_LABEL
+        else:
+            self._ylab = self.DEFAULT_LABEL
+
+    def plot_facet(self, data, color, **kwargs):
+        self.args = self.prepare_arguments(data, self.x, self.y, self.z,
+                                           self.levels_x, self.levels_y)
+
+        sns.swarmplot(**self.args)
+
+        #self.legend_title = self.colorizer.legend_title(self.z)
+        #self.legend_palette = palette[::-1]
+        #if not (self.z == self.x or self.z == self.y):
+            #self.legend_levels = self.colorizer.legend_levels()
+        #else:
+            #self.legend_levels = []
+
+    def plot_facet_old(self, data, color,
                    x=None, y=None, z=None,
                    levels_x=None, levels_y=None,
                    levels_z=None, range_z=None,
@@ -34,23 +99,23 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
         if not x and not y:
             if not self.force_horizontal:
                 X = [""] * len(data)
-                Y = data["coquery_invisible_corpus_id"]
+                Y = data[self.NUM_COLUMN]
                 self._xlab = ""
                 self.horizontal = True
             else:
-                X = data["coquery_invisible_corpus_id"]
+                X = data[self.NUM_COLUMN]
                 Y = [""] * len(data)
                 self._ylab = ""
                 self.horizontal = False
             O = None
         elif x:
             X = data[x]
-            Y = data["coquery_invisible_corpus_id"]
+            Y = data[self.NUM_COLUMN]
             O = levels_x
             self._xlab = x
             self.horizontal = True
         else:
-            X = data["coquery_invisible_corpus_id"]
+            X = data[self.NUM_COLUMN]
             Y = data[y]
             O = levels_y
             self._ylab = y

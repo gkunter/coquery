@@ -88,7 +88,7 @@ class Visualizer(QtCore.QObject):
     DEFAULT_XLABEL = "X"
     DEFAULT_YLABEL = "Y"
 
-    def __init__(self, df, session):
+    def __init__(self, df, session, id_column=None):
         super(Visualizer, self).__init__()
         self.df = df
         self.session = session
@@ -99,6 +99,7 @@ class Visualizer(QtCore.QObject):
         self.aggregator = Aggregator()
         self.colorizer = None
         self._xlab, self._ylab = self.DEFAULT_XLABEL, self.DEFAULT_YLABEL
+        self._id_column = id_column
 
     def get_custom_widgets(self, *args, **kwargs):
         """

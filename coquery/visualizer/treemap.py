@@ -175,6 +175,7 @@ class TreeMap(vis.Visualizer):
             else:
                 aggregator.add(numeric, "mean")
 
+        # Add hue variable to aggregation:
         if z:
             if z == category:
                 hues = numeric
@@ -182,14 +183,13 @@ class TreeMap(vis.Visualizer):
             else:
                 hues = "COQ_HUE"
                 if data[z].dtype == object:
-                    fnc = _get_most_frequent
+                    fnc = "mode"
                     self._colorizer = ColorizeByFactor(
                         palette, color_number, levels_z)
                 else:
                     fnc = "max"
                     self._colorizer = ColorizeByNum(
-                        palette, color_number,
-                        data[z].min(), data[z].max(), data[z].dtype)
+                        palette, color_number, data[z])
                 aggregator.add(z, fnc, name=hues)
         else:
             hues = category

@@ -26,8 +26,6 @@ class BarcodePlot(vis.Visualizer):
     BOTTOM = 0.025
     COLOR = None
 
-    NUM_COLUMN = "coquery_invisible_corpus_id"
-
     name = "Barcode plot"
     icon = "Barcode_plot"
 
@@ -77,7 +75,12 @@ class BarcodePlot(vis.Visualizer):
             val = pd.Series([0] * len(data), index=data.index)
             levels = [None]
 
-        kwargs = {"values": data[self.NUM_COLUMN], "pos": val}
+        if self._id_column:
+            values = data[self._id_column]
+        else:
+            values = pd.Series(data.index)
+
+        kwargs = {"values": values, "pos": val}
 
         if x and not y:
             kwargs["horizontal"] = True
@@ -206,9 +209,6 @@ class HeatbarPlot(BarcodePlot):
     bandwidth = None
     plot_rug = False
     normalize = False
-
-    def __init__(self, *args, **kwargs):
-        super(HeatbarPlot, self).__init__(*args, **kwargs)
 
     def get_custom_widgets(self, *args, **kwargs):
         label = tr("HeatbarPlot", "Plot horizontal by default", None)
@@ -346,12 +346,17 @@ class HeatbarPlot(BarcodePlot):
 
         M = []
 
+        if self._id_column:
+            num_column = data[self._id_column]
+        else:
+            num_column = pd.Series(data.index)
+
         if x or y:
             self.horizontal = bool(x)
 
             for val in levels_x or levels_y:
                 binned = pd.np.zeros(1 + (size // bw))
-                values = (data[self.NUM_COLUMN][data[x or y] == val]).values
+                values = (num_column[data[x or y] == val]).values
                 for i in values:
                     binned = self.increment_bins(binned, i, bw)
 
@@ -360,7 +365,7 @@ class HeatbarPlot(BarcodePlot):
             self.horizontal = not self.force_horizontal
 
             binned = pd.np.zeros(1 + (size // bw))
-            values = data[self.NUM_COLUMN].values
+            values = num_column.values
             for i in values:
                 binned = self.increment_bins(binned, i, bw)
 
