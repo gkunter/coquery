@@ -2,7 +2,7 @@
 """
 timeseries.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,7 +14,7 @@ import math
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from coquery.gui.pyqt_compat import QtWidgets
+from coquery.gui.pyqt_compat import QtWidgets, tr
 
 
 class TimeSeries(vis.Visualizer):
@@ -30,41 +30,28 @@ class TimeSeries(vis.Visualizer):
     stacked = False
 
     def get_custom_widgets(self, *args, **kwargs):
-        layout = QtWidgets.QHBoxLayout()
-        label = QtWidgets.QApplication.instance().translate(
-                    "TimeSeries", "Bandwidth", None)
-        unit = QtWidgets.QApplication.instance().translate(
-                    "TimeSeries", " units", None)
-        button = QtWidgets.QApplication.instance().translate(
-                    "TimeSeries", "Apply", None)
+        label = tr("TimeSeries", "Bandwidth", None)
+        unit = tr("TimeSeries", " units", None)
 
-        TimeSeries.label_bandwidth = QtWidgets.QLabel(label)
-        TimeSeries.spin_bandwidth = QtWidgets.QSpinBox()
-        TimeSeries.spin_bandwidth.setValue(TimeSeries.bandwidth)
-        TimeSeries.spin_bandwidth.setSuffix(unit)
-        TimeSeries.spin_bandwidth.setMinimum(1)
-        TimeSeries.spin_bandwidth.setMaximum(9999)
-        TimeSeries.spin_bandwidth.setValue(TimeSeries.bandwidth)
-        TimeSeries.button_apply = QtWidgets.QPushButton(button)
-        TimeSeries.button_apply.setDisabled(True)
-        TimeSeries.button_apply.clicked.connect(
-            lambda: TimeSeries.update_figure(
-                self, TimeSeries.spin_bandwidth.value()))
-        TimeSeries.spin_bandwidth.valueChanged.connect(
-            lambda x: TimeSeries.button_apply.setEnabled(True))
-        layout.addWidget(TimeSeries.label_bandwidth)
-        layout.addWidget(TimeSeries.spin_bandwidth)
-        layout.addWidget(TimeSeries.button_apply)
+        layout = QtWidgets.QHBoxLayout()
+        self.label_bandwidth = QtWidgets.QLabel(label)
+        self.spin_bandwidth = QtWidgets.QSpinBox()
+        self.spin_bandwidth.setValue(self.bandwidth)
+        self.spin_bandwidth.setSuffix(unit)
+        self.spin_bandwidth.setMinimum(1)
+        self.spin_bandwidth.setMaximum(9999)
+        self.spin_bandwidth.setValue(self.bandwidth)
+
+        layout.addWidget(self.label_bandwidth)
+        layout.addWidget(self.spin_bandwidth)
         layout.setStretch(0, 1)
         layout.setStretch(1, 0)
-        layout.setStretch(2, 0)
-        return [layout]
+        return ([layout],
+                [self.spin_bandwidth.valueChanged],
+                [])
 
-    @classmethod
-    def update_figure(cls, self, i):
-        cls.bandwidth = i
-        TimeSeries.button_apply.setDisabled(True)
-        self.updateRequested.emit()
+    def update_values(self):
+        self.bandwidth = int(self.spin_bandwidth.value())
 
     def plot_facet(self, data, color,
                    x=None, y=None, z=None,
@@ -74,17 +61,15 @@ class TimeSeries(vis.Visualizer):
         def to_num(x):
             bw = TimeSeries.bandwidth
             val = pd.to_numeric(x, errors="coerce")
-            val = val.apply(lambda x: x if pd.isnull(x)
-                                      else
-                                      (int(x) // bw) * bw)
+            val = val.apply(
+                lambda x: x if pd.isnull(x) else (int(x) // bw) * bw)
             return val
 
         def to_year(x):
             bw = TimeSeries.bandwidth
             val = pd.to_datetime(x.astype(str), errors="coerce")
-            val = val.apply(lambda x: x if pd.isnull(x)
-                                      else
-                                      (int(x.year) // bw) * bw)
+            val = val.apply(
+                lambda x: x if pd.isnull(x) else (int(x.year) // bw) * bw)
             return val
 
         category = None
@@ -166,7 +151,7 @@ class TimeSeries(vis.Visualizer):
             self.legend_levels = levels
 
     def plot_func(self, S=None, df=None, *args, **kwargs):
-        if type(S) is not type(None):
+        if S is not None:
             pd.Series(S).plot.line(*args, **kwargs)
         else:
             df.plot.line(*args, **kwargs)
@@ -207,13 +192,13 @@ class StackedArea(TimeSeries):
     stacked = True
 
     def plot_func(self, S=None, df=None, *args, **kwargs):
-        if type(S) is not type(None):
+        if S is not None:
             self._transform(S=S).plot.area(stacked=True, *args, **kwargs)
         else:
             self._transform(df=df).plot.area(stacked=True, *args, **kwargs)
 
     def _transform(self, S=None, df=None):
-        if type(S) is not type(None):
+        if S is not None:
             return S
         else:
             return df
@@ -226,12 +211,9 @@ class PercentageArea(StackedArea):
     _default = "Percentage"
 
     def _transform(self, S=None, df=None):
-        print("perc")
-        if type(S) is not type(None):
-            print("S")
+        if S is not None:
             return pd.Series(data=[100] * len(S), index=S.index)
         else:
-            print("df")
             return df.apply(lambda x: x * 100 / sum(x), axis=1)
 
     def set_annotations(self, grid, values):

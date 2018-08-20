@@ -1,9 +1,12 @@
-""" Tree mapping based on http://hcil.cs.umd.edu/trs/91-03/91-03.html.
+# -*- coding: utf-8 -*-
+"""
+treemap.py is part of Coquery.
 
-Another Python implementation is given here:
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
-http://wiki.scipy.org/Cookbook/Matplotlib/TreeMap
-
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import division
@@ -24,7 +27,7 @@ from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByFreq, ColorizeByNum)
 
 from coquery import options
-from coquery.gui.pyqt_compat import QtWidgets, QtCore
+from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
 
 class TreeMap(vis.Visualizer):
@@ -38,87 +41,55 @@ class TreeMap(vis.Visualizer):
 
     axes_style = "white"
 
-    def __init__(self, *args, **kwargs):
-        super(TreeMap, self).__init__(*args, **kwargs)
-        self.aggregator = vis.Aggregator()
-
     def get_custom_widgets(self, *args, **kwargs):
-        layout = QtWidgets.QVBoxLayout()
-
-        label = QtWidgets.QApplication.instance().translate(
-                    "TreeMap", "Padding", None)
-        TreeMap.check_padding = QtWidgets.QCheckBox(label)
-        TreeMap.check_padding.setCheckState(
-            QtCore.Qt.Checked if TreeMap.box_padding else
+        label = tr("TreeMap", "Padding", None)
+        self.check_padding = QtWidgets.QCheckBox(label)
+        self.check_padding.setCheckState(
+            QtCore.Qt.Checked if self.box_padding else
             QtCore.Qt.Unchecked)
-        TreeMap.check_padding.stateChanged.connect(
-            lambda x: TreeMap.button_apply.setEnabled(True))
 
-        label = QtWidgets.QApplication.instance().translate(
-                    "TreeMap", "Draw border", None)
-        TreeMap.check_border = QtWidgets.QCheckBox(label)
-        TreeMap.check_border.setCheckState(
-            QtCore.Qt.Checked if TreeMap.box_border else
+        label = tr("TreeMap", "Draw border", None)
+        self.check_border = QtWidgets.QCheckBox(label)
+        self.check_border.setCheckState(
+            QtCore.Qt.Checked if self.box_border else
             QtCore.Qt.Unchecked)
-        TreeMap.check_border.stateChanged.connect(
-            lambda x: TreeMap.button_apply.setEnabled(True))
 
-        label = QtWidgets.QApplication.instance().translate(
-                    "TreeMap", "Draw text boxes", None)
-        TreeMap.check_boxes = QtWidgets.QCheckBox(label)
-        TreeMap.check_boxes.setCheckState(
-            QtCore.Qt.Checked if TreeMap.text_boxes else
+        label = tr("TreeMap", "Draw text boxes", None)
+        self.check_boxes = QtWidgets.QCheckBox(label)
+        self.check_boxes.setCheckState(
+            QtCore.Qt.Checked if self.text_boxes else
             QtCore.Qt.Unchecked)
-        TreeMap.check_boxes.stateChanged.connect(
-            lambda x: TreeMap.button_apply.setEnabled(True))
 
-        label = QtWidgets.QApplication.instance().translate(
-                    "TreeMap", "Rotate text", None)
-        TreeMap.check_rotate = QtWidgets.QCheckBox(label)
-        TreeMap.check_rotate.setCheckState(
-            QtCore.Qt.Checked if TreeMap.text_rotate else
+        label = tr("TreeMap", "Rotate text", None)
+        self.check_rotate = QtWidgets.QCheckBox(label)
+        self.check_rotate.setCheckState(
+            QtCore.Qt.Checked if self.text_rotate else
             QtCore.Qt.Unchecked)
-        TreeMap.check_rotate.stateChanged.connect(
-            lambda x: TreeMap.button_apply.setEnabled(True))
 
-        button = QtWidgets.QApplication.instance().translate(
-                    "Visualizer", "Apply", None)
-        TreeMap.button_apply = QtWidgets.QPushButton(button)
-        TreeMap.button_apply.setDisabled(True)
-        TreeMap.button_apply.clicked.connect(
-            lambda: TreeMap.update_figure(
-                self,
-                TreeMap.check_padding.checkState(),
-                TreeMap.check_border.checkState(),
-                TreeMap.check_boxes.checkState(),
-                TreeMap.check_rotate.checkState()))
+        hlayout1 = QtWidgets.QHBoxLayout()
+        hlayout1.addWidget(self.check_padding)
+        hlayout1.addWidget(self.check_border)
+        hlayout1.setStretch(0, 1)
+        hlayout1.setStretch(1, 1)
 
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(TreeMap.check_padding)
-        hlayout.addWidget(TreeMap.check_border)
-        hlayout.setStretch(0, 1)
-        hlayout.setStretch(1, 1)
-        layout.addLayout(hlayout)
+        hlayout2 = QtWidgets.QHBoxLayout()
+        hlayout2.addWidget(self.check_boxes)
+        hlayout2.addWidget(self.check_rotate)
+        hlayout2.setStretch(0, 1)
+        hlayout2.setStretch(1, 1)
 
-        hlayout = QtWidgets.QHBoxLayout()
-        hlayout.addWidget(TreeMap.check_boxes)
-        hlayout.addWidget(TreeMap.check_rotate)
-        hlayout.setStretch(0, 1)
-        hlayout.setStretch(1, 1)
-        layout.addLayout(hlayout)
+        return ([hlayout1, hlayout2],
+                [self.check_padding.stateChanged,
+                 self.check_border.stateChanged,
+                 self.check_boxes.stateChanged,
+                 self.check_rotate.stateChanged],
+                [])
 
-        layout.addWidget(TreeMap.button_apply)
-
-        return [layout]
-
-    @classmethod
-    def update_figure(cls, self, padding, border, boxes, rotate):
-        cls.box_border = bool(border)
-        cls.box_padding = bool(padding)
-        cls.text_boxes = bool(boxes)
-        cls.text_rotate = bool(rotate)
-        cls.button_apply.setDisabled(True)
-        self.updateRequested.emit()
+    def update_values(self):
+        self.box_border = self.check_border.isChecked()
+        self.box_padding = self.check_padding.isChecked()
+        self.text_boxes = self.check_boxes.isChecked()
+        self.text_rotate = self.check_rotate.isChecked()
 
     def transform(self, rect, x, y, dx, dy):
         if not self.box_padding:
@@ -177,12 +148,14 @@ class TreeMap(vis.Visualizer):
         numeric = None
         second_category = None
 
+        aggregator = vis.Aggregator()
+
         if (x and data[x].dtype == object and
                 y and data[y].dtype == object):
             category = x
             second_category = y
             numeric = "COQ_FREQ"
-            self.aggregator.add(second_category, "count", name=numeric)
+            aggregator.add(second_category, "count", name=numeric)
         else:
             if x:
                 if data.dtypes[x] == object:
@@ -198,9 +171,9 @@ class TreeMap(vis.Visualizer):
 
             if not numeric:
                 numeric = "COQ_FREQ"
-                self.aggregator.add(category, "count", name=numeric)
+                aggregator.add(category, "count", name=numeric)
             else:
-                self.aggregator.add(numeric, "mean")
+                aggregator.add(numeric, "mean")
 
         if z:
             if z == category:
@@ -217,13 +190,13 @@ class TreeMap(vis.Visualizer):
                     self._colorizer = ColorizeByNum(
                         palette, color_number,
                         data[z].min(), data[z].max(), data[z].dtype)
-                self.aggregator.add(z, fnc, name=hues)
+                aggregator.add(z, fnc, name=hues)
         else:
             hues = category
             self._colorizer = Colorizer(palette, color_number,
                                         levels_x or levels_y)
         if second_category:
-            df = self.aggregator.process(data, [category, second_category])
+            df = aggregator.process(data, [category, second_category])
             _df = (df[[category, numeric]].drop_duplicates()
                                           .groupby(category)
                                           .agg({numeric: "sum"})
@@ -231,7 +204,7 @@ class TreeMap(vis.Visualizer):
                                           .sort_values([numeric, category]))
             values = _df[numeric].values
         else:
-            df = self.aggregator.process(data, category)
+            df = aggregator.process(data, category)
             df = df.sort_values([numeric, category])
             values = df[numeric].values
 
@@ -277,7 +250,6 @@ class TreeMap(vis.Visualizer):
                     self.draw_rect(sr, col,
                                    frm.format(xval, yval, count),
                                    rx + dx, ry + dy)
-
         ax = plt.gca()
         ax.set(xticklabels=[], xlim=[0, norm_x])
         ax.set(yticklabels=[], ylim=[0, norm_y])
