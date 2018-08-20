@@ -2,7 +2,7 @@
 """
 pyqt_compat.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -49,6 +49,10 @@ if sys.platform == 'win32':
 else:
     frameShadow = QtWidgets.QFrame.Raised
     frameShape = QtWidgets.QFrame.StyledPanel
+
+
+def tr(*args, **kwargs):
+    return QtWidgets.QApplication.instance().translate(*args, **kwargs)
 
 
 def get_toplevel_window(name="MainWindow"):

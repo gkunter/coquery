@@ -937,8 +937,9 @@ class BuilderGui(InstallerGui):
 
         namespace.metadata_column = self._metafile_column
         namespace.metaoptions = self._meta_options
-        namespace.db_name = "coq_{}".format(namespace.name).lower()
         namespace.one_file = self._onefile
+        namespace.name = utf8(self.ui.corpus_name.text())
+        namespace.db_name = "coq_{}".format(namespace.name).lower()
         return namespace
 
 

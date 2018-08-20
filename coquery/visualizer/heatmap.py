@@ -9,11 +9,12 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
+import logging
 import seaborn as sns
 import pandas as pd
 
 from coquery.visualizer import visualizer as vis
-from coquery.gui.pyqt_compat import QtWidgets
+from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
 
 def _annotate_heatmap(self, ax, mesh):
@@ -30,12 +31,13 @@ def _annotate_heatmap(self, ax, mesh):
         height, width = self.annot_data.shape
         xpos, ypos = pd.np.meshgrid(pd.np.arange(width) + 0.5,
                                     pd.np.arange(height) + 0.5)
-        print(xpos, ypos, mesh, self.annot_data)
+        logging.debug("{}, {}\n\t{}\n\t{}".format(
+            xpos, ypos, mesh, self.annot_data))
         for x, y, m, color, val in zip(xpos.flat, ypos.flat,
                                        mesh.get_array(),
                                        mesh.get_facecolors(),
                                        self.annot_data.flat):
-            print(m, pd.np.ma.masked)
+            logging.debug("\t\t{}{}".format(m, pd.np.ma.masked))
             if m is not pd.np.ma.masked:
                 _, l, _ = colorsys.rgb_to_hls(*color[:3])
                 text_color = ".15" if l > .408 else "w"
@@ -47,6 +49,7 @@ def _annotate_heatmap(self, ax, mesh):
         print(e)
         raise e
 
+
 if sns.__version__ < "0.7.0" or True:
     sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
 
@@ -55,10 +58,17 @@ class Heatmap(vis.Visualizer):
     name = "Heatmap"
     icon = "Heatmap"
 
-    normalization = 0
+    center = None
+
+    NORM_BY_ROW = "By row"
+    NORM_BY_COLUMN = "By column"
+    NORM_ACROSS = "Across all cells"
+    NORM_NONE = "No normalization"
+
+    NORMALIZATIONS = [NORM_BY_ROW, NORM_BY_COLUMN, NORM_ACROSS, NORM_NONE]
+    normalization = NORM_NONE
 
     def plot_facet(self, data, color, **kwargs):
-
         def get_crosstab(data, row_fact, col_fact, row_names, col_names):
             ct = pd.crosstab(data[row_fact], data[col_fact])
             ct = ct.reindex_axis(row_names, axis=0).fillna(0)
@@ -137,61 +147,79 @@ class Heatmap(vis.Visualizer):
             self._xlab = "Frequency"
 
         fmt = ".1%"
-        if Heatmap.normalization == 1:
+        if self.normalization == self.NORM_BY_ROW:
             ct = ct.apply(lambda col: col / sum(col), axis="columns")
-        elif Heatmap.normalization == 2:
+        elif self.normalization == self.NORM_BY_COLUMN:
             ct = ct.apply(lambda row: row / sum(row), axis="rows")
-        elif Heatmap.normalization == 3:
+        elif self.normalization == self.NORM_ACROSS:
             ct = pd.DataFrame(ct.values / ct.values.sum(),
                               columns=ct.columns, index=ct.index)
         else:
             fmt = "g"
 
+        if self.center is None or self.normalization == self.NORM_NONE:
+            center = None
+        else:
+            center = self.center / 100
+
         sns.heatmap(ct.fillna(0),
                     robust=True,
                     annot=True,
                     cbar=False,
+                    center=center,
                     cmap=cmap,
                     fmt=fmt,
                     linewidths=1)
 
     def get_custom_widgets(self, *args, **kwargs):
-        layout = QtWidgets.QHBoxLayout()
+        text_normalization = tr("HeatMap", "Normalization", None)
+        text_centering = tr("HeatMap", "Use centering value", None)
 
-        tr = QtWidgets.QApplication.instance().translate
+        self.label_normalization = QtWidgets.QLabel(text_normalization)
+        self.combo_normalize = QtWidgets.QComboBox()
+        self.combo_normalize.addItems(
+            [tr("HeatMap", text, None) for text in self.NORMALIZATIONS])
+        self.combo_normalize.setCurrentIndex(
+            self.NORMALIZATIONS.index(self.normalization))
 
-        label = tr("HeatMap", "Normalization", None)
-        rowwise = tr("HeatMap", "By row", None)
-        columnwise = tr("HeatMap", "By column", None)
-        tablewise = tr("HeatMap", "Across all cells", None)
-        no_normalization = tr("HeatMap", "No normalization", None)
-        button = tr("HeatMap", "Apply", None)
+        self.check_centering = QtWidgets.QCheckBox(text_centering)
+        self.spin_centering = QtWidgets.QDoubleSpinBox()
 
-        Heatmap.label_normalization = QtWidgets.QLabel(label)
-        Heatmap.combo_normalize = QtWidgets.QComboBox()
-        Heatmap.combo_normalize.addItems(
-            [no_normalization, rowwise, columnwise, tablewise])
-        Heatmap.combo_normalize.setCurrentIndex(Heatmap.normalization)
-        Heatmap.button_apply = QtWidgets.QPushButton(button)
-        Heatmap.button_apply.setDisabled(True)
-        Heatmap.button_apply.clicked.connect(
-            lambda: Heatmap.update_figure(
-                self, Heatmap.combo_normalize.currentIndex()))
-        Heatmap.combo_normalize.currentIndexChanged.connect(
-            lambda x: Heatmap.button_apply.setEnabled(True))
-        layout.addWidget(Heatmap.label_normalization)
-        layout.addWidget(Heatmap.combo_normalize)
-        layout.addWidget(Heatmap.button_apply)
-        layout.setStretch(0, 1)
-        layout.setStretch(1, 0)
-        layout.setStretch(2, 0)
-        return [layout]
+        if self.center is None:
+            self.check_centering.setCheckState(QtCore.Qt.Unchecked)
+        else:
+            self.check_centering.setCheckState(QtCore.Qt.Checked)
+            self.spin_centering.setValue(self.center)
+        self.spin_centering.setDisabled(self.center is None)
 
-    @classmethod
-    def update_figure(cls, self, i):
-        cls.normalization = i
-        Heatmap.button_apply.setDisabled(True)
-        self.updateRequested.emit()
+        norm_layout = QtWidgets.QHBoxLayout()
+        norm_layout.addWidget(self.label_normalization)
+        norm_layout.addWidget(self.combo_normalize)
+        norm_layout.setStretch(0, 1)
+        norm_layout.setStretch(1, 0)
+
+        center_layout = QtWidgets.QHBoxLayout()
+        center_layout.addWidget(self.check_centering)
+        center_layout.addWidget(self.spin_centering)
+        center_layout.setStretch(0, 1)
+        center_layout.setStretch(1, 0)
+
+        return ([norm_layout, center_layout],
+                [self.combo_normalize.currentIndexChanged,
+                 self.check_centering.stateChanged,
+                 self.spin_centering.valueChanged],
+                [self.check_centering.stateChanged])
+
+    def update_widgets(self):
+        self.spin_centering.setEnabled(self.check_centering.isChecked())
+
+    def update_values(self):
+        if self.check_centering.isChecked():
+            self.center = float(self.spin_centering.value())
+        else:
+            self.center = None
+        ix = int(self.combo_normalize.currentIndex())
+        self.normalization = self.NORMALIZATIONS[ix]
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):

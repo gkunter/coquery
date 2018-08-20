@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import itertools
 
 from coquery.visualizer import visualizer as vis
-from coquery.gui.pyqt_compat import QtWidgets, QtCore
+from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
 
 class BarPlot(vis.Visualizer):
@@ -54,37 +54,18 @@ class BarPlot(vis.Visualizer):
         return ax
 
     def get_custom_widgets(self, *args, **kwargs):
-        layout = QtWidgets.QHBoxLayout()
-        label = QtWidgets.QApplication.instance().translate(
-                    "BarPlot", "Prefer vertical bars where possible", None)
-        button = QtWidgets.QApplication.instance().translate(
-                    "Visualizer", "Apply", None)
+        label = tr("BarPlot", "Prefer vertical bars where possible", None)
 
-        BarPlot.check_direction = QtWidgets.QCheckBox(label)
-        BarPlot.check_direction.setCheckState(
-            QtCore.Qt.Checked if BarPlot.vertical else
-            QtCore.Qt.Unchecked)
+        self.check_direction = QtWidgets.QCheckBox(label)
+        self.check_direction.setCheckState(
+            QtCore.Qt.Checked if self.vertical else QtCore.Qt.Unchecked)
 
-        BarPlot.button_apply = QtWidgets.QPushButton(button)
-        BarPlot.button_apply.setDisabled(True)
-        BarPlot.button_apply.clicked.connect(
-            lambda: BarPlot.update_figure(
-                self, BarPlot.check_direction.checkState()))
+        return ([self.check_direction],
+                [self.check_direction.stateChanged],
+                [])
 
-        BarPlot.check_direction.stateChanged.connect(
-            lambda x: BarPlot.button_apply.setEnabled(True))
-
-        layout.addWidget(BarPlot.check_direction)
-        layout.addWidget(BarPlot.button_apply)
-        layout.setStretch(0, 1)
-        layout.setStretch(1, 0)
-        return [layout]
-
-    @classmethod
-    def update_figure(cls, self, i):
-        cls.vertical = bool(i)
-        BarPlot.button_apply.setDisabled(True)
-        self.updateRequested.emit()
+    def update_values(self):
+        self.vertical = self.check_direction.isChecked()
 
     def prepare_arguments(self, data, x, y, z,
                           levels_x, levels_y, z_statistic=None):
@@ -313,6 +294,11 @@ class StackedBars(BarPlot):
 
         #return [layout]
 
+    #def update_figure(cls, self, focus, sort):
+        #cls.focus = focus
+        #cls.sort = sort
+        #cls.button_apply.setDisabled(True)
+
     @staticmethod
     def transform(series):
         return series.cumsum()
@@ -432,13 +418,6 @@ class StackedBars(BarPlot):
             else:
                 _ax.set_yticklabels([])
         return _ax
-
-    @classmethod
-    def update_figure(cls, self, focus, sort):
-        cls.focus = focus
-        cls.sort = sort
-        cls.button_apply.setDisabled(True)
-        self.updateRequested.emit()
 
 
 class PercentBars(StackedBars):

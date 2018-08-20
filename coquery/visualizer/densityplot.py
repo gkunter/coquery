@@ -2,7 +2,7 @@
 """
 densityplot.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,7 +15,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from coquery.visualizer import visualizer as vis
-from coquery.gui.pyqt_compat import QtWidgets, QtCore
+from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
 from coquery.visualizer.colorizer import Colorizer
 
@@ -33,58 +33,39 @@ class DensityPlot(vis.Visualizer):
     alpha = 50
 
     def get_custom_widgets(self, *args, **kwargs):
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QApplication.instance().translate(
-                    "DensityPlot", "Transparency", None)
-        button = QtWidgets.QApplication.instance().translate(
-                    "DensityPlot", "Apply", None)
-        check = QtWidgets.QApplication.instance().translate(
-                    "DensityPlot", "Use shading", None)
+        label = tr("DensityPlot", "Shade transparency", None)
+        check = tr("DensityPlot", "Use shading", None)
 
-        DensityPlot.label_transparency = QtWidgets.QLabel(label)
+        self.label_transparency = QtWidgets.QLabel(label)
 
-        DensityPlot.slider = QtWidgets.QSlider()
-        DensityPlot.slider.setOrientation(QtCore.Qt.Horizontal)
-        DensityPlot.slider.setMinimum(0)
-        DensityPlot.slider.setMaximum(100)
-        DensityPlot.slider.setSingleStep(1)
-        DensityPlot.slider.setPageStep(1)
-        DensityPlot.slider.setValue(DensityPlot.alpha)
-        DensityPlot.slider.setTickPosition(DensityPlot.slider.TicksAbove)
+        self.slider = QtWidgets.QSlider()
+        self.slider.setOrientation(QtCore.Qt.Horizontal)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(100)
+        self.slider.setSingleStep(1)
+        self.slider.setPageStep(1)
+        self.slider.setValue(self.alpha)
+        self.slider.setTickPosition(self.slider.TicksAbove)
 
-        DensityPlot.check_shading = QtWidgets.QCheckBox(check)
-        DensityPlot.check_shading.setChecked(DensityPlot.shading)
-        DensityPlot.check_shading.toggled.connect(
-            lambda x: DensityPlot.button_apply.setEnabled(True))
-        DensityPlot.slider.valueChanged.connect(
-            lambda x: DensityPlot.button_apply.setEnabled(True))
-
-        DensityPlot.button_apply = QtWidgets.QPushButton(button)
-        DensityPlot.button_apply.setDisabled(True)
-        DensityPlot.button_apply.clicked.connect(
-            lambda: DensityPlot.update_figure(
-                self,
-                val=DensityPlot.slider.value(),
-                shading=DensityPlot.check_shading.isChecked()))
+        self.check_shading = QtWidgets.QCheckBox(check)
+        self.check_shading.setChecked(self.shading)
 
         slide_layout = QtWidgets.QHBoxLayout()
-        slide_layout.addWidget(DensityPlot.label_transparency)
-        slide_layout.addWidget(DensityPlot.slider)
+        slide_layout.addWidget(self.label_transparency)
+        slide_layout.addWidget(self.slider)
         slide_layout.setStretch(0, 0)
         slide_layout.setStretch(1, 1)
 
-        layout.addLayout(slide_layout)
-        layout.addWidget(DensityPlot.check_shading)
-        layout.addWidget(DensityPlot.button_apply)
+        return ([self.check_shading, slide_layout],
+                [self.check_shading.toggled, self.slider.valueChanged],
+                [self.check_shading.toggled])
 
-        return [layout]
+    def update_widgets(self):
+        self.slider.setEnabled(self.check_shading.isChecked())
 
-    @classmethod
-    def update_figure(cls, self, val, shading):
-        cls.alpha = val
-        cls.shading = shading
-        DensityPlot.button_apply.setDisabled(True)
-        self.updateRequested.emit()
+    def update_values(self):
+        self.shading = self.check_shading.isChecked()
+        self.alpha = int(self.slider.value())
 
     def plt(self, *args, shade=None, alpha=None, **kwargs):
         if shade:
@@ -95,8 +76,8 @@ class DensityPlot(vis.Visualizer):
                    levels_x=None, levels_y=None, levels_z=None,
                    color_number=None, palette=None, *args, **kwargs):
 
-        args = {"shade": DensityPlot.shading,
-                "alpha": 1 - DensityPlot.alpha / 100,
+        args = {"shade": self.shading,
+                "alpha": 1 - self.alpha / 100,
                 "ax": plt.gca()}
 
         self._xlab = x or self._default

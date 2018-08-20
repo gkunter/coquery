@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from coquery.visualizer import visualizer as vis
-from coquery.gui.pyqt_compat import QtWidgets, QtCore
+from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
 
 class BarcodePlot(vis.Visualizer):
@@ -36,38 +36,19 @@ class BarcodePlot(vis.Visualizer):
     force_horizontal = True
 
     def get_custom_widgets(self, *args, **kwargs):
-        layout = QtWidgets.QHBoxLayout()
-        label = QtWidgets.QApplication.instance().translate(
-                    "BarcodePlot", "Plot horizontal by default", None)
-        button = QtWidgets.QApplication.instance().translate(
-                    "Visualizer", "Apply", None)
+        label = tr("BarcodePlot", "Plot horizontal by default", None)
 
-        BarcodePlot.check_horizontal = QtWidgets.QCheckBox(label)
-        BarcodePlot.check_horizontal.setCheckState(
-            QtCore.Qt.Checked if BarcodePlot.force_horizontal else
+        self.check_horizontal = QtWidgets.QCheckBox(label)
+        self.check_horizontal.setCheckState(
+            QtCore.Qt.Checked if self.force_horizontal else
             QtCore.Qt.Unchecked)
 
-        BarcodePlot.button_apply = QtWidgets.QPushButton(button)
-        BarcodePlot.button_apply.setDisabled(True)
-        BarcodePlot.button_apply.clicked.connect(
-            lambda: BarcodePlot.update_figure(
-                self, BarcodePlot.check_horizontal.checkState()))
+        return ([self.check_horizontal],
+                [self.check_horizontal.stateChanged],
+                [])
 
-        BarcodePlot.check_horizontal.stateChanged.connect(
-            lambda x: BarcodePlot.button_apply.setEnabled(True))
-
-        layout.addWidget(BarcodePlot.check_horizontal)
-        layout.addWidget(BarcodePlot.button_apply)
-        layout.setStretch(0, 1)
-        layout.setStretch(1, 0)
-        self._layout = layout
-        return [layout]
-
-    @classmethod
-    def update_figure(cls, self, i):
-        cls.force_horizontal = bool(i)
-        BarcodePlot.button_apply.setDisabled(True)
-        self.updateRequested.emit()
+    def update_values(self):
+        self.force_horizontal = self.check_horizontal.isChecked()
 
     def prepare_ax_kwargs(self, data, x, y, z, levels_x, levels_y, **kwargs):
         if x and not y:
@@ -222,7 +203,7 @@ class HeatbarPlot(BarcodePlot):
     BOTTOM = 0.0
     COLOR = "Black"
 
-    custom_bandwidth = None
+    bandwidth = None
     plot_rug = False
     normalize = False
 
@@ -230,86 +211,60 @@ class HeatbarPlot(BarcodePlot):
         super(HeatbarPlot, self).__init__(*args, **kwargs)
 
     def get_custom_widgets(self, *args, **kwargs):
-        layout = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QApplication.instance().translate(
-                    "HeatbarPlot", "Plot horizontal by default", None)
-        button = QtWidgets.QApplication.instance().translate(
-                    "Visualizer", "Apply", None)
-        bandwidth_text = QtWidgets.QApplication.instance().translate(
-            "HeatbarPlot", "Use custom bandwidth:", None)
-        suffix_text = QtWidgets.QApplication.instance().translate(
-            "HeatbarPlot", " words", None)
-        rug_text = QtWidgets.QApplication.instance().translate(
-            "HeatbarPlot", "Add coloured rugs", None)
-        normalize_text = QtWidgets.QApplication.instance().translate(
-            "HeatbarPlot", "Normalize within groups", None)
+        label = tr("HeatbarPlot", "Plot horizontal by default", None)
+        bandwidth_text = tr("HeatbarPlot", "Use custom bandwidth:", None)
+        suffix_text = tr("HeatbarPlot", " words", None)
+        rug_text = tr("HeatbarPlot", "Add coloured rugs", None)
+        normalize_text = tr("HeatbarPlot", "Normalize within groups", None)
 
-        HeatbarPlot.check_bandwidth = QtWidgets.QCheckBox(bandwidth_text)
-        HeatbarPlot.spin_bandwidth = QtWidgets.QSpinBox(
-            HeatbarPlot.custom_bandwidth)
-        HeatbarPlot.spin_bandwidth.setDisabled(True)
-        HeatbarPlot.spin_bandwidth.setSuffix(suffix_text)
-        HeatbarPlot.spin_bandwidth.setMaximum(99999999)
-        HeatbarPlot.spin_bandwidth.setMinimum(5)
-        HeatbarPlot.spin_bandwidth.setSingleStep(1)
+        self.check_bandwidth = QtWidgets.QCheckBox(bandwidth_text)
+        self.spin_bandwidth = QtWidgets.QSpinBox(self.bandwidth)
+        self.spin_bandwidth.setDisabled(True)
+        self.spin_bandwidth.setSuffix(suffix_text)
+        self.spin_bandwidth.setMaximum(99999999)
+        self.spin_bandwidth.setMinimum(5)
+        self.spin_bandwidth.setSingleStep(1)
+        self.layout_bandwidth = QtWidgets.QHBoxLayout()
+        self.layout_bandwidth.addWidget(self.check_bandwidth)
+        self.layout_bandwidth.addWidget(self.spin_bandwidth)
 
-        spin_layout = QtWidgets.QHBoxLayout()
-        spin_layout.addWidget(HeatbarPlot.check_bandwidth)
-        spin_layout.addWidget(HeatbarPlot.spin_bandwidth)
-
-        HeatbarPlot.check_normalize = QtWidgets.QCheckBox(normalize_text)
-        HeatbarPlot.check_normalize.setCheckState(
-            QtCore.Qt.Checked if HeatbarPlot.normalize else
+        self.check_normalize = QtWidgets.QCheckBox(normalize_text)
+        self.check_normalize.setCheckState(
+            QtCore.Qt.Checked if self.normalize else
             QtCore.Qt.Unchecked)
 
-        HeatbarPlot.check_rug = QtWidgets.QCheckBox(rug_text)
-        HeatbarPlot.check_rug.setCheckState(
-            QtCore.Qt.Checked if HeatbarPlot.plot_rug else
+        self.check_rug = QtWidgets.QCheckBox(rug_text)
+        self.check_rug.setCheckState(
+            QtCore.Qt.Checked if self.plot_rug else
             QtCore.Qt.Unchecked)
 
-        HeatbarPlot.check_horizontal = QtWidgets.QCheckBox(label)
-        HeatbarPlot.check_horizontal.setCheckState(
-            QtCore.Qt.Checked if HeatbarPlot.force_horizontal else
+        self.check_horizontal = QtWidgets.QCheckBox(label)
+        self.check_horizontal.setCheckState(
+            QtCore.Qt.Checked if self.force_horizontal else
             QtCore.Qt.Unchecked)
 
-        HeatbarPlot.button_apply = QtWidgets.QPushButton(button)
-        HeatbarPlot.button_apply.setDisabled(True)
-        HeatbarPlot.button_apply.clicked.connect(
-            lambda: HeatbarPlot.update_figure(
-                self,
-                HeatbarPlot.check_horizontal.checkState(),
-                None if HeatbarPlot.check_bandwidth.checkState() else
-                HeatbarPlot.spin_bandwidth.value()))
-
-        for signal in (HeatbarPlot.check_horizontal.stateChanged,
-                       HeatbarPlot.check_bandwidth.stateChanged,
-                       HeatbarPlot.check_rug.stateChanged,
-                       HeatbarPlot.check_normalize.stateChanged,
-                       HeatbarPlot.spin_bandwidth.valueChanged):
-            signal.connect(
-                lambda x: HeatbarPlot.button_apply.setEnabled(True))
-            signal.connect(self.update_widgets)
-
-        layout.addWidget(HeatbarPlot.check_horizontal)
-        layout.addLayout(spin_layout)
-        layout.addWidget(HeatbarPlot.check_rug)
-        layout.addWidget(HeatbarPlot.check_normalize)
-        layout.addWidget(HeatbarPlot.button_apply)
-        return [layout]
+        return ([self.check_horizontal,
+                 self.layout_bandwidth,
+                 self.check_rug,
+                 self.check_normalize],
+                [self.check_horizontal.stateChanged,
+                 self.check_bandwidth.stateChanged,
+                 self.check_rug.stateChanged,
+                 self.check_normalize.stateChanged,
+                 self.spin_bandwidth.valueChanged],
+                [self.check_bandwidth.stateChanged])
 
     def update_widgets(self):
-        HeatbarPlot.spin_bandwidth.setEnabled(
-            HeatbarPlot.check_bandwidth.checkState())
-        if HeatbarPlot.check_bandwidth.checkState():
-            HeatbarPlot.custom_bandwidth = int(
-                HeatbarPlot.spin_bandwidth.value())
-        HeatbarPlot.force_horizontal = bool(
-            HeatbarPlot.check_horizontal.checkState())
+        self.spin_bandwidth.setEnabled(self.check_bandwidth.isChecked())
 
-    @classmethod
-    def update_figure(cls, self, i, bw):
-        HeatbarPlot.button_apply.setDisabled(True)
-        self.updateRequested.emit()
+    def update_values(self):
+        if self.check_bandwidth.isChecked():
+            self.bandwidth = int(self.spin_bandwidth.value())
+        else:
+            self.bandwidth = None
+        self.force_horizontal = self.check_horizontal.isChecked()
+        self.plot_rug = self.check_rug.isChecked()
+        self.normalize = self.check_normalize.isChecked()
 
     def increment_bins(self, bins, value, bw):
         """
@@ -425,9 +380,10 @@ class HeatbarPlot(BarcodePlot):
         return kwargs
 
     def set_bandwidth(self, bw):
-        HeatbarPlot.spin_bandwidth.blockSignals(True)
-        HeatbarPlot.spin_bandwidth.setValue(bw)
-        HeatbarPlot.spin_bandwidth.blockSignals(False)
+        self.bandwidth = int(bw)
+        self.spin_bandwidth.blockSignals(True)
+        self.spin_bandwidth.setValue(bw)
+        self.spin_bandwidth.blockSignals(False)
 
     def plot_facet(self, data, color, **kwargs):
         """
@@ -438,19 +394,15 @@ class HeatbarPlot(BarcodePlot):
         """
 
         size = self.session.Corpus.get_corpus_size()
-
-        if not HeatbarPlot.spin_bandwidth.isEnabled():
+        if not self.bandwidth:
             self.set_bandwidth(max(size / 250, 5))
-
-        bw = HeatbarPlot.spin_bandwidth.value()
-        param = self.prepare_im_arguments(data, bw=bw, size=size,
+        param = self.prepare_im_arguments(data, bw=self.bandwidth, size=size,
                                           **kwargs)
-
         M = param.pop("M")
 
         left, right, bottom, top = param["extent"]
 
-        if HeatbarPlot.check_normalize.isChecked():
+        if self.normalize:
             M = pd.np.array([[val / max(X) for val in X] for X in M])
 
         if not self.horizontal:
@@ -466,7 +418,7 @@ class HeatbarPlot(BarcodePlot):
 
             plt.imshow(x, vmax=M.max(), **param)
 
-        if HeatbarPlot.check_rug.isChecked():
+        if self.plot_rug:
             super(HeatbarPlot, self).plot_facet(
                 data, color, rug=("top", "bottom"), **kwargs)
 

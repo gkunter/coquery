@@ -24,7 +24,7 @@ from coquery.defines import (PALETTE_BW,
                              msg_visualization_error,
                              msg_visualization_module_error)
 
-from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window)
+from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window, tr)
 
 import matplotlib as mpl
 
@@ -48,6 +48,27 @@ mpl.rcParams["backend"] = "Qt5Agg"
 
 app = get_toplevel_window()
 
+
+def uniques(S):
+    """
+    Get unique levels of Series by discarding NAs and then sorting
+    the unique values.
+
+    This function is much more efficient (but less transparent) than
+    the equivalent sorted(S.dropna().unique().values()).
+    """
+    return sorted(set(S.values[~pd.isnull(S.values)]))
+
+
+def deleteItemsOfLayout(layout):
+     if layout is not None:
+         while layout.count():
+             item = layout.takeAt(0)
+             widget = item.widget()
+             if widget is not None:
+                 widget.setParent(None)
+             else:
+                 deleteItemsOfLayout(item.layout())
 
 class MyTool(SubplotToolQt):
     def __init__(self, *args, **kwargs):
@@ -157,19 +178,18 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def data_available(self):
         self.ui.button_refresh_data.show()
-        new_label = QtWidgets.QApplication.instance().translate(
-                "VisualizationDesigner", "<b>New data available</b>", None)
+        new_label = tr("VisualizationDesigner", "<b>New data available</b>",
+                       None)
         if len(self.df):
             new_label = "{}<br>{}".format(self.get_label(), new_label)
         self.ui.label_dimensions.setText(new_label)
 
     def get_label(self):
         if len(self.df):
-            label = QtWidgets.QApplication.instance().translate(
-                "VisualizationDesigner", "{col} columns, {row} rows", None)
+            label = tr("VisualizationDesigner", "{col} columns, {row} rows",
+                       None)
         else:
-            label = QtWidgets.QApplication.instance().translate(
-                "VisualizationDesigner", "No data available", None)
+            label = tr("VisualizationDesigner", "No data available", None)
 
         label = label.format(col=len(self.categorical) + len(self.numerical),
                              row=len(self.df))
@@ -350,8 +370,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             print(e)
 
         self.tool = MyTool(self.canvas.figure, self)
-        opt_text = QtWidgets.QApplication.instance().translate(
-            "VisualizationDesigner", "&Optimize margins", None)
+        opt_text = tr("VisualizationDesigner", "&Optimize margins", None)
 
         # Someone made the buttons in the tool private in one of the recent
         # versions of matplotlib (2.1, I think). Thank you very much for that.
@@ -491,28 +510,26 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.change_legend)
 
         # Hook up figure plotting.
-        # The figure will be plot only upon _explicit_ user actions. User
-        # actions are:
+        for signal in (# (1) placing a feature in a tray
+                       self.ui.tray_data_x.featureChanged,
+                       self.ui.tray_data_y.featureChanged,
+                       self.ui.tray_data_z.featureChanged,
+                       self.ui.tray_columns.featureChanged,
+                       self.ui.tray_rows.featureChanged,
 
-        # (1) placing a feature in a tray
-        self.ui.tray_data_x.featureChanged.connect(self.plot_figure)
-        self.ui.tray_data_y.featureChanged.connect(self.plot_figure)
-        self.ui.tray_data_z.featureChanged.connect(self.plot_figure)
-        self.ui.tray_columns.featureChanged.connect(self.plot_figure)
-        self.ui.tray_rows.featureChanged.connect(self.plot_figure)
+                       # (2) clicking a clear button
+                       self.ui.button_clear_x.clicked,
+                       self.ui.button_clear_y.clicked,
+                       self.ui.button_clear_z.clicked,
+                       self.ui.button_clear_rows.clicked,
+                       self.ui.button_clear_columns.clicked,
 
-        # (2) clicking a clear button
-        self.ui.button_clear_x.clicked.connect(self.plot_figure)
-        self.ui.button_clear_y.clicked.connect(self.plot_figure)
-        self.ui.button_clear_z.clicked.connect(self.plot_figure)
-        self.ui.button_clear_rows.clicked.connect(self.plot_figure)
-        self.ui.button_clear_columns.clicked.connect(self.plot_figure)
+                       # (3) changing the wrapping checkbox
+                       self.ui.check_wrap_layout.toggled,
 
-        # (3) changing the wrapping checkbox
-        self.ui.check_wrap_layout.toggled.connect(self.plot_figure)
-
-        # (4) selecting a different figure type
-        self.ui.list_figures.currentItemChanged.connect(self.plot_figure)
+                       # (4) selecting a different figure type
+                       self.ui.list_figures.currentItemChanged):
+            signal.connect(self.plot_figure)
 
     def change_figure_type(self):
         self.ui.group_custom.hide()
@@ -531,38 +548,52 @@ class VisualizationDesigner(QtWidgets.QDialog):
             #self.vis.updateRequested.disconnect()
 
         self.vis = vis_class(self.df, self.session)
+        self.add_custom_widgets(self.vis)
         self.vis.updateRequested.connect(self.plot_figure)
-        self.add_custom_widgets()
 
-    def add_custom_widgets(self):
-        for i in reversed(range(self.ui.layout_custom.count())):
-            item = self.ui.layout_custom.itemAt(i)
-            if isinstance(item, QtWidgets.QLayout):
-                for j in reversed(range(item.count())):
-                    subitem = item.takeAt(j)
-                    if hasattr(subitem, "widget"):
-                        widget = subitem.widget()
-                        if widget:
-                            widget.hide()
-                            widget.setParent(None)
-                    del subitem
-            else:
-                item.hide()
-            if hasattr(item, "widget"):
-                widget = item.widget()
-                if widget:
-                    widget.hide()
-                    widget.setParent(None)
-            del item
+    def add_custom_widgets(self, vis):
+        deleteItemsOfLayout(self.ui.layout_custom)
 
-        widgets = self.vis.get_custom_widgets(**self.get_gui_values())
-        if widgets:
+        tup = vis.get_custom_widgets(**self.get_gui_values())
+        items, apply_signals, update_signals = tup
+
+        if items:
             self.ui.group_custom.show()
-            for item in widgets:
+            for item in items:
                 if isinstance(item, QtWidgets.QLayout):
                     self.ui.layout_custom.addLayout(item)
                 else:
                     self.ui.layout_custom.addWidget(item)
+            self.create_apply_button(vis, apply_signals)
+            self.ui.layout_custom.addWidget(self.ui.button_apply)
+            for signal in update_signals:
+                signal.connect(vis.update_widgets)
+
+        else:
+            self.ui.group_custom.hide()
+
+    def create_apply_button(self, vis, signals):
+        label = tr("Visualizer", "Apply", None)
+
+        self.ui.button_apply = QtWidgets.QPushButton(label)
+        self.ui.button_apply.setDisabled(True)
+        self.ui.button_apply.clicked.connect(self.update_figure)
+
+        for signal in signals:
+            signal.connect(self.enable_apply_button)
+
+    def enable_apply_button(self):
+        """
+        Enable the 'Apply' custom button, if present.
+        """
+        try:
+            self.ui.button_apply.setEnabled(True)
+        except AttributeError:
+            pass
+
+    def update_figure(self):
+        self.vis.update_values()
+        self.plot_figure()
 
     def check_wrapping(self):
         """
@@ -598,12 +629,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.ui.tray_rows.clear()
 
     def check_clear_buttons(self):
-        self.ui.button_clear_x.setEnabled(bool(self.ui.tray_data_x.text()))
-        self.ui.button_clear_y.setEnabled(bool(self.ui.tray_data_y.text()))
-        self.ui.button_clear_z.setEnabled(bool(self.ui.tray_data_z.text()))
-        self.ui.button_clear_columns.setEnabled(
-            bool(self.ui.tray_columns.text()))
-        self.ui.button_clear_rows.setEnabled(bool(self.ui.tray_rows.text()))
+        for button, tray in (
+                (self.ui.button_clear_x, self.ui.tray_data_x),
+                (self.ui.button_clear_y, self.ui.tray_data_y),
+                (self.ui.button_clear_z, self.ui.tray_data_z),
+                (self.ui.button_clear_columns, self.ui.tray_columns),
+                (self.ui.button_clear_rows, self.ui.tray_rows)):
+            button.setEnabled(bool(tray.text()))
 
     def check_grid_layout(self):
         if self.ui.tray_data_x.text() or self.ui.tray_data_y.text():
@@ -731,12 +763,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
             "visualizationdesigner_layout_rows", None)
         val = options.settings.value(
             "visualizationdesigner_show_legend", "true")
-        val = val == "true"
+        val = (val == "true")
         self.ui.check_show_legend.setChecked(val)
 
         val = options.settings.value(
             "visualizationdesigner_hide_unavailable", "true")
-        val = val == "true"
+        val = (val == "true")
         self.ui.check_hide_unavailable.setChecked(val)
 
         family = options.settings.value(
@@ -767,7 +799,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         val = options.settings.value(
             "visualizationdesigner_reverse_palette", "true")
-        self._reversed = val == "true"
+        self._reversed = (val == "true")
         self.ui.check_reverse.setChecked(self._reversed)
         val = options.settings.value("visualizationdesigner_color_number", 12)
         self._color_number = int(val)
@@ -860,23 +892,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
         d["range_z"] = None
 
         if x:
-            # get levels by discarding NAs and then sorting the unique
-            # values, using a much more efficient but less transparent
-            # variant of sorted(self.df[var].dropna().unique().values():
-            d["levels_x"] = sorted(
-                set(self.df[x].values[~pd.isnull(self.df[x].values)]))
+            d["levels_x"] = uniques(self.df[x])
             d["range_x"] = (self.df[x].dropna().min(),
                             self.df[x].dropna().max())
 
         if y:
-            d["levels_y"] = sorted(
-                set(self.df[y].values[~pd.isnull(self.df[y].values)]))
+            d["levels_y"] = uniques(self.df[y])
             d["range_y"] = (self.df[y].dropna().min(),
                             self.df[y].dropna().max())
 
         if z:
-            d["levels_z"] = sorted(
-                set(self.df[z].values[~pd.isnull(self.df[z].values)]))
+            d["levels_z"] = uniques(self.df[z])
             d["range_z"] = (self.df[z].dropna().min(),
                             self.df[z].dropna().max())
 
@@ -899,13 +925,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         return pal_name
 
-    def get_colorizer(self, x, y, z, df,
-                      palette, color_number, vis, **kwargs):
+    def get_colorizer(self, x, y, z, df, palette, color_number, vis, **kwargs):
 
         z = z or vis.get_subordinated(x=x, y=y)
         if z:
             if df[z].dtype == object:
-                levels = sorted(set(df[z].values[~pd.isnull(df[z].values)]))
+                levels = uniques(df[z])
                 colorizer = ColorizeByFactor(palette, color_number, levels)
                 if z not in [x, y]:
                     colorizer.set_title_frm(vis.get_factor_frm())
@@ -924,18 +949,15 @@ class VisualizationDesigner(QtWidgets.QDialog):
         if not values["figure_type"]:
             return
 
-        vis_class = VisualizationDesigner.visualizers[
-            values["figure_type"].text()]
-
         if (self.ui.check_wrap_layout.isChecked()):
             col_wrap, _ = get_grid_layout(
                 len(self.df[values["columns"]].unique()))
         else:
             col_wrap = None
 
-        data_columns = [values[x] for
-                        x in ["x", "y", "z", "columns", "rows"]
+        data_columns = [values[x] for x in ["x", "y", "z", "columns", "rows"]
                         if values[x]]
+
         # remove duplicates:
         data_columns = list(set(data_columns))
         data_columns.append("coquery_invisible_corpus_id")
@@ -948,7 +970,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         df.columns = aliased_columns
 
         logging.info("VIS: Data initialized")
-        self.vis = vis_class(df, self.session)
+        self.vis.df = df
         self.colorizer = self.get_colorizer(df=df, vis=self.vis, **values)
 
         logging.info("VIS: Visualizer initialized")
@@ -969,30 +991,38 @@ class VisualizationDesigner(QtWidgets.QDialog):
         logging.info("VIS: Grid size {}, {} inches".format(
             w / dpi, h / dpi))
 
-        if options.cfg.experimental:
-            self.plot_thread = CoqThread(
-                self.run_plot, parent=self, **values)
-            self.plot_thread.taskStarted.connect(self.start_plot)
-            self.plot_thread.taskFinished.connect(self.finalize_plot)
-            self.plot_thread.taskException.connect(self.exception_plot)
-            self.vis.moveToThread(self.plot_thread)
-            self.plot_thread.start()
-        else:
-            self.start_plot()
+        self.start_plot()
+        try:
             self.run_plot(**values)
-            self.finalize_plot()
+        except Exception as e:
+            self.exception_plot(e)
+        self.finalize_plot()
+
+
+        #if options.cfg.experimental:
+            #self.plot_thread = CoqThread(
+                #self.run_plot, parent=self, **values)
+            #self.plot_thread.taskStarted.connect(self.start_plot)
+            #self.plot_thread.taskFinished.connect(self.finalize_plot)
+            #self.plot_thread.taskException.connect(self.exception_plot)
+            ##self.vis.moveToThread(self.plot_thread)
+            #self.plot_thread.start()
+        #else:
+            #self.start_plot()
+            #self.run_plot(**values)
+            #self.finalize_plot()
         logging.info("VIS: plot_figure() done")
 
     def start_plot(self):
         logging.info("VIS: start_plot()")
-        try:
-            self.progress_bar = QtWidgets.QProgressBar()
-            self.progress_bar.setRange(0, 0)
-            self.progress_bar.show()
-            self.dialog_layout.addWidget(self.progress_bar)
-        except Exception as e:
-            logging.error("VIS: start_plot(), exception {}".format(str(e)))
-            raise e
+        #try:
+            #self.progress_bar = QtWidgets.QProgressBar()
+            #self.progress_bar.setRange(0, 0)
+            #self.progress_bar.show()
+            #self.dialog_layout.addWidget(self.progress_bar)
+        #except Exception as e:
+            #logging.error("VIS: start_plot(), exception {}".format(str(e)))
+            #raise e
         logging.info("VIS: start_plot() done")
 
     def run_plot(self, **kwargs):
@@ -1028,9 +1058,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.dialog.show()
             self.dialog.raise_()
 
-            if hasattr(self.vis, "on_pick"):
-                self.grid.fig.canvas.mpl_connect(
-                    "button_press_event", self.vis.on_pick)
+            try:
+                self.grid.fig.canvas.mpl_connect("button_press_event",
+                                                 self.vis.on_pick)
+            except AttributeError:
+                pass
+
+            try:
+                self.ui.button_apply.setDisabled(True)
+            except AttributeError:
+                pass
+
         except Exception as e:
             logging.error("VIS: finalize_plot(), exception {}".format(str(e)))
             raise e
@@ -1076,59 +1114,47 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.reject()
 
     def close(self, *args):
-        options.settings.setValue(
-            "visualizationdesigner_size", self.size())
-        options.settings.setValue(
-            "visualizationdesigner_viewer_size", self.viewer_size)
-        options.settings.setValue(
-            "visualizationdesigner_data_x", self.data_x)
-        options.settings.setValue(
-            "visualizationdesigner_data_y", self.data_y)
-        options.settings.setValue(
-            "visualizationdesigner_layout_columns", self.layout_columns)
-        options.settings.setValue(
-            "visualizationdesigner_layout_rows", self.layout_rows)
+        options.settings.setValue("visualizationdesigner_size", self.size())
+        options.settings.setValue("visualizationdesigner_viewer_size",
+                                  self.viewer_size)
+        options.settings.setValue("visualizationdesigner_data_x", self.data_x)
+        options.settings.setValue("visualizationdesigner_data_y", self.data_y)
+        options.settings.setValue("visualizationdesigner_layout_columns",
+                                  self.layout_columns)
+        options.settings.setValue("visualizationdesigner_layout_rows",
+                                  self.layout_rows)
 
         options.settings.setValue(
             "visualizationdesigner_figure_font",
             utf8(self.ui.combo_font_figure.currentText()))
 
-        options.settings.setValue(
-            "visualizationdesigner_size_title",
-            self.ui.spin_size_title.value())
-        options.settings.setValue(
-            "visualizationdesigner_size_x_label",
-            self.ui.spin_size_x_label.value())
-        options.settings.setValue(
-            "visualizationdesigner_size_x_ticklabels",
-            self.ui.spin_size_x_ticklabels.value())
-        options.settings.setValue(
-            "visualizationdesigner_size_y_label",
-            self.ui.spin_size_y_label.value())
-        options.settings.setValue(
-            "visualizationdesigner_size_y_ticklabels",
-            self.ui.spin_size_y_ticklabels.value())
-        options.settings.setValue(
-            "visualizationdesigner_size_legend",
-            self.ui.spin_size_legend.value())
-        options.settings.setValue(
-            "visualizationdesigner_size_legend_entries",
-            self.ui.spin_size_legend_entries.value())
+        options.settings.setValue("visualizationdesigner_size_title",
+                                  self.ui.spin_size_title.value())
+        options.settings.setValue("visualizationdesigner_size_x_label",
+                                  self.ui.spin_size_x_label.value())
+        options.settings.setValue("visualizationdesigner_size_x_ticklabels",
+                                  self.ui.spin_size_x_ticklabels.value())
+        options.settings.setValue("visualizationdesigner_size_y_label",
+                                  self.ui.spin_size_y_label.value())
+        options.settings.setValue("visualizationdesigner_size_y_ticklabels",
+                                  self.ui.spin_size_y_ticklabels.value())
+        options.settings.setValue("visualizationdesigner_size_legend",
+                                  self.ui.spin_size_legend.value())
+        options.settings.setValue("visualizationdesigner_size_legend_entries",
+                                  self.ui.spin_size_legend_entries.value())
 
-        val = "true" if self.ui.check_show_legend.isChecked() else "false"
+        val = ("true" if self.ui.check_show_legend.isChecked() else "false")
         options.settings.setValue("visualizationdesigner_show_legend", val)
 
-        val = ("true" if self.ui.check_hide_unavailable.isChecked()
-               else "false")
-        options.settings.setValue(
-            "visualizationdesigner_hide_unavailable", val)
+        val = "true" if self.ui.check_hide_unavailable.isChecked() else "false"
+        options.settings.setValue("visualizationdesigner_hide_unavailable",
+                                  val)
 
         options.settings.setValue("visualizationdesigner_legend_columns",
                                   self.legend_columns)
 
-        val = "true" if self.ui.check_reverse.isChecked() else "false"
-        options.settings.setValue("visualizationdesigner_reverse_palette",
-                                  val)
+        val = ("true" if self.ui.check_reverse.isChecked() else "false")
+        options.settings.setValue("visualizationdesigner_reverse_palette", val)
         options.settings.setValue("visualizationdesigner_color_number",
                                   self.ui.spin_number.value())
 
@@ -1162,11 +1188,9 @@ def get_visualizer_module(name):
             code=sys.exc_info()[1],
             line=sys.exc_info()[2].tb_lineno)
         logging.error(msg)
-        s = msg_visualization_module_error.format(
-                module=name,
-                msg=msg)
-        QtWidgets.QMessageBox.critical(None,
-                                       "Visualization error – Coquery", s)
+        s = msg_visualization_module_error.format(module=name, msg=msg)
+        QtWidgets.QMessageBox.critical(None, "Visualization error – Coquery",
+                                       s)
         return None
 
 
@@ -1177,5 +1201,5 @@ def find_visualizer_modules():
     visualizer_path = os.path.join(options.cfg.base_path, "visualizer")
 
     lst = [os.path.splitext(os.path.basename(file_name))[0]
-         for file_name in glob.glob(os.path.join(visualizer_path, "*.py"))]
+           for file_name in glob.glob(os.path.join(visualizer_path, "*.py"))]
     return lst
