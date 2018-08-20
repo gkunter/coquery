@@ -22,7 +22,7 @@ from .testcase import CoqTestCase
 
 
 class TestBarcodePlotArguments(CoqTestCase):
-    NUM_COLUMN = "coquery_invisible_corpus_id"
+    NUM_COLUMN = "NUM"
 
     def setUp(self):
         options.cfg = argparse.Namespace()
@@ -37,7 +37,7 @@ class TestBarcodePlotArguments(CoqTestCase):
              "Z": list("111122221111222211221122112222"),
              self.NUM_COLUMN: pd.np.random.randint(0, 100, 30)})
 
-        self.vis = BarcodePlot(None, None)
+        self.vis = BarcodePlot(None, None, self.NUM_COLUMN)
 
     def test_horizontal_no_subgroup(self):
         """
@@ -173,7 +173,7 @@ class TestBarcodePlotAxisArguments(TestBarcodePlotArguments):
 
 
 class TestHeatbarPlotArguments(CoqTestCase):
-    NUM_COLUMN = "coquery_invisible_corpus_id"
+    NUM_COLUMN = "NUM"
 
     def setUp(self):
         options.cfg = argparse.Namespace()
@@ -190,7 +190,7 @@ class TestHeatbarPlotArguments(CoqTestCase):
         N = [2, 4, 6, 8, 10, 20, 21, 22, 30, 35, 40, 46, 47, 48]
         X = list("AAAAA") + list("BBB") + list("AAA") + list("BBB")
         self.df = pd.DataFrame({self.NUM_COLUMN: N, "X": X})
-        self.vis = HeatbarPlot(None, None)
+        self.vis = HeatbarPlot(None, None, self.NUM_COLUMN)
 
 
     def test_increment_bins(self):
