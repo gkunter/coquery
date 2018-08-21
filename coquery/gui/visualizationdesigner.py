@@ -547,7 +547,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.vis = vis_class(self.df, self.session,
                              id_column="coquery_invisible_corpus_id")
         self.add_custom_widgets(self.vis)
-        self.vis.updateRequested.connect(self.plot_figure)
 
     def add_custom_widgets(self, vis):
         deleteItemsOfLayout(self.ui.layout_custom)
