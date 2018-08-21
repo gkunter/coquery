@@ -33,7 +33,7 @@ from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 class TreeMap(vis.Visualizer):
     name = "Treemap"
     icon = "Scatterplot"
-    text_boxes = True
+    text_boxes = 70
     text_rotate = False
     box_padding = True
     box_border = False
@@ -45,7 +45,7 @@ class TreeMap(vis.Visualizer):
         label = tr("TreeMap", "Padding", None)
         self.check_padding = QtWidgets.QCheckBox(label)
         self.check_padding.setCheckState(
-            QtCore.Qt.Checked if self.box_padding else
+            QtCore.Qt.Checked if self.box_padding is not None else
             QtCore.Qt.Unchecked)
 
         label = tr("TreeMap", "Draw border", None)
@@ -55,10 +55,29 @@ class TreeMap(vis.Visualizer):
             QtCore.Qt.Unchecked)
 
         label = tr("TreeMap", "Draw text boxes", None)
-        self.check_boxes = QtWidgets.QCheckBox(label)
-        self.check_boxes.setCheckState(
-            QtCore.Qt.Checked if self.text_boxes else
-            QtCore.Qt.Unchecked)
+        self.group_transparency = QtWidgets.QGroupBox()
+        self.group_transparency.setTitle(label)
+        layout_group = QtWidgets.QHBoxLayout()
+        self.group_transparency.setLayout(layout_group)
+        self.group_transparency.setCheckable(True)
+        self.group_transparency.setChecked(self.text_boxes is not None)
+
+        label = tr("TreeMap", "Transparency:", None)
+        self.label_transparency = QtWidgets.QLabel(label)
+        self.slide_transparency = QtWidgets.QSlider()
+        self.slide_transparency.setOrientation(QtCore.Qt.Horizontal)
+        self.slide_transparency.setMinimum(0)
+        self.slide_transparency.setMaximum(100)
+        self.slide_transparency.setSingleStep(5)
+        self.slide_transparency.setPageStep(25)
+        self.slide_transparency.setTickPosition(
+            self.slide_transparency.TicksAbove)
+        self.slide_transparency.setValue(self.text_boxes)
+
+        layout_group.addWidget(self.label_transparency)
+        layout_group.addWidget(self.slide_transparency)
+        layout_group.setStretch(1, 1)
+        layout_group.setAlignment(QtCore.Qt.AlignCenter)
 
         label = tr("TreeMap", "Rotate text", None)
         self.check_rotate = QtWidgets.QCheckBox(label)
@@ -69,45 +88,43 @@ class TreeMap(vis.Visualizer):
         hlayout1 = QtWidgets.QHBoxLayout()
         hlayout1.addWidget(self.check_padding)
         hlayout1.addWidget(self.check_border)
-        hlayout1.setStretch(0, 1)
-        hlayout1.setStretch(1, 1)
 
-        hlayout2 = QtWidgets.QHBoxLayout()
-        hlayout2.addWidget(self.check_boxes)
-        hlayout2.addWidget(self.check_rotate)
-        hlayout2.setStretch(0, 1)
-        hlayout2.setStretch(1, 1)
-
-        return ([hlayout1, hlayout2],
+        return ([hlayout1, self.check_rotate, self.group_transparency],
                 [self.check_padding.stateChanged,
                  self.check_border.stateChanged,
-                 self.check_boxes.stateChanged,
-                 self.check_rotate.stateChanged],
+                 self.group_transparency.toggled,
+                 self.check_rotate.stateChanged,
+                 self.slide_transparency.valueChanged],
                 [])
 
     def update_values(self):
         self.box_border = self.check_border.isChecked()
         self.box_padding = self.check_padding.isChecked()
-        self.text_boxes = self.check_boxes.isChecked()
+        if self.slide_transparency.isEnabled():
+            self.text_boxes = self.slide_transparency.value()
+        else:
+            self.text_boxes = None
         self.text_rotate = self.check_rotate.isChecked()
 
-    def transform(self, rect, x, y, dx, dy):
+    def transform(self, rect, x, y, dx, dy, padding=1):
         if not self.box_padding:
             return rect
 
-        if (rect["x"] > x and rect["dx"] > 1):
-            rect["x"] += 1
-            rect["dx"] -= 1
+        if (rect["x"] > x and rect["dx"] > padding):
+            rect["x"] += padding
+            rect["dx"] -= padding
 
-        if (rect["x"] + rect["dx"] < dx - 1 and rect["dx"] > 1):
-            rect["dx"] -= 1
+        if (rect["x"] + rect["dx"] < dx - padding and
+                rect["dx"] > padding):
+            rect["dx"] -= padding
 
-        if (rect["y"] > y and rect["dy"] > 1):
-            rect["y"] += 1
-            rect["dy"] -= 1
+        if (rect["y"] > y and rect["dy"] > padding):
+            rect["y"] += padding
+            rect["dy"] -= padding
 
-        if (rect["y"] + rect["dy"] < dy - 1 and rect["dy"] > 1):
-            rect["dy"] -= 1
+        if (rect["y"] + rect["dy"] < dy - padding and
+                rect["dy"] > padding):
+            rect["dy"] -= padding
 
         return rect
 
@@ -120,6 +137,9 @@ class TreeMap(vis.Visualizer):
             facecolor=col,
             edgecolor="black" if self.box_border else "none")
         plt.gca().add_patch(patch)
+
+        if self.text_boxes:
+            self.box_style["alpha"] = self.text_boxes / 100
         plt.gca().text(x + dx / 2.0, y + dy / 2.0, label,
                        va="center", ha="center",
                        rotation=90 if self.text_rotate else 0,
