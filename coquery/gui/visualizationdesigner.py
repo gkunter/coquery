@@ -38,7 +38,8 @@ import seaborn as sns
 
 from ..visualizer.visualizer import get_grid_layout
 from coquery.visualizer.colorizer import (
-    COQ_SINGLE, Colorizer, ColorizeByFactor, ColorizeByNum)
+    COQ_SINGLE, COQ_CUSTOM,
+    Colorizer, ColorizeByFactor, ColorizeByNum)
 from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
 from .threads import CoqThread
 from .app import get_icon
@@ -143,17 +144,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.ui.combo_qualitative.addItem(PALETTE_BW)
 
-        # disable unsupported elements:
-        self.ui.radio_custom.hide()
-        self.ui.combo_custom.hide()
-        self.ui.button_remove_custom.hide()
-        self.ui.label_38.hide()
-        #self.ui.spin_number.hide()
-        #self.ui.label_37.hide()
-
+        ## disable unsupported elements:
+        #self.ui.radio_custom.hide()
+        #self.ui.combo_custom.hide()
+        #self.ui.button_remove_custom.hide()
+        #self.ui.label_38.hide()
         self.populate_figure_types()
 
-        self.restore_settings()
+        self.restore_settings(options.settings)
         self.display_values()
 
         self.check_figure_types()
@@ -531,6 +529,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
                        self.ui.list_figures.currentItemChanged):
             signal.connect(self.plot_figure)
 
+        self.ui.color_test_area.currentItemChanged.connect(
+            self.switch_stylesheet)
+        self.ui.color_test_area.currentItemChanged.connect(
+            self.set_custom_palette)
+
     def change_figure_type(self):
         self.ui.group_custom.hide()
 
@@ -687,26 +690,73 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.ui.list_figures.blockSignals(False)
 
-    def show_palette(self):
+    def get_palette_name(self):
+        for ptype in ("qualitative", "sequential", "diverging",
+                      "single_color", "custom"):
+            widget_name = "radio_{}".format(ptype)
+            widget = getattr(self.ui, widget_name)
+            if widget.isChecked():
+                if ptype == "single_color":
+                    return "{}_{}".format(
+                        COQ_SINGLE, self._current_color.name())
+                elif ptype == "custom":
+                    return COQ_CUSTOM
+                else:
+                    combo_name = "combo_{}".format(ptype)
+                    combo = getattr(self.ui, combo_name)
+                    pal_name = utf8(combo.currentText())
+                    if self.ui.check_reverse.isChecked():
+                        pal_name = "{}_r".format(pal_name)
+                    return pal_name
+
+        return "Paired"
+
+    def get_current_palette(self):
         self._palette_name = self.get_palette_name()
         self._color_number = self.ui.spin_number.value()
-        self.ui.color_test_area.clear()
+
         name, _, rev = self._palette_name.partition("_")
         if name == COQ_SINGLE:
             rgb = self._current_color.getRgb()[:-1]
-            test_palette = [tuple(x / 255 for x in rgb)] * self._color_number
+            palette = [tuple(x / 255 for x in rgb)] * self._color_number
         elif name == PALETTE_BW:
-            test_palette = [(0, 0, 0), (1, 1, 1)]
+            palette = [(0, 0, 0), (1, 1, 1)]
+        elif name == COQ_CUSTOM:
+            if self._color_number > len(self._custom_palette):
+                base_palette = sns.color_palette(self._custom_base,
+                                                 self._color_number)
+                palette = (self._custom_palette +
+                                base_palette[len(self._custom_palette)
+                                             :self._color_number])
+            else:
+                palette = self._custom_palette[:self._color_number]
         else:
-            test_palette = sns.color_palette(name, self._color_number)
+            palette = sns.color_palette(name, self._color_number)
+
         if rev == "r":
-            test_palette = test_palette[::-1]
+            palette = palette[::-1]
+
+        return palette
+
+    def show_palette(self):
+        test_palette = self.get_current_palette()
+
+        self.ui.color_test_area.clear()
         for i, (r, g, b) in enumerate(test_palette):
             item = QtWidgets.QListWidgetItem()
             self.ui.color_test_area.addItem(item)
             brush = QtGui.QBrush(QtGui.QColor(
                         int(r * 255), int(g * 255), int(b * 255)))
             item.setBackground(brush)
+
+        return test_palette
+
+    def set_custom_palette(self):
+        current_palette = self.get_palette_name()
+        if current_palette != COQ_SINGLE:
+            self._custom_base = current_palette
+            self._custom_palette = self.get_current_palette()
+            self.ui.radio_custom.setChecked(True)
 
     def change_palette(self):
         x = self.get_palette_name()
@@ -724,6 +774,18 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self._current_color = color
             self.change_palette()
 
+    def switch_stylesheet(self, item):
+        if item:
+            color = item.background().color()
+            template = """QListWidget::item:selected {{
+                            background: rgb({r}, {g}, {b}); }}"""
+            self.ui.color_test_area.setStyleSheet(
+                template.format(r=color.red(),
+                                g=color.green(),
+                                b=color.blue()))
+        else:
+            self.ui.color_test_area.setStyleSheet(None)
+
     def set_radio(self, radio):
         radio.blockSignals(True)
         if not radio.isChecked():
@@ -731,107 +793,19 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.change_palette()
         radio.blockSignals(False)
 
-    def restore_settings(self):
-        def get_or_set_size(key, factor=1.0):
-            try:
-                size = int(options.settings.value(key, None))
-            except TypeError:
-                size = None
-            if size is None:
-                size = int(QtWidgets.QLabel().font().pointSize() * factor)
-            return size
-
-        self.resize(640, 400)
-        try:
-            self.resize(options.settings.value("visualizationdesigner_size"))
-        except TypeError:
-            pass
-        self.viewer_size = options.settings.value(
-            "visualizationdesigner_viewer_size")
-        self.viewer_size = QtCore.QSize(640, 480)
-
-        self.data_x = options.settings.value(
-            "visualizationdesinger_data_x", None)
-        self.data_y = options.settings.value(
-            "visualizationdesigner_data_y", None)
-        self.layout_columns = options.settings.value(
-            "visualizationdesigner_layout_columns", None)
-        self.layout_rows = options.settings.value(
-            "visualizationdesigner_layout_rows", None)
-        val = options.settings.value(
-            "visualizationdesigner_show_legend", "true")
-        val = (val == "true")
-        self.ui.check_show_legend.setChecked(val)
-
-        val = options.settings.value(
-            "visualizationdesigner_hide_unavailable", "true")
-        val = (val == "true")
-        self.ui.check_hide_unavailable.setChecked(val)
-
-        family = options.settings.value(
-            "visualizationdesigner_figure_font", None)
-        index = self.ui.combo_font_figure.findText(family)
-        if family is None or index == -1:
-            family = utf8(QtWidgets.QLabel().font().family())
-            index = self.ui.combo_font_figure.findText(family)
-        self.ui.combo_font_figure.setCurrentIndex(index)
-
-        self.legend_columns = options.settings.value(
-            "visualizationdesigner_legend_columns", 1)
-
-        self.ui.spin_size_title.setValue(
-            get_or_set_size("visualizationdesigner_size_title", 1.2))
-        self.ui.spin_size_x_label.setValue(
-            get_or_set_size("visualizationdesigner_size_x_label"))
-        self.ui.spin_size_y_label.setValue(
-            get_or_set_size("visualizationdesigner_size_y_label"))
-        self.ui.spin_size_legend.setValue(
-            get_or_set_size("visualizationdesigner_size_legend"))
-        self.ui.spin_size_x_ticklabels.setValue(
-            get_or_set_size("visualizationdesigner_size_x_ticklabels", 0.8))
-        self.ui.spin_size_y_ticklabels.setValue(
-            get_or_set_size("visualizationdesigner_size_y_ticklabels", 0.8))
-        self.ui.spin_size_legend_entries.setValue(
-            get_or_set_size("visualizationdesigner_size_legend_entries", 0.8))
-
-        val = options.settings.value(
-            "visualizationdesigner_reverse_palette", "true")
-        self._reversed = (val == "true")
-        self.ui.check_reverse.setChecked(self._reversed)
-        val = options.settings.value("visualizationdesigner_color_number", 12)
-        self._color_number = int(val)
-        self.ui.spin_number.setValue(self._color_number)
-
-        palette = options.settings.value("visualizationdesigner_palette", None)
-        if palette is None:
-            palette = "Paired"
-        for box, radio in (
-                (self.ui.combo_qualitative, self.ui.radio_qualitative),
-                (self.ui.combo_diverging, self.ui.radio_diverging),
-                (self.ui.combo_sequential, self.ui.radio_sequential)):
-            if box.findText(palette):
-                radio.setChecked(True)
-                box.setCurrentIndex(box.findText(palette))
-                break
-        else:
-            self.ui.radio_qualitative.setChecked(True)
-            self.ui.combo_qualitative.setCurrentIndex(
-                self.ui.combo_qualitative.findText("Paired"))
-            palette = "Paired"
-
-        if self._reversed:
-            palette = "{}_r".format(palette)
-        self._palette_name = palette
-
     def display_values(self):
         # set up Layout tab:
 
+
+        print("display_values")
         # data x
         if self.data_x:
             label = self.alias.get(self.data_x) or self.data_x
         else:
             label = None
-        #self.ui.receive_data_x.setText(label)
+        print(label)
+        if label:
+            self.ui.receive_data_x.setData(label)
 
         # data y
         if self.data_y:
@@ -904,23 +878,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
                             self.df[z].dropna().max())
 
         return d
-
-    def get_palette_name(self):
-        for ptype in ("qualitative", "sequential", "diverging", "single"):
-            if ptype == "single":
-                return "{}_{}".format(COQ_SINGLE, self._current_color.name())
-            widget_name = "radio_{}".format(ptype)
-            widget = getattr(self.ui, widget_name)
-            if widget.isChecked():
-                combo_name = "combo_{}".format(ptype)
-                combo = getattr(self.ui, combo_name)
-                pal_name = utf8(combo.currentText())
-                break
-
-        if self.ui.check_reverse.isChecked():
-            pal_name = "{}_r".format(pal_name)
-
-        return pal_name
 
     def get_colorizer(self, x, y, z, df, palette, color_number, vis, **kwargs):
 
@@ -1110,66 +1067,128 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.close()
             self.reject()
 
-    def close(self, *args):
-        options.settings.setValue("visualizationdesigner_size", self.size())
-        options.settings.setValue("visualizationdesigner_viewer_size",
-                                  self.viewer_size)
-        options.settings.setValue("visualizationdesigner_data_x", self.data_x)
-        options.settings.setValue("visualizationdesigner_data_y", self.data_y)
-        options.settings.setValue("visualizationdesigner_layout_columns",
-                                  self.layout_columns)
-        options.settings.setValue("visualizationdesigner_layout_rows",
-                                  self.layout_rows)
+    def store_settings(self, settings):
+        gui = self.get_gui_values()
+        reverse_palette = ["false", "true"][self.ui.check_reverse.isChecked()]
+        show_legend = ["false", "true"][self.ui.check_show_legend.isChecked()]
+        hide_unavailable = ["false", "true"][
+            self.ui.check_hide_unavailable.isChecked()]
 
-        options.settings.setValue(
-            "visualizationdesigner_figure_font",
-            utf8(self.ui.combo_font_figure.currentText()))
+        print("store_settings", gui["palette"])
 
-        options.settings.setValue("visualizationdesigner_size_title",
-                                  self.ui.spin_size_title.value())
-        options.settings.setValue("visualizationdesigner_size_x_label",
-                                  self.ui.spin_size_x_label.value())
-        options.settings.setValue("visualizationdesigner_size_x_ticklabels",
-                                  self.ui.spin_size_x_ticklabels.value())
-        options.settings.setValue("visualizationdesigner_size_y_label",
-                                  self.ui.spin_size_y_label.value())
-        options.settings.setValue("visualizationdesigner_size_y_ticklabels",
-                                  self.ui.spin_size_y_ticklabels.value())
-        options.settings.setValue("visualizationdesigner_size_legend",
-                                  self.ui.spin_size_legend.value())
-        options.settings.setValue("visualizationdesigner_size_legend_entries",
-                                  self.ui.spin_size_legend_entries.value())
+        for name, value in (
+                ("size", self.size()),
+                ("viewer_size", self.viewer_size),
+                ("data_x", gui["x"]),
+                ("data_y", gui["y"]),
+                ("data_z", gui["z"]),
+                ("layout_columns", gui["columns"]),
+                ("layout_rows", gui["rows"]),
+                ("figure_type", gui["figure_type"]), # CHECK
+                ("figure_font", gui["figure_font"]),
+                ("size_title", gui["size_title"]),
+                ("size_x_label", gui["size_xlab"]),
+                ("size_x_ticklabels", gui["size_xticks"]),
+                ("size_y_label", gui["size_ylab"]),
+                ("size_y_ticklabels", gui["size_yticks"]),
+                ("color_number", gui["color_number"]),
+                ("palette", gui["palette"]),
 
-        val = ("true" if self.ui.check_show_legend.isChecked() else "false")
-        options.settings.setValue("visualizationdesigner_show_legend", val)
 
-        val = "true" if self.ui.check_hide_unavailable.isChecked() else "false"
-        options.settings.setValue("visualizationdesigner_hide_unavailable",
-                                  val)
+                ("size_legend", self.ui.spin_size_legend.value()),
+                ("size_legend_entries",
+                 self.ui.spin_size_legend_entries.value()),
+                ("legend_columns", self.legend_columns),
+                ("show_legend", show_legend),
+                ("hide_unavailable", hide_unavailable)):
 
-        options.settings.setValue("visualizationdesigner_legend_columns",
-                                  self.legend_columns)
+            settings.setValue("visualizationdesigner_{}".format(name), value)
 
-        val = ("true" if self.ui.check_reverse.isChecked() else "false")
-        options.settings.setValue("visualizationdesigner_reverse_palette", val)
-        options.settings.setValue("visualizationdesigner_color_number",
-                                  self.ui.spin_number.value())
+    def restore_settings(self, settings):
+        def get_or_set_size(key, factor=1.0):
+            try:
+                size = int(settings.value(key, None))
+            except TypeError:
+                size = None
+            if size is None:
+                size = int(QtWidgets.QLabel().font().pointSize() * factor)
+            return size
 
-        super(VisualizationDesigner, self).close(*args)
+        self.resize(640, 400)
+        try:
+            self.resize(settings.value("visualizationdesigner_size"))
+        except TypeError:
+            pass
+        self.viewer_size = settings.value(
+            "visualizationdesigner_viewer_size")
+        self.viewer_size = QtCore.QSize(640, 480)
 
+        self.data_x = settings.value("visualizationdesinger_data_x", None)
+        self.data_y = settings.value("visualizationdesigner_data_y", None)
+        self.layout_columns = settings.value("visualizationdesigner_layout_columns", None)
+        self.layout_rows = settings.value("visualizationdesigner_layout_rows", None)
+        val = settings.value("visualizationdesigner_show_legend", "true")
+        self.ui.check_show_legend.setChecked(val == "true")
+
+        val = settings.value("visualizationdesigner_hide_unavailable", "true")
+        self.ui.check_hide_unavailable.setChecked(val == "true")
+
+        family = settings.value("visualizationdesigner_figure_font", None)
+        index = self.ui.combo_font_figure.findText(family)
+        if family is None or index == -1:
+            family = utf8(QtWidgets.QLabel().font().family())
+            index = self.ui.combo_font_figure.findText(family)
+        self.ui.combo_font_figure.setCurrentIndex(index)
+
+        self.legend_columns = settings.value("visualizationdesigner_legend_columns", 1)
+
+        self.ui.spin_size_title.setValue(get_or_set_size("visualizationdesigner_size_title", 1.2))
+        self.ui.spin_size_x_label.setValue(get_or_set_size("visualizationdesigner_size_x_label"))
+        self.ui.spin_size_y_label.setValue(get_or_set_size("visualizationdesigner_size_y_label"))
+        self.ui.spin_size_legend.setValue(get_or_set_size("visualizationdesigner_size_legend"))
+        self.ui.spin_size_x_ticklabels.setValue(get_or_set_size("visualizationdesigner_size_x_ticklabels", 0.8))
+        self.ui.spin_size_y_ticklabels.setValue(get_or_set_size("visualizationdesigner_size_y_ticklabels", 0.8))
+        self.ui.spin_size_legend_entries.setValue(get_or_set_size("visualizationdesigner_size_legend_entries", 0.8))
+
+        val = settings.value("visualizationdesigner_reverse_palette", "true")
+        self._reversed = (val == "true")
+        self.ui.check_reverse.setChecked(self._reversed)
+        val = settings.value("visualizationdesigner_color_number", 12)
+        self._color_number = int(val)
+        self.ui.spin_number.setValue(self._color_number)
+
+        palette = settings.value("visualizationdesigner_palette", "Paired")
+        if not palette:
+            palette = "Paired"
+        print("restore palette", palette)
+
+        for box, radio in (
+                (self.ui.combo_qualitative, self.ui.radio_qualitative),
+                (self.ui.combo_diverging, self.ui.radio_diverging),
+                (self.ui.combo_sequential, self.ui.radio_sequential)):
+            if box.findText(palette):
+                radio.setChecked(True)
+                box.setCurrentIndex(box.findText(palette))
+                print(radio, box)
+                break
+        else:
+            self.ui.radio_qualitative.setChecked(True)
+            self.ui.combo_qualitative.setCurrentIndex(
+                self.ui.combo_qualitative.findText("Paired"))
+            palette = "Paired"
+            print("default")
+
+        if self._reversed:
+            palette = "{}_r".format(palette)
+        self._palette_name = palette
+
+    def closeEvent(self, ev):
+        self.store_settings(options.settings)
         if not hasattr(self, "canvas") and hasattr(self, "dialog"):
             self.dialog.hide()
             self.dialog.close()
             del self.dialog
-
-    def exec_(self):
-        result = super(VisualizationDesigner, self).exec_()
-
-        if result == QtWidgets.QDialog.Accepted:
-            self.accept()
-            return result
-        else:
-            return None
+        return super(VisualizationDesigner, self).closeEvent(ev)
 
 
 def get_visualizer_module(name):
