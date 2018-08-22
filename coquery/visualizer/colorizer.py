@@ -22,6 +22,7 @@ from coquery import options
 
 
 COQ_SINGLE = "COQSINGLE"
+COQ_CUSTOM = "COQCUSTOM"
 
 
 class Colorizer(QtCore.QObject):
