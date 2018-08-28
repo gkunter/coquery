@@ -34,6 +34,7 @@ mpl.rcParams["backend"] = "Qt5Agg"
 
 class Aggregator(QtCore.QObject):
     def __init__(self, id_column=None):
+        super(Aggregator, self).__init__()
         self.reset()
         self._id_column = id_column or "coquery_invisible_corpus_id"
 
