@@ -1075,6 +1075,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.ui.check_hide_unavailable.isChecked()]
 
         print("store_settings", gui["palette"])
+        return
 
         for name, value in (
                 ("size", self.size()),
