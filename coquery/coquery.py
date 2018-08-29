@@ -216,7 +216,8 @@ def main():
         options.cfg.icon = Coq.get_icon("coquerel_icon.png",
                                         small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
-
+        Coq.show()
+        
         if options.cfg.profile:
             import cProfile
             cProfile.runctx("options.cfg.app.exec_()", globals(), locals())

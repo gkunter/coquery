@@ -223,7 +223,6 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.setMenuBar(self.ui.menubar)
         self.setup_app()
-        self.show()
 
         self.ui.centralwidget.adjustSize()
         self.adjustSize()
