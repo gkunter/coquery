@@ -19,6 +19,7 @@ from coquery.managers import Group, Summary
 from coquery.functions import (
                     get_base_func,
                     Entropy,
+                    Add,
                     Min, Max, Mean, Median, StandardDeviation,
                     InterquartileRange,
                     Freq, FreqNorm,
@@ -251,6 +252,7 @@ class GroupFunctionDelegate(QtWidgets.QItemDelegate):
 class GroupDialog(QtWidgets.QDialog):
     function_list = (Freq, FreqNorm, FreqPTW, FreqPMW,
                      RowNumber, Tokens, Types, TypeTokenRatio,
+                     Add,
                      Min, Max, Mean, Median, StandardDeviation,
                      InterquartileRange,
                      ReferenceCorpusLLKeyness,
