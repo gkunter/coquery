@@ -958,12 +958,12 @@ class PackageGui(BuilderGui):
 
         self.ui = Ui_PackageInstaller()
         self.ui.setupUi(self)
+
         self.ui.yes_button = self.ui.buttonBox.button(
             QtWidgets.QDialogButtonBox.Yes)
-
         self.ui.yes_button.setText(self.button_label)
-
         self.ui.yes_button.clicked.connect(self.start_install)
+
         self.ui.button_input_path.clicked.connect(self.select_file)
         self.ui.input_path.clicked.connect(self.select_file)
         self.ui.corpus_name.textChanged.connect(self.validate_dialog)
@@ -1183,8 +1183,6 @@ class TableGui(MetaGui):
             lambda: self.validate_dialog())
         self.ui.radio_only_module.toggled.connect(
             lambda: self.validate_dialog())
-
-        self.ui.yes_button.clicked.connect(self.start_install)
 
         self.ui.corpus_name.setFocus()
 
