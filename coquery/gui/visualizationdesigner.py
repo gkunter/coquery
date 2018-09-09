@@ -165,6 +165,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.dialog = QtWidgets.QWidget()
         self.dialog_layout = QtWidgets.QVBoxLayout(self.dialog)
+        self.dialog_layout.setContentsMargins(0, 0, 0, 0)
+        self.dialog_layout.setSpacing(0)
         self.dialog.resize(self.viewer_size)
         self.dialog.setWindowTitle("<no figure> – Coquery")
         self.dialog.setWindowIcon(get_icon(
