@@ -14,7 +14,7 @@ from __future__ import print_function
 
 try:
     import squarify
-except ModuleNotFoundError:
+except ImportError:
     # the missing module is handled at the end of this script
     pass
 
