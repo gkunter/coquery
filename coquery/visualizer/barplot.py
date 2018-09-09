@@ -145,7 +145,7 @@ class BarPlot(vis.Visualizer):
     def plot_facet(self, data, color, **kwargs):
         self.args = self.prepare_arguments(data, self.x, self.y, self.z,
                                            self.levels_x, self.levels_y)
-        ax = self.plt_func(**self.args, ax=plt.gca())
+        ax = self.plt_func(ax=plt.gca(), **self.args)
         self.colorize_artists(ax)
 
     def colorize_artists(self, ax):
