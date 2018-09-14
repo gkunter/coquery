@@ -927,6 +927,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         logging.info("VIS: Data initialized")
         self.vis.df = df
+        self.vis.frm_str = options.cfg.digits
+        self.vis.experimental = options.cfg.experimental
         self.colorizer = self.get_colorizer(df=df, vis=self.vis, **values)
 
         logging.info("VIS: Visualizer initialized")
