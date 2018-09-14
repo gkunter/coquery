@@ -100,9 +100,11 @@ def main():
         test_list += [TestUnicodeModuleMethods]
 
     if not args or "visualizer" in args:
-        from test.test_vis_barplot import provided_tests
+        from test.vis.test_barplot import provided_tests
         test_list += provided_tests
-        from test.test_vis_barcodeplot import provided_tests
+        from test.vis.test_barcodeplot import provided_tests
+        test_list += provided_tests
+        from test.vis.test_bubbleplot import provided_tests
         test_list += provided_tests
 
     suite = unittest.TestSuite(
