@@ -101,6 +101,11 @@ class Visualizer(QtCore.QObject):
         self.colorizer = None
         self._xlab, self._ylab = self.DEFAULT_XLABEL, self.DEFAULT_YLABEL
         self._id_column = id_column
+        self.frm_str = "{}"
+        self.experimental = False
+
+    def get_default_index(self):
+        return self._id_column
 
     def get_custom_widgets(self, *args, **kwargs):
         """
