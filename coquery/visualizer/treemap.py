@@ -128,7 +128,14 @@ class TreeMap(vis.Visualizer):
 
         return rect
 
-    def draw_rect(self, rect, col, label, norm_x, norm_y):
+    def add_text(self, label, rect):
+        x, y, dx, dy = rect["x"], rect["y"], rect["dx"], rect["dy"]
+        plt.gca().text(x + dx / 2.0, y + dy / 2.0, label,
+                       va="center", ha="center",
+                       rotation=90 if self.text_rotate else 0,
+                       bbox=self.box_style if self.text_boxes else None)
+
+    def draw_rect(self, rect, col, norm_x, norm_y):
         rect = self.transform(rect, 0, 0, norm_x, norm_y)
         x, y, dx, dy = rect["x"], rect["y"], rect["dx"], rect["dy"]
         patch = Rectangle(
@@ -140,10 +147,6 @@ class TreeMap(vis.Visualizer):
 
         if self.text_boxes:
             self.box_style["alpha"] = self.text_boxes / 100
-        plt.gca().text(x + dx / 2.0, y + dy / 2.0, label,
-                       va="center", ha="center",
-                       rotation=90 if self.text_rotate else 0,
-                       bbox=self.box_style if self.text_boxes else None)
 
     def get_frm_string(self, S):
         if S.dtype == int:
@@ -242,15 +245,17 @@ class TreeMap(vis.Visualizer):
             labels = df.apply(
                 lambda row: frm.format(row[category], row[numeric]),
                 axis="columns")
-            for rect, label, col in zip(rects, labels,
-                                        self._colorizer.get_hues(df[hues])):
-                self.draw_rect(rect, col, label, norm_x, norm_y)
+            for rect, col in zip(rects,
+                                 self._colorizer.get_hues(df[hues])[::-1]):
+                self.draw_rect(rect, col, norm_x, norm_y)
+            for label, rect in zip(labels, rects):
+                self.add_text(label, rect)
         else:
             numeric2 = "COQ_FREQ2"
             frm = "{{}}:{{}}\n{}".format(self.get_frm_string(df[numeric]))
 
-            for rect, xval, col in zip(rects, df[x],
-                                       self._colorizer.get_hues(df[hues])):
+            for rect, xval, col in zip(
+                    rects, df[x], self._colorizer.get_hues(df[hues])[::-1]):
                 rect = self.transform(rect, 0, 0, norm_x, norm_y)
                 rx = rect["x"]
                 ry = rect["y"]
@@ -263,13 +268,12 @@ class TreeMap(vis.Visualizer):
                 dsub = sub_agg.process(df[df[x] == xval], y)
                 values = dsub[numeric2].values
                 rsub = self.get_rects(values, 0, 0, dx, dy)
-
                 for sr, yval, count in zip(rsub, dsub[y], values):
                     sr["x"] += rx
                     sr["y"] += ry
-                    self.draw_rect(sr, col,
-                                   frm.format(xval, yval, count),
-                                   rx + dx, ry + dy)
+                    self.draw_rect(sr, col, rx + dx, ry + dy)
+                    # FIXME: The labels don't work as expected
+                    self.add_text(frm.format(xval, yval, count), sr)
         ax = plt.gca()
         ax.set(xticklabels=[], xlim=[0, norm_x])
         ax.set(yticklabels=[], ylim=[0, norm_y])
@@ -281,10 +285,13 @@ class TreeMap(vis.Visualizer):
         cat, num, none = vis.Visualizer.count_parameters(
             data_x, data_y, data_z, df, session)
 
-        if len(num) > 1 or len(cat) == 0 or len(cat) > 2:
+        if len(num) > 1 or len(cat) == 0:
             return False
 
         return True
+
+    def suggest_legend(self):
+        return self.z
 
 
 if "squarify" in globals():
