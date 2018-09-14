@@ -32,7 +32,7 @@ class TextgridWriter(object):
         self.file_data = self.get_file_data()
 
     def get_file_data(self):
-        file_data = self.resource.corpus.get_file_data(
+        file_data = self.resource.get_file_data(
             self.df.coquery_invisible_corpus_id,
             ["file_name", "file_duration"])
         return file_data.reset_index(drop=True)

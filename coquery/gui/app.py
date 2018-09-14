@@ -1331,9 +1331,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             from .contextviewer import ContextView
             Viewer = ContextView
 
-        viewer = Viewer(self.Session.Corpus, int(token_id),
-                             int(origin_id), int(token_width),
-                             icon=options.cfg.icon)
+        viewer = Viewer(self.Session.Resource,
+                        int(token_id), int(origin_id), int(token_width),
+                        icon=options.cfg.icon)
         viewer.show()
         self.widget_list.append(viewer)
 

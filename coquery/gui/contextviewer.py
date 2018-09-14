@@ -29,12 +29,13 @@ from .ui.contextViewerUi import Ui_ContextView
 
 
 class ContextView(QtWidgets.QWidget):
-    def __init__(self, corpus, token_id, source_id, token_width,
+    def __init__(self, resource, token_id, source_id, token_width,
                  icon=None, parent=None):
 
         super(ContextView, self).__init__(parent)
 
-        self.corpus = corpus
+        self.resource = resource
+        self.corpus = resource.corpus
         self.token_id = token_id
         self.source_id = source_id
         self.token_width = token_width
@@ -52,7 +53,7 @@ class ContextView(QtWidgets.QWidget):
 
         # Add clickable header
         self.ui.button_ids = classes.CoqDetailBox(
-            "{} – Token ID {}".format(corpus.resource.name, token_id))
+            "{} – Token ID {}".format(self.resource.name, token_id))
         self.ui.button_ids.clicked.connect(
             lambda: options.settings.setValue(
                 "contextviewer_details",
@@ -62,15 +63,15 @@ class ContextView(QtWidgets.QWidget):
             self.ui.button_ids.box)
 
         self.audio = None
-        if not corpus.resource.audio_features:
+        if not self.resource.audio_features:
             self.ui.tab_widget.removeTab(1)
             self.ui.tab_widget.tabBar().hide()
 
-        L = self.corpus.get_origin_data(token_id)
+        L = self.self.resource.get_origin_data(token_id)
         for table, fields in sorted(L):
             self.add_source_label(table)
             for label in sorted(fields.keys()):
-                if label not in corpus.resource.audio_features:
+                if label not in self.resource.audio_features:
                     self.add_source_label(label, fields[label])
                 else:
                     from coquery import sound
@@ -312,9 +313,9 @@ class ContextView(QtWidgets.QWidget):
 class ContextViewAudio(ContextView):
     _run_first = True
 
-    def __init__(self, corpus, token_id, source_id, token_width,
+    def __init__(self, resource, token_id, source_id, token_width,
                  icon=None, parent=None):
-        super(ContextViewAudio, self).__init__(corpus, token_id, source_id,
+        super(ContextViewAudio, self).__init__(resource, token_id, source_id,
                                                token_width, icon=None,
                                                parent=None)
         if ContextViewAudio._run_first:

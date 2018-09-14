@@ -39,7 +39,7 @@ from . import options
 from .links import get_by_hash
 
 
-class LexiconClass(object):
+class LexiconClass():
     pass
 
 
@@ -731,17 +731,6 @@ class SQLResource(BaseResource):
                     "Null": ("NOT NULL" if row["null"] in ["NO", 1] else ""),
                     "Name": field_name}
         return d
-
-    def get_primary_keys(self):
-        """
-        Returns a dictionary with the tables of the current resource as
-        keys, and tuples as values. Each tuple contains the name and the
-        dtype of the primary key of that table.
-
-        This structure can be used to make Link objects work even if the
-        linked table has not been instantiated yet.
-        """
-        raise NotImplementedError
 
     def get_table_size(self, rc_table):
         engine = options.cfg.current_connection.get_engine(self.db_name)
@@ -1976,58 +1965,6 @@ class SQLResource(BaseResource):
 
         return df.values.ravel()[0]
 
-
-class CorpusClass(object):
-    """
-    """
-    _frequency_cache = {}
-    _corpus_size_cache = {}
-    _subcorpus_size_cache = {}
-    _corpus_range_cache = {}
-    _context_cache = {}
-
-    def __init__(self):
-        super(CorpusClass, self).__init__()
-        self.resource = None
-
-    def get_file_data(self, token_id, features):
-        """
-        Return a data frame containing the requested features for the token
-        id.
-        """
-        if isinstance(token_id, list):
-            tokens = token_id
-        elif isinstance(token_id, pd.Series):
-            tokens = list(token_id.values)
-        else:
-            tokens = list(token_id)
-
-        self.resource.joined_tables = ["corpus"]
-        self.resource.table_list = [self.resource.corpus_table]
-
-        self.resource.add_table_path("corpus_id", "file_id")
-
-        feature_list = ["{}.{}".format(
-                                    self.resource.file_table,
-                                    getattr(self.resource, x))
-                        for x in features]
-        feature_list.append("{}.{}".format(
-                                    self.resource.corpus_table,
-                                    self.resource.corpus_id))
-        token_ids = [str(x) for x in tokens]
-        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
-                features=", ".join(feature_list),
-                path=" ".join(self.resource.table_list),
-                corpus=self.resource.corpus_table,
-                corpus_id=self.resource.corpus_id,
-                token_ids=", ".join(token_ids))
-
-        engine = options.cfg.current_connection.get_engine(
-            self.resource.db_name)
-        df = pd.read_sql(S, engine)
-        engine.dispose()
-        return df
-
     def get_origin_data(self, token_id):
         """
         Return a dictionary containing all origin data that is available for
@@ -2053,12 +1990,12 @@ class CorpusClass(object):
 
         # get the complete row from the corpus table for the current token:
         S = "SELECT * FROM {} WHERE {} = {}".format(
-            self.resource.corpus_table,
-            self.resource.corpus_id,
+            self.corpus_table,
+            self.corpus_id,
             token_id)
 
         engine = options.cfg.current_connection.get_engine(
-            self.resource.db_name)
+            self.db_name)
         df = pd.read_sql(S, engine)
         engine.dispose()
 
@@ -2066,13 +2003,13 @@ class CorpusClass(object):
         # we go through all of them:
         for column in df.columns:
             # exclude the Token ID:
-            if column == self.resource.corpus_id:
+            if column == self.corpus_id:
                 continue
             # do not look into the word column of the corpus:
             try:
-                if column == self.resource.corpus_word_id:
+                if column == self.corpus_word_id:
                     continue
-                if column == self.resource.corpus_word:
+                if column == self.corpus_word:
                     continue
             except AttributeError:
                 pass
@@ -2089,30 +2026,30 @@ class CorpusClass(object):
             # to the current column display name:
             try:
                 rc_feature = [x for x
-                              in self.resource.get_feature_from_name(column)
+                              in self.get_feature_from_name(column)
                               if x.startswith("corpus_")][0]
             except IndexError:
                 continue
 
             # obtain the field name from the resource name:
-            _, _, feature = self.resource.split_resource_feature(rc_feature)
+            _, _, feature = self.split_resource_feature(rc_feature)
             # determine whether the field name is a linking field:
             try:
-                _, tab, feat = self.resource.split_resource_feature(feature)
+                _, tab, feat = self.split_resource_feature(feature)
             except ValueError:
                 # split_resource_feature() raises a ValueError exception if
                 # the passed string does not appear to be a resource feature.
                 # In that case, the resource is not considered for origin data.
                 continue
             if feat == "id":
-                id_column = getattr(self.resource, "{}_id".format(tab))
-                table_name = getattr(self.resource, "{}_table".format(tab))
+                id_column = getattr(self, "{}_id".format(tab))
+                table_name = getattr(self, "{}_table".format(tab))
                 S = "SELECT * FROM {} WHERE {} = {}".format(
                     table_name, id_column, df[column].values[0])
                 # Fetch all fields from the linked table for the current
                 # token:
                 engine = options.cfg.current_connection.get_engine(
-                    self.resource.db_name)
+                    self.db_name)
                 row = pd.read_sql(S, engine)
                 engine.dispose()
 
@@ -2122,6 +2059,53 @@ class CorpusClass(object):
                     # append the row data to the list:
                     l.append((table_name, D))
         return l
+
+    def get_file_data(self, token_id, features):
+        """
+        Return a data frame containing the requested features for the token
+        id.
+        """
+        if isinstance(token_id, list):
+            tokens = token_id
+        elif isinstance(token_id, pd.Series):
+            tokens = list(token_id.values)
+        else:
+            tokens = list(token_id)
+
+        self.joined_tables = ["corpus"]
+        self.table_list = [self.corpus_table]
+
+        self.add_table_path("corpus_id", "file_id")
+
+        feature_list = ["{}.{}".format(self.file_table, getattr(self, x))
+                        for x in features]
+        feature_list.append("{}.{}".format(self.corpus_table, self.corpus_id))
+        token_ids = [str(x) for x in tokens]
+        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
+                features=", ".join(feature_list),
+                path=" ".join(self.table_list),
+                corpus=self.corpus_table,
+                corpus_id=self.corpus_id,
+                token_ids=", ".join(token_ids))
+
+        engine = options.cfg.current_connection.get_engine(self.db_name)
+        df = pd.read_sql(S, engine)
+        engine.dispose()
+        return df
+
+
+class CorpusClass(object):
+    """
+    """
+    _frequency_cache = {}
+    _corpus_size_cache = {}
+    _subcorpus_size_cache = {}
+    _corpus_range_cache = {}
+    _context_cache = {}
+
+    def __init__(self):
+        super(CorpusClass, self).__init__()
+        self.resource = None
 
     def get_corpus_size(self, filters=None):
         """
