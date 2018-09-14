@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-This module tests the barplot visualizer module.
+This module tests the barcodeplot visualizer module.
 
 Run it like so:
 
-coquery$ python -m test.test_vis_barcodeplot
+coquery$ python -m test.vis.test_barcodeplot
 
 """
 
@@ -18,16 +18,13 @@ import matplotlib.pyplot as plt
 
 from coquery.coquery import options
 
-from .testcase import CoqTestCase
+from test.testcase import CoqTestCase
 
 
 class TestBarcodePlotArguments(CoqTestCase):
     NUM_COLUMN = "NUM"
 
     def setUp(self):
-        options.cfg = argparse.Namespace()
-        options.cfg.experimental = False
-
         from coquery.visualizer.barcodeplot import BarcodePlot
 
         pd.np.random.seed(123)
@@ -176,9 +173,6 @@ class TestHeatbarPlotArguments(CoqTestCase):
     NUM_COLUMN = "NUM"
 
     def setUp(self):
-        options.cfg = argparse.Namespace()
-        options.cfg.experimental = False
-
         from coquery.visualizer.barcodeplot import HeatbarPlot
 
         # TEST DATA:
@@ -191,7 +185,6 @@ class TestHeatbarPlotArguments(CoqTestCase):
         X = list("AAAAA") + list("BBB") + list("AAA") + list("BBB")
         self.df = pd.DataFrame({self.NUM_COLUMN: N, "X": X})
         self.vis = HeatbarPlot(None, None, self.NUM_COLUMN)
-
 
     def test_increment_bins(self):
         """

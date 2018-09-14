@@ -4,7 +4,7 @@ This module tests the barplot visualizer module.
 
 Run it like so:
 
-coquery$ python -m test.test_vis_barplot
+coquery$ python -m test.vis.test_barplot
 
 """
 
