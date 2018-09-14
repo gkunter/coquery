@@ -30,33 +30,42 @@ class CoqTestCase(unittest.TestCase):
         d_s1 = {}
         d_s2 = {}
 
+        d_i1 = {}
+        d_i2 = {}
+
         d_np1 = {}
         d_np2 = {}
 
+
+        map_dtypes = ((pd.Series, d_s1, d_s2),
+                      (pd.Index, d_i1, d_i2),
+                      (pd.np.ndarray, d_np1, d_np2),
+                      (pd.DataFrame, d_df1, d_df2))
+
         for key, val in d1.items():
-            if isinstance(val, pd.Series):
-                d_s1[key] = D1.pop(key)
-            elif isinstance(val, pd.np.ndarray):
-                d_np1[key] = D1.pop(key)
-            elif isinstance(val, pd.DataFrame):
-                d_df1[key] = D1.pop(key)
+            for dtype, dct1, _ in map_dtypes:
+                if isinstance(val, dtype):
+                    dct1[key] = D1.pop(key)
+                    break
 
         for key, val in d2.items():
-            if isinstance(val, pd.Series):
-                d_s2[key] = D2.pop(key)
-            elif isinstance(val, pd.np.ndarray):
-                d_np2[key] = D2.pop(key)
-            elif isinstance(val, pd.DataFrame):
-                d_df2[key] = D2.pop(key)
+            for dtype, _, dct2 in map_dtypes:
+                if isinstance(val, dtype):
+                    dct2[key] = D2.pop(key)
+                    break
 
         super(CoqTestCase, self).assertDictEqual(D1, D2)
 
         self.assertEqual(sorted(d_df1.keys()), sorted(d_df2.keys()))
         self.assertEqual(sorted(d_s1.keys()), sorted(d_s2.keys()))
+        self.assertEqual(sorted(d_i1.keys()), sorted(d_i2.keys()))
         self.assertEqual(sorted(d_np1.keys()), sorted(d_np2.keys()))
 
         for key in d_s1.keys():
             pd.testing.assert_series_equal(d_s1[key], d_s2[key])
+
+        for key in d_i1.keys():
+            pd.testing.assert_index_equal(d_i1[key], d_i2[key])
 
         for key in d_df1.keys():
             pd.testing.assert_frame_equal(d_df1[key], d_df2[key])
