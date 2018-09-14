@@ -644,17 +644,6 @@ class BaseResource(CoqObject):
 class SQLResource(BaseResource):
     _get_orth_str = None
 
-    def get_operator(self, Token):
-        """ returns a string containing the appropriate operator for an
-        SQL query using the Token (considering wildcards and negation) """
-        if options.cfg.regexp:
-            return "REGEXP"
-        if Token.has_wildcards(Token.S):
-            Operators = {True: "NOT LIKE", False: "LIKE"}
-        else:
-            Operators = {True: "!=", False: "="}
-        return Operators[False]
-
     def __init__(self, _, corpus):
         super(SQLResource, self).__init__()
         self._word_cache = {}
@@ -666,6 +655,18 @@ class SQLResource(BaseResource):
             getattr(self, "corpus_sentence_id", None) or
             getattr(self, "corpus_utterance", None) or
             getattr(self, "corpus_utterance_id", None))
+
+    @staticmethod
+    def get_operator(Token):
+        """ returns a string containing the appropriate operator for an
+        SQL query using the Token (considering wildcards and negation) """
+        if options.cfg.regexp:
+            return "REGEXP"
+        if Token.has_wildcards(Token.S):
+            Operators = {True: "NOT LIKE", False: "LIKE"}
+        else:
+            Operators = {True: "!=", False: "="}
+        return Operators[False]
 
     @classmethod
     def get_sentence_feature(cls):
@@ -693,45 +694,6 @@ class SQLResource(BaseResource):
                 return x
         return None
 
-    @classmethod
-    def _str_table_desc_mysql(cls, table):
-        S = "SHOW CREATE TABLE {}.{}".format(
-            cls.db_name, getattr(cls, "{}_table".format(table)))
-        return S
-
-    @classmethod
-    def _str_table_desc_sqlite(cls, table):
-        S = "SELECT `sql` FROM sqlite_master WHERE tbl_name = '{}'".format(
-            getattr(cls, "{}_table".format(table)))
-        return S
-
-    def get_table_descriptor(self):
-        d = {}
-        feature_map = [(x, getattr(self, x))
-                       for x in self.get_resource_features()]
-
-        for tab in self.get_table_tree("corpus") + ["tag"]:
-            table_name = getattr(self, "{}_table".format(tab))
-
-            d[tab] = dict(Fields={}, Primary=None, Name=table_name)
-            for row in self.get_table_names(tab):
-                field_name = row["name"]
-                rc_feature = None
-                for rc_feature, name in feature_map:
-                    tup = self.split_resource_feature(rc_feature)
-                    _, table, feature = tup
-                    if table == tab and name == field_name:
-                        break
-
-                if row["key"] in ["PRI", 1]:
-                    d[tab]["Primary"] = rc_feature
-
-                d[tab]["Fields"][rc_feature] = {
-                    "Type": row["type"],
-                    "Null": ("NOT NULL" if row["null"] in ["NO", 1] else ""),
-                    "Name": field_name}
-        return d
-
     def get_table_size(self, rc_table):
         engine = options.cfg.current_connection.get_engine(self.db_name)
         table = getattr(self, "{}_table".format(rc_table))
@@ -740,13 +702,13 @@ class SQLResource(BaseResource):
         engine.dispose()
         return size
 
-    def get_primary_key(self, rc_table):
-        for row in self.get_table_names(rc_table):
-            if row["key"] in ("PRI", 1):
-                return row["name"]
-        return None
-
     def get_table_names(self, rc_table):
+        """
+        Return a list containing the SQL table field information.
+        """
+
+        # FIXME: This is probably a method that should be provided by the
+        # connection and not by the resource
         engine = options.cfg.current_connection.get_engine(self.db_name)
         table_name = getattr(self, "{}_table".format(rc_table))
         db_type = options.cfg.current_connection.db_type()
@@ -761,6 +723,17 @@ class SQLResource(BaseResource):
             rows = [dict(zip(columns, x)) for
                     x in connection.execute(S.format(table_name))]
         return rows
+
+    def get_primary_key(self, rc_table):
+        """
+        Return the name of the primary key in the SQL table, or None.
+        """
+        # FIXME: This is probably a method that should be provided by the
+        # connection and not by the resource
+        for row in self.get_table_names(rc_table):
+            if row["key"] in ("PRI", 1):
+                return row["name"]
+        return None
 
     def dump_table(self, path, rc_table, table_size, chunk_signal,
                    chunksize=250000):
@@ -789,12 +762,55 @@ class SQLResource(BaseResource):
         path = options.cfg.current_connection.resources()[self.name][-1]
         return path
 
+    def get_table_descriptor(self):
+        """
+        Return a description of all SQL tables provided by the resource.
+
+        This method is used by pack_corpus().
+
+        Returns
+        -------
+        d : dict
+            A dictionary with table short names as keys, and table
+            dictionaries as values.
+        """
+        d = {}
+        feature_map = [(x, getattr(self, x))
+                       for x in self.get_resource_features()]
+
+        for tab in self.get_table_tree("corpus") + ["tag"]:
+            table_name = getattr(self, "{}_table".format(tab))
+
+            d[tab] = dict(Fields={}, Primary=None, Name=table_name)
+            for row in self.get_table_names(tab):
+                field_name = row["name"]
+                rc_feature = None
+                for rc_feature, name in feature_map:
+                    tup = self.split_resource_feature(rc_feature)
+                    _, table, feature = tup
+                    if table == tab and name == field_name:
+                        break
+
+                if row["key"] in ["PRI", 1]:
+                    d[tab]["Primary"] = rc_feature
+
+                d[tab]["Fields"][rc_feature] = {
+                    "Type": row["type"],
+                    "Null": ("NOT NULL" if row["null"] in ["NO", 1] else ""),
+                    "Name": field_name}
+        return d
+
     @classmethod
     def get_pack_steps(cls):
+        """
+        Return an estimation of the number of steps that are required to
+        pack this resource.
+
+        Used to advance the progress bar in the corpus builder GUI.
+        """
         return 3 + len(cls.get_table_tree("corpus")) * 3
 
-    def pack_corpus(self, name, license,
-                    file_signal=None, chunk_signal=None):
+    def pack_corpus(self, name, license, file_signal=None, chunk_signal=None):
         """
         Creates a self-contained corpus package.
 
@@ -1047,19 +1063,6 @@ class SQLResource(BaseResource):
         if POS:
             S = (3 / math.sqrt(N)) * S
         return S
-
-    @staticmethod
-    def penalize_query_item(x, i):
-        # FIXME:
-        # Currently, any query item that starts with an asterisk will trigger
-        # a full table scan because indexing is not possible. In the future,
-        # there should be reversed Word and Lemma columns that are queried in
-        # such cases. Then the following line should be changed to
-        # `if x[1] == "*":`
-        if x[1].startswith("*"):
-            return 9999
-        else:
-            return (len(x[1]) - 2 * x[1].count("["))
 
     @classmethod
     def get_token_order(cls, token_list):
@@ -1766,7 +1769,8 @@ class SQLResource(BaseResource):
         return condition_list
 
     @classmethod
-    def get_query_string(cls, query_items, selected, columns=None, to_file=False):
+    def get_query_string(cls,
+                         query_items, selected, columns=None, to_file=False):
         """
         Return an SQL string for the specified query.
         """
@@ -1810,9 +1814,6 @@ class SQLResource(BaseResource):
             """.format(S, int(options.cfg.number_of_tokens))
         return S
 
-    def pos_check_function(self, l):
-        return [self.is_part_of_speech(s) for s in l]
-
     def is_part_of_speech(self, pos):
         pos_feature = getattr(self, QUERY_ITEM_POS, None)
         if pos_feature:
@@ -1830,6 +1831,9 @@ class SQLResource(BaseResource):
             return len(df.index) > 0
         else:
             return False
+
+    def pos_check_function(self, l):
+        return [self.is_part_of_speech(s) for s in l]
 
     def get_sentence_ids(self, id_list):
         """
