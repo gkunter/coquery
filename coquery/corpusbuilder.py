@@ -74,7 +74,6 @@ except ImportError:
     from io import BytesIO as IO_Stream
 
 
-from . import sqlhelper
 from . import sqlwrap
 from . import options
 from . import corpus
@@ -1404,8 +1403,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                     if this_column.index_length:
                         length = this_column.index_length
                     else:
-                        length = sqlhelper.get_index_length(self.DB.engine,
-                                                            table, column)
+                        length = self.DB.get_index_length(table, column)
                 else:
                     length = None
 
