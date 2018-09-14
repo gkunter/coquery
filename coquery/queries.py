@@ -38,7 +38,6 @@ from .general import *
 from . import tokens
 from . import options
 from . import managers
-from . import NAME
 from coquery.unicode import utf8
 
 
@@ -126,7 +125,7 @@ class TokenQuery(object):
                             i+1,
                             len(self.query_list),
                             self._current_subquery_string)
-                logger.info(s)
+                logging.info(s)
 
             query_string = self.Resource.get_query_string(
                 query_items=self._sub_query,
@@ -147,7 +146,7 @@ class TokenQuery(object):
                     df = pd.DataFrame()
                 else:
                     if options.cfg.verbose:
-                        logger.info(query_string)
+                        logging.info(query_string)
 
                     # SQLite: attach external databases
                     if options.cfg.current_connection.db_type() == SQL_SQLITE:
@@ -398,4 +397,3 @@ def get_query_type(MODE):
     else:
         return TokenQuery
 
-logger = logging.getLogger(NAME)
