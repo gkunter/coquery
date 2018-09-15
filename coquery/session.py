@@ -27,9 +27,9 @@ from . import options
 from .errors import (
     TokenParseError, IllegalArgumentError, SQLNoConnectorError,
     EmptyInputFileError, CorpusUnavailableQueryTypeError)
-from .defines import SQL_SQLITE, COLUMN_NAMES
+from .defines import SQL_SQLITE, COLUMN_NAMES, QUERY_MODE_STATISTICS
 from .general import Print
-from . import queries
+from coquery.queries import StatisticsQuery, TokenQuery
 from . import managers
 from . import functionlist
 
@@ -79,7 +79,10 @@ class Session(object):
             warnings.warn("No corpus available on connection '{}'".format(
                 current_connection.name))
 
-        self.query_type = queries.get_query_type(options.cfg.MODE)
+        if options.cfg.MODE == QUERY_MODE_STATISTICS:
+            self.query_type = StatisticsQuery
+        else:
+            self.query_type = TokenQuery
 
         self.data_table = pd.DataFrame()
         self.output_object = pd.DataFrame()
@@ -247,7 +250,7 @@ class Session(object):
                 # data frames containing NaNs or empty strings does not change
                 # when appending the new data frame to the previous.
 
-                # The same hack is also needed in queries.run().
+                # The same hack is also needed in TokenQuery.run().
                 if (len(self.data_table) > 0 and
                         df.dtypes.tolist() != dtype_list.tolist()):
                     for x in df.columns:
@@ -612,7 +615,7 @@ class StatisticsSession(Session):
 
     def __init__(self):
         super(StatisticsSession, self).__init__()
-        self.query_list.append(queries.StatisticsQuery(self.Corpus, self))
+        self.query_list.append(StatisticsQuery(self.Corpus, self))
         self.header = ["Variable", "Value"]
         self.output_order = self.header
 
