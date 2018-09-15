@@ -11,30 +11,17 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
-from __future__ import division
 
-import math
 import hashlib
 import logging
-
-try:
-    range = xrange
-except NameError:
-    pass
-
-try:
-    from numba import jit
-except (ImportError, OSError):
-    def jit(f):
-        def inner(f, *args):
-            return f(*args)
-        return lambda *args: inner(f, *args)
+import os
 
 import pandas as pd
 
-from .defines import *
-from .errors import *
-from .general import *
+from coquery.defines import (SQL_SQLITE,
+                             QUERY_ITEM_LEMMA, QUERY_ITEM_WORD,
+                             CONTEXT_NONE)
+
 from . import tokens
 from . import options
 from . import managers
@@ -63,28 +50,6 @@ class TokenQuery(object):
         self._keys = []
         self.empty_query = False
 
-
-    @staticmethod
-    def get_visible_columns(df, session, ignore_hidden=False):
-        """
-        Return a list with the column names that are currently visible.
-        """
-        print("TokenQuery.get_visible_columns() is deprecated.")
-        if ignore_hidden:
-            return [x for x in list(df.columns.values) if (
-                not x.startswith("coquery_invisible") and
-                x in session.output_order)]
-        else:
-        # FIXME: use manager for column visibility
-            return [x for x in list(df.columns.values) if (
-                not x.startswith("coquery_invisible") and
-                x in session.output_order)]
-
-            #return [x for x in list(df.columns.values) if (
-                #not x.startswith("coquery_invisible") and
-                #x in session.output_order and
-                #options.cfg.column_visibility.get(x, True))]
-
     def run(self, connection=None, to_file=False, **kwargs):
         """
         Run the query, and store the results in an internal data frame.
@@ -101,8 +66,7 @@ class TokenQuery(object):
             directly to a file contains less information, e.g. it doesn't
             contain an origin ID or a corpus ID (unless requested).
         """
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Resource.name)
+        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
         manager_hash = manager.get_hash()
 
         self.results_frame = pd.DataFrame()
@@ -173,7 +137,8 @@ class TokenQuery(object):
                         print(e)
                         raise e
 
-                    df = pd.DataFrame(list(iter(results)), columns=results.keys())
+                    df = pd.DataFrame(list(iter(results)),
+                                      columns=results.keys())
 
                     if len(df) == 0:
                         df = pd.DataFrame(columns=results.keys())
@@ -193,9 +158,12 @@ class TokenQuery(object):
                             (lemma_column and lemma_column in x)):
                         try:
                             if options.cfg.output_to_lower:
-                                df[x] = df[x].apply(lambda x: x.lower() if x else x)
+                                fnc = str.lower
                             else:
-                                df[x] = df[x].apply(lambda x: x.upper() if x else x)
+                                fnc = str.upper
+
+                            df[x] = list(map(lambda s: fnc(s) if s else s,
+                                             df[x]))
 
                         except AttributeError:
                             pass
@@ -324,8 +292,8 @@ class TokenQuery(object):
         # if df is empty, a dummy data frame is created with NAs in all
         # content columns. This is needed so that frequency queries with empty
         # results can be displayed as 0.
-        # FIXME: "coquery_invisible_dummy" is used to handle empty queries. There
-        # is probably a better way of doing this.
+        # FIXME: "coquery_invisible_dummy" is used to handle empty queries.
+        # There is probably a better way of doing this.
         if (len(df) == 0):
             col = []
             for x in options.cfg.selected_features:
@@ -389,11 +357,4 @@ class StatisticsQuery(TokenQuery):
     def run(self, connection=None, to_file=False, **kwargs):
         self.results_frame = self.Session.Resource.get_statistics(connection, **kwargs)
         return self.results_frame
-
-
-def get_query_type(MODE):
-    if MODE == QUERY_MODE_STATISTICS:
-        return StatisticsQuery
-    else:
-        return TokenQuery
 
