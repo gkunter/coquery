@@ -1243,21 +1243,21 @@ def manager_factory(manager):
     return Manager()
 
 
-def get_manager(manager, resource):
+def get_manager(trans_mode, resource):
     """
     Returns a data manager
     """
     if resource is None:
         return None
     try:
-        return options.cfg.managers[resource][manager]
+        return options.cfg.managers[resource][trans_mode]
     except KeyError:
         if resource not in options.cfg.managers:
             options.cfg.managers[resource] = {}
-        new_manager = manager_factory(manager)
-        options.cfg.managers[resource][manager] = new_manager
+        new_manager = manager_factory(trans_mode)
+        options.cfg.managers[resource][trans_mode] = new_manager
     finally:
-        return options.cfg.managers[resource][manager]
+        return options.cfg.managers[resource][trans_mode]
 
 
 def get_visible_columns(df, manager, session, hidden=False):
