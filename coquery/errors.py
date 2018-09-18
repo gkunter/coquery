@@ -68,6 +68,19 @@ class NoArgumentsError(NoTraceException):
     error_message = "No arguments given to script."
 
 
+class RegularExpressionError(NoTraceException):
+    _msg = """
+
+    <p><b>There is an error in your regular expression.</b></p>
+    <p>Your regular expression <code>'{}'</code> caused an error at position
+    {}:</p>
+    <p><span style='color: red'>{}</span></p>"""
+
+    def __init__(self, prefix, pat, pos, msg):
+        self.par = None
+        self.error_message = self._msg.format(pat, pos, msg)
+
+
 class VisualizationNoDataError(NoTraceException):
     error_message = """
     <p><b>The 'Query results' view is empty.</b></p>
