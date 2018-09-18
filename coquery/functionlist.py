@@ -2,7 +2,7 @@
 """
 functionlist.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,13 +15,11 @@ import pandas as pd
 import datetime
 import warnings
 import sys
-import traceback
-import logging
 
 from . import options
 from .general import CoqObject
-from .defines import msg_runtime_error_function
 from .errors import RegularExpressionError
+
 
 class FunctionList(CoqObject):
     def __init__(self, l=None, *args, **kwargs):
@@ -75,15 +73,14 @@ class FunctionList(CoqObject):
                     print(datetime.datetime.now() - then)
                 else:
                     val = fun.evaluate(df, **fun.kwargs)
-            except RegularExpressionError as e:
-                self._exceptions.append(("", e, sys.exc_info()))
-                val = pd.Series([None] * len(df), name=new_column)
             except Exception as e:
                 # if an exception occurs, the error is logged, and an empty
                 # column containing only NAs is added
-                error = "Error during function call {}".format(
-                    fun.get_label(session))
-                #logging.exception(error)
+                if isinstance(e, RegularExpressionError):
+                    error = e.error_message.strip()
+                else:
+                    error = "Error during function call {}".format(
+                        fun.get_label(session))
                 self._exceptions.append((error, e, sys.exc_info()))
                 val = pd.Series([None] * len(df), name=new_column)
             finally:
