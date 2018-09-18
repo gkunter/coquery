@@ -2,7 +2,7 @@
 """
 functions.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -27,7 +27,7 @@ from . import options
 from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
 from .general import CoqObject, collapse_words
 from .gui.pyqt_compat import get_toplevel_window
-
+from .errors import RegularExpressionError
 
 # make sure reduce() is available
 try:
@@ -318,8 +318,7 @@ class StringSeriesFunction(StringFunction):
             # ensure that regex functions use unicode:
             pat = kwargs["pat"]
             if "(?u)" not in pat:
-                pat = "(?u){}".format(pat)
-            kwargs["pat"] = pat
+                kwargs["pat"] = "(?u){}".format(pat)
 
             # add case-sensitivity flag:
             kwargs["flags"] = self.get_flag("case")
@@ -328,11 +327,25 @@ class StringSeriesFunction(StringFunction):
             except KeyError:
                 pass
 
-        _df = pd.concat([getattr(df[col].astype(str).str
-                                 if df[col].dtype != object
-                                 else df[col].str,
-                                 self.str_func)(**kwargs)
-                         for col in self.columns], axis="columns")
+        columns = []
+
+        for col in self.columns:
+            if df[col].dtype != object:
+                # get string function from converted column
+                fnc = getattr(df[col].astype(str).str, self.str_func)
+            else:
+                # get string function from original column
+                fnc = getattr(df[col].str, self.str_func)
+
+            try:
+                val = fnc(**kwargs)
+            except re.error as e:
+                pos = e.pos
+                if "(?u)" not in pat:
+                    pos = pos - 3
+                raise RegularExpressionError(self.get_name(), pat, pos, e.msg)
+            columns.append(val)
+        _df = pd.concat(columns, axis="columns")
 
         groups = len(_df.columns) // len(self.columns)
         if groups > 1 or len(self.columns) > 1:
