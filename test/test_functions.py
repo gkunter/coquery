@@ -72,6 +72,8 @@ class CoqTestCase(unittest.TestCase):
         options.cfg.drop_on_na = False
         options.cfg.benchmark = False
 
+        self.df = df0.copy()
+
 
 class TestModuleFunctions(CoqTestCase):
     def test_get_base_func_1(self):
@@ -89,21 +91,21 @@ class TestModuleFunctions(CoqTestCase):
 
 class TestFrequencyFunctions(CoqTestCase):
     def test_freq(self):
-        df = pd.DataFrame(df0)
+        df = df0.copy()
         func = Freq(columns=[x for x in df.columns
                              if not x.startswith("coquery_invisible")])
         val = FunctionList([func]).lapply(df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [1, 2, 2, 1, 1])
 
     def test_freq_with_none(self):
-        df = pd.DataFrame(df0)
+        df = df0.copy()
         df["coq_test_label_1"] = [None, "A", None, "B", None]
         func = Freq(columns=["coq_word_label_1", "coq_test_label_1"])
         val = FunctionList([func]).lapply(df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [2, 1, 2, 1, 1])
 
     def test_freq_with_nan1(self):
-        df = pd.DataFrame(df0)
+        df = df0.copy()
         df["coq_test_label_1"] = [pd.np.nan, "A", pd.np.nan, "B", pd.np.nan]
         func = Freq(columns=["coq_word_label_1", "coq_test_label_1"])
         val = FunctionList([func]).lapply(df, session=None)[func.get_id()]
@@ -113,88 +115,88 @@ class TestFrequencyFunctions(CoqTestCase):
 class TestStringFunctions(CoqTestCase):
     def test_count_1(self):
         func = StringCount(columns=["coq_word_label_1"], pat="x")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [0, 0, 0, 1, 1])
 
     def test_count_2(self):
         func = StringCount(columns=["coq_word_label_1"], pat="X")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [0, 0, 0, 1, 1])
 
     def test_count_case_1(self):
         func = StringCount(columns=["coq_word_label_1"], pat="x", case=True)
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [0, 0, 0, 1, 1])
 
     def test_count_case_2(self):
         func = StringCount(columns=["coq_word_label_1"], pat="X", case=True)
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [0, 0, 0, 0, 0])
 
     def test_count_null(self):
         func = StringCount(columns=["coq_word_label_2"], pat="a")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [1, 1, 1, 1, 0])
 
     def test_length(self):
         func = StringLength(columns=["coq_word_label_1"])
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [3, 3, 3, 1, 1])
 
     def test_length_null(self):
         func = StringLength(columns=["coq_word_label_2"])
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [1, 1, 1, 1, 0])
 
     def test_chain(self):
         func = StringChain(
             columns=["coq_word_label_1", "coq_source_genre_1"],
             sep=" ")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(),
             ["abc SPOK", "abc NEWS", "abc NEWS", "x SPOK", "x NEWS"])
 
     def test_match_1(self):
         func = StringMatch(columns=["coq_word_label_1"], pat="[a]")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(), [True, True, True, False, False])
 
     def test_match_2(self):
         func = StringMatch(columns=["coq_word_label_1"], pat="[A]")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(), [True, True, True, False, False])
 
     def test_match_case_1(self):
         func = StringMatch(columns=["coq_word_label_1"], pat="[A]", case=True)
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(), [False, False, False, False, False])
 
     def test_match_case_2(self):
         func = StringMatch(columns=["coq_word_label_1"], pat="[a]", case=True)
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(), [True, True, True, False, False])
 
     def test_match_null(self):
         func = StringMatch(columns=["coq_word_label_2"], pat="[a]")
-        val = FunctionList([func]).lapply(df0, session=None)[func.get_id()]
+        val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
         self.assertListEqual(
             val.tolist(), [True, True, True, True, False])
 
     def test_extract_1(self):
         func = StringExtract(columns=["coq_word_label_1"], pat="[ABX]*")
-        val = FunctionList([func]).lapply(df0, session=None)
+        val = FunctionList([func]).lapply(self.df, session=None)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(),
             ["ab", "ab", "ab", "x", "x"])
 
     def test_extract_2(self):
         func = StringExtract(columns=["coq_word_label_1"], pat="[abx]*")
-        val = FunctionList([func]).lapply(df0, session=None)
+        val = FunctionList([func]).lapply(self.df, session=None)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(),
             ["ab", "ab", "ab", "x", "x"])
@@ -202,7 +204,7 @@ class TestStringFunctions(CoqTestCase):
     def test_extract_case_1(self):
         func = StringExtract(columns=["coq_word_label_1"],
                              pat="[ABX]*", case=True)
-        val = FunctionList([func]).lapply(df0, session=None)
+        val = FunctionList([func]).lapply(self.df, session=None)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(),
             ["", "", "", "", ""])
@@ -210,7 +212,7 @@ class TestStringFunctions(CoqTestCase):
     def test_extract_case_2(self):
         func = StringExtract(columns=["coq_word_label_1"],
                              pat="[abx]*", case=True)
-        val = FunctionList([func]).lapply(df0, session=None)
+        val = FunctionList([func]).lapply(self.df, session=None)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(),
             ["ab", "ab", "ab", "x", "x"])
@@ -236,6 +238,23 @@ class TestStringFunctions(CoqTestCase):
         func2 = Equal(columns=df.columns[-2:])
         val = FunctionList([func2]).lapply(df, session=None)
         raise unittest.SkipTest
+
+    def test_extract_with_illegal_regexp(self):
+        """
+        Test issue #297.
+
+        If a regular expression is faulty and raises a RegularExpressionError,
+        the function containing the expression should return a column
+        consisting only of NAs.
+        """
+
+        df = pd.DataFrame({"Query string": ["/? ??? ?/"] * 5})
+
+        func = StringExtract(columns=["Query string"], pat="^? ???")
+
+        df = FunctionList([func]).lapply(df, session=None)
+        pd.np.testing.assert_array_equal(
+            df[func.get_id()].values, [None] * len(df))
 
     def test_upper(self):
         df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
@@ -279,7 +298,7 @@ class TestStringFunctions(CoqTestCase):
     def test_replace_1(self):
         func = StringReplace(columns=["coq_source_genre_1"],
                              pat="S", repl="s")
-        val = FunctionList([func]).lapply(df0, session=None).iloc[:, -1]
+        val = FunctionList([func]).lapply(self.df, session=None).iloc[:, -1]
         self.assertListEqual(
             val.values.ravel().tolist(),
             ["sPOK", "NEWs", "NEWs", "sPOK", "NEWs"])
@@ -287,7 +306,7 @@ class TestStringFunctions(CoqTestCase):
     def test_replace_2(self):
         func = StringReplace(columns=["coq_source_genre_1"],
                              pat="s", repl="s")
-        val = FunctionList([func]).lapply(df0, session=None).iloc[:, -1]
+        val = FunctionList([func]).lapply(self.df, session=None).iloc[:, -1]
         self.assertListEqual(
             val.values.ravel().tolist(),
             ["sPOK", "NEWs", "NEWs", "sPOK", "NEWs"])
@@ -295,13 +314,13 @@ class TestStringFunctions(CoqTestCase):
     def test_replace_multi(self):
         func = StringReplace(columns=["coq_word_label_1", "coq_word_label_2"],
                              pat="a", repl="A")
-        val = FunctionList([func]).lapply(df0, session=None)
+        val = FunctionList([func]).lapply(self.df, session=None)
         self.assertListEqual(
             val.iloc[:, -2].values.ravel().tolist(),
             ["Abc"] * 3 + ["x"] * 2)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(),
-            ["A"] * 4 + [pd.np.nan])
+            ["A"] * 4 + [None])
 
 
 class TestMathFunctions(CoqTestCase):

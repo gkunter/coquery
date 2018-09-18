@@ -23,8 +23,10 @@ from coquery import options
 
 class BreakFunction(StringLength):
     _name = "BREAK"
+
     def evaluate(*args, **kwargs):
         raise RuntimeError
+
 
 class TestFunctionList(unittest.TestCase):
     def setUp(self):
@@ -173,10 +175,15 @@ class TestFunctionList(unittest.TestCase):
         self.assertTrue(len(f_list.exceptions()) == 1)
 
         self.assertTrue(func1.get_id() in df.columns)
-        self.assertTrue(breaking.get_id() not in df.columns)
+
         self.assertTrue(func3.get_id() in df.columns)
-        self.assertEqual(list(df[func3.get_id()].values),
-                         [4, 4, 4, 2, 1])
+        pd.np.testing.assert_array_equal(
+            df[func3.get_id()].values, [4, 4, 4, 2, 1])
+
+        self.assertTrue(breaking.get_id() in df.columns)
+        pd.np.testing.assert_array_equal(
+            df[breaking.get_id()].values, [None] * len(df))
+
 
 def main():
     suite = unittest.TestSuite([
