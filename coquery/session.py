@@ -141,8 +141,6 @@ class Session(object):
         else:
             header = False
 
-        # FIXME:
-        # saving doesn't work anymore!
         df[columns].to_csv(
             output_file,
             header=header,
@@ -168,9 +166,6 @@ class Session(object):
         if options.cfg.current_connection.db_type() == SQL_SQLITE:
             self.db_connection.connection.create_function("REGEXP", 2,
                                                           _sqlite_regexp)
-
-    def disconnect_from_db(self):
-        self.db_connection.close()
 
     def prepare_queries(self):
         self.query_list = []
@@ -302,7 +297,7 @@ class Session(object):
                 logging.info(
                     "Query executed ({})".format(", ".join(s_list)))
         finally:
-            self.disconnect_from_db()
+            self.db_connection.close()
 
         ordered_columns = self.set_preferred_order(
             list(self.data_table.columns))
