@@ -44,6 +44,7 @@ from coquery.defines import (
     msg_userdata_unavailable, msg_userdata_warning, msg_warning_statistics)
 from coquery.errors import (
     CollocationNoContextError, SQLInitializationError,
+    RegularExpressionError,
     SQLNoConfigurationError, TokenParseError, UnsupportedQueryItemError)
 from coquery.unicode import utf8
 from coquery.links import get_by_hash
@@ -57,6 +58,9 @@ from .threads import CoqThread
 from .resourcetree import CoqResourceTree
 from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
 from .orphanageddatabases import OrphanagedDatabasesDialog
+
+
+critical_box = QtWidgets.QMessageBox.critical
 
 
 # add path required for visualizers::
@@ -1175,9 +1179,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             return
 
         if not self.ui.aggregate_radio_list[0].isChecked():
-            QtWidgets.QMessageBox.critical(self,
-                                           "User data unavailable",
-                                           msg_userdata_unavailable)
+            critical_box(self, "User data unavailable",
+                         msg_userdata_unavailable)
             return
 
         max_user_column = 0
@@ -1302,19 +1305,20 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                         uniques=column != "coq_statistics_entries")
                 else:
                     if options.cfg.MODE == QUERY_MODE_CONTINGENCY:
-                        if meta_data.index[index.column()].startswith("coquery_invisible_corpus_id"):
+                        if meta_data.index[index.column()].startswith(
+                                "coquery_invisible_corpus_id"):
                             token_id = int(meta_data[index.column()])
                         else:
-                            token_id = meta_data["coquery_invisible_corpus_id"]
+                            token_id = meta_data[
+                                "coquery_invisible_corpus_id"]
                         if not token_id:
                             raise KeyError
                     else:
                         token_id = meta_data["coquery_invisible_corpus_id"]
-                    token_width = meta_data["coquery_invisible_number_of_tokens"]
+                    token_width = meta_data[
+                        "coquery_invisible_number_of_tokens"]
             except (AttributeError, KeyError, IndexError):
-                QtWidgets.QMessageBox.critical(self,
-                                               "Context error",
-                                               msg_no_context_available)
+                critical_box(self, "Context error", msg_no_context_available)
                 return
 
             # do not show contexts if the user clicks on user data columns
@@ -1417,7 +1421,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                           QtWidgets.QMessageBox.Ok)
 
         for func_name, exc, exc_info in manager._exceptions:
-            errorbox.ErrorBox.show(exc_info, exc, message=func_name)
+            if isinstance(exc, RegularExpressionError):
+                critical_box(self,
+                             "Regular expression error – Coquery",
+                             str(exc))
+            else:
+                errorbox.ErrorBox.show(exc_info, exc, message=func_name)
 
         options.cfg.app.alert(self, 0)
         self.ui.data_preview.setFocus()
@@ -1776,9 +1785,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     "Selection" if selection else "Results table",
                     name))
         except IOError:
-            QtWidgets.QMessageBox.critical(self, "Disk error", msg_disk_error)
+            critical_box(self, "Disk error", msg_disk_error)
         except (UnicodeEncodeError, UnicodeDecodeError):
-            QtWidgets.QMessageBox.critical(self, "Encoding error", msg_encoding_error)
+            critical_box(self, "Encoding error", msg_encoding_error)
         else:
             if not selection and not clipboard:
                 self.last_results_saved = True
@@ -1853,13 +1862,16 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def exception_during_query(self):
         if not self.terminating:
             if isinstance(self.exception, RuntimeError):
-                QtWidgets.QMessageBox.critical(
+                critical_box(
                     self,
                     "Error during execution – Coquery",
                     str(self.exception),
                     QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             elif isinstance(self.exception, UnsupportedQueryItemError):
-                QtWidgets.QMessageBox.critical(self, "Error in query string – Coquery", str(self.exception), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                critical_box(
+                    self,
+                    "Error in query string – Coquery", str(self.exception),
+                    QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             else:
                 errorbox.ErrorBox.show(self.exc_info, self.exception)
             self.showMessage("Query failed.")
@@ -2327,6 +2339,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # signal sessionInitialized once it's ready to query. Then connect
         # that signal to that part of this method that prepares and starts the
         # query thread.
+
         try:
             if self.ui.radio_query_string.isChecked():
                 options.cfg.query_list = [x.strip() for x
@@ -2353,27 +2366,26 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 msg_box.hide()
                 del msg_box
         except TokenParseError as e:
-            QtWidgets.QMessageBox.critical(
-                self,
-                "Query string parsing error – Coquery",
-                e.par, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            critical_box(self,
+                         "Query string parsing error – Coquery", e.par,
+                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLNoConfigurationError as e:
-            QtWidgets.QMessageBox.critical(
-                self, "Database configuration error – Coquery", str(e),
-                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            critical_box(self,
+                         "Database configuration error – Coquery", str(e),
+                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except SQLInitializationError as e:
-            QtWidgets.QMessageBox.critical(
-                self, "Database initialization error – Coquery",
-                msg_initialization_error.format(code=e),
-                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            critical_box(self,
+                         "Database initialization error – Coquery",
+                         msg_initialization_error.format(code=e),
+                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except CollocationNoContextError as e:
-            QtWidgets.QMessageBox.critical(
-                self, "Collocation error – Coquery", str(e),
-                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            critical_box(self,
+                         "Collocation error – Coquery", str(e),
+                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except RuntimeError as e:
-            QtWidgets.QMessageBox.critical(
-                self, "Runtime error – Coquery", str(e),
-                QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            critical_box(self,
+                         "Runtime error – Coquery", str(e),
+                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
@@ -2481,7 +2493,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             try:
                 url = res.url
             except AttributeError:
-                QtWidgets.QMessageBox.critical(
+                critical_box(
                     None,
                     "Documentation error – Coquery",
                     msg_corpus_no_documentation.format(corpus=corpus),
