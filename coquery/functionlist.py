@@ -21,7 +21,7 @@ import logging
 from . import options
 from .general import CoqObject
 from .defines import msg_runtime_error_function
-
+from .errors import RegularExpressionError
 
 class FunctionList(CoqObject):
     def __init__(self, l=None, *args, **kwargs):
@@ -44,6 +44,9 @@ class FunctionList(CoqObject):
         # This code only keeps track of the attributes. The actual dropping
         # takes place (or doesn't) in the summarize() method of the manager.
         if manager:
+            # FIXME: The following check is super weird. The variable
+            # `drop_on_na` is always either True or None, but never False.
+            # This can't be right.
             if manager.drop_on_na is not None:
                 drop_on_na = True
             else:
@@ -61,6 +64,8 @@ class FunctionList(CoqObject):
                 drop_on_na = True
             else:
                 drop_on_na = drop_on_na and fun.drop_on_na
+
+            new_column = fun.get_id()
             try:
                 if options.cfg.benchmark:
                     print(fun.get_name())
@@ -70,18 +75,20 @@ class FunctionList(CoqObject):
                     print(datetime.datetime.now() - then)
                 else:
                     val = fun.evaluate(df, **fun.kwargs)
+            except RegularExpressionError as e:
+                self._exceptions.append(("", e, sys.exc_info()))
+                val = pd.Series([None] * len(df), name=new_column)
             except Exception as e:
-                # if an exception occurs, the function is removed, and the
-                # error is logged.
-                self._list.remove(fun)
+                # if an exception occurs, the error is logged, and an empty
+                # column containing only NAs is added
                 error = "Error during function call {}".format(
                     fun.get_label(session))
-                logging.exception(error)
+                #logging.exception(error)
                 self._exceptions.append((error, e, sys.exc_info()))
-            else:
+                val = pd.Series([None] * len(df), name=new_column)
+            finally:
                 # Functions can return either single columns or data frames.
                 # Handle the function result accordingly:
-                new_column = fun.get_id()
                 if fun.single_column:
                     df[new_column] = val
                 else:
