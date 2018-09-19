@@ -361,12 +361,24 @@ class CoqClickableLabel(QtWidgets.QLabel):
     clicked = QtCore.Signal()
     textChanged = QtCore.Signal()
 
+    def __init__(self, *args, **kwargs):
+        super(CoqClickableLabel, self).__init__(*args, **kwargs)
+        self._content = None
+
     def mousePressEvent(self, ev):
         self.clicked.emit()
 
+    def setPlaceholderText(self, s):
+        super(CoqClickableLabel, self).setText(s)
+
     def setText(self, s):
         super(CoqClickableLabel, self).setText(s)
+        self._content = s
         self.textChanged.emit()
+
+    def text(self):
+        return self._content
+
 
 
 class CoqSwitch(QtWidgets.QWidget):

@@ -52,7 +52,7 @@ from coquery.links import get_by_hash
 from . import classes
 from . import errorbox
 from .widgets.coqstaticbox import CoqStaticBox
-from .pyqt_compat import QtCore, QtWidgets, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui, tr
 from .ui import coqueryUi
 from .threads import CoqThread
 from .resourcetree import CoqResourceTree
@@ -3012,7 +3012,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.set_toolbox_appearance(i)
         self.change_toolbox(options.cfg.last_toolbox)
 
-        self.ui.edit_file_name.setText(options.cfg.input_path)
+        self.ui.edit_file_name.setPlaceholderText(
+            tr("main", "(no query file selected)", None))
+        if options.cfg.input_path:
+            self.ui.edit_file_name.setText(options.cfg.input_path)
+
         self.ui.edit_query_string.setText("\n".join(options.cfg.query_list))
 
         self.ui.radio_query_string.setChecked(
