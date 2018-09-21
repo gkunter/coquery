@@ -226,6 +226,13 @@ class Visualizer(QtCore.QObject):
                    palette=None, **kwargs):
         pass
 
+    def colorize_artists(self):
+        """
+        Colorize the elements created previously using the appropriate
+        palette values.
+        """
+        pass
+
     def draw(self, data, color, **kwargs):
         self.x = kwargs.get("x")
         self.y = kwargs.get("y")
@@ -235,6 +242,7 @@ class Visualizer(QtCore.QObject):
         self.levels_z = kwargs.get("levels_z")
         self.colorizer = kwargs.get("colorizer")
         self.plot_facet(data, color, **kwargs)
+        self.colorize_artists()
         self.set_titles()
 
     def set_titles(self):
