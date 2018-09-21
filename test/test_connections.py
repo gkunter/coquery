@@ -18,6 +18,12 @@ import select
 import random
 import string
 
+try:
+    import pymysql
+    no_mysql = False
+except ImportError:
+    no_mysql = True
+
 from coquery.connections import (Connection,
                                  MySQLConnection,
                                  SQLiteConnection)
@@ -99,6 +105,9 @@ class TestMySQLConnection(unittest.TestCase):
     root_password = None
 
     def setUp(self):
+        if no_mysql:
+            raise unittest.SkipTest
+        
         self.name = "test_mysql"
         self.host = "127.0.0.1"
         self.port = 3306
