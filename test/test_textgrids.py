@@ -11,12 +11,21 @@ import unittest
 import argparse
 import collections
 
+try:
+    import tgt
+    no_tgt = False
+except ImportError:
+    no_tgt = True
+
 from .mockmodule import setup_module, MockOptions
 
 setup_module("sqlalchemy")
 
 from coquery.corpus import CorpusClass, SQLResource
-from coquery import textgrids
+
+if not no_tgt:
+    from coquery import textgrids
+
 from coquery import options
 from coquery.defines import QUERY_MODE_TOKENS
 
@@ -73,6 +82,9 @@ class TextgridResource(SQLResource):
 
 class TestTextGridModuleMethods(unittest.TestCase):
     def setUp(self):
+        if no_tgt:
+            raise unittest.SkipTest
+
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
         options.cfg.MODE = QUERY_MODE_TOKENS
@@ -115,6 +127,8 @@ class TestTextGridModuleMethods(unittest.TestCase):
         options.cfg.selected_features = self.selected_features1
         writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.prepare_textgrids()
+        if no_tgt:
+            raise unittest.SkipTest
         self.assertEqual(
             len(grids),
             len(writer.get_file_data()["Filename"].unique()))
@@ -259,14 +273,14 @@ class TestTextGridModuleMethods(unittest.TestCase):
         self.assertEqual(interval3.text, "boat")
 
 
+provided_tests = [TestTextGridModuleMethods]
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestTextGridModuleMethods),
-        ])
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(case)
+         for case in provided_tests])
     unittest.TextTestRunner().run(suite)
 
 if __name__ == '__main__':
-    if not hasattr(TestTextGridModuleMethods, "assertCountEqual"):
-        setattr(TestTextGridModuleMethods, "assertCountEqual",
-                TestTextGridModuleMethods.assertItemsEqual)
     main()
