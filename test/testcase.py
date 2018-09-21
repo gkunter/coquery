@@ -12,8 +12,17 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import pandas as pd
 
-
 class CoqTestCase(unittest.TestCase):
+    @staticmethod
+    def get_default_df():
+        pd.np.random.seed(123)
+        return pd.DataFrame({"X": list("AAAAAAAAAAAAAAAAAAABBBBBBBBBBB"),
+                            "Y": list("xxxxxxxxyyyyyyyyyyyxxxxxxxyyyy"),
+                            "Z": list("111122221111222211221122112222"),
+                            "ID": sorted(pd.np.random.choice(
+                                pd.np.arange(1, 100), 30, replace=False)),
+                            "NUM": pd.np.random.randint(0, 100, 30)})
+
     def assertDictEqual(self, d1, d2):
         """
         This overrides assertDictEqual so that any Series or DataFrame value
