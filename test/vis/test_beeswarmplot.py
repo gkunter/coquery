@@ -25,7 +25,7 @@ class TestBeeswarmPlot(CoqTestCase):
 
     def setUp(self):
         self.vis = BeeswarmPlot(None, None, id_column=self.ID_COLUMN)
-        self.df = CoqTestCase.get_default_df().copy()
+        self.df = CoqTestCase.get_default_df()
         plt.gca().clear()
 
     def test_horizontal_no_subgroup(self):
@@ -108,6 +108,13 @@ class TestBeeswarmPlot(CoqTestCase):
         self.assertDictEqual(args, target)
 
     def test_colorizer_default(self):
+        """
+        Use default colorization.
+
+        The default behavior is to use the first color of the palette.
+        Alternatively, this might be changed so that the dot colors cicle
+        through the palette.
+        """
         params = self.vis.prepare_arguments(data=self.df,
                                             x=None, y=None, z=None,
                                             levels_x=None, levels_y=None)
@@ -121,6 +128,9 @@ class TestBeeswarmPlot(CoqTestCase):
         pd.np.testing.assert_array_equal(colors, target)
 
     def test_colorizer_factor(self):
+        """
+        Use a factor as colorizer variable
+        """
         factor = "Z"
         fact_levels = sorted(self.df[factor].unique())
         params = self.vis.prepare_arguments(data=self.df,
@@ -191,6 +201,27 @@ class TestBeeswarmPlot(CoqTestCase):
                        .sort_values(by=self.vis._id_column)
                        .get("COQ_COLOR"))
                   for level in levels]
+
+        pd.np.testing.assert_array_equal(colors, target)
+
+    def test_colorizer_num(self):
+        """
+        Use a numeric variable for colorization
+        """
+        numeric = "NUM"
+
+        params = self.vis.prepare_arguments(data=self.df,
+                                            x=None, y=None, z=numeric,
+                                            levels_x=None, levels_y=None)
+        palette = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByNum(palette, len(palette), self.df[numeric],
+                                  vrange=(0, 100))
+
+        elements = self.vis.plot_facet(**params)
+        colors = self.vis.get_colors(colorizer, elements, **params)
+        target = [colorizer.mpt_to_hex(
+            [palette[4 - (val // 20)] for val
+             in self.df.sort_values(by=self.vis._id_column)[numeric]])]
 
         pd.np.testing.assert_array_equal(colors, target)
 
