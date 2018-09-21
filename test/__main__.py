@@ -82,12 +82,8 @@ def main():
         test_list += provided_tests
 
     if not args or "textgrids" in args:
-        try:
-            from test.test_textgrids import TestTextGridModuleMethods
-        except ModuleNotFoundError as e:
-            warnings.warn(str(e))
-        else:
-            test_list += [TestTextGridModuleMethods]
+        from test.test_textgrids import provided_tests
+        test_list += provided_tests
 
     if not args or "tokens" in args:
         from test.test_tokens import (
