@@ -67,7 +67,7 @@ class ContextView(QtWidgets.QWidget):
             self.ui.tab_widget.removeTab(1)
             self.ui.tab_widget.tabBar().hide()
 
-        L = self.self.resource.get_origin_data(token_id)
+        L = self.resource.get_origin_data(token_id)
         for table, fields in sorted(L):
             self.add_source_label(table)
             for label in sorted(fields.keys()):
@@ -105,7 +105,8 @@ class ContextView(QtWidgets.QWidget):
         else:
             self.ui.button_ids.setExpanded(False)
 
-        self.ui.context_area.setStyleSheet(corpus.get_context_stylesheet())
+        self.ui.context_area.setStyleSheet(
+            self.corpus.get_context_stylesheet())
 
     def set_view(self, context):
         if context:
