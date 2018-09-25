@@ -14,12 +14,9 @@ from __future__ import (unicode_literals, print_function,
 
 import logging
 import os
-import sys
-import random
 import pandas as pd
 from collections import deque
 
-from coquery import general
 from coquery import options
 from coquery import managers
 from coquery.unicode import utf8
@@ -380,7 +377,6 @@ class CoqClickableLabel(QtWidgets.QLabel):
         return self._content
 
 
-
 class CoqSwitch(QtWidgets.QWidget):
     toggled = QtCore.Signal()
 
@@ -436,7 +432,9 @@ class CoqSwitch(QtWidgets.QWidget):
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
         self._label.setSizePolicy(sizePolicy)
-        self._label.setMinimumWidth(max(QtWidgets.QLabel(on).sizeHint().width(), QtWidgets.QLabel(off).sizeHint().width()))
+        self._label.setMinimumWidth(
+            max(QtWidgets.QLabel(on).sizeHint().width(),
+                QtWidgets.QLabel(off).sizeHint().width()))
 
         self._on_text = on
         self._off_text = off
@@ -1645,9 +1643,10 @@ class CoqTableView(QtWidgets.QTableView):
             if self.rowHeight(n) != height:
                 self.resizeRow.emit(n, height)
 
-        cols = [x for x in self.model().header if x in (("coq_context_left",
-                                                         "coq_context_right",
-                                                         "coq_context_string"))]
+        cols = [x for x in self.model().header
+                if x in (("coq_context_left",
+                          "coq_context_right",
+                          "coq_context_string"))]
         if not cols:
             return
 
@@ -1732,8 +1731,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         flags = super(CoqTableModel, self).flags(index)
         try:
             if self.content.columns[index.column()].startswith("coq_userdata"):
-                editable= (get_toplevel_window()
-                           .ui.aggregate_radio_list[0].isChecked())
+                editable = (get_toplevel_window()
+                            .ui.aggregate_radio_list[0].isChecked())
                 if editable:
                     return flags | QtCore.Qt.ItemIsEditable
         except IndexError:
@@ -2003,5 +2002,3 @@ class CoqWidgetListView(QtWidgets.QListView):
         """
         super(CoqWidgetListView, self).setModel(model)
         self.selectionModel().selectionChanged.connect(self.changeSelect)
-
-
