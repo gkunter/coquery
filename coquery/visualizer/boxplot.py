@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from coquery.visualizer import visualizer as vis
 import seaborn as sns
+from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
 class BoxPlot(vis.Visualizer):
     name = "Box-Whisker plot"
@@ -18,67 +19,37 @@ class BoxPlot(vis.Visualizer):
 
     axes_style = "whitegrid"
 
+    draw_boxen = True
+
+    def get_custom_widgets(self, *args, **kwargs):
+        label = tr("BoxPlot", "Draw multiple boxes", None)
+
+        self.check_horizontal = QtWidgets.QCheckBox(label)
+        self.check_horizontal.setCheckState(
+            QtCore.Qt.Checked if self.draw_boxen else
+            QtCore.Qt.Unchecked)
+
+        return ([self.check_horizontal],
+                [self.check_horizontal.stateChanged],
+                [])
+
+    def update_values(self):
+        self.draw_boxen = self.check_horizontal.isChecked()
+
     def plot_fnc(self, *args, **kwargs):
-        sns.boxplot(*args, **kwargs)
+        if self.draw_boxen:
+            sns.boxenplot(*args, **kwargs)
+        else:
+            sns.boxplot(*args, **kwargs)
 
     def plot_facet(self, data, color, **kwargs):
         x = kwargs.get("x")
         y = kwargs.get("y")
-        z = kwargs.get("z")
         palette = kwargs.get("palette")
 
-        # case 1: one category in x, one numeric elsewhere
-        if (self.dtype(x, data) == object and
-            (self.dtype(y, data) != object and z is None) or
-            (y is None and self.dtype(z, data) != object)):
-            if z is None:
-                numeric = y
-            else:
-                numeric = z
-            self.plot_fnc(x=x, y=numeric, data=data, palette=palette)
-            self._xlab = x
-            self._ylab = numeric
-        # case 2: one category in y, one numeric elsewhere
-        elif (self.dtype(y, data) == object and
-              (self.dtype(x, data) != object and z is None) or
-              (x is None and self.dtype(z, data) != object)):
-            if z is None:
-                numeric = x
-            else:
-                numeric = z
-            self.plot_fnc(x=numeric, y=y, data=data, palette=palette)
-            self._xlab = numeric
-            self._ylab = y
-        # case 3: one category in x and z, a numeric in y:
-        elif (self.dtype(x, data) == object and
-              self.dtype(z, data) == object and
-              self.dtype(y, data) in (float, int)):
-            self.plot_fnc(x=x, y=y, hue=z, data=data, palette=palette)
-
-            self.legend_title = kwargs["z"]
-            self.legend_levels = kwargs["levels_z"]
-            self._xlab = x
-            self._ylab = y
-
-        # case 4: one category in y and z, a numeric in x:
-        elif (self.dtype(y, data) == object and
-              self.dtype(z, data) == object and
-              self.dtype(x, data) in (float, int)):
-            self.plot_fnc(x=x, y=y, hue=z, data=data, palette=palette)
-
-            self.legend_title = kwargs["z"]
-            self.legend_levels = kwargs["levels_z"]
-            self._xlab = x
-            self._ylab = y
-
-        # case 5: one category in x and y, a numeric in z:
-        else:
-            self.plot_fnc(x=z, y=y, hue=x, data=data, palette=palette)
-
-            self.legend_title = kwargs["x"]
-            self.legend_levels = kwargs["levels_x"]
-            self._xlab = z
-            self._ylab = y
+        self.plot_fnc(x, y, data=data, palette=palette)
+        self._xlab = x
+        self._ylab = y
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
@@ -87,9 +58,10 @@ class BoxPlot(vis.Visualizer):
 
         if len(num) != 1:
             return False
-        if len(cat) == 0:
+        if len(cat) != 1:
             return False
         return True
+
 
 class ViolinPlot(BoxPlot):
     name = "Violin plot"
