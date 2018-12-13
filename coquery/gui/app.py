@@ -1577,7 +1577,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             manager.reset_hidden_columns()
             for col in self.hidden_features:
                 manager.hide_column(col)
-            hidden_cols = pd.Index(manager.hidden_columns)
+            hidden_cols = pd.Index([x
+                                    for x in self.Session.output_object.columns
+                                    if x in manager.hidden_columns])
 
             vis_cols = [x for x in self.Session.output_object.columns
                         if x not in hidden_cols]
