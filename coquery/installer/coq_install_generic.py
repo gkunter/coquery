@@ -264,15 +264,20 @@ class BuilderClass(BaseCorpusBuilder):
             else:
                 meta_columns.append(col)
 
-        df[self.file_path] = ""
-        for root, dirs, files in os.walk(os.path.split(file_name)[0]):
-            for filename in files:
-                df[self.file_path].loc[
-                    df[self.file_name] == filename] = root
 
-        df = df.iloc[df[self.file_name].nonzero()[0]]
-        df = df.iloc[df[self.file_path].nonzero()[0]]
-        df.index = range(1, len(df)+1)
+        # prepare a dataframe that adds the correct file path to the meta data
+        path_list = []
+        file_list = []
+        for root, dirs, files in os.walk(self.arguments.path):
+            for filename in files:
+                if (df[self.file_name] == filename).any():
+                    path_list.append(root)
+                    file_list.append(filename)
+        df2 = pd.DataFrame({self.file_path: path_list,
+                            self.file_name: file_list})
+
+        # merge the data frames:
+        df = df.merge(df2, how="inner", on=[self.file_name])
 
         l = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
              Column(self.file_path, "VARCHAR(4096) NOT NULL"),
@@ -300,7 +305,8 @@ class BuilderClass(BaseCorpusBuilder):
         if self._meta_table is None:
             return False
         basename = os.path.basename(file_name)
-        return any(self._meta_table[self.file_name] == basename)
+        val = any(self._meta_table[self.file_name] == basename)
+        return val
 
     def store_metadata(self):
         self.DB.load_dataframe(self._meta_table,
@@ -316,7 +322,7 @@ class BuilderClass(BaseCorpusBuilder):
                     self._meta_table[
                         self.file_name] == basename].index[0]
         else:
-            return super(BuilderClass, self).store_filename(file_name)
+            super(BuilderClass, self).store_filename(file_name)
 
     def build_initialize(self):
         super(BuilderClass, self).build_initialize()
