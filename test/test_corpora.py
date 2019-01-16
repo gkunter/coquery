@@ -71,6 +71,10 @@ class NGramResource(CorpusResource):
     corpusngram_table = "CorpusNgram"
     corpusngram_width = 3
 
+class BiGramResource(CorpusResource):
+    corpusngram_table = "CorpusNgram"
+    corpusngram_width = 2
+
 
 class MockBuckeye(SQLResource):
     """
@@ -1773,6 +1777,107 @@ class TestNGramCorpus(unittest.TestCase):
                          simple(target_string))
 
 
+class TestBigramCorpus(unittest.TestCase):
+    """
+    This test case addresses an issue that occured with look-up tables
+    consisting of bigrams.
+
+    Apparently, query strings like '* * xxx' or '* xxx yyy' produce the correct
+    query strings, but the query string '* *.[x*] yyy' uses incorrect ids for
+    the different word columns.
+    """
+
+    resource = BiGramResource
+
+    def setUp(self):
+        self.maxDiff = None
+        options.cfg = argparse.Namespace()
+        options.cfg.number_of_tokens = 0
+        options.cfg.limit_matches = False
+        options.cfg.regexp = False
+        options.cfg.query_case_sensitive = False
+        options.cfg.experimental = True
+        options.get_configuration_type = lambda: SQL_MYSQL
+        options.cfg.no_ngram = False
+        self.Session = MockOptions()
+        self.Session.Resource = self.resource
+        self.Session.Corpus = None
+
+        options.cfg.current_connection = default_connection
+
+    def test_working_1(self):
+        S = "* * xxx"
+        query = TokenQuery(S, self.Session)
+        l = [simple(s) for s
+             in self.resource.get_corpus_joins(query.query_list[0])]
+
+        target = [
+            simple("FROM (SELECT "
+                "              End AS End3,"
+                "              FileId AS FileId3,"
+                "              ID AS ID3,"
+                "              Start AS Start3,"
+                "              WordId AS WordId3"
+                "       FROM   Corpus) AS COQ_CORPUS_3"),
+            simple("INNER JOIN CorpusNgram "
+                "ON ID1 = ID3 - 2")]
+
+        self.assertListEqual(l, target)
+
+    def test_working_2(self):
+        S = "* xxx xxx"
+        query = TokenQuery(S, self.Session)
+        l = [simple(s) for s
+             in self.resource.get_corpus_joins(query.query_list[0])]
+
+        target = [
+            simple("FROM CorpusNgram"),
+            simple("INNER JOIN (SELECT "
+                "              End AS End3,"
+                "              FileId AS FileId3,"
+                "              ID AS ID3,"
+                "              Start AS Start3,"
+                "              WordId AS WordId3"
+                "       FROM   Corpus) AS COQ_CORPUS_3 "
+                "ON ID3 = ID1 + 2")]
+
+        self.assertListEqual(l, target)
+
+    def test_issue(self):
+        S = "* *.[v*] xxx"
+        query = TokenQuery(S, self.Session)
+        l = [simple(s) for s
+             in self.resource.get_corpus_joins(query.query_list[0])]
+
+        target = [
+            simple("FROM CorpusNgram"),
+            simple("INNER JOIN (SELECT "
+                "              End AS End3,"
+                "              FileId AS FileId3,"
+                "              ID AS ID3,"
+                "              Start AS Start3,"
+                "              WordId AS WordId3"
+                "       FROM   Corpus) AS COQ_CORPUS_3 "
+                "ON ID3 = ID1 + 2")]
+
+        print("\n".join(l))
+        print("\n".join(target))
+
+        self.assertListEqual(l, target)
+
+    def test_get_token_order_1(self):
+        token_order_1 = [
+            (0, (1, '*')),
+            (1, (2, '*')),
+            (2, (2, 'xxx'))]
+
+        token_order_2 = [
+        token_order_1 = [
+            (0, (1, '*')),
+            (1, (2, '*.[v*]')),
+            (2, (2, 'xxx'))]
+
+
 def mock_get_available_resources(configuration):
     path = os.path.join(os.path.expanduser("~"),
                         "{}.py".format(CorpusResource.db_name))
@@ -1783,7 +1888,8 @@ def mock_get_available_resources(configuration):
 
 provided_tests = [
                   TestCorpus, TestSuperFlat, TestCorpusWithExternal,
-                  TestNGramCorpus]
+                  TestNGramCorpus, TestBigramCorpus
+                  ]
 
 
 def main():
