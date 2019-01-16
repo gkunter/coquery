@@ -25,6 +25,7 @@ from coquery import managers
 from coquery import NAME, __version__
 from coquery.general import memory_dump
 from coquery import options
+from coquery.options import CSVOptions
 from coquery.defines import (
     AUTO_APPLY_DEFAULT, AUTO_FILTER, AUTO_FUNCTION, AUTO_STOPWORDS,
     AUTO_SUBSTITUTE, AUTO_VISIBILITY,
@@ -1678,7 +1679,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """ Get CSV file options for current query input file. """
         from . import csvoptions
 
-        csv_options = csvoptions.CSVOptions(
+        csv_options = CSVOptions(
             sep=options.cfg.input_separator,
             header=options.cfg.file_has_headers,
             quote_char=options.cfg.quote_char,

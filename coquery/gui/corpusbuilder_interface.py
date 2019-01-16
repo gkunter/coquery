@@ -20,6 +20,7 @@ import sys
 import zipfile
 
 from coquery import options
+from coquery.options import CSVOptions
 from coquery.defines import (msg_install_abort,
                              msg_nltk_message_error,
                              msg_corpus_path_not_valid)
@@ -593,7 +594,7 @@ class BuilderGui(InstallerGui):
         self._testing = False
         self._onefile = onefile
 
-        self._meta_options = csvoptions.CSVOptions(
+        self._meta_options = CSVOptions(
             sep=options.cfg.input_separator,
             header=options.cfg.file_has_headers,
             quote_char=options.cfg.quote_char,
@@ -1150,7 +1151,7 @@ class TableGui(MetaGui):
                                        gui=Ui_CorpusTable,
                                        parent=parent)
 
-        self._table_options = csvoptions.CSVOptions(
+        self._table_options = CSVOptions(
             sep=options.cfg.input_separator,
             header=options.cfg.file_has_headers,
             quote_char=options.cfg.quote_char,

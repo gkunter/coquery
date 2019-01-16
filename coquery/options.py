@@ -31,7 +31,7 @@ import os
 import sys
 import logging
 import re
-
+import pandas as pd
 import hashlib
 from collections import defaultdict
 
@@ -462,7 +462,6 @@ class Options(object):
             if self.args.MODE not in QUERY_MODES.values():
                 self.args.MODE = QUERY_MODE_TOKENS
 
-
         # the following lines are deprecated and should be removed once
         # feature selection is fully implemented:
         self.args.show_source = "source" in vars(self.args)
@@ -701,14 +700,15 @@ class Options(object):
 
             s = config_file.str("gui", "show_log_messages", d=defaults)
             try:
-                self.args.show_log_messages = [x.strip() for x in s.split(",") if x]
-            except:
+                self.args.show_log_messages = [x.strip()
+                                               for x in s.split(",") if x]
+            except Exception:
                 s = defaults["show_log_messages"]
             self.args.digits = config_file.int(
                 "gui", "decimal_digits", d=defaults)
             self.args.float_format = config_file.str(
                 "gui", "float_format",
-                fallback="{:.%if}" % self.args.digits)
+                fallback="{{:.{}f}}".format(self.args.digits))
 
             # read FILTER section
 
@@ -899,6 +899,70 @@ class Options(object):
                 if x.startswith("column_width_"):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
+
+
+class CSVOptions(object):
+    def __init__(self, file_name="", sep=",", header=True, quote_char='"',
+                 skip_lines=0, encoding="utf-8", selected_column=None,
+                 mapping=None, dtypes=None, nrows=None, excel=False):
+        self.sep = sep
+        self.header = header
+        self.quote_char = quote_char
+        self.skip_lines = skip_lines
+        self.encoding = encoding
+        self.selected_column = selected_column
+        self.mapping = mapping if mapping else {}
+        self.dtypes = dtypes
+        self.file_name = file_name
+        self.nrows = nrows
+        self.excel = excel
+
+    def __repr__(self):
+        return ("CSVOptions(sep='{}', header={}, quote_char='{}', "
+                "skip_lines={}, encoding='{}', selected_column={}, "
+                "nrows={}, mapping={}, dtypes={}, excel={})".format(
+                    self.sep, self.header, self.quote_char.replace("'", "\'"),
+                    self.skip_lines, self.encoding, self.selected_column,
+                    self.nrows, self.mapping, self.dtypes, self.excel))
+
+    def read_file(self, path):
+        if use_xlrd and self.excel:
+            df = self.read_excel_file(path)
+        else:
+            df = self.read_csv_file(path)
+        return df
+
+    def read_csv_file(self, path):
+        kwargs = {
+            "encoding": self.encoding,
+            "header": 0 if self.header else None,
+            "sep": self.sep,
+            "skiprows": self.skip_lines,
+            "quotechar": self.quote_char,
+            "low_memory": False,
+            "error_bad_lines": False}
+        try:
+            df = pd.read_csv(path, **kwargs)
+        except Exception as e:
+            print(path)
+            from pprint import pprint
+            pprint(kwargs)
+            logging.error(e)
+            print(e)
+            raise e
+        return df
+
+    def read_excel_file(self, path):
+        try:
+            df = pd.read_excel(
+                path,
+                header=0 if self.header else None,
+                skiprows=self.skip_lines)
+        except Exception as e:
+            logging.error(e)
+            print(e)
+            raise e
+        return df
 
 
 cfg = None
@@ -1295,7 +1359,7 @@ def decode_query_string(s):
     """
     in_quote = False
     escape = False
-    l = []
+    lst = []
     char_list = []
     s = s.replace("%%", "%")
     for ch in s:
@@ -1311,15 +1375,15 @@ def decode_query_string(s):
                 if in_quote:
                     char_list.append(ch)
                 else:
-                    l.append("".join(char_list))
+                    lst.append("".join(char_list))
                     char_list = []
             else:
                 char_list.append(ch)
-    l.append("".join(char_list))
-    return "\n".join(l)
+    lst.append("".join(char_list))
+    return "\n".join(lst)
 
 
-def encode_query_string(s):
+def encode_query_string(query):
     """
     Encode a query string that has can be written to a configuration file.
 
@@ -1328,9 +1392,8 @@ def encode_query_string(s):
     into a comma-separated, quoted and escaped string that can be passed on
     to the configuration file.
     """
-    l = s.split("\n")
     str_list = []
-    for s in l:
+    for s in query.split("\n"):
         s = s.replace("\\", "\\\\")
         s = s.replace('"', '\\"')
         s = s.replace("%", "%%")
