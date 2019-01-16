@@ -152,7 +152,7 @@ class TreeMap(vis.Visualizer):
         if S.dtype == int:
             return "{:.0f}"
         else:
-            return options.cfg.float_format
+            return self.frm_str
 
     def get_rects(self, values, x, y, dx, dy):
         normed = [val * dx * dy / values.sum() for val in values]
@@ -241,7 +241,8 @@ class TreeMap(vis.Visualizer):
         self.legend_levels = self._colorizer.legend_levels()
 
         if not second_category:
-            frm = "{{}}\n{}".format(self.get_frm_string(df[numeric]))
+            s = self.get_frm_string(df[numeric])
+            frm = "{{}}\n{}".format(s)
             labels = df.apply(
                 lambda row: frm.format(row[category], row[numeric]),
                 axis="columns")
