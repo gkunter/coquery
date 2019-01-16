@@ -287,7 +287,7 @@ class Table(object):
         lst = [values[x] for x in self._row_order]
         if self.primary.name not in self._row_order:
             self._current_id += 1
-            self._add_cache.append(tuple([self._current_id] + l))
+            self._add_cache.append(tuple([self._current_id] + lst))
         else:
             # A few installers appear to depend on this, but actually, I
             # can't see how this will ever get executed.
