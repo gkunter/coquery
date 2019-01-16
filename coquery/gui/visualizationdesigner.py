@@ -798,7 +798,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def display_values(self):
         # set up Layout tab:
 
-
         print("display_values")
         # data x
         if self.data_x:
@@ -927,7 +926,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         logging.info("VIS: Data initialized")
         self.vis.df = df
-        self.vis.frm_str = options.cfg.digits
+        self.vis.frm_str = options.cfg.float_format
         self.vis.experimental = options.cfg.experimental
         self.colorizer = self.get_colorizer(df=df, vis=self.vis, **values)
 
