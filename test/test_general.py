@@ -15,8 +15,8 @@ import tempfile
 import os
 import numpy as np
 
-from coquery.general import check_fs_case_sensitive, pretty
-
+from coquery.general import check_fs_case_sensitive, pretty, collapse_words
+from    test.testcase import CoqTestCase
 
 class TestGeneral(unittest.TestCase):
 
@@ -178,9 +178,157 @@ class TestPretty(unittest.TestCase):
                              [70, 80, 90, 100, 110, 120, 130])
 
 
+class TestCollapseWords(CoqTestCase):
+    def test_default_collapser1(self):
+        lst = ["this", "is", "a", "test"]
+        target = "this is a test"
+        value = collapse_words(lst)
+        self.assertEqual(target, value)
+
+    def test_default_collapser2(self):
+        lst = ["this", "is", "a", "test", ".", "go", "on", "."]
+        target = "this is a test . go on ."
+        value = collapse_words(lst)
+        self.assertEqual(target, value)
+
+    def test_empty(self):
+        lst = [None] * 4
+        target = None
+        value = collapse_words(lst)
+        self.assertEqual(target, value)
+
+class TestEnglishCollapseWords(CoqTestCase):
+    def test_punctuation_spacing_1(self):
+        lst = ["this", "is", "a", "test", ",", "go", "on", "."]
+        target = "this is a test, go on."
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_punctuation_spacing_2(self):
+        lst = list("a.b,c:d;e!f?g%h+i-j)k]l}m—n")
+        target = "a. b, c: d; e! f? g% h + i - j) k] l} m—n"
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_collapse_1(self):
+        lst = ["this", "is", "a", "test", "."]
+        target = "this is a test."
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_contractions_1(self):
+        """
+        Use U+0027 (APOSTROPHE) as the character marking contractions.
+        """
+        lst = ["I", "'ve", "I", "'m", "he", "'s", "hasn", "'t",
+               "she", "'d", "you", "'re"]
+        target = "I've I'm he's hasn't she'd you're"
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_contractions_2(self):
+        """
+        Use U+2019 (RIGHT SINGLE QUOTATION MARK) as the character marking
+        contractions.
+        """
+        lst = ["I", "\U00002019ve", "I", "\U00002019m", "he", "\U00002019s",
+               "hasn", "\U00002019t", "she", "\U00002019d",
+               "you", "\U00002019re"]
+        target = ("I\U00002019ve I\U00002019m he\U00002019s hasn\U00002019t "
+                  "she\U00002019d you\U00002019re")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_contractions_3(self):
+        """
+        Use U+02BC (MODIFIER LETTER APOSTROPHE) as the character marking
+        contractions.
+        """
+        lst = ["I", "\U00002019ve", "I", "\U00002019m", "he", "\U00002019s",
+               "hasn", "\U00002019t", "she", "\U00002019d",
+               "you", "\U00002019re"]
+        target = ("I\U00002019ve I\U00002019m he\U00002019s hasn\U00002019t "
+                  "she\U00002019d you\U00002019re")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_brackets_1(self):
+        lst = list("a(b)c[d]e{f}")
+        target = "a (b) c [d] e {f}"
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_single_quoting_1(self):
+        lst = ["he", "said", "\N{LEFT SINGLE QUOTATION MARK}", "no",
+               "\N{RIGHT SINGLE QUOTATION MARK}", "to", "me", "."]
+        target = ("he said \N{LEFT SINGLE QUOTATION MARK}no"
+                  "\N{RIGHT SINGLE QUOTATION MARK} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_double_quoting_1(self):
+        lst = ["he", "said", "\N{LEFT DOUBLE QUOTATION MARK}", "no",
+               "\N{RIGHT DOUBLE QUOTATION MARK}", "to", "me", "."]
+        target = ("he said \N{LEFT DOUBLE QUOTATION MARK}no"
+                  "\N{RIGHT DOUBLE QUOTATION MARK} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_single_tick_quoting_1(self):
+        """
+        Use single LaTeX-style tick quotes, which are actually (GRAVE ACCENT)
+        and (ACUTE ACCENT).
+        """
+        lst = ["he", "said",
+               "\N{GRAVE ACCENT}", "no", "\N{ACUTE ACCENT}",
+               "to", "me", "."]
+        target = ("he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_single_tick_quoting_2(self):
+        """
+        Use double LaTeX-style tick quotes, which are actually (GRAVE ACCENT)
+        and (ACUTE ACCENT).
+        """
+        lst = ["he", "said",
+               "\N{GRAVE ACCENT}\N{GRAVE ACCENT}", "no",
+               "\N{ACUTE ACCENT}\N{ACUTE ACCENT}",
+               "to", "me", "."]
+        target = ("he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}no"
+                  "\N{ACUTE ACCENT}\N{ACUTE ACCENT} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_single_ascii_quoting_1(self):
+        """
+        Use single ASCII quoting.
+        """
+        lst = ["he", "said", "'" "xxx", "'", "to", "me", "."]
+        target = "he said 'xxx' to me."
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_double_ascii_quoting_2(self):
+        """
+        Use double ASCII quoting.
+        """
+        lst = ["he", "said", '"' , "xxx", '"', "to", "me", "."]
+        target = 'he said "xxx" to me.'
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_double_mixed_quote_1(self):
+        lst = ["he", "said", "\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
+               "xxx", "''", "to", "me", "."]
+        target = "he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}xxx'' to me."
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
 
 
-provided_tests = [TestGeneral, TestPretty]
+
+provided_tests = [TestGeneral, TestPretty,
+                  TestCollapseWords, TestEnglishCollapseWords]
 
 
 def main():
