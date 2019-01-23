@@ -4,6 +4,7 @@ from __future__ import print_function
 import unittest
 import argparse
 import os
+import pandas as pd
 
 from .mockmodule import MockOptions
 
@@ -152,7 +153,7 @@ class TestCorpus(unittest.TestCase):
         return [x.lower().startswith(("n", "v")) for x in l]
 
     def setUp(self):
-        self.resource = CorpusResource
+        self.resource = CorpusResource(None, None)
         self.maxDiff = None
         options.cfg = argparse.Namespace()
         options.cfg.number_of_tokens = 0
@@ -161,6 +162,8 @@ class TestCorpus(unittest.TestCase):
         options.cfg.query_case_sensitive = False
         options.get_configuration_type = lambda: SQL_MYSQL
         options.cfg.context_mode = CONTEXT_NONE
+        options.cfg.context_left = None
+        options.cfg.context_right = None
         self.Session = MockOptions()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
@@ -1258,7 +1261,6 @@ class TestCorpus(unittest.TestCase):
             WHERE      (COQ_CORPUS_1.ID1 BETWEEN 95 AND 105) AND
                        (COQ_CORPUS_1.FileId1 = 1) LIMIT 11"""
         context_string = self.resource.get_context_string(
-            self.resource,
             token_id=100,
             width=1,
             left=5,
@@ -1298,6 +1300,21 @@ class TestCorpus(unittest.TestCase):
             sentence_id=99)
         self.assertEqual(simple(context_string),
                          simple(target_string))
+
+    def test_get_context_NA(self):
+        """
+        Test whether the get_context() method reacts appropriately to empty
+        data.
+        """
+        value = self.resource.get_context(
+            pd.np.nan,
+            pd.np.nan,
+            pd.np.nan,
+            options.cfg.current_connection,
+            left=7, right=7,
+            sentence_id=pd.np.nan)
+        target = ([None] * 7, [], [None] * 7)
+        self.assertEqual(target, value)
 
 
 class TestSuperFlat(unittest.TestCase):
