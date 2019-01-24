@@ -27,6 +27,7 @@ from coquery.defines import (PALETTE_BW,
 from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window, tr)
 
 import matplotlib as mpl
+from matplotlib import pyplot as plt
 
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
@@ -130,6 +131,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
     moduleLoaded = QtCore.Signal(str, str, object)
     allLoaded = QtCore.Signal()
     dataRequested = QtCore.Signal()
+    paletteUpdated = QtCore.Signal()
+    updateFigureRequested = QtCore.Signal()
+
     visualizers = {}
 
     def __init__(self, session, parent=None):
@@ -138,6 +142,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.vis = None
         self.df = None
         self._current_color = QtGui.QColor("#55aaff")
+        self._dragging = False
+        self._plotted = False
 
         self.ui = Ui_VisualizationDesigner()
         self.ui.setupUi(self)
@@ -529,11 +535,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
                        # (4) selecting a different figure type
                        self.ui.list_figures.currentItemChanged):
+
+                       # (5)
             signal.connect(self.plot_figure)
 
+        self.ui.color_test_area.itemPressed.connect(self.switch_stylesheet)
         self.ui.color_test_area.currentItemChanged.connect(
-            self.switch_stylesheet)
-        self.ui.color_test_area.currentItemChanged.connect(
+            self.reset_stylesheet)
+        self.ui.color_test_area.model().dataChanged.connect(
             self.set_custom_palette)
 
     def change_figure_type(self):
@@ -596,6 +605,15 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def update_figure(self):
         self.vis.update_values()
         self.plot_figure()
+
+    def recolorize(self):
+        if not self._plotted:
+            self.update_figure()
+        else:
+            values = self.get_gui_values()
+            self.colorizer.update(**values)
+            self.vis.colorize()
+            plt.gcf().canvas.draw_idle()
 
     def check_wrapping(self):
         """
@@ -692,6 +710,25 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.ui.list_figures.blockSignals(False)
 
+    # PALETTE METHODS
+
+    """
+    Update palette...
+
+    * different index from current combo box is selected
+    * current radio button is deselected
+    * the reverse button is clicked
+    * a different custom color is selected
+    --> each of these emits an paletteUpdated signal that
+        should be connected to show_palette()
+
+    The figure will be repainted if...
+
+    * the palette has been updated
+    * the palette order has been changed
+    * a palette color has been modified
+    """
+
     def get_palette_name(self):
         for ptype in ("qualitative", "sequential", "diverging",
                       "single_color", "custom"):
@@ -702,70 +739,80 @@ class VisualizationDesigner(QtWidgets.QDialog):
                     return "{}_{}".format(
                         COQ_SINGLE, self._current_color.name())
                 elif ptype == "custom":
-                    return COQ_CUSTOM
+                    pal_name = COQ_CUSTOM
+                    break
                 else:
                     combo_name = "combo_{}".format(ptype)
                     combo = getattr(self.ui, combo_name)
                     pal_name = utf8(combo.currentText())
-                    if self.ui.check_reverse.isChecked():
-                        pal_name = "{}_r".format(pal_name)
-                    return pal_name
+                    break
 
-        return "Paired"
+        if self.ui.check_reverse.isChecked():
+            pal_name = "{}_r".format(pal_name)
+        return pal_name or "Paired"
 
     def get_current_palette(self):
         self._palette_name = self.get_palette_name()
+        #print("get_current_palette", self._palette_name)
         self._color_number = self.ui.spin_number.value()
 
         name, _, rev = self._palette_name.partition("_")
+
+        if not name:
+            name = "Paired"
+
         if name == COQ_SINGLE:
             rgb = self._current_color.getRgb()[:-1]
             palette = [tuple(x / 255 for x in rgb)] * self._color_number
         elif name == PALETTE_BW:
             palette = [(0, 0, 0), (1, 1, 1)]
         elif name == COQ_CUSTOM:
-            if self._color_number > len(self._custom_palette):
-                base_palette = sns.color_palette(self._custom_base,
-                                                 self._color_number)
-                palette = (self._custom_palette +
-                                base_palette[len(self._custom_palette)
-                                             :self._color_number])
-            else:
-                palette = self._custom_palette[:self._color_number]
+            palette = []
+            self.ui.color_test_area.blockSignals(True)
+            for i in range(self.ui.color_test_area.count()):
+                item = self.ui.color_test_area.item(i)
+                rgb = item.background().color().getRgb()[:-1]
+                palette.append(tuple(x / 255 for x in rgb))
+            self.ui.color_test_area.blockSignals(False)
         else:
             palette = sns.color_palette(name, self._color_number)
 
         if rev == "r":
             palette = palette[::-1]
-
         return palette
 
     def show_palette(self):
-        test_palette = self.get_current_palette()
+        print("show_palette")
+        palette = self.get_current_palette()
 
+        self.ui.color_test_area.blockSignals(True)
         self.ui.color_test_area.clear()
-        for i, (r, g, b) in enumerate(test_palette):
+        for i, (r, g, b) in enumerate(palette):
             item = QtWidgets.QListWidgetItem()
             self.ui.color_test_area.addItem(item)
             brush = QtGui.QBrush(QtGui.QColor(
                         int(r * 255), int(g * 255), int(b * 255)))
             item.setBackground(brush)
-
-        return test_palette
+        self.ui.color_test_area.blockSignals(False)
+        self.updateFigureRequested.emit()
 
     def set_custom_palette(self):
+        if not self._dragging:
+            return
+
+        print("set_custom_palette")
+        self._dragging = False
         current_palette = self.get_palette_name()
         if current_palette != COQ_SINGLE:
-            self._custom_base = current_palette
             self._custom_palette = self.get_current_palette()
             self.ui.radio_custom.setChecked(True)
+            self._palette_name = None
+            self.recolorize()
 
     def change_palette(self):
-        x = self.get_palette_name()
-        n = self.ui.spin_number.value()
-        if (x != self._palette_name or n != self._color_number):
-            self.show_palette()
-            self.plot_figure()
+        print("change_palette()")
+        self.show_palette()
+        self.recolorize()
 
     def set_color(self):
         if self._current_color:
@@ -777,6 +824,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.change_palette()
 
     def switch_stylesheet(self, item):
+        print("switch_stylesheet")
         if item:
             color = item.background().color()
             template = """QListWidget::item:selected {{
@@ -785,8 +833,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 template.format(r=color.red(),
                                 g=color.green(),
                                 b=color.blue()))
+            self._dragging = True
         else:
             self.ui.color_test_area.setStyleSheet(None)
+
+    def reset_stylesheet(self, item1, item2):
+        print("reset_stylesheet")
+        self.ui.color_test_area.setStyleSheet(None)
+        self.ui.color_test_area.setCurrentItem(None)
 
     def set_radio(self, radio):
         radio.blockSignals(True)
@@ -797,8 +851,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def display_values(self):
         # set up Layout tab:
-
-
         print("display_values")
         # data x
         if self.data_x:
@@ -854,7 +906,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
                  size_xticks=self.ui.spin_size_x_ticklabels.value(),
                  size_yticks=self.ui.spin_size_y_ticklabels.value(),
                  session=self.session,
-                 palette=self.get_palette_name(),
+                 #palette=self.get_palette_name(),
+                 palette=self.get_current_palette(),
                  color_number=self.ui.spin_number.value())
 
         d["levels_x"] = []
@@ -882,7 +935,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         return d
 
     def get_colorizer(self, x, y, z, df, palette, color_number, vis, **kwargs):
-
         z = z or vis.get_subordinated(x=x, y=y)
         if z:
             if df[z].dtype == object:
@@ -953,9 +1005,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
         try:
             self.run_plot(**values)
         except Exception as e:
+            raise e
             self.exception_plot(e)
+            self._plotted = False
+        else:
+            self._plotted = True
         self.finalize_plot()
-
 
         #if options.cfg.experimental:
             #self.plot_thread = CoqThread(
@@ -1072,6 +1127,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.reject()
 
     def store_settings(self, settings):
+        return
         gui = self.get_gui_values()
         reverse_palette = ["false", "true"][self.ui.check_reverse.isChecked()]
         show_legend = ["false", "true"][self.ui.check_show_legend.isChecked()]
