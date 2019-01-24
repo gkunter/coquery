@@ -27,6 +27,7 @@ COQ_CUSTOM = "COQCUSTOM"
 
 class Colorizer(QtCore.QObject):
     def __init__(self, palette, ncol, values=None):
+        # FIXME: ncol is obsolete now.
         super(Colorizer, self).__init__()
         self.palette = palette
         self.ncol = ncol
@@ -35,19 +36,35 @@ class Colorizer(QtCore.QObject):
         self._entry_frm = "{val}"
         self._reversed = False
 
+    def update(self, palette, color_number, **kwargs):
+        self.palette = palette
+        self.ncol = color_number
+
     def get_palette(self, n=None):
-        base, _, rev = self.palette.partition("_")
+        """
+        Return the palette values used by the current visualizer.
 
-        if base == PALETTE_BW:
-            col = ([(0, 0, 0), (1, 1, 1)] * (1 + self.ncol // 2))[:self.ncol]
-        elif base == COQ_SINGLE:
-            color = QtGui.QColor(rev)
-            col = [tuple(x / 255 for x in color.getRgb()[:-1])] * self.ncol
-        else:
-            col = sns.color_palette(base, self.ncol)
+        NEW BEHAVIOR:
+        Instead of calculating the palette based on a palette name and the
+        number of colors, colorizers now use a predefined palette that is
+        passed on to them during initialization.
 
-        if rev:
-            col = col[::-1]
+        This makes it possible to deal with non-standard and custom palettes.
+
+        Arguments
+        ---------
+        n : int
+            The number of palette values that is requested. If n is larger
+            than the number of entries in the current palette, the palette is
+            recylced.
+
+        Returns
+        -------
+        lst : list
+            A list of tuples containing Matplotlib color specifications.
+        """
+
+        col = self.palette
 
         if n:
             col = (col * (1 + n // len(col)))[:n]
@@ -58,7 +75,6 @@ class Colorizer(QtCore.QObject):
         self._reversed = rev
 
     def get_hues(self, data):
-        base, _, rev = self.palette.partition("_")
         n = len(data)
         pal = self.get_palette()
         if self._reversed:
@@ -114,8 +130,11 @@ class ColorizeByFactor(Colorizer):
 
     def get_hues(self, data):
         pal = self.get_palette()
-        color_indices = [self.values.index(val) % len(pal) for val in data]
-        hues = [pal[ix] for ix in color_indices]
+        color_indices = [self.values.index(val) % len(pal)
+                         if not pd.isnull(val) else None
+                         for val in data]
+        hues = [pal[ix] if not pd.isnull(ix) else None
+                for ix in color_indices]
         return hues
 
     def legend_palette(self):
@@ -149,6 +168,7 @@ class ColorizeByNum(Colorizer):
         else:
             self.bins = pretty((vmin, vmax), ncol)
             self.set_entry_frm("≥ {val}")
+            #self.set_entry_frm("> {val}")
 
         self.set_title_frm("{z}")
 
