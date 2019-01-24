@@ -2,7 +2,7 @@
 """
 tables.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -18,6 +18,45 @@ import sys
 
 from .defines import SQL_MYSQL, SQL_SQLITE
 from .unicode import utf8
+
+
+def varchar(n, not_null=True):
+    """
+    Returns a string that can be used in an SQL table definition to specify
+    VARCHAR field types.
+    """
+    return "VARCHAR({}){}".format(n, " NOT NULL" if not_null else "")
+
+
+def mediumint(n, unsigned=True, not_null=True):
+    """
+    Returns a string that can be used in an SQL table definition to specify
+    MEDIUMINT field types.
+    """
+    return "MEDIUMINT({}){}{}".format(n,
+                                      " UNSIGNED" if unsigned else "",
+                                      " NOT NULL" if not_null else "")
+
+
+def smallint(n, unsigned=True, not_null=True):
+    """
+    Returns a string that can be used in an SQL table definition to specify
+    SMALLINT field types.
+    """
+    return "SMALLINT({}){}{}".format(n,
+                                     " UNSIGNED" if unsigned else "",
+                                     " NOT NULL" if not_null else "")
+
+
+def enum(*values, not_null=True):
+    """
+    Returns a string that can be used in an SQL table definition to specify
+    ENUM field types.
+    """
+    return "ENUM({}){}".format(
+        ",".join(
+            ["'{}'".format(s.replace("'", "''")) for s in values]),
+        " NOT NULL" if not_null else "")
 
 
 class Column(object):
@@ -229,7 +268,9 @@ class Table(object):
 
             if not self.primary.unique:
                 if self._DB.db_type == SQL_SQLITE:
-                    df[self.primary.alias] = range(self._line_counter, self._line_counter + len(df))
+                    df[self.primary.alias] = range(
+                        self._line_counter,
+                        self._line_counter + len(df))
                 self._line_counter += len(df)
 
             df.to_sql(self.name, self._DB.engine, if_exists="append",
@@ -243,19 +284,19 @@ class Table(object):
         necessary, a valid primary key is added to the values.
 
         """
-        l = [values[x] for x in self._row_order]
+        lst = [values[x] for x in self._row_order]
         if self.primary.name not in self._row_order:
             self._current_id += 1
-            self._add_cache.append(tuple([self._current_id] + l))
+            self._add_cache.append(tuple([self._current_id] + lst))
         else:
             # A few installers appear to depend on this, but actually, I
             # can't see how this will ever get executed.
             # Installers that pass entry IDs in the values:
             # CELEX, GABRA, OBC2, SWITCHBOARD
             self._current_id = values[self.primary.name]
-            self._add_cache.append(tuple(l))
+            self._add_cache.append(tuple(lst))
 
-        self._add_lookup[tuple(l)] = self._current_id
+        self._add_lookup[tuple(lst)] = self._current_id
 
         if self._max_cache and len(self._add_cache) > self._max_cache:
             self.commit()
@@ -516,6 +557,7 @@ class Table(object):
         else:
             s = "PRIMARY KEY (`{}_primary`)".format(self.primary.name)
         col_defs.append(s)
+
         return ",\n\t".join(col_defs)
 
     def _get_create_string_SQLite(self, tables, index_gen):

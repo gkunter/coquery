@@ -250,10 +250,10 @@ class Heatmap(vis.Visualizer):
         else:
             if self.normalization == self.NORM_BY_ROW:
                 ct = ct.divide(ct.sum(axis="columns", skipna=True),
-                               axis="rows", skipna=True)
+                               axis="rows")
             elif self.normalization == self.NORM_BY_COLUMN:
                 ct = ct.divide(ct.sum(axis="rows", skipna=True),
-                               axis="columns", skipna=True)
+                               axis="columns")
             elif self.normalization == self.NORM_ACROSS:
                 ct = pd.DataFrame(ct.values / ct.values.sum(),
                                   columns=ct.columns, index=ct.index)

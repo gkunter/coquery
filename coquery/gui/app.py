@@ -25,6 +25,7 @@ from coquery import managers
 from coquery import NAME, __version__
 from coquery.general import memory_dump
 from coquery import options
+from coquery.options import CSVOptions
 from coquery.defines import (
     AUTO_APPLY_DEFAULT, AUTO_FILTER, AUTO_FUNCTION, AUTO_STOPWORDS,
     AUTO_SUBSTITUTE, AUTO_VISIBILITY,
@@ -1577,7 +1578,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             manager.reset_hidden_columns()
             for col in self.hidden_features:
                 manager.hide_column(col)
-            hidden_cols = pd.Index(manager.hidden_columns)
+            hidden_cols = pd.Index([x
+                                    for x in self.Session.output_object.columns
+                                    if x in manager.hidden_columns])
 
             vis_cols = [x for x in self.Session.output_object.columns
                         if x not in hidden_cols]
@@ -1676,7 +1679,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """ Get CSV file options for current query input file. """
         from . import csvoptions
 
-        csv_options = csvoptions.CSVOptions(
+        csv_options = CSVOptions(
             sep=options.cfg.input_separator,
             header=options.cfg.file_has_headers,
             quote_char=options.cfg.quote_char,

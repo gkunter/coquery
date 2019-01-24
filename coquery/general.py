@@ -47,65 +47,154 @@ def html_escape(text):
     return text
 
 
-def collapse_words(word_list):
+class Collapser(object):
+    """
+    Provides a language-specific way to collapse a list of word tokens into a
+    single string.
+    """
+
+    whitespace = " "
+
+    @classmethod
+    def tag_spacing(cls, s):
+        """
+        Return a string that contains appropriate whitespaces around certain
+        XML tags.
+
+        Some tags are typically used for typesetting, such as <b> or <i>. These
+        tags should be preceded by a whitespace. In the case of the
+        corresponding closing tag, the tag should be followed by a whitespace.
+
+        If the string does not contain a tag that is recognized, the return
+        value is identical to the input value.
+        """
+        if s in {"<b>", "<u>", "<s>", "<em>"} or s.startswith("<span"):
+            return "{}{}".format(cls.whitespace, s)
+        elif s in {"</b>", "</u>", "</s>", "</em>"} or s.startswith("</span"):
+            return "{}{}".format(s, cls.whitespace)
+        else:
+            return s
+
+    @classmethod
+    def _collapse_list(cls, word_list):
+        lst = []
+        for s in word_list:
+            lst += [cls.whitespace, cls.tag_spacing(s)]
+        return lst
+
+    @classmethod
+    def collapse(cls, word_list):
+        # return None if the word list contains only None:
+        if word_list.count(None) == len(word_list):
+            return None
+        else:
+            lst = cls._collapse_list(word_list)
+            return utf8("").join(lst).strip()
+
+
+class EnglishCollapser(Collapser):
+    clitics = {"s", "re", "m", "ve", "d", "ll", "t"}
+    apostrophe_char = ("'", "\N{RIGHT SINGLE QUOTATION MARK}",
+                       "\N{MODIFIER LETTER APOSTROPHE}")
+    nonspacing_punctuation = (".", ",", ":", ";", "?", "!",
+                              ")", "}", "]",
+                              "%")
+    nontrailing_punctuation = ("(", "{", "[")
+    contracting_punctuation = ("\N{EM DASH}")
+    opening_quotes = ("\N{LEFT SINGLE QUOTATION MARK}",
+                      "\N{LEFT DOUBLE QUOTATION MARK}",
+                      '"', "'", # ASCII quotes
+                      "\N{GRAVE ACCENT}", # tick quote
+                      )
+    closing_quotes = ("\N{RIGHT SINGLE QUOTATION MARK}",
+                      "\N{RIGHT DOUBLE QUOTATION MARK}",
+                      '"', "''", "'", # ASCII quotes
+                      "\N{ACUTE ACCENT}", # tick quote
+                      )
+
+    track_quotes = {'"': '"',
+                    "'": "'",
+                    "\N{GRAVE ACCENT}\N{GRAVE ACCENT}":
+                         "\N{ACUTE ACCENT}\N{ACUTE ACCENT}",
+                    "\N{GRAVE ACCENT}\N{GRAVE ACCENT}": "''"}
+
+    @classmethod
+    def _collapse_list(cls, word_list):
+        lst = []
+        next_sep = cls.whitespace
+        skip_next = False
+        open_counter = {k: 0 for k in cls.track_open.keys()}
+
+        for word in word_list:
+            # per default, words will be joined using the language's
+            # whitespace:
+            sep = next_sep
+            next_sep = cls.whitespace
+            lw = word.lower()
+
+            if lw.startswith(cls.apostrophe_char) and lw[1:] in cls.clitics:
+                sep = ""
+            elif lw in cls.nonspacing_punctuation:
+                sep = ""
+            elif lw in cls.nontrailing_punctuation:
+                next_sep = ""
+            elif lw.startswith(cls.contracting_punctuation):
+                sep = ""
+                next_sep = ""
+                if lst[-1] == cls.whitespace:
+                    lst[-1] = ""
+            elif lw.startswith(cls.opening_quotes):
+                for quote in cls.opening_quotes:
+                    # check if the quotation mark is one that can occur both
+                    # as a opening and a closing mark
+                    if (lw.startswith(quote) and quote in track_quotes):
+                        count = open_counter[quote]
+                        # if the current quote count is even, the mark is
+                        # interpreted as an opening quotation mark, otherwise
+                        # it is interpreted as a closing quotation mark.
+                        if (count // 2) * 2 == count:
+                            next_sep = ""
+                            open_counter[quote] = open_counter[quote] + 1
+                        else:
+                            sep = ""
+                            open_counter[quote] = open_counter[quote] - 1
+                        break
+                else:
+                    # if the quotation mark is not any of the quotation marks
+                    # that can occur bot has opening and closing marks, treat
+                    # it as an opening quotation mark
+                    next_sep = ""
+
+            elif lw.startswith(cls.closing_quotes):
+                # use the same special case rules for quotation marks as for
+                # opening marks
+                for quote in cls.closing_quotes:
+                    if lw.startswith(quote) and quote in cls.track_open:
+                        count = open_counter[quote]
+                        if (count // 2) * 2 == count:
+                            next_sep = ""
+                            open_counter[quote] = open_counter[quote] + 1
+                        else:
+                            sep = ""
+                            open_counter[quote] = open_counter[quote] - 1
+                        break
+                else:
+                    sep = ""
+
+            lst += [sep, cls.tag_spacing(word)]
+
+        return [x for x in lst if x]
+
+def collapser_factory(language):
+    mapping = {"en": EnglishCollapser}
+    return mapping.get(language, Collapser)
+
+
+def collapse_words(word_list, language=None):
     """ Concatenate the words in the word list, taking clitics, punctuation
     and some other stop words into account."""
-    def is_tag(s):
-        # there are some tags that should still be preceded by spaces. In
-        # paricular those that are normally used for typesetting, including
-        # <span>, but excluding <sup> and <sub>, because these are frequently
-        # used in formula:
 
-        if s.startswith("<span") or s.startswith("</span"):
-            return False
-        if s in {"</b>", "<b>", "</i>", "<i>", "</u>", "<u>", "</s>", "<s>",
-                 "<em>", "</em>"}:
-            return False
-        return s.startswith("<") and s.endswith(">") and len(s) > 2
-
-    token_list = []
-    context_list = [x.strip() if hasattr(x, "strip") else x
-                    for x in word_list]
-    open_quote = {'"': False, "'": False, "``": False}
-    last_token = ""
-    for current_token in context_list:
-        if (current_token and
-                not (isinstance(current_token, float) and
-                     pd.np.isnan(current_token))):
-            if '""""' in current_token:
-                current_token = '"'
-
-            # stupid list of exceptions in which the current_token should NOT
-            # be preceded by a space:
-            no_space = False
-            if all([x in PUNCT for x in current_token]):
-                no_space = True
-            if current_token in CONTRACTION:
-                no_space = True
-            if last_token in '({[‘“':
-                no_space = True
-            if is_tag(last_token):
-                no_space = True
-            if is_tag(current_token):
-                no_space = True
-            if last_token.endswith("/"):
-                no_space = True
-
-            if current_token == "``":
-                no_space = False
-                open_quote["``"] = True
-            if current_token == "''":
-                open_quote["``"] = False
-                no_space = True
-            if last_token == "``":
-                no_space = True
-
-            if not no_space:
-                token_list.append(" ")
-
-            token_list.append(current_token)
-            last_token = current_token
-    return utf8("").join(token_list)
+    return collapser_factory(language).collapse(word_list)
 
 
 def check_fs_case_sensitive(path):
