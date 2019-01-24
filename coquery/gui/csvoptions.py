@@ -16,6 +16,7 @@ import pandas as pd
 import logging
 
 from coquery import options
+from coquery.options import CSVOptions
 from coquery.unicode import utf8
 from coquery.defines import (msg_csv_encoding_error,
                              msg_csv_file_error,
@@ -23,70 +24,6 @@ from coquery.defines import (msg_csv_encoding_error,
 from .pyqt_compat import QtWidgets, QtGui, QtCore
 from .ui.csvOptionsUi import Ui_FileOptions
 from .app import get_icon
-
-
-class CSVOptions(object):
-    def __init__(self, file_name="", sep=",", header=True, quote_char='"',
-                 skip_lines=0, encoding="utf-8", selected_column=None,
-                 mapping=None, dtypes=None, nrows=None, excel=False):
-        self.sep = sep
-        self.header = header
-        self.quote_char = quote_char
-        self.skip_lines = skip_lines
-        self.encoding = encoding
-        self.selected_column = selected_column
-        self.mapping = mapping if mapping else {}
-        self.dtypes = dtypes
-        self.file_name = file_name
-        self.nrows = nrows
-        self.excel = excel
-
-    def __repr__(self):
-        return ("CSVOptions(sep='{}', header={}, quote_char='{}', "
-                "skip_lines={}, encoding='{}', selected_column={}, "
-                "nrows={}, mapping={}, dtypes={}, excel={})".format(
-                    self.sep, self.header, self.quote_char.replace("'", "\'"),
-                    self.skip_lines, self.encoding, self.selected_column,
-                    self.nrows, self.mapping, self.dtypes, self.excel))
-
-    def read_file(self, path):
-        if options.use_xlrd and self.excel:
-            df = self.read_excel_file(path)
-        else:
-            df = self.read_csv_file(path)
-        return df
-
-    def read_csv_file(self, path):
-        kwargs = {
-            "encoding": self.encoding,
-            "header": 0 if self.header else None,
-            "sep": self.sep,
-            "skiprows": self.skip_lines,
-            "quotechar": self.quote_char,
-            "low_memory": False,
-            "error_bad_lines": False}
-        try:
-            df = pd.read_csv(path, **kwargs)
-        except Exception as e:
-            print(path)
-            from pprint import pprint
-            pprint(kwargs)
-            logging.error(e)
-            print(e)
-            raise e
-        return df
-
-    def read_excel_file(self, path):
-        try:
-            df = pd.read_excel(
-                path,
-                header=0 if self.header else None,
-                skiprows=self.skip_lines)
-        except Exception as e:
-            logging.error(e)
-            print(e)
-            raise e
-        return df
 
 
 class MyTableModel(QtCore.QAbstractTableModel):

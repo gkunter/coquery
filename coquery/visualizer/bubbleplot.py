@@ -144,7 +144,8 @@ class BubblePlot(TreeMap):
             frm_str = ": M={}".format(self.frm_str)
         else:
             frm_str = " ({})"
-        label = "{}{}".format(cat_label, frm_str.format(val))
+        label = "{}{}".format(cat_label,
+                              frm_str.format(self.frm_str.format(val)))
 
         return label
 

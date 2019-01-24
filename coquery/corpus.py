@@ -1870,12 +1870,14 @@ class SQLResource(BaseResource):
     def get_context(self, token_id, origin_id, number_of_tokens,
                     db_connection, sentence_id=None, left=None, right=None):
 
-        left_span = left or options.cfg.context_left
-        right_span = right or options.cfg.context_right
+        left_span = left if not pd.isna(left) else options.cfg.context_left
+        right_span = right if not pd.isna(right) else options.cfg.context_right
+        n_tokens = int(number_of_tokens if not pd.isna(number_of_tokens)
+                       else 0)
 
         if pd.np.isnan(origin_id):
             results = ([(None, 0)] * left_span +
-                       [(None, 1)] * number_of_tokens +
+                       [(None, 1)] * n_tokens +
                        [(None, 2)] * right_span)
         else:
             S = self.get_context_string(token_id, number_of_tokens,
@@ -2674,7 +2676,7 @@ class CorpusClass(object):
 
         context = pd.np.hstack(df.apply(lambda x: parse_row(x, tags),
                                         axis="columns"))
-        s = collapse_words(context)
+        s = collapse_words(context, self.resource.get_language())
         s = s.replace("</p>", "</p>\n")
         s = s.replace("<br/>", "<br/>\n")
         audio = self.resource.audio_features != []
