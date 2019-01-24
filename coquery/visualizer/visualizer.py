@@ -107,6 +107,13 @@ class Visualizer(QtCore.QObject):
     def get_default_index(self):
         return self._id_column
 
+    def get_id_values(self, data):
+        if self._id_column:
+            values = data[self._id_column]
+        else:
+            values = pd.Series(data.index)
+        return values
+
     def get_custom_widgets(self, *args, **kwargs):
         """
         Return a tuple containing a description of the custom widgets for
@@ -221,17 +228,52 @@ class Visualizer(QtCore.QObject):
             legend.set_visible(False)
             grid.fig.legends = []
 
-    def plot_facet(self, data, color,
-                   x=None, y=None, levels_x=None, levels_y=None,
-                   palette=None, **kwargs):
-        pass
+    def prepare_arguments(self, data, x, y, z, levels_x, levels_y, **kwargs):
+        return {}
 
-    def colorize_artists(self):
+    def plot_facet(self, **kwargs):
+        """
+        Plot the facet using the provided arguments.
+
+        Returns
+        -------
+        lst : list
+            A list of elements that can be colorized.
+        """
+        return []
+
+    def get_colors(self, elements, **kwargs):
+        """
+        Determine the color of each element.
+
+        Arguments
+        ---------
+        elements : list
+            A list of elements created by plot_facet()
+
+        Returns
+        -------
+        lst : list
+            A list of tuples representing Matplotlib color values.
+        """
+        return []
+
+    def colorize_elements(self, elements, colors):
         """
         Colorize the elements created previously using the appropriate
         palette values.
         """
         pass
+
+    def set_titles(self, **kwargs):
+        self._xlab = self.DEFAULT_XLABEL
+        self._ylab = self.DEFAULT_YLABEL
+
+    def colorize(self):
+        self.colors = self.get_colors(self.colorizer,
+                                      self.elements,
+                                      **self.params)
+        self.colorize_elements(self.elements, self.colors)
 
     def draw(self, data, color, **kwargs):
         self.x = kwargs.get("x")
@@ -241,13 +283,11 @@ class Visualizer(QtCore.QObject):
         self.levels_y = kwargs.get("levels_y")
         self.levels_z = kwargs.get("levels_z")
         self.colorizer = kwargs.get("colorizer")
-        self.plot_facet(data, color, **kwargs)
-        self.colorize_artists()
-        self.set_titles()
 
-    def set_titles(self):
-        self._xlab = self.DEFAULT_XLABEL
-        self._ylab = self.DEFAULT_YLABEL
+        self.params = self.prepare_arguments(data, **kwargs)
+        self.elements = self.plot_facet(**self.params)
+        self.set_titles(**self.params)
+        self.colorize()
 
     def rotate_annotations(self, grid):
         for ax in grid.fig.axes:
@@ -396,13 +436,6 @@ class Visualizer(QtCore.QObject):
         else:
             c = Colorizer(palette, color_number)
         return c
-
-    @staticmethod
-    def get_colors(data, colorizer, z):
-        if z:
-            return colorizer.get_hues(data[z])
-        else:
-            return colorizer.get_hues(data.iloc[:, 0])
 
     def get_subordinated(self, x, y):
         """

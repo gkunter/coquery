@@ -74,12 +74,6 @@ class BubblePlot(TreeMap):
 
         return lst
 
-    def colorize_artists(self):
-        for circ, col in zip(self.artists, self.colors):
-            circ.set_color(col)
-            if self.box_border:
-                circ.set_edgecolor("black")
-
     @classmethod
     def rotate_vector(cls, x, theta):
         """
@@ -223,8 +217,8 @@ class BubblePlot(TreeMap):
         grouping = []
         numerical = None
 
-        for feature in [x, y]:
-            if self.dtype(feature, data) != object:
+        for feature in [f for f in [x, y] if f]:
+            if data[feature].dtype != object:
                 numerical = feature
             else:
                 grouping.append(feature)
@@ -318,7 +312,7 @@ class BubblePlot(TreeMap):
 
         return circles
 
-    def prepare_arguments(self, data, x, y, z, levels_x, levels_y):
+    def prepare_arguments(self, data, x, y, z, levels_x, levels_y, **kwargs):
         """
         Bubble placement algorithm:
 
@@ -335,7 +329,6 @@ class BubblePlot(TreeMap):
         self.x = x
         self.y = y
         self.z = z
-
         df_freq = self.get_dataframe(data, x, y, z)
         circles = self.place_circles(df_freq)
         if z:
@@ -344,16 +337,9 @@ class BubblePlot(TreeMap):
             _color_column = df_freq.index
         return {"data": circles, "cix": _color_column}
 
-    def plot_facet(self, data, color, **kwargs):
-        self.args = self.prepare_arguments(data, self.x, self.y, self.z,
-                                           self.levels_x, self.levels_y)
-        cix = self.args.pop("cix")
-        if self.z:
-            self.colors = self.colorizer.get_hues(cix)
-        else:
-            self.colors = self.colorizer.get_palette(n=len(cix))
-
-        self.artists = self.draw_circles(**self.args)
+    def plot_facet(self, **kwargs):
+        self.args = kwargs
+        artists = self.draw_circles(**kwargs)
 
         ax = plt.gca()
         ax.set_aspect(1)
@@ -361,6 +347,21 @@ class BubblePlot(TreeMap):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         sns.despine(ax=ax, top=True, bottom=True, left=True, right=True)
+        return artists
+
+    def get_colors(self, colorizer, elements, **kwargs):
+        cix = self.args["cix"]
+        if self.z:
+            self.colors = self.colorizer.get_hues(cix)
+        else:
+            self.colors = self.colorizer.get_palette(n=len(cix))
+        return self.colors
+
+    def colorize_elements(self, elements, colors):
+        for circ, col in zip(elements, colors):
+            circ.set_color(col)
+            if self.box_border:
+                circ.set_edgecolor("black")
 
 
 provided_visualizations = [BubblePlot]

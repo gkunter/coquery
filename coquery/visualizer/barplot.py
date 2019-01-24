@@ -51,7 +51,7 @@ class BarPlot(vis.Visualizer):
                             x=data[self.NUM_COLUMN],
                             xerr=data[self.SEM_COLUMN],
                             **style)
-        return ax
+        return ax.containers
 
     def get_custom_widgets(self, *args, **kwargs):
         label = tr("BarPlot", "Prefer vertical bars where possible", None)
@@ -68,7 +68,7 @@ class BarPlot(vis.Visualizer):
         self.vertical = self.check_direction.isChecked()
 
     def prepare_arguments(self, data, x, y, z,
-                          levels_x, levels_y, z_statistic=None):
+                          levels_x, levels_y, z_statistic=None, **kwargs):
         """
         Return a dictionary representing the arguments that will be passed on
         to plt_func().
@@ -142,15 +142,10 @@ class BarPlot(vis.Visualizer):
 
         return args
 
-    def plot_facet(self, data, color, **kwargs):
-        self.args = self.prepare_arguments(data, self.x, self.y, self.z,
-                                           self.levels_x, self.levels_y)
-        self.plt_func(ax=plt.gca(), **self.args)
+    def plot_facet(self, **kwargs):
+        return self.plt_func(ax=plt.gca(), **kwargs)
 
-    def colorize_artists(self, ax=None):
-        if ax is None:
-            ax = plt.gca()
-
+    def get_colors(self, colorizer, elements, **kwargs):
         if ((self.x and not self.y) or (self.y and not self.x) or
                 (self.df[self.x].dtype != object) or
                 (self.df[self.y].dtype != object)):
@@ -161,35 +156,36 @@ class BarPlot(vis.Visualizer):
                     levels = self.levels_x
                 else:
                     levels = self.levels_y
-
-                rgb = self.colorizer.get_hues(levels)
+                hues = [self.colorizer.get_hues(levels)[0]] * len(levels)
             else:
-                df = self.args["data"]
-                rgb = self.colorizer.get_hues(df[self.COL_COLUMN])
-
-            assert len(ax.containers[0]) == len(rgb)
-
-            for i, art in enumerate(ax.containers[0]):
-                art.set_facecolor(rgb[i])
+                df = kwargs["data"]
+                hues = self.colorizer.get_hues(df[self.COL_COLUMN])
+            rgb = [hues]
         else:
             # colorize two categorical series
-            data = self.args["data"]
-            rgb = self.colorizer.get_hues(data[self.COL_COLUMN])
-            data[self.RGB_COLUMN] = rgb
+            if not self.z:
+                hues = self.colorizer.get_hues(self.levels_y)
+                rgb = [[col] * len(self.levels_x) for col in hues]
+            else:
+                df = pd.merge(
+                    pd.DataFrame({
+                        self.x: self.levels_x * len(self.levels_y),
+                        self.y: pd.np.repeat(self.levels_y,
+                                             len(self.levels_x))}),
+                    kwargs["data"],
+                    on=[self.x, self.y], how="left")
+                hues = self.colorizer.get_hues(df[self.COL_COLUMN])
+                rgb = pd.np.split(pd.np.array(hues), len(self.levels_y))
+        return rgb
 
-            for i, cont in enumerate(ax.containers):
-                val_y = self.levels_y[i]
-                for j, art in enumerate(cont):
-                    val_x = self.levels_x[j]
-                    row = data[(data[self.x] == val_x) &
-                               (data[self.y] == val_y)]
-                    if len(row):
-                        color = row[self.RGB_COLUMN].tolist()[0]
-                        art.set_facecolor(color)
+    def colorize_elements(self, elements, colors):
+        for cont, color_list in zip(elements, colors):
+            for art, color in zip(cont, color_list):
+                art.set_facecolor(color)
 
-    def set_titles(self):
+    def set_titles(self, **kwargs):
         self._xlab, self._ylab = BarPlot.DEFAULT_LABEL, BarPlot.DEFAULT_LABEL
-        if self.args["x"] != self.NUM_COLUMN:
+        if kwargs["x"] != self.NUM_COLUMN:
             self._xlab = self.x
         else:
             self._ylab = self.y
@@ -204,6 +200,11 @@ class BarPlot(vis.Visualizer):
             return x or y
 
     def suggest_legend(self):
+        if self.x and self.y:
+            return self.z != self.x
+        else:
+            return self.z not in [self.x, self.y]
+
         return (self.z or
                 not ((self.x and not self.y) or
                      (self.y and not self.x) or
@@ -233,74 +234,6 @@ class StackedBars(BarPlot):
     focus = 0
     sort = 0
 
-    #def get_custom_widgets(self, **kwargs):
-        #x = kwargs.get("x", None)
-        #y = kwargs.get("y", None)
-        #hue = kwargs.get("z", None)
-
-        #levels_x = kwargs.get("levels_x", None)
-        #levels_y = kwargs.get("levels_y", None)
-        #levels_z = kwargs.get("levels_z", None)
-
-        #layout = QtWidgets.QGridLayout()
-        #tr = QtWidgets.QApplication.instance().translate
-
-        #focus_label = QtWidgets.QLabel(tr("StackedBars", "Set focus:", None))
-        #sort_label = QtWidgets.QLabel(tr("StackedBars", "Sort by:", None))
-        #button = tr("StackedBars", "Apply", None)
-
-        #StackedBars.combo_focus = QtWidgets.QComboBox()
-        #StackedBars.combo_sort = QtWidgets.QComboBox()
-        #StackedBars.button_apply = QtWidgets.QPushButton(button)
-        #StackedBars.button_apply.setDisabled(True)
-
-        #if levels_x and not levels_y:
-            #entries = levels_x
-        #else:
-            #entries = levels_y
-
-        #entries.insert(0, tr("StackedBars", "(none)", None))
-
-        #StackedBars.combo_focus.addItems(entries)
-        #StackedBars.combo_sort.addItems(entries)
-
-        #StackedBars.button_apply.clicked.connect(
-            #lambda: StackedBars.update_figure(
-                #self,
-                #StackedBars.combo_focus.currentIndex(),
-                #StackedBars.combo_sort.currentIndex()))
-        #StackedBars.combo_focus.currentIndexChanged.connect(
-            #lambda x: StackedBars.button_apply.setEnabled(True))
-        #StackedBars.combo_sort.currentIndexChanged.connect(
-            #lambda x: StackedBars.button_apply.setEnabled(True))
-
-        #self.focus = 0
-        #self.sort = 0
-
-        #layout.addWidget(focus_label, 0, 0)
-        #layout.addWidget(sort_label, 1, 0)
-        #layout.addWidget(StackedBars.combo_focus, 0, 1)
-        #layout.addWidget(StackedBars.combo_sort, 1, 1)
-
-        #h_layout = QtWidgets.QHBoxLayout()
-        #h_layout.addWidget(QtWidgets.QLabel())
-        #h_layout.addWidget(StackedBars.button_apply)
-        #h_layout.addWidget(QtWidgets.QLabel())
-        #h_layout.setStretch(0, 1)
-        #h_layout.setStretch(2, 1)
-
-        #layout.addLayout(h_layout, 2, 0, 1, 3)
-
-        #layout.setColumnStretch(0, 1)
-        #layout.setColumnStretch(1, 3)
-
-        #return [layout]
-
-    #def update_figure(cls, self, focus, sort):
-        #cls.focus = focus
-        #cls.sort = sort
-        #cls.button_apply.setDisabled(True)
-
     @staticmethod
     def transform(series):
         return series.cumsum()
@@ -315,22 +248,7 @@ class StackedBars(BarPlot):
         """
         return True
 
-    def colorize_artists(self, ax=None):
-        if ax is None:
-            ax = plt.gca()
-
-        if self.x and not self.y:
-            cols = self.colorizer.get_palette(len(self.levels_x))
-        elif self.y and not self.x:
-            cols = self.colorizer.get_palette(len(self.levels_y))
-        else:
-            cols = self.colorizer.get_palette(len(self.levels_y))
-
-        for col, cont in zip(cols, ax.containers[::-1]):
-            for act in cont:
-                act.set_facecolor(col)
-
-    def set_titles(self):
+    def set_titles(self, **kwargs):
         self._xlab, self._ylab = BarPlot.DEFAULT_LABEL, BarPlot.DEFAULT_LABEL
         if self.x and not self.y:
             self._xlab = self.x
@@ -349,9 +267,15 @@ class StackedBars(BarPlot):
                 self._xlab = self.x
 
     def prepare_arguments(self, data, x, y, z,
-                          levels_x, levels_y, z_statistic=None):
+                          levels_x, levels_y, z_statistic=None, **kwargs):
         args = super(StackedBars, self).prepare_arguments(
-            data, x, y, z, levels_x, levels_y, z_statistic)
+            data, x, y, z, levels_x, levels_y, z_statistic, **kwargs)
+
+        print("----")
+        print(args["data"])
+        print(args.get("hue", None))
+        print("----")
+
 
         if args["x"] != self.NUM_COLUMN:
             num = "y"
@@ -414,16 +338,91 @@ class StackedBars(BarPlot):
         levels = kwargs.pop("levels")
         df = kwargs.pop("data")
 
+        containers = []
+
         for val in levels[::-1]:
-            _ax = sns.barplot(data=df[df[self.COL_COLUMN] == val], **kwargs)
+            ax = sns.barplot(data=df[df[self.COL_COLUMN] == val],
+                             edgecolor="black", **kwargs)
+            containers.append(plt.gca().containers)
 
-        if not (self.x and self.y):
-            if kwargs["x"] != self.NUM_COLUMN:
-                _ax.set_xticklabels([])
+        #if not (self.x and self.y):
+            #if kwargs["x"] != self.NUM_COLUMN:
+                #ax.set_xticklabels([])
+            #else:
+                #ax.set_yticklabels([])
+        return ax.containers
+
+    def get_colors(self, colorizer, elements, **kwargs):
+        if (bool(self.x) != bool(self.y) or
+                any([dtype != object for dtype in
+                     self.df[[self.x, self.y]]])):
+            # only one categorical (either with or without a numeric
+            # variable):
+            if not self.z:
+                levels = self.levels_x if self.x else self.levels_y
+                hues = self.colorizer.get_hues(levels)
+                rgb = [[hue] for hue in hues][::-1]
             else:
-                _ax.set_yticklabels([])
-        return _ax
+                print(kwargs["data"])
+                df = pd.merge(
+                    pd.DataFrame({
+                        self.x: self.levels_x * len(self.levels_y),
+                        self.y: pd.np.repeat(self.levels_y,
+                                             len(self.levels_x))}),
+                    kwargs["data"],
+                    on=[self.x, self.y], how="left")
+                print(df)
+                hues = self.colorizer.get_hues(df[self.COL_COLUMN])
+                print(hues)
+                rgb = pd.np.split(pd.np.array(hues), len(self.levels_y))[::-1]
 
+
+        return rgb or ["green"] * len(elements)
+        if ((self.x and not self.y) or (self.y and not self.x) or
+                (self.df[self.x].dtype != object) or
+                (self.df[self.y].dtype != object)):
+            # colorize one categorical series (either with or without a
+            # numeric series):
+            if not self.z:
+                if self.x and self.df[self.x].dtype == object:
+                    levels = self.levels_x
+                else:
+                    levels = self.levels_y
+                hues = [self.colorizer.get_hues(levels)[0]] * len(levels)
+            else:
+                df = kwargs["data"]
+                hues = self.colorizer.get_hues(df[self.COL_COLUMN])
+            rgb = [hues]
+        else:
+            # colorize two categorical series
+            if not self.z:
+                hues = self.colorizer.get_hues(self.levels_y)
+                rgb = [[col] * len(self.levels_x) for col in hues]
+            else:
+                df = pd.merge(
+                    pd.DataFrame({
+                        self.x: self.levels_x * len(self.levels_y),
+                        self.y: pd.np.repeat(self.levels_y,
+                                             len(self.levels_x))}),
+                    kwargs["data"],
+                    on=[self.x, self.y], how="left")
+                hues = self.colorizer.get_hues(df[self.COL_COLUMN])
+                rgb = pd.np.split(pd.np.array(hues), len(self.levels_y))
+        return rgb
+
+    def colorize_elements(self, elements, colors):
+        print(elements)
+        print(colors)
+        for container, color_list in zip(elements, colors):
+            print("\t", container)
+            print("\t", color_list)
+            for artist, color in zip(container, color_list):
+                print("\t\t", artist)
+                print("\t\t", color)
+                artist.set_facecolor(color)
+
+
+        #return super(StackedBars, self).colorize_elements(elements, colors)
 
 class PercentBars(StackedBars):
     """
