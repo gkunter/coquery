@@ -817,6 +817,23 @@ class TestCorpus(unittest.TestCase):
             simple(d["word"][1]),
             simple("COQ_WORD_1.POS LIKE 'n%'"))
 
+    def test_token_conditions_lemmatized_deep_4(self):
+        """
+        Tests issue #296.
+        """
+        token = COCAToken("#?ome")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertEqual(
+            simple(d["word"][0]),
+            simple("""
+                COQ_LEMMA_1.Lemma IN
+                    (SELECT DISTINCT Lemma
+                     FROM       Lexicon AS COQ_WORD_1
+                     INNER JOIN Lemmas AS COQ_LEMMA_1
+                             ON COQ_LEMMA_1.LemmaId = COQ_WORD_1.LemmaId
+                     WHERE (COQ_WORD_1.Word LIKE '_ome'))"""))
+
+
     ### SELECT COLUMNS
 
     def test_get_required_columns_1(self):
