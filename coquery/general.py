@@ -123,7 +123,7 @@ class EnglishCollapser(Collapser):
         lst = []
         next_sep = cls.whitespace
         skip_next = False
-        open_counter = {k: 0 for k in cls.track_open.keys()}
+        open_counter = {k: 0 for k in cls.track_quotes.keys()}
 
         for word in word_list:
             # per default, words will be joined using the language's
@@ -147,7 +147,7 @@ class EnglishCollapser(Collapser):
                 for quote in cls.opening_quotes:
                     # check if the quotation mark is one that can occur both
                     # as a opening and a closing mark
-                    if (lw.startswith(quote) and quote in track_quotes):
+                    if (lw.startswith(quote) and quote in cls.track_quotes):
                         count = open_counter[quote]
                         # if the current quote count is even, the mark is
                         # interpreted as an opening quotation mark, otherwise
@@ -169,7 +169,7 @@ class EnglishCollapser(Collapser):
                 # use the same special case rules for quotation marks as for
                 # opening marks
                 for quote in cls.closing_quotes:
-                    if lw.startswith(quote) and quote in cls.track_open:
+                    if lw.startswith(quote) and quote in cls.track_quotes:
                         count = open_counter[quote]
                         if (count // 2) * 2 == count:
                             next_sep = ""
@@ -386,6 +386,17 @@ def format_file_size(size):
         power = math.floor(math.log2(abs(size)) / 10)
     unit = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'][power]
     return "{:0.1f} {}".format(size / 1024 ** power, unit)
+
+
+def recycle(data, n, limit=None):
+    """
+    Recycle the data to return a list with n elements. If limit is not None,
+    only the elements up to that value are used.
+    """
+    if limit:
+        return (data[:limit] * (1 + n // limit))[:n]
+    else:
+        return (data * (1 + n // len(data)))[:n]
 
 
 def pretty(vrange, n, endpoint=False):
