@@ -15,8 +15,11 @@ import tempfile
 import os
 import numpy as np
 
-from coquery.general import check_fs_case_sensitive, pretty, collapse_words
-from    test.testcase import CoqTestCase
+from coquery.general import (check_fs_case_sensitive,
+                             pretty,
+                             recycle,
+                             collapse_words)
+from test.testcase import CoqTestCase
 
 class TestGeneral(unittest.TestCase):
 
@@ -178,6 +181,41 @@ class TestPretty(unittest.TestCase):
                              [70, 80, 90, 100, 110, 120, 130])
 
 
+class TestRecycle(CoqTestCase):
+    def test_recycle_1(self):
+        """
+        Test if the data is correctly recycled.
+        """
+        data = [0, 1, 2, 3, 4]
+        target = data * 5
+        requested_length = len(target)
+        value = recycle(data, requested_length)
+        self.assertListEqual(value, target)
+
+    def test_recycle_2(self):
+        """
+        Test if recycling works when only the first two elements of the data
+        are requested.
+        """
+        data = [0, 1, 2, 3, 4]
+        target = [0, 1] * 5
+        requested_data_length = 2
+        requested_length = len(target)
+        value = recycle(data, requested_length, requested_data_length)
+        self.assertListEqual(value, target)
+
+    def test_recycle_3(self):
+        """
+        Test if recycling works when there is more data than needed
+        """
+        data = [0, 1, 2, 3, 4]
+        target = [0, 1]
+        requested_data_length = len(data)
+        requested_length = len(target)
+        value = recycle(data, requested_length)
+        self.assertListEqual(value, target)
+
+
 class TestCollapseWords(CoqTestCase):
     def test_default_collapser1(self):
         lst = ["this", "is", "a", "test"]
@@ -328,7 +366,8 @@ class TestEnglishCollapseWords(CoqTestCase):
 
 
 provided_tests = [TestGeneral, TestPretty,
-                  TestCollapseWords, TestEnglishCollapseWords]
+                  TestCollapseWords, TestEnglishCollapseWords,
+                  TestRecycle]
 
 
 def main():
