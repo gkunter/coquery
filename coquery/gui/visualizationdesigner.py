@@ -611,8 +611,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.update_figure()
         else:
             values = self.get_gui_values()
-            self.colorizer.update(**values)
+            self.colorizer.palette = values["palette"]
             self.vis.colorize()
+            self.update_legend()
             plt.gcf().canvas.draw_idle()
 
     def check_wrapping(self):
@@ -906,7 +907,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
                  size_xticks=self.ui.spin_size_x_ticklabels.value(),
                  size_yticks=self.ui.spin_size_y_ticklabels.value(),
                  session=self.session,
-                 #palette=self.get_palette_name(),
                  palette=self.get_current_palette(),
                  color_number=self.ui.spin_number.value())
 
@@ -939,14 +939,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
         if z:
             if df[z].dtype == object:
                 levels = uniques(df[z])
-                colorizer = ColorizeByFactor(palette, color_number, levels)
+                colorizer = ColorizeByFactor(palette, levels)
                 if z not in [x, y]:
                     colorizer.set_title_frm(vis.get_factor_frm())
             else:
-                colorizer = ColorizeByNum(palette, color_number, df[z])
+                colorizer = ColorizeByNum(palette, kwargs["range_z"])
                 colorizer.set_title_frm(vis.get_num_frm())
         else:
-            colorizer = Colorizer(palette, color_number, None)
+            colorizer = Colorizer(palette)
             colorizer.set_title_frm("{z}")
         return colorizer
 
@@ -1106,20 +1106,26 @@ class VisualizationDesigner(QtWidgets.QDialog):
             else:
                 self.canvas.draw()
 
+    def update_legend(self):
+        if self.ui.check_show_legend.isChecked():
+            kwargs = dict(
+                grid=self.grid,
+                title=self.ui.edit_legend_title.text() or None,
+                palette=self._palette_name,
+                ncol=self.ui.spin_columns.value(),
+                fontsize=self.ui.spin_size_legend_entries.value(),
+                titlesize=self.ui.spin_size_legend.value())
+            self.vis.hide_legend(self.grid)
+            self.vis.add_legend(**kwargs)
+        else:
+            self.vis.hide_legend(self.grid)
+
+
     def change_legend(self):
+        print("change_legend()")
         if self.vis:
-            if self.ui.check_show_legend.isChecked():
-                kwargs = dict(
-                    grid=self.grid,
-                    title=self.ui.edit_legend_title.text() or None,
-                    palette=self._palette_name,
-                    ncol=self.ui.spin_columns.value(),
-                    fontsize=self.ui.spin_size_legend_entries.value(),
-                    titlesize=self.ui.spin_size_legend.value())
-                self.vis.add_legend(**kwargs)
-            else:
-                self.vis.hide_legend(self.grid)
-            self.canvas.draw()
+            self.update_legend()
+            plt.gcf().canvas.draw_idle()
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
