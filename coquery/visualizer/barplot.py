@@ -271,12 +271,6 @@ class StackedBars(BarPlot):
         args = super(StackedBars, self).prepare_arguments(
             data, x, y, z, levels_x, levels_y, z_statistic, **kwargs)
 
-        print("----")
-        print(args["data"])
-        print(args.get("hue", None))
-        print("----")
-
-
         if args["x"] != self.NUM_COLUMN:
             num = "y"
             cat = "x"
@@ -344,12 +338,6 @@ class StackedBars(BarPlot):
             ax = sns.barplot(data=df[df[self.COL_COLUMN] == val],
                              edgecolor="black", **kwargs)
             containers.append(plt.gca().containers)
-
-        #if not (self.x and self.y):
-            #if kwargs["x"] != self.NUM_COLUMN:
-                #ax.set_xticklabels([])
-            #else:
-                #ax.set_yticklabels([])
         return ax.containers
 
     def get_colors(self, colorizer, elements, **kwargs):
@@ -363,7 +351,6 @@ class StackedBars(BarPlot):
                 hues = self.colorizer.get_hues(levels)
                 rgb = [[hue] for hue in hues][::-1]
             else:
-                print(kwargs["data"])
                 df = pd.merge(
                     pd.DataFrame({
                         self.x: self.levels_x * len(self.levels_y),
@@ -371,11 +358,8 @@ class StackedBars(BarPlot):
                                              len(self.levels_x))}),
                     kwargs["data"],
                     on=[self.x, self.y], how="left")
-                print(df)
                 hues = self.colorizer.get_hues(df[self.COL_COLUMN])
-                print(hues)
                 rgb = pd.np.split(pd.np.array(hues), len(self.levels_y))[::-1]
-
 
         return rgb or ["green"] * len(elements)
         if ((self.x and not self.y) or (self.y and not self.x) or
@@ -411,18 +395,10 @@ class StackedBars(BarPlot):
         return rgb
 
     def colorize_elements(self, elements, colors):
-        print(elements)
-        print(colors)
         for container, color_list in zip(elements, colors):
-            print("\t", container)
-            print("\t", color_list)
             for artist, color in zip(container, color_list):
-                print("\t\t", artist)
-                print("\t\t", color)
                 artist.set_facecolor(color)
 
-
-        #return super(StackedBars, self).colorize_elements(elements, colors)
 
 class PercentBars(StackedBars):
     """
