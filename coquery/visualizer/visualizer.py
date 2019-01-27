@@ -82,6 +82,18 @@ class Aggregator(QtCore.QObject):
 
 
 class Visualizer(QtCore.QObject):
+    """
+    Define a Visualizer class that can be used by the visualization designer.
+
+    In order to be used by the visualization designer, Visualization classes
+    have to implement the following methods:
+
+    prepare_arguments()
+    plot_facet()
+    set_titles()
+    colorize_elements()
+    """
+
     axes_style = None
     plotting_context = "notebook"
 
@@ -189,8 +201,7 @@ class Visualizer(QtCore.QObject):
 
         return (legend_title, legend_levels, legend_palette)
 
-    def add_legend(self, grid, title=None, palette=None, levels=None,
-                   loc="lower left", **kwargs):
+    def add_legend(self, grid, title=None, palette=None, levels=None, loc="lower left", **kwargs):
         """
         Add a legend to the figure, using the current option settings.
         """
@@ -242,12 +253,13 @@ class Visualizer(QtCore.QObject):
         """
         return []
 
-    def get_colors(self, elements, **kwargs):
+    def get_colors(self, colorizer, elements, **kwargs):
         """
         Determine the color of each element.
 
         Arguments
         ---------
+        colorizer : Colorizer
         elements : list
             A list of elements created by plot_facet()
 
@@ -425,8 +437,7 @@ class Visualizer(QtCore.QObject):
         return pal
 
     @staticmethod
-    def get_colorizer(data, palette, color_number,
-                      z, levels_z=None, range_z=None):
+    def get_colorizer(data, palette, color_number, z, levels_z=None, range_z=None):
         if z:
             if data[z].dtype == object:
                 c = ColorizeByFactor(palette, color_number, levels_z)
