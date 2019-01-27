@@ -54,7 +54,8 @@ class BarcodePlot(vis.Visualizer):
         values = (0.5 + pd.np.arange(len(order)),
                   order[::-1],
                   (0, len(order)))
-        return dict(zip(keys, values))
+        dct = dict(zip(keys, values))
+        return dct
 
     def draw_tokens(self, x, y, order, rug=None):
         if self.horizontal:
@@ -62,12 +63,14 @@ class BarcodePlot(vis.Visualizer):
         else:
             _func = plt.hlines
 
+        order = order or [""]
+
         if x.dtype != object:
             numeric, categorical = x, y
         else:
             numeric, categorical = y, x
+            order = order[::-1]
 
-        order = order or [""]
         for i, level in enumerate(order):
             pos = len(order) - i - 1
             if not rug:
@@ -123,23 +126,22 @@ class BarcodePlot(vis.Visualizer):
         return ax.collections
 
     def get_colors(self, colorizer, elements, **kwargs):
-        if kwargs["z"] is not None:
-            colors = colorizer.get_hues(kwargs["z"])
-        else:
-            colors = [colorizer.get_palette(n=1)[0]] * len(kwargs["x"])
-
-        _ID = self._id_column
         if kwargs["horizontal"]:
             values = kwargs["x"]
         else:
             values = kwargs["y"]
-        df_col = pd.DataFrame({_ID: values,
+        if kwargs["z"] is not None:
+            colors = colorizer.get_hues(kwargs["z"])
+        else:
+            colors = colorizer.get_hues(values, ncol=1)
+
+        df_col = pd.DataFrame({self._id_column: values,
                                "Z": kwargs["z"],
                                "COQ_COLOR": colorizer.mpt_to_hex(colors)})
         lst = []
         for collection in elements:
-            df = self._extract_data(collection, _ID)
-            df = df.merge(df_col, on=_ID, how="left")
+            df = self._extract_data(collection, self._id_column)
+            df = df.merge(df_col, on=self._id_column, how="left")
             lst.append(df["COQ_COLOR"].values.tolist())
         return lst
 
@@ -172,6 +174,9 @@ class BarcodePlot(vis.Visualizer):
             self._xlab = self.DEFAULT_LABEL
         else:
             self._ylab = self.DEFAULT_LABEL
+
+    def get_subordinated(self, x, y):
+        return None
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
