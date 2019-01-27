@@ -12,222 +12,224 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import unittest
-import os
 
 import pandas as pd
 import seaborn as sns
 
 from coquery.visualizer.colorizer import (
-    Colorizer, ColorizeByFactor, ColorizeByNum, ColorizeByFreq,
-    COQ_SINGLE)
-from coquery.defines import PALETTE_BW
+    Colorizer, ColorizeByFactor, ColorizeByNum,
+    )
 
 
 class TestColorizer(unittest.TestCase):
-    def test_get_palette(self):
-        colorizer = Colorizer("Paired", 5)
-        pal = colorizer.get_palette()
+    def test_get_palette_1(self):
         sns_pal = sns.color_palette("Paired", 5)
+        colorizer = Colorizer(sns_pal)
+        pal = colorizer.get_palette()
         self.assertListEqual(pal, sns_pal)
 
-    #def test_get_palette_rev(self):
-        #colorizer = Colorizer("Paired_r", 5)
-        #pal = colorizer.get_palette()
-        #sns_pal = sns.color_palette("Paired", 5)
-        #self.assertListEqual(pal, sns_pal[::-1])
+    def test_get_palette_2(self):
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = Colorizer(sns_pal)
+        pal = colorizer.get_palette(n=7)
+        self.assertListEqual(pal, sns_pal + sns_pal[0:2])
 
-    #def test_get_palette_bw(self):
-        #colorizer = Colorizer(PALETTE_BW, 5)
-        #pal = colorizer.get_palette()
-        #bw_pal = [(0, 0, 0),
-                  #(1, 1, 1),
-                  #(0, 0, 0),
-                  #(1, 1, 1),
-                  #(0, 0, 0)]
-        #self.assertListEqual(pal, bw_pal)
+    def test_get_palette_3(self):
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = Colorizer(sns_pal)
+        pal = colorizer.get_palette(n=14)
+        self.assertListEqual(pal, (sns_pal * 3)[:-1])
 
-    #def test_get_palette_bw_rev(self):
-        #colorizer = Colorizer("{}_r".format(PALETTE_BW), 5)
-        #pal = colorizer.get_palette()
-        #bw_pal = [(0, 0, 0),
-                  #(1, 1, 1),
-                  #(0, 0, 0),
-                  #(1, 1, 1),
-                  #(0, 0, 0)][::-1]
-        #self.assertListEqual(pal, bw_pal)
-
-    #def test_get_palette_single(self):
-        #colorizer = Colorizer("{}_#ff0000".format(COQ_SINGLE), 5)
-        #pal = colorizer.get_palette()
-        #single_pal = [(1, 0, 0)] * 5
-        #self.assertListEqual(pal, single_pal)
-
-    #def test_get_hues_by_data_1(self):
-        #colorizer = Colorizer("Paired", 5)
-        #hues = colorizer.get_hues(data=range(13))
-        #sns_hues = (sns.color_palette("Paired", 5) * 2 +
-                    #sns.color_palette("Paired", 5)[:3])
-        #self.assertListEqual(hues, sns_hues)
-
-    #def test_get_hues_by_data_2(self):
-        #colorizer = Colorizer("Paired", 5)
-        #hues = colorizer.get_hues(data=range(3))
-        #sns_hues = sns.color_palette("Paired", 5)[:3]
-        #self.assertListEqual(hues, sns_hues)
-
-    #def test_legend_title(self):
-        #colorizer = Colorizer("Paired", 5)
-        #legend_title = colorizer.legend_title("coq_word")
-        #self.assertEqual(legend_title, "")
-
-    #def test_legend_palette(self):
-        #colorizer = Colorizer("Paired", 5)
-        #legend_palette = colorizer.legend_palette()
-        #self.assertEqual(legend_palette, [])
-
-    #def test_legend_levels(self):
-        #colorizer = Colorizer("Paired", 5)
-        #legend_levels = colorizer.legend_levels()
-        #self.assertListEqual(legend_levels, [])
-
-    #def test_set_title_frm(self):
-        #colorizer = Colorizer("Paired", 5)
-        #colorizer.set_title_frm("{z}")
-        #z = "coq_word"
-        #legend_title = colorizer.legend_title(z)
-        #self.assertEqual(legend_title, z)
-
-
-#class TestColorizeByFactor(unittest.TestCase):
-    #def test_get_hues_by_data_1(self):
-        #sns_pal = sns.color_palette("Paired", 5)
-        #colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
-        #hues = colorizer.get_hues(data=list("AABBABA"))
-        #expected = [sns_pal[0],
-                    #sns_pal[0],
-                    #sns_pal[1],
-                    #sns_pal[1],
-                    #sns_pal[0],
-                    #sns_pal[1],
-                    #sns_pal[0]]
-        #self.assertListEqual(hues, expected)
-
-    #def test_get_hues_by_data_2(self):
-        #sns_pal = sns.color_palette("Paired", 5)
-        #colorizer = ColorizeByFactor("Paired", 5, values=list("ABCDEF"))
-        #hues = colorizer.get_hues(data=list("ABCDEFABCDEF"))
-        #expected = [sns_pal[0],
-                    #sns_pal[1],
-                    #sns_pal[2],
-                    #sns_pal[3],
-                    #sns_pal[4],
-                    #sns_pal[0],
-
-                    #sns_pal[0],
-                    #sns_pal[1],
-                    #sns_pal[2],
-                    #sns_pal[3],
-                    #sns_pal[4],
-                    #sns_pal[0]]
-
-        #self.assertListEqual(hues, expected)
-
-    #def test_get_hues_by_data_3(self):
-        #data = list("BBB")
-
-        #sns_pal = sns.color_palette("Paired", 5)
-        #colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
-        #hues = colorizer.get_hues(data=data)
-        #expected = [sns_pal[1],
-                    #sns_pal[1],
-                    #sns_pal[1]]
-
-        #self.assertEqual(len(hues), len(data))
-        #self.assertListEqual(hues, expected)
-
-    #def test_get_hues_by_data_3a(self):
-        #data = list("B")
-
-        #sns_pal = sns.color_palette("Paired", 5)
-        #colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
-        #hues = colorizer.get_hues(data=data)
-        #expected = [sns_pal[1]]
-
-        #self.assertEqual(len(hues), len(data))
-        #self.assertListEqual(hues, expected)
-
-    #def test_get_hues_by_data_4(self):
-        #data = list("AAA")
-
-        #sns_pal = sns.color_palette("Paired", 5)
-        #colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
-        #hues = colorizer.get_hues(data=data)
-        #expected = [sns_pal[0],
-                    #sns_pal[0],
-                    #sns_pal[0]]
-
-        #self.assertEqual(len(hues), len(data))
-        #self.assertListEqual(hues, expected)
-
-    #def test_get_hues_by_data_4a(self):
-        #data = list("A")
-
-        #sns_pal = sns.color_palette("Paired", 5)
-        #colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
-        #hues = colorizer.get_hues(data=data)
-        #expected = [sns_pal[0]]
-
-        #self.assertEqual(len(hues), len(data))
-        #self.assertListEqual(hues, expected)
-
-    #def test_legend_title(self):
-        #factor_column = "coq_word"
-        #colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
-        #title = colorizer.legend_title(z=factor_column)
-        #self.assertEqual(title, factor_column)
-
-    #def test_legend_palette_1(self):
-        #colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
-        #sns_pal = sns.color_palette("Paired", 5)
-        #pal = sns_pal[:2]
-        #self.assertListEqual(colorizer.legend_palette(), pal)
-
-    #def test_legend_palette_2(self):
-        #colorizer = ColorizeByFactor("Paired", 5, values=list("ABCDEFGHI"))
-        #sns_pal = sns.color_palette("Paired", 5)
-        #pal = sns_pal + sns_pal[:-1]
-        #self.assertListEqual(colorizer.legend_palette(), pal)
-
-    #def test_legend_levels(self):
-        #levels = list("ABCDEFGHI")
-        #colorizer = ColorizeByFactor("Paired", 5, values=levels)
-        #self.assertListEqual(colorizer.legend_levels(), levels)
-
-
-class TestColorizeByNum(unittest.TestCase):
     def test_get_hues_1(self):
-        data = [500, 500, 4500, 4500, 2500]
+        """
+        Test if hues are correctly assigned for a data set smaller than the
+        number of colors in the current palette.
+        """
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = Colorizer(sns_pal)
+        data = range(4)
+        hues = colorizer.get_hues(data=data)
+        self.assertListEqual(hues, sns_pal[:4])
 
-        colorizer = ColorizeByNum("Greys", 5,
-                                  pd.Series(data), vrange=(0, 5000))
-        sns_pal = sns.color_palette("Greys", 5)[::-1]
+    def test_get_hues_2(self):
+        """
+        Test if hues are correctly recycled if there is more data than colors
+        in the current palette.
+        """
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = Colorizer(sns_pal)
+        data = range(10)
+        hues = colorizer.get_hues(data=data)
+        self.assertListEqual(hues, sns_pal * 2)
 
+    def test_get_hues_ncol_1(self):
+        """
+        Test if the number of colors used from the current palette can be
+        limited to one.
+        """
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = Colorizer(sns_pal)
+        data = range(10)
+        hues = colorizer.get_hues(data=data, ncol=1)
+        self.assertListEqual(hues, [sns_pal[0]] * 10)
+
+    def test_get_hues_ncol_2(self):
+        """
+        Test if the number of colors used from the current palette can be
+        limited to two.
+        """
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = Colorizer(sns_pal)
+        data = range(10)
+        hues = colorizer.get_hues(data=data, ncol=2)
+        self.assertListEqual(hues, sns_pal[:2] * 5)
+
+    def test_legend_title(self):
+        colorizer = Colorizer([])
+        legend_title = colorizer.legend_title("coq_word")
+        self.assertEqual(legend_title, "")
+
+    def test_legend_palette(self):
+        colorizer = Colorizer([])
+        legend_palette = colorizer.legend_palette()
+        self.assertEqual(legend_palette, [])
+
+    def test_legend_levels(self):
+        colorizer = Colorizer([])
+        legend_levels = colorizer.legend_levels()
+        self.assertListEqual(legend_levels, [])
+
+    def test_set_title_frm(self):
+        colorizer = Colorizer([])
+        colorizer.set_title_frm("{z}")
+        z = "coq_word"
+        legend_title = colorizer.legend_title(z)
+        self.assertEqual(legend_title, z)
+
+
+class TestColorizeByFactor(unittest.TestCase):
+    def test_get_hues_by_data_1(self):
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=["A", "B"])
+        hues = colorizer.get_hues(data=list("AABBABA"))
         expected = [sns_pal[0],
                     sns_pal[0],
+                    sns_pal[1],
+                    sns_pal[1],
+                    sns_pal[0],
+                    sns_pal[1],
+                    sns_pal[0]]
+        self.assertListEqual(hues, expected)
+
+    def test_get_hues_by_data_2(self):
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=list("ABCDEF"))
+        hues = colorizer.get_hues(data=list("ABCDEFABCDEF"))
+        expected = [sns_pal[0],
+                    sns_pal[1],
+                    sns_pal[2],
+                    sns_pal[3],
                     sns_pal[4],
+                    sns_pal[0],
+
+                    sns_pal[0],
+                    sns_pal[1],
+                    sns_pal[2],
+                    sns_pal[3],
                     sns_pal[4],
-                    sns_pal[2]]
+                    sns_pal[0]]
+
+        self.assertListEqual(hues, expected)
+
+    def test_get_hues_by_data_3(self):
+        data = list("BBB")
+
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=["A", "B"])
         hues = colorizer.get_hues(data=data)
+        expected = [sns_pal[1],
+                    sns_pal[1],
+                    sns_pal[1]]
 
         self.assertEqual(len(hues), len(data))
         self.assertListEqual(hues, expected)
 
-    def test_legend_levels_1(self):
-        data = [500, 500, 4500, 4500, 2500]
+    def test_get_hues_by_data_3a(self):
+        data = list("B")
 
-        colorizer = ColorizeByNum("Paired", 5,
-                                  pd.Series(range(5000)),
-                                  vrange=(0, 5000))
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=["A", "B"])
+        hues = colorizer.get_hues(data=data)
+        expected = [sns_pal[1]]
+
+        self.assertEqual(len(hues), len(data))
+        self.assertListEqual(hues, expected)
+
+    def test_get_hues_by_data_4(self):
+        data = list("AAA")
+
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=["A", "B"])
+        hues = colorizer.get_hues(data=data)
+        expected = [sns_pal[0],
+                    sns_pal[0],
+                    sns_pal[0]]
+
+        self.assertEqual(len(hues), len(data))
+        self.assertListEqual(hues, expected)
+
+    def test_get_hues_by_data_4a(self):
+        data = list("A")
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=["A", "B"])
+        hues = colorizer.get_hues(data=data)
+        expected = [sns_pal[0]]
+
+        self.assertEqual(len(hues), len(data))
+        self.assertListEqual(hues, expected)
+
+    def test_legend_title(self):
+        factor_column = "coq_word"
+        colorizer = ColorizeByFactor([], values=["A", "B"])
+        title = colorizer.legend_title(z=factor_column)
+        self.assertEqual(title, factor_column)
+
+    def test_legend_palette_1(self):
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=["A", "B"])
+        pal = sns_pal[:2]
+        self.assertListEqual(colorizer.legend_palette(), pal)
+
+    def test_legend_palette_2(self):
+        sns_pal = sns.color_palette("Paired", 5)
+        colorizer = ColorizeByFactor(sns_pal, values=list("ABCDEFGHI"))
+        pal = sns_pal + sns_pal[:-1]
+        self.assertListEqual(colorizer.legend_palette(), pal)
+
+    def test_legend_levels(self):
+        levels = list("ABCDEFGHI")
+        colorizer = ColorizeByFactor([], values=levels)
+        self.assertListEqual(colorizer.legend_levels(), levels)
+
+
+class TestColorizeByNum(unittest.TestCase):
+    def test_get_hues_1(self):
+        data = pd.Series([500, 500, 4500, 4500, 2500])
+
+        pal = list("ABCDE")
+        colorizer = ColorizeByNum(pal, vrange=(0, 5000))
+
+        target = list("AAEEC")
+        values = colorizer.get_hues(data=data, ncol=len(pal))
+        self.assertEqual(len(values), len(data))
+        self.assertListEqual(target, values)
+
+    def test_legend_levels_1(self):
+        data = pd.Series([500, 500, 4500, 4500, 2500])
+
+        pal = list("ABCDE")
+        colorizer = ColorizeByNum(pal, vrange=(0, 5000))
+        colorizer.get_hues(data=data)
 
         expected = ["≥ 4000",
                     "≥ 3000",
@@ -239,17 +241,6 @@ class TestColorizeByNum(unittest.TestCase):
 
         self.assertEqual(len(levels), len(data))
         self.assertListEqual(levels, expected)
-
-    #def legend_levels(self):
-        #if self.dtype == int:
-            #frm_str = "{:.0f}"
-        #else:
-            #frm_str = options.cfg.float_format
-        #return ["≥ {}".format(frm_str.format(x)) for x in self.bins][::-1]
-
-
-class TestColorizeByFreq(unittest.TestCase):
-    pass
 
 
 class TestColorizeTransform(unittest.TestCase):
@@ -301,10 +292,9 @@ class TestColorizeTransform(unittest.TestCase):
 
 provided_tests = (
     TestColorizer,
-    #TestColorizeByFactor,
-    #TestColorizeByNum,
-    #TestColorizeByFreq,
-    #TestColorizeTransform,
+    TestColorizeByFactor,
+    TestColorizeByNum,
+    TestColorizeTransform,
     )
 
 
