@@ -535,7 +535,41 @@ class TestStackedPlotComplex(CoqTestCase1):
 
     def test_prepare_argument_XY(self):
         """
-        Basic test: only a single categorical variable on the `Y` axis
+        Stacked bars with grouping variable
+        """
+        vis = StackedBars(None, None)
+
+        category = "X"
+        hue = "Y"
+        order = sorted(self.df[category].unique())
+        hue_order = sorted(self.df[hue].unique())
+        numeric = NUM_COLUMN
+        data = (self.df.groupby([category, hue])
+                       .size()
+                       .groupby([category])
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data[COL_COLUMN] = data[hue]
+
+        # ensure that all variable combinations are attested in the target
+        # frame:
+        expand = pd.DataFrame(data=list(itertools.product(order, hue_order)),
+                              columns=[category, COL_COLUMN])
+        data = data.merge(expand, how="right")
+
+        target = {"x": category, "y": numeric,
+                  "levels": hue_order, "data": data}
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=category, y=hue, z=None,
+                                     levels_x=order, levels_y=hue_order)
+
+        self.assertDictEqual(args, target)
+
+    def test_prepare_argument_XYZ(self):
+        """
+        Stacked bars with grouping variable
         """
         vis = StackedBars(None, None)
 
