@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import unittest
 import sys
-import warnings
 from pprint import pprint
 
 def main():
@@ -101,6 +100,8 @@ def main():
         from test.vis.test_barplot import provided_tests
         test_list += provided_tests
         from test.vis.test_beeswarmplot import provided_tests
+        test_list += provided_tests
+        from test.vis.test_boxplot import provided_tests
         test_list += provided_tests
         from test.vis.test_bubbleplot import provided_tests
         test_list += provided_tests
