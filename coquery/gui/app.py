@@ -475,6 +475,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             (self.ui.action_add_column, self.add_column),
             (self.ui.action_add_function, self.menu_add_function),
             (self.ui.action_find, lambda: self.ui.widget_find.show()),
+            (self.ui.action_view_sql, self.show_sql),
             (self.ui.action_visualization_designer,
              self.visualization_designer),
             (self.ui.action_toggle_management, self.toggle_data_management),
@@ -724,6 +725,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_show_hidden.setEnabled(enable)
         self.ui.action_find.setEnabled(enable)
         self.ui.action_visualization_designer.setEnabled(enable)
+        if options.use_sqlparse:
+            self.ui.action_view_sql.setEnabled(
+                len(self.Session.sql_queries) > 0)
+        else:
+            self.ui.action_view_sql.setDisabled(True)
 
     def show_options_menu(self):
         self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
@@ -2960,6 +2966,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                      for i in range(tree.topLevelItemCount())]:
             lst += traverse(root)
         return lst
+
+    def show_sql(self):
+        from . import sqlqueries
+        sql_view = sqlqueries.SQLViewer(
+            lines=self.Session.sql_queries, parent=self)
+        sql_view.show()
 
     def show_log(self):
         from . import logfile
