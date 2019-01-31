@@ -103,7 +103,7 @@ class TokenQuery(object):
             directly to a file contains less information, e.g. it doesn't
             contain an origin ID or a corpus ID (unless requested).
         """
-        manager = managers.get_manager(options.cfg.MODE, self.Resource.name)
+        manager = self.Session.get_manager(options.cfg.MODE)
         manager_hash = manager.get_hash()
 
         self.results_frame = pd.DataFrame()

@@ -1348,7 +1348,7 @@ class SubcorpusSize(CorpusSize):
     def evaluate(self, df, **kwargs):
         try:
             session = get_toplevel_window().Session
-            manager = session.get_manager()
+            manager = session.get_manager(options.cfg.MODE)
             fun = SubcorpusSize(session=session,
                                 columns=self.columns, group=self.group)
             if self.find_function(df, fun):
