@@ -8,6 +8,7 @@ Interface
 * Revised connection dialog
 * Use new class model for database connections
 * The database paths of non-MySQL connections can now be changed
+* Add an SQL query viewer
 
 Queries
 * Can restrict query files to a number of rows
@@ -55,6 +56,41 @@ API changes
 * Visualization modules now use 'provides_visualization' list to inform the
   visualization designer of the classes they provide
 * Visualization classes provide a 'name' and 'icon' property
+
+TEST COVERAGE
+Name                                           Stmts   Miss  Cover
+------------------------------------------------------------------
+coquery/bibliography.py                          301     17    94%
+coquery/capturer.py                               44     29    34%
+coquery/connections.py                           227    121    47%
+coquery/coquery.py                               150    125    17%
+coquery/corpus.py                               1255    617    51%
+coquery/corpusbuilder.py                         915    618    32%
+coquery/defines.py                               131      0   100%
+coquery/errors.py                                146     65    55%
+coquery/filters.py                               125     22    82%
+coquery/functionlist.py                           86     10    88%
+coquery/functions.py                             840    306    64%
+coquery/general.py                               256    122    52%
+coquery/gui/classes.py                          1092    868    21%
+coquery/gui/pyqt_compat.py                        44     22    50%
+coquery/installer/coq_install_celex.py           258     74    71%
+coquery/installer/coq_install_switchboard.py     221     70    68%
+coquery/links.py                                  41     13    68%
+coquery/managers.py                              698    413    41%
+coquery/options.py                               946    826    13%
+coquery/queries.py                               168    132    21%
+coquery/session.py                               402    248    38%
+coquery/sqlwrap.py                               255    215    16%
+coquery/tables.py                                261     90    66%
+coquery/tokens.py                                306     24    92%
+coquery/unicode.py                                19     10    47%
+coquery/visualizer/barcodeplot.py                227    116    49%
+coquery/visualizer/barplot.py                    212     94    56%
+coquery/visualizer/bubbleplot.py                 184     46    75%
+coquery/visualizer/colorizer.py                  117     13    89%
+coquery/visualizer/treemap.py                    188    155    18%
+coquery/visualizer/visualizer.py                 225    122    46%
 
 0.10.0 May 23, 2017
 
