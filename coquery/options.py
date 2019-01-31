@@ -334,7 +334,7 @@ class Options(object):
         self.args.no_ngram = False
 
         self.args.managers = {}
-        self.args.summary_group = []
+        self.args.summary_groups = []
 
     @property
     def cfg(self):
@@ -876,10 +876,8 @@ class Options(object):
                     cols = columns.strip().split(",")
                 else:
                     cols = []
-                self.args.summary_group.append(
+                self.args.summary_groups.append(
                     Summary(name, cols, function_list))
-            if not sum_names:
-                self.args.summary_group.append(Summary("summary", [], []))
 
         # Use QSettings?
         if settings:
@@ -1083,7 +1081,7 @@ def save_configuration():
 
     config.set("summary", "summary_distinct", cfg.show_distinct)
 
-    for i, grp in enumerate(cfg.summary_group):
+    for i, grp in enumerate(cfg.summary_groups):
         config.set("summary", "summary_{}_name".format(i), grp.name)
         config.set("summary", "summary_{}_columns".format(i),
                    ",".join(grp.columns))

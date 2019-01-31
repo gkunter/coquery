@@ -19,7 +19,7 @@ from coquery.errors import TokenParseError
 from coquery.functions import StringExtract
 from coquery.functionlist import FunctionList
 from coquery.corpus import SQLResource, CorpusClass
-from coquery.managers import Manager, Summary
+from coquery.managers import Manager
 from coquery.connections import SQLiteConnection
 
 
@@ -39,7 +39,6 @@ class TestSessionInputFile(unittest.TestCase):
         options.cfg.input_separator = ","
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
-        options.cfg.summary_group = [Summary("summary")]
         options.cfg.csv_restrict = None
         default = SQLiteConnection(DEFAULT_CONFIGURATION)
         options.cfg.current_connection = default
@@ -219,14 +218,13 @@ class TestSessionMethods(unittest.TestCase):
         options.cfg.context_mode = CONTEXT_NONE
         options.cfg.context_left = 3
         options.cfg.context_right = 5
-        options.cfg.summary_group = [Summary("summary")]
         default = SQLiteConnection(DEFAULT_CONFIGURATION)
         options.cfg.current_connection = default
         options.cfg.sample_matches = False
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self.session = SessionCommandLine()
+            self.session = SessionCommandLine([])
 
         self.corpus = CorpusClass()
 

@@ -2351,10 +2351,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 options.cfg.query_list = [x.strip() for x
                                           in options.cfg.query_list[0].splitlines()
                                           if x.strip()]
-                self.new_session = SessionCommandLine()
+                self.new_session = SessionCommandLine(
+                    summary_groups=options.cfg.summary_groups)
                 self.new_session.prepare_queries()
             else:
-                self.new_session = SessionInputFile()
+                self.new_session = SessionInputFile(
+                    summary_groups=options.cfg.summary_groups)
                 if not self.verify_file_name():
                     QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
@@ -2900,7 +2902,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
         if options.cfg:
-            options.cfg.summary_group = [self.Session.summary_group]
+            options.cfg.summary_groups = [self.Session.summary_group]
             options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
             options.cfg.MODE = self.get_aggregate()
             options.cfg.context_restrict = (

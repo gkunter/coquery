@@ -38,7 +38,7 @@ class Session(object):
     _is_statistics = False
     query_id = 0
 
-    def __init__(self):
+    def __init__(self, summary_groups):
         self.header = None
         self.max_number_of_input_columns = 0
         self.query_list = []
@@ -98,7 +98,11 @@ class Session(object):
         self.column_functions = functionlist.FunctionList()
         # Summary functions are functions that the user specified to be
         # applied after the summary
-        self.summary_group = options.cfg.summary_group[0]
+
+        if summary_groups:
+            self.summary_group = summary_groups[0]
+        else:
+            self.summary_group = managers.Summary("summary", [], [])
 
     def get_max_token_count(self):
         """
@@ -613,7 +617,7 @@ class StatisticsSession(Session):
     _is_statistics = True
 
     def __init__(self):
-        super(StatisticsSession, self).__init__()
+        super(StatisticsSession, self).__init__([])
         self.query_list.append(StatisticsQuery(self.Corpus, self))
         self.header = ["Variable", "Value"]
         self.output_order = self.header
@@ -623,8 +627,8 @@ class StatisticsSession(Session):
 
 
 class SessionCommandLine(Session):
-    def __init__(self):
-        super(SessionCommandLine, self).__init__()
+    def __init__(self, summary_groups=None):
+        super(SessionCommandLine, self).__init__(summary_groups)
         if len(options.cfg.query_list) > 1:
             logging.info(
                 "{} queries".format(len(options.cfg.query_list)))
@@ -694,8 +698,8 @@ class SessionInputFile(Session):
 
 
 class SessionStdIn(Session):
-    def __init__(self):
-        super(SessionStdIn, self).__init__()
+    def __init__(self, summary_groups=None):
+        super(SessionStdIn, self).__init__(summary_groups)
 
         for current_string in fileinput.input("-"):
             read_lines = 0
