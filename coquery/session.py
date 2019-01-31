@@ -43,6 +43,7 @@ class Session(object):
         self.max_number_of_input_columns = 0
         self.query_list = []
         self.requested_fields = []
+        self.sql_queries = []
         self.groups = []
         self.to_file = False
         options.cfg.query_label = ""
@@ -213,6 +214,8 @@ class Session(object):
         self.queries = {}
         _queried = []
 
+        self.sql_queries = []
+
         try:
             for i, current_query in enumerate(self.query_list):
                 if current_query.query_string in _queried and not to_file:
@@ -240,6 +243,7 @@ class Session(object):
                 df = current_query.run(connection=self.db_connection,
                                        to_file=to_file, **kwargs)
                 raw_length = len(df)
+                self.sql_queries.append(current_query.sql_list)
 
                 # apply clumsy hack that tries to make sure that the dtypes of
                 # data frames containing NaNs or empty strings does not change

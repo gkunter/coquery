@@ -79,7 +79,12 @@ class TokenQuery(object):
         tokens.QueryToken.set_pos_check_function(
             self.Resource.pos_check_function)
 
+        self.sql_list = []
+
         for i, self._sub_query in enumerate(self.query_list):
+            sub_str = [item if item else "_NULL"
+                       for _, item in self._sub_query]
+            self.sql_list.append("-- {}".format(" ".join(sub_str)))
             l = [utf8(x) for _, x in self._sub_query if x]
             self._current_number_of_tokens = len(l)
             self._current_subquery_string = " ".join(l)
@@ -123,6 +128,7 @@ class TokenQuery(object):
                                 path, db_name)
                             try:
                                 connection.execute(S)
+                                self.sql_list.append(S)
                             except Exception:
                                 error = ("Exception raised when executing "
                                          "{}").format(S)
@@ -207,6 +213,8 @@ class TokenQuery(object):
                     #print(dtype_list)
 
                     self.results_frame = self.results_frame.append(df)
+
+            self.sql_list.append(query_string)
 
         self.results_frame = self.results_frame.reset_index(drop=True)
         TokenQuery._id += 1

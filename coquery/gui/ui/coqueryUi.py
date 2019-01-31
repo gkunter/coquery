@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'coquery.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(821, 684)
+        MainWindow.resize(831, 722)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout_6 = QtWidgets.QGridLayout(self.centralwidget)
@@ -178,7 +178,6 @@ class Ui_MainWindow(object):
         self.tool_widget_column_order = QtWidgets.QWidget()
         self.tool_widget_column_order.setObjectName("tool_widget_column_order")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.tool_widget_column_order)
-        self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
         self.list_column_order = CoqButtonList(self.tool_widget_column_order)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
@@ -192,7 +191,6 @@ class Ui_MainWindow(object):
         self.tool_widget_page_context = QtWidgets.QWidget()
         self.tool_widget_page_context.setObjectName("tool_widget_page_context")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.tool_widget_page_context)
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_2.setObjectName("gridLayout_2")
         spacerItem4 = QtWidgets.QSpacerItem(0, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.gridLayout_2.addItem(spacerItem4, 0, 0, 1, 1)
@@ -267,7 +265,6 @@ class Ui_MainWindow(object):
         self.tool_widget_page_stopwords_2 = QtWidgets.QWidget()
         self.tool_widget_page_stopwords_2.setObjectName("tool_widget_page_stopwords_2")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.tool_widget_page_stopwords_2)
-        self.gridLayout_4.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_4.setObjectName("gridLayout_4")
         spacerItem7 = QtWidgets.QSpacerItem(0, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.gridLayout_4.addItem(spacerItem7, 0, 2, 3, 1)
@@ -290,7 +287,6 @@ class Ui_MainWindow(object):
         self.tool_widget_page_groups_2 = QtWidgets.QWidget()
         self.tool_widget_page_groups_2.setObjectName("tool_widget_page_groups_2")
         self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.tool_widget_page_groups_2)
-        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
         self.tree_groups = CoqGroupTree(self.tool_widget_page_groups_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
@@ -305,7 +301,6 @@ class Ui_MainWindow(object):
         self.tool_widget_page_transform_2 = QtWidgets.QWidget()
         self.tool_widget_page_transform_2.setObjectName("tool_widget_page_transform_2")
         self.gridLayout_7 = QtWidgets.QGridLayout(self.tool_widget_page_transform_2)
-        self.gridLayout_7.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_7.setObjectName("gridLayout_7")
         spacerItem10 = QtWidgets.QSpacerItem(0, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.gridLayout_7.addItem(spacerItem10, 0, 0, 1, 1)
@@ -322,7 +317,6 @@ class Ui_MainWindow(object):
         self.tool_widget_page_summary_2 = QtWidgets.QWidget()
         self.tool_widget_page_summary_2.setObjectName("tool_widget_page_summary_2")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.tool_widget_page_summary_2)
-        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_5.setObjectName("gridLayout_5")
         self.button_add_summary_function = QtWidgets.QPushButton(self.tool_widget_page_summary_2)
         self.button_add_summary_function.setObjectName("button_add_summary_function")
@@ -537,7 +531,7 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 821, 26))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 831, 30))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -638,6 +632,8 @@ class Ui_MainWindow(object):
         self.action_regex_tester.setObjectName("action_regex_tester")
         self.action_pos_helper = QtWidgets.QAction(MainWindow)
         self.action_pos_helper.setObjectName("action_pos_helper")
+        self.action_view_sql = QtWidgets.QAction(MainWindow)
+        self.action_view_sql.setObjectName("action_view_sql")
         self.menuFile.addAction(self.action_save_results)
         self.menuFile.addAction(self.action_save_selection)
         self.menuFile.addAction(self.action_copy_to_clipboard)
@@ -678,6 +674,8 @@ class Ui_MainWindow(object):
         self.menu_Results.addAction(self.action_add_function)
         self.menu_Results.addSeparator()
         self.menu_Results.addAction(self.action_find)
+        self.menu_Results.addSeparator()
+        self.menu_Results.addAction(self.action_view_sql)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuCorpus.menuAction())
         self.menubar.addAction(self.menu_Results.menuAction())
@@ -735,7 +733,7 @@ class Ui_MainWindow(object):
         self.button_stopwords.setText(_translate("MainWindow", "Change stop &words..."))
         self.button_add_summary_function.setText(_translate("MainWindow", "Summary functions{}..."))
         self.button_filters.setText(_translate("MainWindow", "Result filters{}..."))
-        self.label.setText(_translate("MainWindow", "Show &random sample:"))
+        self.label.setText(_translate("MainWindow", "Show rando&m sample:"))
         self.spin_sample_size.setSuffix(_translate("MainWindow", " match(es)"))
         self.button_apply_management.setText(_translate("MainWindow", "&Apply"))
         self.button_apply_management.setShortcut(_translate("MainWindow", "F5"))
@@ -748,8 +746,8 @@ class Ui_MainWindow(object):
         self.text_no_match.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Oxygen-Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-weight:600;\">No match.</span></p></body></html>"))
+"</style></head><body style=\" font-family:\'Noto Sans [GOOG]\'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Droid Sans\'; font-size:11pt; font-weight:600;\">No match.</span></p></body></html>"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menuHelp.setTitle(_translate("MainWindow", "&Help"))
         self.menuCorpus.setTitle(_translate("MainWindow", "&Corpus"))
@@ -798,7 +796,8 @@ class Ui_MainWindow(object):
         self.action_visualization_designer.setShortcut(_translate("MainWindow", "Ctrl+D"))
         self.action_how_to_cite.setText(_translate("MainWindow", "How to &cite"))
         self.action_regex_tester.setText(_translate("MainWindow", "Regular &expression tester..."))
-        self.action_pos_helper.setText(_translate("MainWindow", "POS Tag helper.."))
+        self.action_pos_helper.setText(_translate("MainWindow", "&POS Tag helper.."))
+        self.action_view_sql.setText(_translate("MainWindow", "View SQL queries..."))
 
 from ..buttonlist import CoqButtonList
 from ..classes import CoqClickableLabel, CoqRotatedButton, CoqTextEdit
