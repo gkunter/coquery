@@ -879,7 +879,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         else:
             col = "#7f0000"
 
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
         if manager.dropped_na_count:
             rows = self.unfiltered_tokens - manager.dropped_na_count
         else:
@@ -909,7 +909,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         filter_icon = "Filter"
         error_icon = "Error"
         try:
-            manager = self.Session.get_manager()
+            manager = self.Session.get_manager(options.cfg.MODE)
         except Exception:
             manager = None
         if not manager:
@@ -1104,7 +1104,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from .columnproperties import ColumnPropertiesDialog
 
         columns = columns or []
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
 
         #FIXME: the whole way column properties are handled needs to be
         # revised!
@@ -1173,7 +1173,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.settings.setValue("column_properties", properties)
 
     def show_hidden_columns(self):
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
         manager.reset_hidden_columns()
         self.update_table_models()
         self.update_columns()
@@ -1281,7 +1281,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         token_width = 1
 
         if index is not None:
-            manager = self.Session.get_manager()
+            manager = self.Session.get_manager(options.cfg.MODE)
             try:
                 if isinstance(manager, managers.ContrastMatrix):
                     from .independencetestviewer import (
@@ -1382,7 +1382,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.aggr_thread.taskFinished.connect(self.finalize_reaggregation)
         self.abortRequested.connect(self.kill_reaggregation)
 
-        if not self.Session.has_cached_data():
+        if not self.Session.has_cached_data(options.cfg.MODE):
             self.start_progress_indicator()
         self.reaggregating = True
 
@@ -1393,7 +1393,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def finalize_reaggregation(self):
         self.reaggregating = False
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
         self.display_results(drop=False)
         self.stop_progress_indicator()
         self.resize_rows()
@@ -1577,7 +1577,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def update_table_models(self, visible=None, hidden=None):
         if visible is None and hidden is None:
-            manager = self.Session.get_manager()
+            manager = self.Session.get_manager(options.cfg.MODE)
             manager.reset_hidden_columns()
             for col in self.hidden_features:
                 manager.hide_column(col)
@@ -1616,8 +1616,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             if not self.Session.Resource:
                 hide()
                 return
-            manager = managers.get_manager(options.cfg.MODE,
-                                           self.Session.Resource.name)
+            manager = self.Session.get_manager(options.cfg.MODE)
             if len(manager.hidden_columns) == 0:
                 hide()
             else:
@@ -2245,8 +2244,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def change_sorting_order(self, tup):
         column, ascending, reverse = tup
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Session.Resource.name)
+        manager = self.Session.get_manager(options.cfg.MODE)
         if ascending is None:
             manager.remove_sorter(column)
         else:
@@ -2351,10 +2349,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 options.cfg.query_list = [x.strip() for x
                                           in options.cfg.query_list[0].splitlines()
                                           if x.strip()]
-                self.new_session = SessionCommandLine()
+                self.new_session = SessionCommandLine(
+                    summary_groups=options.cfg.summary_groups)
                 self.new_session.prepare_queries()
             else:
-                self.new_session = SessionInputFile()
+                self.new_session = SessionInputFile(
+                    summary_groups=options.cfg.summary_groups)
                 if not self.verify_file_name():
                     QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
@@ -2900,7 +2900,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
         if options.cfg:
-            options.cfg.summary_group = [self.Session.summary_group]
+            options.cfg.summary_groups = [self.Session.summary_group]
             options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
             options.cfg.MODE = self.get_aggregate()
             options.cfg.context_restrict = (

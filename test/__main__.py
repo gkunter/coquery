@@ -67,6 +67,10 @@ def main():
         from test.test_options import TestQueryStringParse
         test_list += [TestQueryStringParse]
 
+    if not args or "queries" in args:
+        from test.test_queries import provided_tests
+        test_list += provided_tests
+
     if not args or "sessions" in args:
         from test.test_sessions import (
             TestSessionInputFile, TestSessionMethods)

@@ -348,10 +348,12 @@ class SQLiteConnection(Connection):
 
         self.path = path
 
+    def db_path(self, db_name):
+        return os.path.join(self.path, "{}.db".format(db_name))
+
     def url(self, db_name):
         template = "sqlite+pysqlite:///{path}"
-        path = os.path.join(self.path, "{}.db".format(db_name))
-        return template.format(path=path)
+        return template.format(path=self.db_path(db_name))
 
     def test(self):
         if os.access(self.path, os.X_OK | os.R_OK):
@@ -363,15 +365,13 @@ class SQLiteConnection(Connection):
         pass
 
     def remove_database(self, db_name):
-        os.remove(os.path.join(self.path, "{}.db".format(db_name)))
+        os.remove(self.db_path(db_name))
 
     def has_database(self, db_name):
-        path = os.path.join(self.path, "{}.db".format(db_name))
-        return os.path.exists(path)
+        return os.path.exists(self.db_path(db_name))
 
     def get_database_size(self, db_name):
-        path = os.path.join(self.path, "{}.db".format(db_name))
-        return os.path.getsize(path)
+        return os.path.getsize(self.db_path(db_name))
 
 
 def get_connection(name, dbtype,
