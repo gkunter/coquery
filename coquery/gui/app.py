@@ -725,11 +725,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_show_hidden.setEnabled(enable)
         self.ui.action_find.setEnabled(enable)
         self.ui.action_visualization_designer.setEnabled(enable)
-        if options.use_sqlparse:
-            self.ui.action_view_sql.setEnabled(
-                len(self.Session.sql_queries) > 0)
-        else:
-            self.ui.action_view_sql.setDisabled(True)
+        self.ui.action_view_sql.setEnabled(
+            len(self.Session.sql_queries) > 0)
 
     def show_options_menu(self):
         self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
