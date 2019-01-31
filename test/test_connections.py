@@ -107,7 +107,7 @@ class TestMySQLConnection(unittest.TestCase):
     def setUp(self):
         if no_mysql:
             raise unittest.SkipTest
-        
+
         self.name = "test_mysql"
         self.host = "127.0.0.1"
         self.port = 3306
@@ -273,10 +273,17 @@ class TestSQLiteConnection(unittest.TestCase):
                                       DEFAULT_CONFIGURATION,
                                       "databases"))
 
+    def test_db_path(self):
+        con = SQLiteConnection(self.name, self.db_path)
+
+        value = con.db_path(self.db_name)
+        target = os.path.join(self.db_path, "{}.db".format(self.db_name))
+        self.assertEqual(value, target)
+
     def test_url(self):
         con = SQLiteConnection(self.name, self.db_path)
 
-        path = os.path.join(self.db_path, "{}.db".format(self.db_name))
+        path = con.db_path(self.db_name)
         url = "sqlite+pysqlite:///{path}".format(path=path)
 
         self.assertEqual(url, con.url(self.db_name))
