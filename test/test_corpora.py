@@ -1799,9 +1799,11 @@ class TestBigramCorpus(unittest.TestCase):
     This test case addresses an issue that occured with look-up tables
     consisting of bigrams.
 
-    Apparently, query strings like '* * xxx' or '* xxx yyy' produce the correct
-    query strings, but the query string '* *.[x*] yyy' uses incorrect ids for
-    the different word columns.
+    Apparently, query strings like '* * xxx' or '* xxx yyy' produce the
+    correct query strings, but the query string '* *.[x*] yyy' uses incorrect
+    ids for the different word columns.
+
+    Thus may be caused by determining the token orders incorrectly.
     """
 
     resource = BiGramResource
@@ -1881,18 +1883,6 @@ class TestBigramCorpus(unittest.TestCase):
         print("\n".join(target))
 
         self.assertListEqual(l, target)
-
-    def test_get_token_order_1(self):
-        token_order_1 = [
-            (0, (1, '*')),
-            (1, (2, '*')),
-            (2, (2, 'xxx'))]
-
-        token_order_2 = [
-        token_order_1 = [
-            (0, (1, '*')),
-            (1, (2, '*.[v*]')),
-            (2, (2, 'xxx'))]
 
 
 def mock_get_available_resources(configuration):
