@@ -47,6 +47,35 @@ def html_escape(text):
     return text
 
 
+def has_module(name):
+    """
+    Check if the Python module 'name' is available.
+
+    Parameters
+    ----------
+    name : str
+        The name of the Python module, as used in an import instruction.
+
+    This function uses ideas from this Stack Overflow question:
+    http://stackoverflow.com/questions/14050281/
+
+    Returns
+    -------
+    b : bool
+        True if the module exists, or False otherwise.
+    """
+
+    if sys.version_info > (3, 3):
+        import importlib.util
+        return importlib.util.find_spec(name) is not None
+    elif sys.version_info > (2, 7, 99):
+        import importlib
+        return importlib.find_loader(name) is not None
+    else:
+        import pkgutil
+        return pkgutil.find_loader(name) is not None
+
+
 class Collapser(object):
     """
     Provides a language-specific way to collapse a list of word tokens into a
@@ -103,27 +132,29 @@ class EnglishCollapser(Collapser):
     contracting_punctuation = ("\N{EM DASH}")
     opening_quotes = ("\N{LEFT SINGLE QUOTATION MARK}",
                       "\N{LEFT DOUBLE QUOTATION MARK}",
-                      '"', "'", # ASCII quotes
-                      "\N{GRAVE ACCENT}", # tick quote
+                      '"', "'",  # ASCII quotes
+                      "\N{GRAVE ACCENT}",  # tick quote
                       )
     closing_quotes = ("\N{RIGHT SINGLE QUOTATION MARK}",
                       "\N{RIGHT DOUBLE QUOTATION MARK}",
-                      '"', "''", "'", # ASCII quotes
-                      "\N{ACUTE ACCENT}", # tick quote
+                      '"', "''", "'",  # ASCII quotes
+                      "\N{ACUTE ACCENT}",  # tick quote
                       )
 
     track_quotes = {'"': '"',
                     "'": "'",
                     "\N{GRAVE ACCENT}\N{GRAVE ACCENT}":
                          "\N{ACUTE ACCENT}\N{ACUTE ACCENT}",
-                    "\N{GRAVE ACCENT}\N{GRAVE ACCENT}": "''"}
+                    # FIXME: we need some way to allow the same opening mark
+                    # with different closing marks!
+                    #"\N{GRAVE ACCENT}\N{GRAVE ACCENT}": "''",
+                    }
 
     @classmethod
     def _collapse_list(cls, word_list):
         lst = []
         next_sep = cls.whitespace
-        skip_next = False
-        open_counter = {k: 0 for k in cls.track_open.keys()}
+        open_counter = {k: 0 for k in cls.track_quotes.keys()}
 
         for word in word_list:
             # per default, words will be joined using the language's
@@ -147,7 +178,7 @@ class EnglishCollapser(Collapser):
                 for quote in cls.opening_quotes:
                     # check if the quotation mark is one that can occur both
                     # as a opening and a closing mark
-                    if (lw.startswith(quote) and quote in track_quotes):
+                    if (lw.startswith(quote) and quote in cls.track_quotes):
                         count = open_counter[quote]
                         # if the current quote count is even, the mark is
                         # interpreted as an opening quotation mark, otherwise
@@ -169,7 +200,7 @@ class EnglishCollapser(Collapser):
                 # use the same special case rules for quotation marks as for
                 # opening marks
                 for quote in cls.closing_quotes:
-                    if lw.startswith(quote) and quote in cls.track_open:
+                    if lw.startswith(quote) and quote in cls.track_quotes:
                         count = open_counter[quote]
                         if (count // 2) * 2 == count:
                             next_sep = ""
@@ -184,6 +215,7 @@ class EnglishCollapser(Collapser):
             lst += [sep, cls.tag_spacing(word)]
 
         return [x for x in lst if x]
+
 
 def collapser_factory(language):
     mapping = {"en": EnglishCollapser}

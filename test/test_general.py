@@ -11,12 +11,14 @@ coquery$ python -m test.test_general
 from __future__ import print_function
 import unittest
 import sys
-import tempfile
 import os
 import numpy as np
 
-from coquery.general import check_fs_case_sensitive, pretty, collapse_words
-from    test.testcase import CoqTestCase
+from coquery.general import (
+    check_fs_case_sensitive, has_module,
+    pretty, collapse_words)
+from gtest.testcase import CoqTestCase
+
 
 class TestGeneral(unittest.TestCase):
 
@@ -27,6 +29,11 @@ class TestGeneral(unittest.TestCase):
             self.assertFalse(check_fs_case_sensitive(os.path.expanduser("~")))
         else:
             raise NotImplementedError
+
+    def test_has_module_1(self):
+        self.assertFalse(has_module("a1b2c3d4e5f"[::-1]))
+        self.assertTrue(has_module("os"))
+
 
 class TestPretty(unittest.TestCase):
     def assertListEqual(self, l1, l2):
@@ -197,6 +204,7 @@ class TestCollapseWords(CoqTestCase):
         value = collapse_words(lst)
         self.assertEqual(target, value)
 
+
 class TestEnglishCollapseWords(CoqTestCase):
     def test_punctuation_spacing_1(self):
         lst = ["this", "is", "a", "test", ",", "go", "on", "."]
@@ -313,7 +321,7 @@ class TestEnglishCollapseWords(CoqTestCase):
         """
         Use double ASCII quoting.
         """
-        lst = ["he", "said", '"' , "xxx", '"', "to", "me", "."]
+        lst = ["he", "said", '"', "xxx", '"', "to", "me", "."]
         target = 'he said "xxx" to me.'
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
@@ -324,7 +332,6 @@ class TestEnglishCollapseWords(CoqTestCase):
         target = "he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}xxx'' to me."
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
-
 
 
 provided_tests = [TestGeneral, TestPretty,
