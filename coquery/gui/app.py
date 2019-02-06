@@ -1744,68 +1744,94 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 else:
                     self.enable_apply_button()
 
-    def save_results(self, selection=False, clipboard=False):
-        name = None
-        if not clipboard:
-            if selection:
-                caption = "Save selected query results – Coquery"
-            else:
-                caption = "Save query results – Coquery"
-            name = QtWidgets.QFileDialog.getSaveFileName(
-                caption=caption,
-                directory=options.cfg.results_file_path)
-            if type(name) == tuple:
-                name = name[0]
-            if not name:
-                return
-            options.cfg.results_file_path = os.path.dirname(name)
+    def get_selection(self, df):
+        """
+        Return a slice of the current data table representing the selected
+        data. If no data is selected, the whole data table is returned.
+
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame that will be spliced
+
+        Returns
+        -------
+        df : DataFrame
+            The spliced data frame
+        """
+        ix_selected = (self.ui.data_preview.selectionModel()
+                                           .selection()
+                                           .indexes())
+        if ix_selected:
+            rows, columns = zip(*[(x.row(), x.column()) for x in ix_selected])
+            df = df.iloc[list(set(rows)), list(set(columns))]
+
+        return df
+
+    def save_results(self, sel_only=False):
+        if sel_only:
+            caption = "Save selected query results – Coquery"
+        else:
+            caption = "Save query results – Coquery"
+
+        name = QtWidgets.QFileDialog.getSaveFileName(
+            caption=caption,
+            directory=options.cfg.results_file_path)
+
+        if type(name) == tuple:
+            name = name[0]
+        if not name:
+            return
+
+        options.cfg.results_file_path = os.path.dirname(name)
+
+        # restrict to selection?
+        if sel_only:
+            df = self.get_selection(self.table_model.content)
+        else:
+            df = self.table_model.content
+
+        df.columns = self.Session.translated_headers(df)
+
         try:
-            tab = self.table_model.content
-
-            # restrict to selection?
-            if selection or clipboard:
-                select_range = (self.ui.data_preview.selectionModel()
-                                                    .selection())
-                selected_rows = set([])
-                selected_columns = set([])
-                for x in select_range.indexes():
-                    selected_rows.add(x.row())
-                    selected_columns.add(x.column())
-
-                tab = tab.ix[selected_rows, selected_columns]
-
-            if clipboard:
-                cb = QtWidgets.QApplication.clipboard()
-                cb.clear(mode=cb.Clipboard)
-                cb.setText(
-                    tab.to_csv(sep=str("\t"),
-                               index=False,
-                               header=[self.Session.translate_header(x) for x in tab.columns],
-                               encoding=options.cfg.output_encoding), mode=cb.Clipboard)
-                self.showMessage("{} copied to clipboard.".format(
-                    "Selection" if selection else "Results table"))
-            else:
-                tab.to_csv(name,
-                           sep=options.cfg.output_separator,
-                           index=False,
-                           header=[self.Session.translate_header(x) for x in tab.columns],
-                           encoding=options.cfg.output_encoding)
-                self.showMessage("{} saved to file {}.".format(
-                    "Selection" if selection else "Results table",
-                    name))
+            df.to_csv(name,
+                      sep=options.cfg.output_separator,
+                      index=False,
+                      encoding=options.cfg.output_encoding)
         except IOError:
             critical_box(self, "Disk error", msg_disk_error)
         except (UnicodeEncodeError, UnicodeDecodeError):
             critical_box(self, "Encoding error", msg_encoding_error)
         else:
-            if not selection and not clipboard:
+            if not sel_only:
                 self.last_results_saved = True
+            msg = "{data} saved to file {filename}.".format(
+                data="Selection" if sel_only else "Results table",
+                filename=name)
+            self.showMessage(msg)
 
     def save_selection(self):
-        self.save_results(selection=True)
+        self.save_results(sel_only=True)
 
     def copy_to_clipboard(self):
-        self.save_results(selection=True, clipboard=True)
+        df = self.get_selection(self.table_model.content)
+        df.columns = self.Session.translated_headers(df)
+
+        sel_only = not df.equals(self.table_model.content)
+        try:
+            s = df.to_csv(index=False,
+                          sep=utf8("\t"),
+                          encoding=options.cfg.output_encoding)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            critical_box(self, "Encoding error", msg_encoding_error)
+        else:
+            cb = QtWidgets.QApplication.clipboard()
+            cb.clear(mode=cb.Clipboard)
+            cb.setText(s, mode=cb.Clipboard)
+
+            msg = "{} copied to clipboard.".format(
+                "Selection" if sel_only else "Results table")
+            self.showMessage(msg)
 
     def create_textgrids(self):
         if not options.use_tgt:
@@ -2042,18 +2068,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         return menu
 
-    def get_row_submenu(self, selection=pd.Series(), point=None):
+    def get_row_submenu(self, selection=None, point=None):
         """
         Create a submenu for one or more rows.
 
-        Column submenus contain obtions for hiding, showing, and colorizing
-        result rows. The set of available options depends on the number of
-        rows selected, and their current visibility.
+        Column submenus contain obtions for colorizing result rows. The set of
+        available options depends on the number of rows selected, and their
+        current visibility.
 
-        Row submenus can either be generated as context menus for the row
-        names in the results table, or from the Output main menu entry.
-        In the former case, the parameter 'point' indicates the screen
-        position of the context menu. In the latter case, point is None.
+        Row submenus can either be generated as context menus for the row names
+        in the results table, or from the Output main menu entry. In the former
+        case, the parameter 'point' indicates the screen position of the
+        context menu. In the latter case, point is None.
 
         Parameters
         ----------
@@ -2062,6 +2088,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         point : QPoint
             The screen position for which the context menu is requested
         """
+        if selection is None:
+            selection = pd.Series()
 
         menu = QtWidgets.QMenu("Row options", self)
         if len(selection) == 0:
@@ -2116,7 +2144,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # Check if any row has a custom color:
             if any([x in options.cfg.row_color for x in selection]):
                 action = QtWidgets.QAction("&Reset color", self)
-                action.triggered.connect(lambda: self.reset_row_color(selection))
+                action.triggered.connect(
+                    lambda: self.reset_row_color(selection))
                 menu.addAction(action)
 
             action = QtWidgets.QAction("&Change color...", self)
@@ -2141,7 +2170,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for x in model.selectionModel().selectedColumns():
             selection.append(table.header[x.column()])
 
-        self.menu = self.get_column_submenu(selection=selection, point=point, hidden=hidden)
+        self.menu = self.get_column_submenu(selection=selection,
+                                            point=point,
+                                            hidden=hidden)
         self.menu.popup(header.mapToGlobal(point))
 
     def show_row_header_menu(self, point=None):
@@ -2947,7 +2978,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         def traverse(node):
             checked = []
-            for child in [node.child(i) for i in range(node.childCount())]:
+            children = [node.child(i) for i in range(node.childCount())]
+            for child in children:
                 checked += traverse(child)
             if node.checkState(0) == QtCore.Qt.Checked:
                 try:
@@ -3004,7 +3036,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         available.show()
 
     def setGUIDefaults(self):
-        """ Set up the gui values based on the values in options.cfg.* """
+        """
+        Set up the gui values based on the values in options.cfg.*
+        """
         self.ui.tool_widget.blockSignals(True)
 
         # add restored groups to the UI:
