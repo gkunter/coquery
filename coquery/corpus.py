@@ -63,6 +63,15 @@ class BaseResource(CoqObject):
         self._joined_tables = []
         self._table_list = []
 
+    @staticmethod
+    def get_language():
+        """
+        Return the corpus language as a string.
+
+        Defaults to "en" (English).
+        """
+        return "en"
+
     @classmethod
     def format_resource_feature(cls, rc_feature, N):
         """
