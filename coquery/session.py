@@ -414,13 +414,12 @@ class Session(object):
 
     def translate_header(self, header, ignore_alias=False):
         """
-        Return a string that contains the display name for the header
-        string.
+        Return a string that contains the display name for the header string.
 
         Translation removes the 'coq_' prefix and any numerical suffix,
         determines the resource feature from the remaining string, translates
-        it to its display name, and returns the display name together with
-        the numerical suffix attached.
+        it to its display name, and returns the display name together with the
+        numerical suffix attached.
 
         Parameters
         ----------
@@ -504,7 +503,7 @@ class Session(object):
         if header.startswith("func_"):
             manager = self.get_manager()
             # check if there is a parenthesis in the header (there shouldn't
-            # ever be one, acutally)
+            # ever be one, actually)
             match = re.search("(.*)\((.*)\)", header)
             if match:
                 s = match.group(1)
@@ -569,28 +568,29 @@ class Session(object):
 
         try:
             # special treatment of lexicon features:
-            if (rc_feature in [x for x, _
-                               in resource.get_lexicon_features()] or
+            lexicon_features = [
+                x for x, _ in resource.get_lexicon_features()]
+            if (rc_feature in lexicon_features or
                     resource.is_tokenized(rc_feature)):
                 try:
                     number = self.quantified_number_labels[int(number) - 1]
                 except ValueError:
                     pass
 
+                name = getattr(resource, str(rc_feature))
                 # Print(15)
-                return "{}{}{}".format(
-                    res_prefix,
-                    getattr(resource, str(rc_feature)).replace("__", " "),
-                    number)
+                return "{}{}{}".format(res_prefix,
+                                       name.replace("__", " "),
+                                       number)
         except AttributeError:
             pass
 
         # treat any other feature that is provided by the corpus:
         try:
             Print(16)
-            return "{}{}".format(
-                res_prefix,
-                getattr(resource, str(rc_feature)).replace("__", " "))
+            name = getattr(resource, str(rc_feature))
+            return "{}{}".format(res_prefix,
+                                 name.replace("__", " "))
         except AttributeError:
             pass
 
@@ -607,6 +607,13 @@ class Session(object):
 
         Print(18)
         return header
+
+    def translated_headers(self, df):
+        """
+        Create a list that contains the translated column headers
+        of the data frame.
+        """
+        return [self.translate_header(x) for x in df.columns]
 
 
 class StatisticsSession(Session):
