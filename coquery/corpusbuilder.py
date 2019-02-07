@@ -1625,11 +1625,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         return "(no title)"
 
     @staticmethod
-    def get_language():
-        "Return the corpus language as a string."
-        return "(unspecified)"
-
-    @staticmethod
     def get_language_code():
         """
         Return the ISO 639-1 code for the corpus language. Variant sub-codes

@@ -3,7 +3,7 @@
 """
 test_celex.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License.
 For details, see the file LICENSE that you should have received along
@@ -12,12 +12,11 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import unittest
-
 from coquery.installer.coq_install_celex import dia_to_unicode
+from test.testcase import CoqTestCase, run_tests
 
 
-class TestCELEX(unittest.TestCase):
+class TestCELEX(CoqTestCase):
     def test_dia_to_unicode(self):
         self.assertEqual(dia_to_unicode("cause c#el`ebre"), "cause célèbre")
         self.assertEqual(dia_to_unicode("#eclat"), "éclat")
@@ -28,11 +27,12 @@ class TestCELEX(unittest.TestCase):
         self.assertEqual(dia_to_unicode('sm@aland'), "småland")
 
 
+provided_tests = [TestCELEX]
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestCELEX),
-        ])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

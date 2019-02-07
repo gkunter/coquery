@@ -3,19 +3,12 @@
 
 from __future__ import print_function
 
-import unittest
 
-from .mockmodule import setup_module
-
-setup_module("sqlalchemy")
-setup_module("options")
-
-from coquery.corpus import BaseResource
 from coquery import tokens
-from coquery import defines
+from test.testcase import CoqTestCase, run_tests
 
 
-class TestTokensModuleMethods(unittest.TestCase):
+class TestTokensModuleMethods(CoqTestCase):
     def test_parse_query_string1(self):
         S1 = "this is a query"
         S2 = "this    is a query    "
@@ -91,7 +84,7 @@ class TestTokensModuleMethods(unittest.TestCase):
         self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
         self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
 
-    def test_parse_query_string_escape2(self):
+    def test_parse_query_string_escape3(self):
         S1 = r'this \/is] a query'
         L1 = ['this', '\\/is]', 'a', 'query']
         S2 = r'this is a que\/ry'
@@ -99,7 +92,7 @@ class TestTokensModuleMethods(unittest.TestCase):
         self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
         self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
 
-    def test_parse_query_string_escape3(self):
+    def test_parse_query_string_escape4(self):
         S = r'this\ is a query'
         L = ['this\\ is', 'a', 'query']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
@@ -107,12 +100,12 @@ class TestTokensModuleMethods(unittest.TestCase):
     def test_unicode_1(self):
         B = b"string"
         U = u"string"
-        self.assertEqual(type(tokens.parse_query_string(B, tokens.COCAToken)[0]),
-                         type(U))
+        self.assertEqual(
+            type(tokens.parse_query_string(B, tokens.COCAToken)[0]), type(U))
         B = "string_äöü"
         U = u"string"
-        self.assertEqual(type(tokens.parse_query_string(B, tokens.COCAToken)[0]),
-                         type(U))
+        self.assertEqual(
+            type(tokens.parse_query_string(B, tokens.COCAToken)[0]), type(U))
 
     def test_unicode_2(self):
         S = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
@@ -124,7 +117,7 @@ class TestTokensModuleMethods(unittest.TestCase):
         L = [u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', u'ƒǿř', u'ŧḗşŧīƞɠ']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
-    def test_unicode_3(self):
+    def test_unicode_4(self):
         S = u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ] ƒǿř ŧḗşŧīƞɠ'
         L = [u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', u'ƒǿř', u'ŧḗşŧīƞɠ']
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
@@ -151,27 +144,31 @@ class TestTokensModuleMethods(unittest.TestCase):
 
         for x in L:
             try:
-                self.assertRaises(tokens.TokenParseError,
-                              tokens.parse_query_string,
-                              x, tokens.COCAToken)
+                self.assertRaises(
+                    tokens.TokenParseError,
+                    tokens.parse_query_string,
+                    x, tokens.COCAToken)
             except AssertionError as e:
                 print("Exception not raised: '{}'".format(x))
                 raise e
 
     def test_word_internal_slashes(self):
         for S in ["th/is/", "t/hi/s", "th/is/"]:
-            self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken),
-                         [S])
+            self.assertEqual(
+                tokens.parse_query_string(S, tokens.COCAToken),
+                [S])
 
     def test_word_internal_brackets(self):
         for S in ["th[is]", "t[hi]s", "th[is]"]:
-            self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken),
-                         [S])
+            self.assertEqual(
+                tokens.parse_query_string(S, tokens.COCAToken),
+                [S])
 
     def test_word_internal_quotes(self):
         for S in ['th"is"', 't"hi"s', 'th"is"']:
-            self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken),
-                         [S])
+            self.assertEqual(
+                tokens.parse_query_string(S, tokens.COCAToken),
+                [S])
 
     def test_parse_query_string_quantifiers(self):
         S = '[this]{1,3} *.[v*]{2} a query'
@@ -201,15 +198,12 @@ class TestTokensModuleMethods(unittest.TestCase):
     def test_parse_lemmatized_transcript(self):
         S = "#/'bɐlɐl/"
         L = [u"#/'bɐlɐl/"]
-        result = tokens.parse_query_string(S, tokens.COCAToken)
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
 
     def test_potentially_malformed_query(self):
         S = "ABC/"
         L = ["ABC/"]
-        result = tokens.parse_query_string(S, tokens.COCAToken)
         self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
-
 
     def test_preprocess_string_literal(self):
         S = r"\? \* \_ \%"
@@ -229,18 +223,15 @@ class TestTokensModuleMethods(unittest.TestCase):
             self.assertCountEqual(tokens.preprocess_query(S), L)
 
 
-class TestQueryTokenCOCA(unittest.TestCase):
+class TestQueryTokenCOCA(CoqTestCase):
     token_type = tokens.COCAToken
 
-    def runTest(self):
-        super(TestQueryToken, self).runTest()
+    def setUp(self):
+        self.token_type.set_pos_check_function(self.pos_check_function)
 
     @classmethod
     def pos_check_function(cls, l):
         return [x in ["V", "N"] for x in l]
-
-    def setUp(self):
-        self.token_type.set_pos_check_function(self.pos_check_function)
 
     def test_unicode_1(self):
         token = self.token_type(b"word")
@@ -359,7 +350,6 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.class_specifiers, [])
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
-
 
     def test_lemmas_and_several_pos(self):
         token = self.token_type("[lemma1|lemma2].[N|V]")
@@ -537,7 +527,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
 
-    def test_transcripts_multiple_slashes(self):
+    def test_transcripts_multiple_slashes_1(self):
         token = self.token_type("/trans1/|/trans2/")
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
@@ -548,7 +538,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.gloss_specifiers, [])
         self.assertEqual(token.word_specifiers, [])
 
-    def test_transcripts_multiple_slashes(self):
+    def test_transcripts_multiple_slashes_2(self):
         token = self.token_type("/S K*/")
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
@@ -1078,7 +1068,7 @@ class TestQueryTokenCOCA(unittest.TestCase):
         self.assertEqual(token.word_specifiers, ["~abc"])
 
 
-class TestQuantification(unittest.TestCase):
+class TestQuantification(CoqTestCase):
     def test_no_quantifiers(self):
         self.assertEqual(tokens.get_quantifiers("xxx"), ("xxx", 1, 1))
 
@@ -1287,14 +1277,14 @@ class TestQuantification(unittest.TestCase):
             #self.assertEqual(token.word_specifiers, ["dog", "cat"])
 
 
-def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestTokensModuleMethods),
-        unittest.TestLoader().loadTestsFromTestCase(TestQueryTokenCOCA),
-        unittest.TestLoader().loadTestsFromTestCase(TestQuantification),
-        ])
+provided_tests = [TestTokensModuleMethods,
+                  TestQueryTokenCOCA,
+                  TestQuantification]
 
-    unittest.TextTestRunner().run(suite)
+
+def main():
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

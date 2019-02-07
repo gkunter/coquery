@@ -3,12 +3,10 @@
 
 from __future__ import print_function
 
-import unittest
 import argparse
 import tempfile
 import os
 import warnings
-
 import pandas as pd
 
 from coquery.coquery import options
@@ -21,6 +19,7 @@ from coquery.functionlist import FunctionList
 from coquery.corpus import SQLResource, CorpusClass
 from coquery.managers import Manager
 from coquery.connections import SQLiteConnection
+from test.testcase import CoqTestCase, run_tests
 
 
 class TestResource(SQLResource):
@@ -31,7 +30,7 @@ class TestResource(SQLResource):
     query_item_word = "word_label"
 
 
-class TestSessionInputFile(unittest.TestCase):
+class TestSessionInputFile(CoqTestCase):
     def setUp(self):
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
@@ -52,13 +51,13 @@ class TestSessionInputFile(unittest.TestCase):
 
     def write_to_temp_file(self, d):
         with open(options.cfg.input_path, "w") as temp_file:
-            l = []
+            lst = []
             if d.get("header", None):
-                l.append("{}\n".format(
+                lst.append("{}\n".format(
                     options.cfg.input_separator.join(d["header"])))
             if d.get("queries", None):
-                l.append("{}\n".format("\n".join(d["queries"])))
-            S = "".join(l)
+                lst.append("{}\n".format("\n".join(d["queries"])))
+            S = "".join(lst)
             temp_file.write(S)
 
     def test_input_file_session_init_header_only(self):
@@ -201,7 +200,7 @@ class TestSessionInputFile(unittest.TestCase):
             session.prepare_queries()
 
 
-class TestSessionMethods(unittest.TestCase):
+class TestSessionMethods(CoqTestCase):
     def setUp(self):
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
@@ -257,13 +256,11 @@ class TestSessionMethods(unittest.TestCase):
             ["Left context(3)", "Right context(5)"])
 
 
-def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestSessionInputFile),
-        unittest.TestLoader().loadTestsFromTestCase(TestSessionMethods),
-        ])
+provided_tests = [TestSessionInputFile, TestSessionMethods]
 
-    unittest.TextTestRunner().run(suite)
+
+def main():
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

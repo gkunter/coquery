@@ -11,18 +11,20 @@ coquery$ python -m test.test_colorizers
 from __future__ import unicode_literals
 from __future__ import division
 
-import unittest
-
 import pandas as pd
 import seaborn as sns
 
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByNum,
-    )
+    COQ_SINGLE)
+from coquery.defines import PALETTE_BW
+from test.testcase import CoqTestCase, run_tests
 
 
-class TestColorizer(unittest.TestCase):
-    def test_get_palette_1(self):
+class TestColorizer(CoqTestCase):
+    def test_get_palette(self):
+        colorizer = Colorizer("Paired", 5)
+        pal = colorizer.get_palette()
         sns_pal = sns.color_palette("Paired", 5)
         colorizer = Colorizer(sns_pal)
         pal = colorizer.get_palette()
@@ -107,7 +109,7 @@ class TestColorizer(unittest.TestCase):
         self.assertEqual(legend_title, z)
 
 
-class TestColorizeByFactor(unittest.TestCase):
+class TestColorizeByFactor(CoqTestCase):
     def test_get_hues_by_data_1(self):
         sns_pal = sns.color_palette("Paired", 5)
         colorizer = ColorizeByFactor(sns_pal, values=["A", "B"])
@@ -212,7 +214,7 @@ class TestColorizeByFactor(unittest.TestCase):
         self.assertListEqual(colorizer.legend_levels(), levels)
 
 
-class TestColorizeByNum(unittest.TestCase):
+class TestColorizeByNum(CoqTestCase):
     def test_get_hues_1(self):
         data = pd.Series([500, 500, 4500, 4500, 2500])
 
@@ -243,7 +245,11 @@ class TestColorizeByNum(unittest.TestCase):
         self.assertListEqual(levels, expected)
 
 
-class TestColorizeTransform(unittest.TestCase):
+class TestColorizeByFreq(CoqTestCase):
+    pass
+
+
+class TestColorizeTransform(CoqTestCase):
     def setUp(self):
         self.rgb = [(0, 0, 0),
                     (127, 0, 0), (0, 127, 0), (0, 0, 127),
@@ -299,10 +305,7 @@ provided_tests = (
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

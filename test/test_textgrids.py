@@ -4,55 +4,21 @@
 
 from __future__ import print_function
 
-import pandas as pd
-from pandas.util.testing import assert_frame_equal
-
-import unittest
 import argparse
-import collections
-
-try:
-    import tgt
-    no_tgt = False
-except ImportError:
-    no_tgt = True
-
-from .mockmodule import setup_module, MockOptions
-
-setup_module("sqlalchemy")
-
-from coquery.corpus import CorpusClass, SQLResource
-
-if not no_tgt:
-    from coquery import textgrids
+import tempfile
+import pandas as pd
 
 from coquery import options
+from coquery.corpus import CorpusClass, SQLResource
+from coquery.general import has_module
+from coquery.connections import SQLiteConnection
 from coquery.defines import QUERY_MODE_TOKENS
 
-options.cfg = MockOptions()
+if has_module("tgt"):
+    from coquery import textgrids
 
-options.cfg.current_resources = collections.defaultdict(
-    lambda: (None, None, None, None))
+from test.testcase import CoqTestCase, run_tests
 
-
-class MockSession(object):
-    def __init__(self):
-        self.corpus = CorpusClass()
-        self.Resource = TextgridResource(None, self.corpus)
-
-        self.corpus.resource = self.Resource
-        self.Resource.corpus = self.corpus
-
-
-def _get_file_data(_, token_id, features):
-    df = pd.DataFrame({
-        "Filename": {0: "File1.txt", 1: "File1.txt",
-                     2: "File2.txt", 3: "File2.txt", 4: "File2.txt"},
-        "Duration": {0: 10, 1: 10, 2: 20, 3: 20, 4:20},
-        "ID": {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}})
-    return df
-
-CorpusClass.get_file_data = _get_file_data
 
 class TextgridResource(SQLResource):
     corpus_table = "Corpus"
@@ -79,16 +45,36 @@ class TextgridResource(SQLResource):
     db_name = "Test"
     query_item_word = "word_label"
 
+    def get_file_data(self, token_id, features):
+        df = pd.DataFrame({
+            "Filename": {0: "File1.txt", 1: "File1.txt",
+                        2: "File2.txt", 3: "File2.txt", 4: "File2.txt"},
+            "Duration": {0: 10, 1: 10, 2: 20, 3: 20, 4:20},
+            "ID": {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}})
+        return df
 
-class TestTextGridModuleMethods(unittest.TestCase):
+
+class MockSession(object):
+    def __init__(self):
+        self.corpus = CorpusClass()
+        self.Resource = TextgridResource(None, self.corpus)
+
+        self.corpus.resource = self.Resource
+        self.Resource.corpus = self.corpus
+
+
+class TestTextGridModuleMethods(CoqTestCase):
     def setUp(self):
-        if no_tgt:
-            raise unittest.SkipTest
+        if not has_module("tgt"):
+            self.skipTest("Module 'tgt' not available.")
 
         options.cfg = argparse.Namespace()
         options.cfg.corpus = None
         options.cfg.MODE = QUERY_MODE_TOKENS
-        options.cfg.current_resources = {"MockConnection": "MockCorpus"}
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            self.temp_path = tmp_dir
+        default = SQLiteConnection("temporary", self.temp_path)
+        options.cfg.current_connection = default
         options.cfg.input_separator = ","
         options.cfg.quote_char = '"'
         options.cfg.input_encoding = "utf-8"
@@ -115,23 +101,13 @@ class TestTextGridModuleMethods(unittest.TestCase):
             "coq_word_label_1": ["this", "tree", "a", "tiny", "boat"],
             "coquery_invisible_origin_id": [1, 1, 2, 2, 2]})
 
-    def test_get_file_data(self):
-        options.cfg.selected_features = self.selected_features1
-        writer = textgrids.TextgridWriter(self.df1, self.session)
-        df = _get_file_data(None, [1, 2, 3, 4, 5], [self.resource.corpus_id,
-                                              self.resource.file_name,
-                                              self.resource.file_duration])
-        assert_frame_equal(writer.get_file_data(), df)
-
     def test_prepare_textgrids_number_of_grids(self):
         options.cfg.selected_features = self.selected_features1
         writer = textgrids.TextgridWriter(self.df1, self.session)
         grids = writer.prepare_textgrids()
-        if no_tgt:
-            raise unittest.SkipTest
         self.assertEqual(
             len(grids),
-            len(writer.get_file_data()["Filename"].unique()))
+            len(writer.file_data["Filename"].unique()))
 
     def test_prepare_textgrids_feature_timing1(self):
         """
@@ -143,7 +119,7 @@ class TestTextGridModuleMethods(unittest.TestCase):
         """
         options.cfg.selected_features = self.selected_features1
         writer = textgrids.TextgridWriter(self.df1, self.session)
-        grids = writer.prepare_textgrids()
+        writer.prepare_textgrids()
 
         self.assertEqual(list(writer.feature_timing.keys()), ["corpus_id"])
         self.assertEqual(writer.feature_timing["corpus_id"], ("corpus_starttime", "corpus_endtime"))
@@ -158,7 +134,7 @@ class TestTextGridModuleMethods(unittest.TestCase):
         """
         options.cfg.selected_features = self.selected_features2
         writer = textgrids.TextgridWriter(self.df2, self.session)
-        grids = writer.prepare_textgrids()
+        writer.prepare_textgrids()
 
         self.assertListEqual(
             list(writer.feature_timing.keys()), ["corpus_id", "word_label"])
@@ -277,10 +253,8 @@ provided_tests = [TestTextGridModuleMethods]
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(case)
-         for case in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

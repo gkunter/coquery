@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import unittest
 import argparse
 import warnings
 
@@ -15,6 +14,7 @@ from coquery.connections import SQLiteConnection
 from coquery.corpus import BaseResource
 from coquery.managers import Manager, Group, Summary
 from coquery.functions import Freq, Tokens
+from test.testcase import CoqTestCase, run_tests
 
 
 class ManagerResource(BaseResource):
@@ -28,7 +28,7 @@ class ManagerResource(BaseResource):
     query_item_word = "word_label"
 
 
-class TestManager(unittest.TestCase):
+class TestManager(CoqTestCase):
     df = pd.DataFrame(
         {"coq_word_label_1": list("aaaaaabbbb"),
          "coq_word_label_2": list("yyyyxxxxxx"),
@@ -139,10 +139,12 @@ class TestManager(unittest.TestCase):
             [1] + [1] + [2] * 2 + [2] * 2 + [2] * 2 + [2] * 2)
 
 
+provided_tests = [TestManager]
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestManager)])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()
