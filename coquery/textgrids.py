@@ -29,13 +29,15 @@ class TextgridWriter(object):
         self.session = session
         self._artificial_corpus_id = False
         self._offsets = {}
-        self.file_data = self.get_file_data()
+        self._file_data = None
 
-    def get_file_data(self):
-        file_data = self.resource.get_file_data(
-            self.df.coquery_invisible_corpus_id,
-            ["file_name", "file_duration"])
-        return file_data.reset_index(drop=True)
+    @property
+    def file_data(self):
+        if self._file_data is None:
+            self._file_data = self.resource.get_file_data(
+                self.df.coquery_invisible_corpus_id,
+                ["file_name", "file_duration"])
+        return self._file_data.reset_index(drop=True)
 
     def prepare_textgrids(self, order=None, one_grid_per_match=False,
                           remember_time=False):
