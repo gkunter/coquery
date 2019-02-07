@@ -98,10 +98,12 @@ class TestGenericTable(CoqTestCase):
         del options.cfg.current_connection
 
     def test_suggest_sql_types(self):
-        dct = self.installer.suggest_sql_types(self.dtypes, self.mapping)
-        print(dct)
-        pass
-        #dct = self.installer.suggest_sql_types(
+        value = self.installer.suggest_sql_types(self.dtypes, self.mapping)
+        target = [("corpus_word", "Word", "VARCHAR(255)"),
+                  ("corpus_x1", "Length", "INTEGER"),
+                  ("corpus_x2", "LogFreq", "REAL")]
+
+        self.assertListEqual(value, target)
 
     def test_module(self):
         self.installer.build()
