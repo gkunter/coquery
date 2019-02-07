@@ -2,7 +2,7 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -32,14 +32,10 @@ import sys
 import logging
 import re
 import pandas as pd
-import hashlib
 from collections import defaultdict
 
 from . import general, NAME
-from .errors import (
-    IllegalImportInModuleError, IllegalCodeInModuleError,
-    ConfigurationError, ModuleIncompleteError,
-    add_source_path)
+from .errors import ConfigurationError, add_source_path
 from .defines import (
     DEFAULT_CONFIGURATION,
     SQL_SQLITE, SQL_MYSQL,
@@ -50,6 +46,8 @@ from .unicode import utf8
 from .links import parse_link_text
 from .filters import parse_filter_text
 from .connections import get_connection, SQLiteConnection
+from coquery.general import has_module
+
 
 # make ast work in all Python versions:
 if not hasattr(ast, "TryExcept"):
@@ -134,16 +132,17 @@ class UnicodeConfigParser(RawConfigParser):
     def write(self, fp, DEFAULTSECT="main"):
         """Fixed for Unicode output"""
         if self._defaults:
-            fp.write("[%s]\n" % DEFAULTSECT)
+            fp.write("[{}]\n".format(DEFAULTSECT))
             for (key, value) in self._defaults.items():
-                fp.write("%s = %s\n" % (key, utf8(value).replace('\n', '\n\t')))
+                fp.write("{} = {}\n".format(
+                    key, utf8(value).replace('\n', '\n\t')))
             fp.write("\n")
         for section in self._sections:
-            fp.write("[%s]\n" % section)
+            fp.write("[{}]\n".format(section))
             for (key, value) in self._sections[section].items():
                 if key != "__name__":
-                    fp.write("%s = %s\n" %
-                             (key, utf8(value).replace('\n', '\n\t')))
+                    fp.write("{} = {}\n".format(
+                        key, utf8(value).replace('\n', '\n\t')))
             fp.write("\n")
 
     # This function is needed to override default lower-case conversion
@@ -245,7 +244,8 @@ if sys.version_info < (3, 0):
                 parts[i:i] = [inserts[i]]
 
             # join all the action items with spaces
-            text = u' '.join([item.decode("utf-8") for item in parts if item is not None])
+            text = u' '.join([item.decode("utf-8") for item in parts
+                              if item is not None])
 
             # clean up separators for mutually exclusive groups
             open = r'[\[(]'
@@ -260,7 +260,8 @@ if sys.version_info < (3, 0):
             return text
 
         def _join_parts(self, part_strings):
-            part_strings = [utf8(x) for x in part_strings if utf8(x) and x is not argparse.SUPPRESS]
+            part_strings = [utf8(x) for x in part_strings
+                            if utf8(x) and x is not argparse.SUPPRESS]
             return "".join(part_strings)
 else:
     class CoqHelpFormatter(argparse.HelpFormatter):
@@ -278,7 +279,10 @@ class Options(object):
             self.args.base_path = os.path.dirname(__file__)
         self.prog_name = NAME
         self.config_name = "%s.cfg" % NAME.lower()
-        self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False, formatter_class=CoqHelpFormatter)
+        self.parser = argparse.ArgumentParser(
+            prog=self.prog_name,
+            add_help=False,
+            formatter_class=CoqHelpFormatter)
 
         self.args.config_path = os.path.join(self.args.coquery_home,
                                              self.config_name)
@@ -334,7 +338,7 @@ class Options(object):
         self.args.no_ngram = False
 
         self.args.managers = {}
-        self.args.summary_group = []
+        self.args.summary_groups = []
 
     @property
     def cfg(self):
@@ -409,44 +413,51 @@ class Options(object):
         is used, both a corpus and a query mode have to be specified, and
         only the database settings from the configuration file are used.
         """
+        # FIXME: This needs complete revision! The way the different arguments
+        # and parses are handled are relicts from a time when the program
+        # needed command line support.
 
         self.setup_parser()
 
         # Do a first argument parse to get the corpus to be used, and
         # whether a GUI is requested. This parse doesn't raise an argument
         # error.
-        args, unknown = self.parser.parse_known_args()
+        cmd_args, unknown = self.parser.parse_known_args()
 
-        self.args.gui = args.gui
+        self.args.gui = cmd_args.gui
         self.args.to_file = False
 
         self.read_configuration(read_file)
 
-        args, unknown = self.parser.parse_known_args()
+        # FIXME: Do we still need a second parse?
+        cmd_args, unknown = self.parser.parse_known_args()
 
         self.args.corpus = utf8(self.args.corpus)
 
-        self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
+        self.parser.add_argument("-h", "--help",
+                                 help="show this help message and exit",
+                                 action="store_true")
 
+        # FIXME: And do we really need a third parse still?
         # reparse the arguments, this time with options that allow feature
         # selection based on the table structure of the corpus
-        args, unknown = self.parser.parse_known_args()
+        cmd_args, unknown = self.parser.parse_known_args()
         if unknown:
             self.parser.print_help()
             sys.exit(1)
-        if args.help:
+        if cmd_args.help:
             self.parser.print_help()
             sys.exit(0)
 
-        if args.input_path:
+        if cmd_args.input_path:
             self.args.input_path_provided = True
         else:
             self.args.input_path_provided = False
 
         # merge the newly-parsed command-line arguments with those read from
         # the configation file.
-        for command_argument in vars(args).keys():
-            if command_argument in vars(self.args) and not vars(args)[command_argument]:
+        for arg in cmd_args.__dict__:
+            if arg in self.args and not cmd_args.__dict__[arg]:
                 # do not overwrite the command argument if it was set in the
                 # config file stored self.args, but not set at the command
                 # line
@@ -454,7 +465,7 @@ class Options(object):
             else:
                 # overwrite the setting from the configuration file with the
                 # command-line setting:
-                vars(self.args)[command_argument] = vars(args)[command_argument]
+                self.args.__dict__[arg] = cmd_args.__dict__[arg]
 
         try:
             self.args.MODE = QUERY_MODES[self.args.MODE]
@@ -474,10 +485,11 @@ class Options(object):
         self.args.context_sentence = False
 
         try:
-            self.args.input_separator = self.args.input_separator.decode('string_escape')
+            sep = self.args.input_separator.decode('string_escape')
         except AttributeError:
-            self.args.input_separator = (
-                codecs.getdecoder("unicode_escape")(self.args.input_separator)[0])
+            decoder = codecs.getdecoder("unicode_escape")
+            sep = decoder(self.args.input_separator)[0]
+        self.args.input_separator = sep
 
         # make sure that a command query consisting of one string is still
         # stored as a list:
@@ -485,7 +497,8 @@ class Options(object):
             if type(self.args.query_list) != list:
                 self.args.query_list = [self.args.query_list]
             try:
-                self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
+                self.args.query_list = [x.decode("utf8")
+                                        for x in self.args.query_list]
             except AttributeError:
                 pass
         logging.info("Command line parameters: " + self.args.parameter_string)
@@ -545,7 +558,8 @@ class Options(object):
             try:
                 config_file.read(self.cfg.config_path)
             except (IOError, TypeError, ParsingError) as e:
-                warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
+                s = "Configuration file {} could not be read."
+                warnings.warn(s.format(cfg.config_path))
                 raise ConfigurationError((str(e).replace("\\n", "\n")
                                                 .replace("\n", "<br>")))
             else:
@@ -600,45 +614,67 @@ class Options(object):
         # GUI is used:
         if self.args.gui:
             # Read MAIN section:
-            self.args.corpus = config_file.str("main", "default_corpus", d=defaults)
+            self.args.corpus = config_file.str(
+                "main", "default_corpus", d=defaults)
             self.args.MODE = config_file.str("main", "query_mode", d=defaults)
             last_query = config_file.str("main", "query_string", d=defaults)
-
             try:
                 self.args.query_list = decode_query_string(last_query)
             except (ValueError):
                 self.args.query_list = []
                 pass
-            self.args.query_cache_size = config_file.int("main", "query_cache_size", d=defaults)
-            self.args.query_case_sensitive = config_file.bool("main", "query_case_sensitive", d=defaults)
-            self.args.output_case_sensitive = config_file.bool("main", "output_case_sensitive", d=defaults)
+            self.args.query_cache_size = config_file.int(
+                "main", "query_cache_size", d=defaults)
+            self.args.query_case_sensitive = config_file.bool(
+                "main", "query_case_sensitive", d=defaults)
+            self.args.output_case_sensitive = config_file.bool(
+                "main", "output_case_sensitive", d=defaults)
             self.args.regexp = config_file.bool("main", "regexp", d=defaults)
-            self.args.experimental = config_file.bool("main", "experimental", d=defaults)
-            self.args.output_to_lower = config_file.bool("main", "output_to_lower", d=defaults)
-            self.args.drop_on_na = config_file.bool("main", "drop_on_na", d=defaults)
-            self.args.na_string = config_file.str("main", "na_string", d=defaults)
+            self.args.experimental = config_file.bool(
+                "main", "experimental", d=defaults)
+            self.args.output_to_lower = config_file.bool(
+                "main", "output_to_lower", d=defaults)
+            self.args.drop_on_na = config_file.bool(
+                "main", "drop_on_na", d=defaults)
+            self.args.na_string = config_file.str(
+                "main", "na_string", d=defaults)
             self.args.custom_installer_path = config_file.str(
                 "main", "custom_installer_path", d=defaults)
             self.args.binary_path = config_file.str(
                 "main", "binary_path", d=defaults)
             if use_cachetools:
-                self.args.use_cache = config_file.bool("main", "use_cache", d=defaults)
+                self.args.use_cache = config_file.bool(
+                    "main", "use_cache", d=defaults)
             else:
                 self.args.use_cache = False
-            self.args.input_path = config_file.str("main", "csv_file", d=defaults)
-            self.args.input_separator = config_file.str("main", "csv_separator", d=defaults)
-            self.args.query_column_number = config_file.int("main", "csv_column", d=defaults)
-            self.args.file_has_headers = config_file.bool("main", "csv_has_header", d=defaults)
-            self.args.skip_lines = config_file.int("main", "csv_line_skip", d=defaults)
-            self.args.quote_char = config_file.str("main", "csv_quote_char", d=defaults)
-            self.args.xkcd = config_file.bool("main", "xkcd", fallback=False)
+            self.args.input_path = config_file.str(
+                "main", "csv_file", d=defaults)
+            self.args.input_separator = config_file.str(
+                "main", "csv_separator", d=defaults)
+            self.args.query_column_number = config_file.int(
+                "main", "csv_column", d=defaults)
+            self.args.file_has_headers = config_file.bool(
+                "main", "csv_has_header", d=defaults)
+            self.args.skip_lines = config_file.int(
+                "main", "csv_line_skip", d=defaults)
+            self.args.quote_char = config_file.str(
+                "main", "csv_quote_char", d=defaults)
+            self.args.xkcd = config_file.bool(
+                "main", "xkcd", fallback=False)
+
             # read CONTEXT section:
-            self.args.context_left = config_file.int("context", "context_left", d=defaults)
-            self.args.context_right = config_file.int("context", "context_right", d=defaults)
-            self.args.context_mode = config_file.str("context", "context_mode", d=defaults)
-            self.args.context_restrict = config_file.bool("context", "context_restrict", d=defaults)
-            self.args.collo_left = config_file.int("context", "collo_left", d=defaults)
-            self.args.collo_right = config_file.int("context", "collo_right", d=defaults)
+            self.args.context_left = config_file.int(
+                "context", "context_left", d=defaults)
+            self.args.context_right = config_file.int(
+                "context", "context_right", d=defaults)
+            self.args.context_mode = config_file.str(
+                "context", "context_mode", d=defaults)
+            self.args.context_restrict = config_file.bool(
+                "context", "context_restrict", d=defaults)
+            self.args.collo_left = config_file.int(
+                "context", "collo_left", d=defaults)
+            self.args.collo_right = config_file.int(
+                "context", "collo_right", d=defaults)
 
             # read OUTPUT section:
             for variable, value in config_file.items("output"):
@@ -662,41 +698,62 @@ class Options(object):
             # read GUI section:
             group = config_file.str("gui", "group_columns", fallback="")
             self.args.group_columns = group.split(",")
-            self.args.last_toolbox = config_file.int("gui", "last_toolbox", fallback=0)
-            self.args.select_radio_query_file = config_file.bool("gui", "select_radio_query_file", fallback=False)
+            self.args.last_toolbox = config_file.int(
+                "gui", "last_toolbox", fallback=0)
+            self.args.select_radio_query_file = config_file.bool(
+                "gui", "select_radio_query_file", fallback=False)
             stopwords = config_file.str("gui", "stopword_list", fallback="")
-            self.args.stopword_list = [x for x
-                                       in decode_query_string(stopwords).split("\n")
-                                       if x]
+            lst = [x for x in decode_query_string(stopwords).split("\n") if x]
+            self.args.stopword_list = lst
             group = config_file.str("gui", "group_columns", fallback="")
-            self.args.ask_on_quit = config_file.bool("gui", "ask_on_quit", fallback=True)
-            self.args.word_wrap = config_file.bool("gui", "word_wrap", fallback=False)
-            self.args.save_query_string = config_file.bool("gui", "save_query_string", fallback=True)
-            self.args.save_query_file = config_file.bool("gui", "save_query_file", fallback=True)
+            self.args.ask_on_quit = config_file.bool(
+                "gui", "ask_on_quit", fallback=True)
+            self.args.word_wrap = config_file.bool(
+                "gui", "word_wrap", fallback=False)
+            self.args.save_query_string = config_file.bool(
+                "gui", "save_query_string", fallback=True)
+            self.args.save_query_file = config_file.bool(
+                "gui", "save_query_file", fallback=True)
 
             # various paths:
-            self.args.query_file_path = config_file.str("gui", "query_file_path", fallback=os.path.expanduser("~"))
-            self.args.textgrids_file_path = config_file.str("gui", "textgrids_file_path", fallback=os.path.expanduser("~"))
-            self.args.results_file_path = config_file.str("gui", "results_file_path", fallback=os.path.expanduser("~"))
-            self.args.output_file_path = config_file.str("gui", "output_file_path", fallback=os.path.expanduser("~"))
+            user_path = os.path.expanduser("~")
+            self.args.query_file_path = config_file.str(
+                "gui", "query_file_path", fallback=user_path)
+            self.args.textgrids_file_path = config_file.str(
+                "gui", "textgrids_file_path", fallback=user_path)
+            self.args.results_file_path = config_file.str(
+                "gui", "results_file_path", fallback=user_path)
+            self.args.output_file_path = config_file.str(
+                "gui", "output_file_path", fallback=user_path)
             self.args.export_file_path = config_file.str(
-                "gui", "export_file_path", fallback=os.path.expanduser("~"))
-            self.args.stopwords_file_path = config_file.str("gui", "stopwords_file_path", fallback=os.path.expanduser("~"))
-            self.args.filter_file_path = config_file.str("gui", "filter_file_path", fallback=os.path.expanduser("~"))
-            self.args.uniques_file_path = config_file.str("gui", "uniques_file_path", fallback=os.path.expanduser("~"))
-            self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
+                "gui", "export_file_path", fallback=user_path)
+            self.args.stopwords_file_path = config_file.str(
+                "gui", "stopwords_file_path",
+                fallback=user_path)
+            self.args.filter_file_path = config_file.str(
+                "gui", "filter_file_path", fallback=user_path)
+            self.args.uniques_file_path = config_file.str(
+                "gui", "uniques_file_path", fallback=user_path)
+            self.args.corpus_table_source_path = config_file.str(
+                "gui", "corpus_table_source_path", fallback="")
             self.args.text_source_path = config_file.str(
                 "gui", "text_source_path",
                 fallback=os.path.join(self.args.base_path, "texts", "alice"))
 
-            self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=True)
-            self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=True)
-
-            self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
-            self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
-            self.args.limit_matches = config_file.bool("gui", "limit_matches", fallback=False)
-            self.args.sample_size = config_file.int("gui", "sample_size", fallback=0)
-            self.args.sample_matches = config_file.bool("gui", "sample_matches", fallback=False)
+            self.args.show_data_management = config_file.bool(
+                "gui", "show_data_management", fallback=True)
+            self.args.show_output_columns = config_file.bool(
+                "gui", "show_output_columns", fallback=True)
+            self.args.drop_duplicates = config_file.bool(
+                "gui", "drop_duplicates", fallback=False)
+            self.args.number_of_tokens = config_file.int(
+                "gui", "number_of_tokens", fallback=0)
+            self.args.limit_matches = config_file.bool(
+                "gui", "limit_matches", fallback=False)
+            self.args.sample_size = config_file.int(
+                "gui", "sample_size", fallback=0)
+            self.args.sample_matches = config_file.bool(
+                "gui", "sample_matches", fallback=False)
 
             s = config_file.str("gui", "show_log_messages", d=defaults)
             try:
@@ -876,10 +933,8 @@ class Options(object):
                     cols = columns.strip().split(",")
                 else:
                     cols = []
-                self.args.summary_group.append(
+                self.args.summary_groups.append(
                     Summary(name, cols, function_list))
-            if not sum_names:
-                self.args.summary_group.append(Summary("summary", [], []))
 
         # Use QSettings?
         if settings:
@@ -983,7 +1038,8 @@ def save_configuration():
             try:
                 config.read(input_file)
             except (IOError, TypeError):
-                warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
+                s = "Configuration file {} could not be read."
+                warnings.warn(s.format(cfg.config_path))
     if "main" not in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
@@ -1066,7 +1122,9 @@ def save_configuration():
 
     for i, grp in enumerate(cfg.groups):
         config.set("groups", "group_{}_name".format(i), grp.name)
-        config.set("groups", "group_{}_distinct".format(i), str(grp.show_distinct))
+        config.set("groups",
+                   "group_{}_distinct".format(i),
+                   str(grp.show_distinct))
         config.set("groups", "group_{}_columns".format(i),
                    ",".join(grp.columns))
         for j, (fnc, columns) in enumerate(grp.functions):
@@ -1083,7 +1141,7 @@ def save_configuration():
 
     config.set("summary", "summary_distinct", cfg.show_distinct)
 
-    for i, grp in enumerate(cfg.summary_group):
+    for i, grp in enumerate(cfg.summary_groups):
         config.set("summary", "summary_{}_name".format(i), grp.name)
         config.set("summary", "summary_{}_columns".format(i),
                    ",".join(grp.columns))
@@ -1115,7 +1173,8 @@ def save_configuration():
         for x in cfg.column_width:
             if (not x.startswith("coquery_invisible") and
                     cfg.column_width[x] and x):
-                settings.setValue("column_width_{}".format(x), cfg.column_width[x])
+                settings.setValue("column_width_{}".format(x),
+                                  cfg.column_width[x])
 
         if "gui" not in config.sections():
             config.add_section("gui")
@@ -1130,7 +1189,8 @@ def save_configuration():
         config.set("gui", "decimal_digits", cfg.digits)
 
         try:
-            config.set("gui", "select_radio_query_file", cfg.select_radio_query_file)
+            config.set("gui", "select_radio_query_file",
+                       cfg.select_radio_query_file)
         except AttributeError:
             config.set("gui", "select_radio_query_file", False)
         try:
@@ -1183,7 +1243,8 @@ def save_configuration():
         except AttributeError:
             config.set("gui", "uniques_file_path", os.path.expanduser("~"))
         try:
-            config.set("gui", "corpus_table_source_path", cfg.corpus_table_source_path)
+            config.set("gui", "corpus_table_source_path",
+                       cfg.corpus_table_source_path)
         except AttributeError:
             config.set("gui", "corpus_table_source_path", "")
         try:
@@ -1213,7 +1274,8 @@ def save_configuration():
             config.set("gui", "save_query_string", True)
 
         if cfg.show_log_messages:
-            config.set("gui", "show_log_messages", ",".join(cfg.show_log_messages))
+            config.set("gui", "show_log_messages",
+                       ",".join(cfg.show_log_messages))
         else:
             config.set("gui", "show_log_messages", None)
 
@@ -1335,7 +1397,9 @@ def get_available_resources(configuration):
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
         except Exception as e:
-            s = "There is an error in corpus module '{}': {}\nThe corpus is not available for queries.".format(corpus_name, str(e))
+            s = ("There is an error in corpus module '{}': {}\n"
+                 "The corpus is not available for queries.").format(
+                     corpus_name, str(e))
             print(s)
             logging.warning(s)
         else:
@@ -1345,7 +1409,8 @@ def get_available_resources(configuration):
                                            module_name)
             except (AttributeError, ImportError) as e:
                 print(e)
-                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+                s = "{} does not appear to be a valid corpus module."
+                warnings.warn(s.format(corpus_name))
     return d
 
 
@@ -1399,35 +1464,6 @@ def encode_query_string(query):
         s = s.replace("%", "%%")
         str_list.append(s)
     return ",".join(['"{}"'.format(x) for x in str_list])
-
-
-def has_module(name):
-    """
-    Check if the Python module 'name' is available.
-
-    Parameters
-    ----------
-    name : str
-        The name of the Python module, as used in an import instruction.
-
-    This function uses ideas from this Stack Overflow question:
-    http://stackoverflow.com/questions/14050281/
-
-    Returns
-    -------
-    b : bool
-        True if the module exists, or False otherwise.
-    """
-
-    if sys.version_info > (3, 3):
-        import importlib.util
-        return importlib.util.find_spec(name) is not None
-    elif sys.version_info > (2, 7, 99):
-        import importlib
-        return importlib.find_loader(name) is not None
-    else:
-        import pkgutil
-        return pkgutil.find_loader(name) is not None
 
 
 _recent_python = sys.version_info < (2, 7)

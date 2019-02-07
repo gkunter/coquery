@@ -13,7 +13,13 @@ from __future__ import unicode_literals
 
 from .pyqt_compat import QtCore, QtWidgets, QtGui
 
-import sqlparse
+try:
+    import sqlparse
+except ImportError:
+    parsing_available = False
+else:
+    parsing_available = True
+
 
 try:
     from pygments import highlight
@@ -55,8 +61,11 @@ class SQLViewer(QtWidgets.QDialog):
         if lines:
             sql_queries = []
             for query_strings in lines:
-                lst = [sqlparse.format(s.strip(), reindent=True)
-                    for s in query_strings]
+                if parsing_available:
+                    lst = [sqlparse.format(s.strip(), reindent=True)
+                           for s in query_strings]
+                else:
+                    lst = query_strings
                 sql_queries.append(";\n\n".join(lst))
             text = "\n\n-- next query --\n\n".join(sql_queries)
         print(text)

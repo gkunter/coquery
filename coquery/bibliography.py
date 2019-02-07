@@ -16,7 +16,7 @@ import sys
 
 # Create a tuple containing the available string types
 if sys.version_info < (3, 0):
-    STRING_TYPES = (basestring, )
+    STRING_TYPES = (getattr(__builtins__, "basestring"), )
 else:
     STRING_TYPES = (str, )
 
@@ -76,16 +76,16 @@ class Person(object):
         self.sortby = sortby
 
     def __repr__(self):
-        l = []
+        lst = []
         for x in ["first", "middle", "last", "prefix", "suffix", "sortby"]:
             attr = getattr(self, x)
             if attr:
                 if isinstance(attr, list):
                     attr_values = ", ".join(["'{}'".format(m) for m in attr])
-                    l.append("{}=[{}]".format(x, attr_values))
+                    lst.append("{}=[{}]".format(x, attr_values))
                 else:
-                    l.append("{}='{}'".format(x, attr))
-        return "Person({})".format(", ".join(l))
+                    lst.append("{}='{}'".format(x, attr))
+        return "Person({})".format(", ".join(lst))
 
     def __str__(self, **kwargs):
         return self.full_name(**kwargs)
@@ -125,7 +125,8 @@ class Person(object):
         if not hasattr(self, "middle"):
             return None
         if mode not in ["initials", "full"]:
-            s = "Unknown mode '{}' for Name.middlename(), assuming 'full' instead".format(mode)
+            s = ("Unknown mode '{}' for Name.middlename(), assuming 'full' "
+                 "instead".format(mode))
             warnings.warn(s)
             mode = "full"
 
@@ -231,11 +232,11 @@ class PersonList(object):
         return "PersonList({})".format(", ".join(people))
 
     def __str__(self, **kwargs):
-        return self.get_names(**kwargs)
+        return self.names(**kwargs)
 
-    def get_names(self, mode_first="last", mode_others="first",
-                  sep=", ", two_sep=", and ", last_sep=", and ",
-                  initials="none"):
+    def names(self, mode_first="last", mode_others="first",
+              sep=", ", two_sep=", and ", last_sep=", and ",
+              initials="none"):
         """
         Return the name(s) in a form suitable for a bibliography.
 
@@ -322,8 +323,8 @@ class EditorList(PersonList):
         people = [x.__repr__() for x in self._list]
         return "EditorList({})".format(", ".join(people))
 
-    def get_names(self, one_editor="(ed.)", two_editors="(eds.)",
-                  many_editors="(eds.)", **kwargs):
+    def names(self, one_editor="(ed.)", two_editors="(eds.)",
+              many_editors="(eds.)", **kwargs):
         """
         Return the name(s) in a form suitable for a bibliography.
 
@@ -336,14 +337,14 @@ class EditorList(PersonList):
             for 'editor').
 
         kwargs : dict
-            Other parameters passed to PersonList.get_names()
+            Other parameters passed to PersonList.names()
 
         Returns
         -------
         s : string
             The name(s), followed by the suitable editor abbreviation string
         """
-        s = super(EditorList, self).get_names(**kwargs)
+        s = super(EditorList, self).names(**kwargs)
         if len(self._list) == 1:
             return "{} {}".format(s, one_editor)
         elif len(self._list) == 2:
@@ -447,27 +448,28 @@ class Reference(object):
             raise ValueError(s)
 
     def __repr__(self):
-        l = []
-        for x in dir(self):
+        lst = []
+        keys = sorted(dir(self))
+        for x in keys:
             attr = getattr(self, x)
             if not x.startswith("_") and not hasattr(attr, "__call__"):
                 if isinstance(attr, list):
                     missing = ["'{}'".format(m.__repr__()) for m in attr]
                     attr_repr = ", ".join(missing)
-                    l.append("{}=[{}]".format(x, attr_repr))
+                    lst.append("{}=[{}]".format(x, attr_repr))
                 else:
-                    l.append("{}={}".format(x, attr.__repr__()))
-        return "{}({})".format(self._class_name, ", ".join(l))
+                    lst.append("{}={}".format(x, attr.__repr__()))
+        return "{}({})".format(self._class_name, ", ".join(lst))
 
     def __str__(self, **kwargs):
         title = self.title
 
         if hasattr(self, "authors") and hasattr(self, "year"):
-            authors = self.authors.get_names(**kwargs)
+            authors = self.authors.names(**kwargs)
             year = self.year
             return "{} {} <i>{}</i>.".format(stop(authors), stop(year), title)
         elif hasattr(self, "authors"):
-            authors = self.authors.get_names(**kwargs)
+            authors = self.authors.names(**kwargs)
             return "{} <i>{}</i>.".format(stop(authors), title)
         elif hasattr(self, "year"):
             year = self.year
@@ -547,7 +549,7 @@ class Article(Reference):
             vol = ""
 
         S = "{authors} {year} {title} <i>{journal}</i>".format(
-            authors=stop(self.authors.get_names()),
+            authors=stop(self.authors.names()),
             year=stop(self.year),
             title=stop(self.title),
             journal=self.journal)
@@ -569,7 +571,8 @@ class Book(Reference):
 
     Books published in a series takes the form:
 
-    {authors}. {year}. <i>{title}</i> ({series} {number}). {address}: {publisher}.
+    {authors}. {year}. <i>{title}</i> ({series} {number}). {address}:
+    {publisher}.
 
     Instead of authors, a list of editors can also be provided, but not both
     at the same time.
@@ -640,10 +643,10 @@ class Book(Reference):
             raise ValueError(MSG_BOOK_NO_SERIES)
         if "authors" in kwargs and "editors" in kwargs:
             raise ValueError(MSG_BOOK_EDITOR_AND_AUTHOR)
-        if not "authors" in kwargs and "editors" not in kwargs:
+        if "authors" not in kwargs and "editors" not in kwargs:
             raise ValueError(MSG_BOOK_NEITHER_EDITOR_NOR_AUTHOR)
 
-    def get_book_title(self):
+    def book_title(self):
         """
         Return the formatted title of the book. If the book appeared in a
         series, include the formatted series title and the number, if given.
@@ -660,7 +663,7 @@ class Book(Reference):
         else:
             return "<i>{}</i>".format(self.title)
 
-    def get_publishing_information(self):
+    def publishing_information(self):
         """
         Return the publisher and the publishing address (if available) as a
         string formatted for a bibliographic entry.
@@ -679,10 +682,10 @@ class Book(Reference):
             persons = self.authors
 
         S = "{persons} {year} {title} {pub}".format(
-            persons=stop(persons.get_names()),
+            persons=stop(persons.names()),
             year=stop(self.year),
-            title=stop(self.get_book_title()),
-            pub=stop(self.get_publishing_information()))
+            title=stop(self.book_title()),
+            pub=stop(self.publishing_information()))
         return S
 
 
@@ -699,12 +702,14 @@ class InCollection(Book):
     If there are no editors (which is, for example, sometimes the case with
     conference proceedings), the format takes the following form:
 
-    {authors}. {year}. {contributiontitle}. In <i>{title}</i>, {pages}. {address}: {publisher}.
+    {authors}. {year}. {contributiontitle}. In <i>{title}</i>, {pages}.
+    {address}: {publisher}.
 
     If no pages are given (for example in an online publication), the
     following format is used:
 
-    {authors}. {year}. {contributiontitle}. In {editors}, <i>{title}</i>. {address}: {publisher}.
+    {authors}. {year}. {contributiontitle}. In {editors}, <i>{title}</i>.
+    {{address}: {publisher}.
 
     The format of the title is inherited from Book.
 
@@ -781,21 +786,21 @@ class InCollection(Book):
         if "number" in kwargs and "series" not in kwargs:
             raise ValueError(MSG_INCOLLECTION_NO_SERIES_NAME)
 
-    def get_source_information(self, **kwargs):
+    def source_information(self, **kwargs):
         """
         Returns editors (if given) and the title of the volume as a formatted
         string.
         """
         if hasattr(self, "editors"):
             return "In {editors}, {title}".format(
-                editors=self.editors.get_names(**kwargs),
-                title=self.get_book_title())
+                editors=self.editors.names(**kwargs),
+                title=self.book_title())
         else:
             return "In {title}".format(
-                title=self.get_book_title())
+                title=self.book_title())
 
     def __str__(self, **kwargs):
-        source = self.get_source_information()
+        source = self.source_information()
 
         if hasattr(self, "pages"):
             source = "{source}, {pages}".format(
@@ -803,9 +808,9 @@ class InCollection(Book):
                 pages=self.pages)
 
         S = "{authors} {year} {contributiontitle} {source} {pub}".format(
-            authors=stop(self.authors.get_names(**kwargs)),
+            authors=stop(self.authors.names(**kwargs)),
             year=stop(self.year),
             contributiontitle=stop(self.contributiontitle),
             source=stop(source),
-            pub=stop(self.get_publishing_information()))
+            pub=stop(self.publishing_information()))
         return S

@@ -145,10 +145,12 @@ class BarPlot(vis.Visualizer):
     def plot_facet(self, data, color, **kwargs):
         self.args = self.prepare_arguments(data, self.x, self.y, self.z,
                                            self.levels_x, self.levels_y)
-        ax = self.plt_func(ax=plt.gca(), **self.args)
-        self.colorize_artists(ax)
+        self.plt_func(ax=plt.gca(), **self.args)
 
-    def colorize_artists(self, ax):
+    def colorize_artists(self, ax=None):
+        if ax is None:
+            ax = plt.gca()
+
         if ((self.x and not self.y) or (self.y and not self.x) or
                 (self.df[self.x].dtype != object) or
                 (self.df[self.y].dtype != object)):
@@ -313,7 +315,10 @@ class StackedBars(BarPlot):
         """
         return True
 
-    def colorize_artists(self, ax):
+    def colorize_artists(self, ax=None):
+        if ax is None:
+            ax = plt.gca()
+
         if self.x and not self.y:
             cols = self.colorizer.get_palette(len(self.levels_x))
         elif self.y and not self.x:

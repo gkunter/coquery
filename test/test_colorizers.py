@@ -11,19 +11,17 @@ coquery$ python -m test.test_colorizers
 from __future__ import unicode_literals
 from __future__ import division
 
-import unittest
-import os
-
 import pandas as pd
 import seaborn as sns
 
 from coquery.visualizer.colorizer import (
-    Colorizer, ColorizeByFactor, ColorizeByNum, ColorizeByFreq,
+    Colorizer, ColorizeByFactor, ColorizeByNum,
     COQ_SINGLE)
 from coquery.defines import PALETTE_BW
+from test.testcase import CoqTestCase, run_tests
 
 
-class TestColorizer(unittest.TestCase):
+class TestColorizer(CoqTestCase):
     def test_get_palette(self):
         colorizer = Colorizer("Paired", 5)
         pal = colorizer.get_palette()
@@ -98,7 +96,7 @@ class TestColorizer(unittest.TestCase):
         self.assertEqual(legend_title, z)
 
 
-class TestColorizeByFactor(unittest.TestCase):
+class TestColorizeByFactor(CoqTestCase):
     def test_get_hues_by_data_1(self):
         sns_pal = sns.color_palette("Paired", 5)
         colorizer = ColorizeByFactor("Paired", 5, values=["A", "B"])
@@ -204,7 +202,7 @@ class TestColorizeByFactor(unittest.TestCase):
         self.assertListEqual(colorizer.legend_levels(), levels)
 
 
-class TestColorizeByNum(unittest.TestCase):
+class TestColorizeByNum(CoqTestCase):
     def test_get_hues_1(self):
         data = [500, 500, 4500, 4500, 2500]
 
@@ -240,19 +238,12 @@ class TestColorizeByNum(unittest.TestCase):
         self.assertEqual(len(levels), len(data))
         self.assertListEqual(levels, expected)
 
-    #def legend_levels(self):
-        #if self.dtype == int:
-            #frm_str = "{:.0f}"
-        #else:
-            #frm_str = options.cfg.float_format
-        #return ["≥ {}".format(frm_str.format(x)) for x in self.bins][::-1]
 
-
-class TestColorizeByFreq(unittest.TestCase):
+class TestColorizeByFreq(CoqTestCase):
     pass
 
 
-class TestColorizeTransform(unittest.TestCase):
+class TestColorizeTransform(CoqTestCase):
     def setUp(self):
         self.rgb = [(0, 0, 0),
                     (127, 0, 0), (0, 127, 0), (0, 0, 127),
@@ -307,10 +298,7 @@ provided_tests = (TestColorizer,
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

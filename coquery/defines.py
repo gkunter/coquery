@@ -364,6 +364,11 @@ MODULE_INFORMATION = {
              "1.0",
              "Data input from Microsoft Excel files",
              "http://www.python-excel.org/"),
+    "sqlparse": ("sqlparse – A non-validating SQL parser module for Python",
+                 "0.2.0",
+                 "Show SQL queries well-formatted",
+                 "https://github.com/andialbrecht/sqlparse"),
+
     }
 
 # Python 3 does not have unicode and long, so define them here:

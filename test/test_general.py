@@ -9,16 +9,17 @@ coquery$ python -m test.test_general
 """
 
 from __future__ import print_function
-import unittest
 import sys
-import tempfile
 import os
 import numpy as np
 
-from coquery.general import check_fs_case_sensitive, pretty, collapse_words
-from    test.testcase import CoqTestCase
+from coquery.general import (
+    check_fs_case_sensitive, has_module,
+    pretty, collapse_words)
+from test.testcase import CoqTestCase, run_tests
 
-class TestGeneral(unittest.TestCase):
+
+class TestGeneral(CoqTestCase):
 
     def test_check_fs_case_sensitive(self):
         if sys.platform == "linux":
@@ -28,7 +29,12 @@ class TestGeneral(unittest.TestCase):
         else:
             raise NotImplementedError
 
-class TestPretty(unittest.TestCase):
+    def test_has_module_1(self):
+        self.assertFalse(has_module("a1b2c3d4e5f"[::-1]))
+        self.assertTrue(has_module("os"))
+
+
+class TestPretty(CoqTestCase):
     def assertListEqual(self, l1, l2):
         if (any([type(x) == object for x in l1]) or
                 any([type(x) == object for x in l2])):
@@ -197,6 +203,7 @@ class TestCollapseWords(CoqTestCase):
         value = collapse_words(lst)
         self.assertEqual(target, value)
 
+
 class TestEnglishCollapseWords(CoqTestCase):
     def test_punctuation_spacing_1(self):
         lst = ["this", "is", "a", "test", ",", "go", "on", "."]
@@ -313,7 +320,7 @@ class TestEnglishCollapseWords(CoqTestCase):
         """
         Use double ASCII quoting.
         """
-        lst = ["he", "said", '"' , "xxx", '"', "to", "me", "."]
+        lst = ["he", "said", '"', "xxx", '"', "to", "me", "."]
         target = 'he said "xxx" to me.'
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
@@ -326,16 +333,12 @@ class TestEnglishCollapseWords(CoqTestCase):
         self.assertEqual(target, value)
 
 
-
 provided_tests = [TestGeneral, TestPretty,
                   TestCollapseWords, TestEnglishCollapseWords]
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

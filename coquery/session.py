@@ -27,7 +27,7 @@ from . import options
 from .errors import (
     TokenParseError, IllegalArgumentError, SQLNoConnectorError,
     EmptyInputFileError, CorpusUnavailableQueryTypeError)
-from .defines import SQL_SQLITE, COLUMN_NAMES, QUERY_MODE_STATISTICS
+from .defines import SQL_SQLITE, COLUMN_NAMES
 from .general import Print
 from coquery.queries import StatisticsQuery, TokenQuery
 from . import managers
@@ -38,7 +38,7 @@ class Session(object):
     _is_statistics = False
     query_id = 0
 
-    def __init__(self):
+    def __init__(self, summary_groups=None):
         self.header = None
         self.max_number_of_input_columns = 0
         self.query_list = []
@@ -80,10 +80,7 @@ class Session(object):
             warnings.warn("No corpus available on connection '{}'".format(
                 current_connection.name))
 
-        if options.cfg.MODE == QUERY_MODE_STATISTICS:
-            self.query_type = StatisticsQuery
-        else:
-            self.query_type = TokenQuery
+        self.query_type = TokenQuery
 
         self.data_table = pd.DataFrame()
         self.output_object = pd.DataFrame()
@@ -98,7 +95,11 @@ class Session(object):
         self.column_functions = functionlist.FunctionList()
         # Summary functions are functions that the user specified to be
         # applied after the summary
-        self.summary_group = options.cfg.summary_group[0]
+
+        if summary_groups:
+            self.summary_group = summary_groups[0]
+        else:
+            self.summary_group = managers.Summary("summary", [], [])
 
     def get_max_token_count(self):
         """
@@ -205,7 +206,7 @@ class Session(object):
         Session.query_id += 1
 
         number_of_queries = len(self.query_list)
-        manager = self.get_manager()
+        manager = self.get_manager(options.cfg.MODE)
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
@@ -345,11 +346,11 @@ class Session(object):
                 index=False)
             output_file.flush()
 
-    def get_manager(self):
+    def get_manager(self, query_mode):
         if not self.Resource:
             return None
         else:
-            return managers.get_manager(options.cfg.MODE, self.Resource.name)
+            return managers.get_manager(query_mode, self.Resource.name)
 
     def set_preferred_order(self, l):
         """
@@ -367,8 +368,8 @@ class Session(object):
                 l.insert(0, lex)
         return l
 
-    def has_cached_data(self):
-        return (self, self.get_manager()) in self._manager_cache
+    def has_cached_data(self, query_mode):
+        return (self, self.get_manager(query_mode)) in self._manager_cache
 
     @classmethod
     def is_statistics_session(cls):
@@ -380,7 +381,7 @@ class Session(object):
         a cached table (e.g. for sorting when no recalculation is needed).
         """
 
-        manager = self.get_manager()
+        manager = self.get_manager(options.cfg.MODE)
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
@@ -501,7 +502,7 @@ class Session(object):
 
         # deal with function headers:
         if header.startswith("func_"):
-            manager = self.get_manager()
+            manager = self.get_manager(options.cfg.MODE)
             # check if there is a parenthesis in the header (there shouldn't
             # ever be one, actually)
             match = re.search("(.*)\((.*)\)", header)
@@ -620,18 +621,19 @@ class StatisticsSession(Session):
     _is_statistics = True
 
     def __init__(self):
-        super(StatisticsSession, self).__init__()
+        super(StatisticsSession, self).__init__([])
         self.query_list.append(StatisticsQuery(self.Corpus, self))
         self.header = ["Variable", "Value"]
         self.output_order = self.header
+        self.query_type = StatisticsQuery
 
     def aggregate_data(self, recalculate=True):
         self.output_object = self.data_table
 
 
 class SessionCommandLine(Session):
-    def __init__(self):
-        super(SessionCommandLine, self).__init__()
+    def __init__(self, summary_groups=None):
+        super(SessionCommandLine, self).__init__(summary_groups)
         if len(options.cfg.query_list) > 1:
             logging.info(
                 "{} queries".format(len(options.cfg.query_list)))
@@ -701,8 +703,8 @@ class SessionInputFile(Session):
 
 
 class SessionStdIn(Session):
-    def __init__(self):
-        super(SessionStdIn, self).__init__()
+    def __init__(self, summary_groups=None):
+        super(SessionStdIn, self).__init__(summary_groups)
 
         for current_string in fileinput.input("-"):
             read_lines = 0

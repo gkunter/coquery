@@ -200,7 +200,8 @@ def main():
                 QtGui.QFont.insertSubstitution(old, new)
 
         from . import session
-        session = session.SessionCommandLine()
+        session = session.SessionCommandLine(
+            summary_groups=options.cfg.summary_groups)
 
         Coq = CoqMainWindow(session)
         options.cfg.gui = Coq
@@ -217,7 +218,7 @@ def main():
                                         small_n_flat=False)
         Coq.setWindowIcon(options.cfg.icon)
         Coq.show()
-        
+
         if options.cfg.profile:
             import cProfile
             cProfile.runctx("options.cfg.app.exec_()", globals(), locals())
@@ -236,11 +237,14 @@ def main():
             Session = session.StatisticsSession()
         else:
             if options.cfg.input_path:
-                Session = session.SessionInputFile()
+                Session = session.SessionInputFile(
+                    summary_groups=options.cfg.summary_groups)
             elif options.cfg.query_list:
-                Session = session.SessionCommandLine()
+                Session = session.SessionCommandLine(
+                    summary_groups=options.cfg.summary_groups)
             else:
-                Session = session.SessionStdIn()
+                Session = session.SessionStdIn(
+                    summary_groups=options.cfg.summary_groups)
 
         # Catch keyboard interruptions:
         try:

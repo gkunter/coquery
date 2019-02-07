@@ -10,20 +10,18 @@ coquery$ python -m test.test_switchboard
 
 from __future__ import unicode_literals
 
-import unittest
-import sys, os, shutil
+import os
+import shutil
 import tempfile
 import argparse
 import pandas as pd
 
-sys.path.append(os.path.join(sys.path[0], "../coquery/installer"))
-sys.path.append(os.path.join(sys.path[0], "../coquery"))
-
-from coquery.defines import SQL_MYSQL
 from coquery.coquery import options
 from coquery.installer.coq_install_switchboard import (
     BuilderClass, resource_code)
 from coquery.tables import Table
+from test.testcase import CoqTestCase, run_tests
+
 
 # Dummy data to mock the file call_con_tab.csv:
 mock_call_con_tab = """1001, "A", 1, "555-2368", 5, 100, "", "Y"
@@ -86,6 +84,7 @@ df_meta = pd.DataFrame({
     "Remarks": ["", ""]
     })
 
+
 class MockTable(Table):
     def __init__(self, *args, **kwargs):
         self.content = {}
@@ -96,7 +95,8 @@ class MockTable(Table):
             self.content[word] = (len(self.content) + 1, d)
         return self.content[word][0]
 
-class TestSwitchboard(unittest.TestCase):
+
+class TestSwitchboard(CoqTestCase):
     def setUp(self):
         self._temp_path = tempfile.mkdtemp()
         for file_name in BuilderClass.expected_files:
@@ -132,9 +132,9 @@ class TestSwitchboard(unittest.TestCase):
 
     def test_get_file_list(self):
         installer = BuilderClass()
-        l = installer.get_file_list(self._temp_path, None)
+        lst = installer.get_file_list(self._temp_path, None)
         self.assertListEqual(
-            sorted(l),
+            sorted(lst),
             sorted([os.path.join(self._temp_path, x)
                     for x in BuilderClass.expected_files]))
 
@@ -241,11 +241,13 @@ class TestSwitchboard(unittest.TestCase):
         # assert that the overall duration was correctly determined:
         self.assertEqual(duration, 12)
 
+
+provided_tests = [TestSwitchboard]
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestSwitchboard),
-        ])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

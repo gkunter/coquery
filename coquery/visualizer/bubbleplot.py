@@ -74,7 +74,7 @@ class BubblePlot(TreeMap):
 
         return lst
 
-    def colorize_plot(self):
+    def colorize_artists(self):
         for circ, col in zip(self.artists, self.colors):
             circ.set_color(col)
             if self.box_border:
@@ -355,7 +355,6 @@ class BubblePlot(TreeMap):
             self.colors = self.colorizer.get_palette(n=len(cix))
 
         self.artists = self.draw_circles(**self.args)
-        self.colorize_plot()
 
         ax = plt.gca()
         ax.set_aspect(1)

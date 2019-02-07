@@ -10,20 +10,15 @@ coquery$ python -m test.test_install_generic
 
 from __future__ import unicode_literals
 
-import unittest
 import os
 import argparse
 import tempfile
 
-from coquery.defines import SQL_SQLITE, SQL_MYSQL, DEFAULT_CONFIGURATION
-from coquery.sqlwrap import SqlDB
 from coquery.coquery import options
 from coquery.installer.coq_install_generic import BuilderClass
 from coquery.tables import Table
-from coquery.connections import SQLiteConnection, MySQLConnection
 from coquery.options import CSVOptions
-
-from .mockmodule import MockOptions
+from test.testcase import CoqTestCase, run_tests
 
 
 class MockTable(Table):
@@ -36,13 +31,14 @@ class MockTable(Table):
             self.content[word] = (len(self.content) + 1, d)
         return self.content[word][0]
 
+
 DATA_FILES = ["file1.txt", "file2.txt", "file3.txt", "file999.txt"]
 
 
-class TestGeneric(unittest.TestCase):
+class TestGeneric(CoqTestCase):
 
     def setUp(self):
-        options.cfg = MockOptions()
+        options.cfg = argparse.Namespace()
 
         self.installer = BuilderClass()
 
@@ -89,11 +85,13 @@ class TestGeneric(unittest.TestCase):
         self.assertFalse(self.installer.has_metadata("file4.txt"))
         self.assertFalse(self.installer.has_metadata("file5.txt"))
 
+
+provided_tests = [TestGeneric]
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestGeneric),
-        ])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()
