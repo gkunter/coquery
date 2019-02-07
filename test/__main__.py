@@ -1,8 +1,19 @@
+# -*- coding: utf-8 -*-
+
+"""
+__main__.py is part of Coquery.
+
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import print_function
 
 import unittest
 import sys
-import warnings
 from pprint import pprint
 
 
@@ -19,10 +30,6 @@ def main():
 
     if not args or "bibliography" in args:
         from test.test_bibliography import provided_tests
-        test_list += provided_tests
-
-    if not args or "celex" in args:
-        from test.test_celex import provided_tests
         test_list += provided_tests
 
     if not args or "colorizers" in args:
@@ -65,12 +72,17 @@ def main():
         from test.test_install_generic_package import provided_tests
         test_list += provided_tests
 
-    if not args or "managers" in args:
-        from test.test_managers import provided_tests
+        from test.test_celex import provided_tests
+        test_list += provided_tests
+        from test.test_ice_ng import provided_tests
+        test_list += provided_tests
+        from test.test_obc2 import provided_tests
+        test_list += provided_tests
+        from test.test_switchboard import provided_tests
         test_list += provided_tests
 
-    if not args or "obc2" in args:
-        from test.test_obc2 import provided_tests
+    if not args or "managers" in args:
+        from test.test_managers import provided_tests
         test_list += provided_tests
 
     if not args or "options" in args:
@@ -83,10 +95,6 @@ def main():
 
     if not args or "sessions" in args:
         from test.test_sessions import provided_tests
-        test_list += provided_tests
-
-    if not args or "switchboard" in args:
-        from test.test_switchboard import provided_tests
         test_list += provided_tests
 
     if not args or "tables" in args:
@@ -117,6 +125,7 @@ def main():
         [unittest.TestLoader().loadTestsFromTestCase(x)
          for x in test_list])
     unittest.TextTestRunner().run(suite)
+
 
 if __name__ == '__main__':
     main()
