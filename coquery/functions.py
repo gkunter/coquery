@@ -1519,7 +1519,7 @@ class ContextKWIC(ContextColumns):
                                 left=self.left, right=self.right,
                                 sentence_id=sentence_id)
 
-        language = session.resource.get_language()
+        language = session.Resource.get_language()
         val = pd.Series(data=[collapse_words(left, language),
                               collapse_words(right, language)],
                         index=["coq_context_left", "coq_context_right"])
@@ -1548,7 +1548,7 @@ class ContextString(ContextColumns):
                                 sentence_id=sentence_id)
 
         words = left + [x.upper() for x in target if x] + right
-        language = session.resource.get_language()
+        language = session.Resource.get_language()
         return pd.Series(data=[collapse_words(words, language)],
                          index=[self._name])
 

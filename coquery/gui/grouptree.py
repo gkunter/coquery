@@ -2,7 +2,7 @@
 """
 grouptree.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -175,6 +175,8 @@ class CoqGroupTree(QtWidgets.QWidget):
         self.ui.button_group_up.setDisabled(True)
         self.ui.button_group_down.setDisabled(True)
 
+        # FIXME: replace the exceptions by proper code - the use pattern here
+        # takes EAFP far too literally!
         try:
             group_item = self.ui.tree_groups.currentItem().parent()
             selected_row = self.ui.tree_groups.indexFromItem(group_item).row()
@@ -187,7 +189,7 @@ class CoqGroupTree(QtWidgets.QWidget):
 
         try:
             get_toplevel_window().table_model.content
-        except:
+        except AttributeError:
             self.ui.button_add_group.setDisabled(True)
             self.ui.button_edit_group.setDisabled(True)
             self.ui.button_remove_group.setEnabled(bool(selected))

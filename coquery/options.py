@@ -1486,6 +1486,7 @@ use_squarify = has_module("squarify")
 use_sphfile = has_module("sphfile")
 use_sqlparse = has_module("sqlparse")
 
+
 missing_modules = []
 for mod in ["sqlalchemy", "pandas", "scipy", "PyQt5", "lxml"]:
     if not has_module(mod):
