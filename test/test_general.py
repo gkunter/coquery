@@ -9,7 +9,6 @@ coquery$ python -m test.test_general
 """
 
 from __future__ import print_function
-import unittest
 import sys
 import os
 import numpy as np
@@ -17,10 +16,10 @@ import numpy as np
 from coquery.general import (
     check_fs_case_sensitive, has_module,
     pretty, collapse_words)
-from gtest.testcase import CoqTestCase
+from test.testcase import CoqTestCase, run_tests
 
 
-class TestGeneral(unittest.TestCase):
+class TestGeneral(CoqTestCase):
 
     def test_check_fs_case_sensitive(self):
         if sys.platform == "linux":
@@ -35,7 +34,7 @@ class TestGeneral(unittest.TestCase):
         self.assertTrue(has_module("os"))
 
 
-class TestPretty(unittest.TestCase):
+class TestPretty(CoqTestCase):
     def assertListEqual(self, l1, l2):
         if (any([type(x) == object for x in l1]) or
                 any([type(x) == object for x in l2])):
@@ -339,10 +338,7 @@ provided_tests = [TestGeneral, TestPretty,
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

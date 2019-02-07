@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import unittest
 import argparse
 import os
 import pandas as pd
-
-from .mockmodule import MockOptions
 
 from coquery.defines import DEFAULT_CONFIGURATION
 from coquery.connections import MySQLConnection
@@ -16,6 +13,18 @@ from coquery.defines import SQL_MYSQL, CONTEXT_NONE
 from coquery.queries import TokenQuery
 from coquery.tokens import COCAToken
 import coquery.links
+from test.testcase import CoqTestCase, run_tests
+
+
+class MockConnection(MySQLConnection):
+    def resources(self):
+        return self._resources
+
+
+default_connection = MockConnection(name=DEFAULT_CONFIGURATION,
+                                    host="127.0.0.1",
+                                    port=3306,
+                                    user="coquery", password="coquery")
 
 
 class CorpusResource(SQLResource):
@@ -71,6 +80,7 @@ def simple(s):
 class NGramResource(CorpusResource):
     corpusngram_table = "CorpusNgram"
     corpusngram_width = 3
+
 
 class BiGramResource(CorpusResource):
     corpusngram_table = "CorpusNgram"
@@ -136,16 +146,7 @@ class ExternalCorpus(SQLResource):
     name = "ExternalCorpus"
 
 
-class MockConnection(MySQLConnection):
-    def resources(self):
-        return self._resources
-
-default_connection = MockConnection(name=DEFAULT_CONFIGURATION,
-                                    host="127.0.0.1",
-                                    port=3306,
-                                    user="coquery", password="coquery")
-
-class TestCorpus(unittest.TestCase):
+class TestCorpus(CoqTestCase):
     flat_resource = FlatResource
 
     @classmethod
@@ -164,11 +165,10 @@ class TestCorpus(unittest.TestCase):
         options.cfg.context_mode = CONTEXT_NONE
         options.cfg.context_left = None
         options.cfg.context_right = None
-        self.Session = MockOptions()
+        self.Session = argparse.Namespace()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
 
-        options.cfg.connections = [default_connection]
         options.cfg.current_connection = default_connection
 
         COCAToken.set_pos_check_function(self.pos_check_function)
@@ -176,53 +176,56 @@ class TestCorpus(unittest.TestCase):
     # TEST TABLE PATH
 
     def test_table_path_deep(self):
-        l = ["word", "deep"]
-        path = self.resource.get_table_path(*l)
+        lst = ["word", "deep"]
+        path = self.resource.get_table_path(*lst)
         self.assertListEqual(path, ["word", "lemma", "deep"])
 
     def test_table_path_non_existing(self):
-        l = ["lemma", "source"]
-        path = self.resource.get_table_path(*l)
+        lst = ["lemma", "source"]
+        path = self.resource.get_table_path(*lst)
         self.assertEqual(path, None)
 
     def test_get_required_tables_1(self):
         x = self.resource.get_required_tables("corpus", [], {})
-        root, l = x
+        root, lst = x
         self.assertEqual(root, "corpus")
-        self.assertListEqual(l, [])
+        self.assertListEqual(lst, [])
 
     def test_get_required_tables_2(self):
         x = self.resource.get_required_tables("corpus", ["word_label"], {})
-        root, l = x
+        root, lst = x
         self.assertEqual(root, "corpus")
-        self.assertListEqual(l, [("word", [])])
+        self.assertListEqual(lst, [("word", [])])
 
     def test_get_required_tables_3(self):
-        root, l = self.resource.get_required_tables(
+        root, lst = self.resource.get_required_tables(
             "corpus", ["word_label", "source_label"], {})
         self.assertEqual(root, "corpus")
-        self.assertListEqual(l, [("source", []), ("word", [])])
+        self.assertListEqual(lst, [("source", []), ("word", [])])
 
     def test_get_required_tables_3a(self):
-        root, l = self.resource.get_required_tables(
+        root, lst = self.resource.get_required_tables(
             "corpus", ["source_label", "word_label"], {})
         self.assertEqual(root, "corpus")
-        self.assertListEqual(l, [("source", []), ("word", [])])
+        self.assertListEqual(lst,
+                             [("source", []), ("word", [])])
 
     def test_get_required_tables_4(self):
-        root, l = self.resource.get_required_tables(
+        root, lst = self.resource.get_required_tables(
             "corpus", ["lemma_label", "word_label", "source_label"], {})
-        self.assertListEqual(l, [("source", []), ("word", [("lemma", [])])])
+        self.assertListEqual(lst,
+                             [("source", []), ("word", [("lemma", [])])])
 
     def test_get_required_tables_5(self):
-        root, l = self.resource.get_required_tables(
+        root, lst = self.resource.get_required_tables(
             "corpus", ["word_label", "lemma_label"], {})
-        self.assertEqual(l, [("word", [("lemma", [])])])
+        self.assertEqual(lst,
+                         [("word", [("lemma", [])])])
 
     def test_get_required_tables_6(self):
-        root, l = self.resource.get_required_tables(
+        root, lst = self.resource.get_required_tables(
             "corpus", ["lemma_label"], {})
-        self.assertEqual(l, [("word", [("lemma", [])])])
+        self.assertEqual(lst, [("word", [("lemma", [])])])
 
     # TEST QUERY ORDER HEURISTICS
 
@@ -382,10 +385,10 @@ class TestCorpus(unittest.TestCase):
 
     def test_corpus_joins_one_item(self):
         query = TokenQuery("*", self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
-            l,
+            lst,
             [simple("""FROM  (SELECT End AS End1,
                                      FileId AS FileId1,
                                      ID AS ID1,
@@ -395,11 +398,11 @@ class TestCorpus(unittest.TestCase):
 
     def test_corpus_joins_three_items(self):
         query = TokenQuery("* * *", self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
 
         self.assertListEqual(
-            l,
+            lst,
             [simple("""FROM  (SELECT End AS End1,
                                      FileId AS FileId1,
                                      ID AS ID1,
@@ -426,12 +429,12 @@ class TestCorpus(unittest.TestCase):
         Three query items, join order optimized by query item complexity.
         """
         query = TokenQuery("* *ier [n*]", self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.maxDiff = None
 
         self.assertListEqual(
-            l,
+            lst,
             [simple("""FROM  (SELECT End AS End2,
                                      FileId AS FileId2,
                                      ID AS ID2,
@@ -459,11 +462,11 @@ class TestCorpus(unittest.TestCase):
         POS tags are penalized.
         """
         query = TokenQuery("* d* [n*]", self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.maxDiff = None
         self.assertListEqual(
-            l,
+            lst,
             [simple("""FROM  (SELECT End AS End2,
                                      FileId AS FileId2,
                                      ID AS ID2,
@@ -489,11 +492,11 @@ class TestCorpus(unittest.TestCase):
         query = TokenQuery("* b*{1,2} *", self.Session)
         self.assertTrue(len(query.query_list) == 2)
 
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
 
         self.assertListEqual(
-            l,
+            lst,
             [simple("""FROM  (SELECT End AS End2,
                                      FileId AS FileId2,
                                      ID AS ID2,
@@ -515,10 +518,10 @@ class TestCorpus(unittest.TestCase):
                                    FROM   Corpus) AS COQ_CORPUS_4
                        ON     ID4 = ID2 + 1""")])
 
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[1])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[1])]
         self.assertListEqual(
-            l,
+            lst,
             [simple("""FROM  (SELECT End AS End2,
                                      FileId AS FileId2,
                                      ID AS ID2,
@@ -550,10 +553,11 @@ class TestCorpus(unittest.TestCase):
     def test_lemmatized_corpus_joins_1(self):
         S = "#abc.[n*]"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
-            l, [simple("""
+            lst,
+            [simple("""
                 FROM  (SELECT End AS End1,
                               FileId AS FileId1,
                               ID AS ID1,
@@ -845,38 +849,38 @@ class TestCorpus(unittest.TestCase):
 
     def test_get_required_columns_3(self):
         query = TokenQuery("* *", self.Session)
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0],
             ["source_label", "word_label", "word_pos"])
-        self.assertListEqual(l, ["COQ_WORD_1.Word AS coq_word_label_1",
-                                 "COQ_WORD_2.Word AS coq_word_label_2",
-                                 "COQ_WORD_1.POS AS coq_word_pos_1",
-                                 "COQ_WORD_2.POS AS coq_word_pos_2",
-                                 "COQ_SOURCE_1.Title AS coq_source_label_1",
-                                 "ID1 AS coquery_invisible_corpus_id",
-                                 "FileId1 AS coquery_invisible_origin_id"])
+        self.assertListEqual(lst,
+                             ["COQ_WORD_1.Word AS coq_word_label_1",
+                              "COQ_WORD_2.Word AS coq_word_label_2",
+                              "COQ_WORD_1.POS AS coq_word_pos_1",
+                              "COQ_WORD_2.POS AS coq_word_pos_2",
+                              "COQ_SOURCE_1.Title AS coq_source_label_1",
+                              "ID1 AS coquery_invisible_corpus_id",
+                              "FileId1 AS coquery_invisible_origin_id"])
 
     def test_get_required_columns_4(self):
         query = TokenQuery("*", self.Session)
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["lemma_label"])
-        self.assertListEqual(l, ["COQ_LEMMA_1.Lemma AS coq_lemma_label_1",
-                                 "ID1 AS coquery_invisible_corpus_id",
-                                 "FileId1 AS coquery_invisible_origin_id"])
+        self.assertListEqual(lst, ["COQ_LEMMA_1.Lemma AS coq_lemma_label_1",
+                                   "ID1 AS coquery_invisible_corpus_id",
+                                   "FileId1 AS coquery_invisible_origin_id"])
 
     def test_get_required_columns_quantified(self):
         s = "more * than [dt]{0,1} [jj]{0,3} [nn*]{1,2}"
         query = TokenQuery(s, self.Session)
 
         self.assertTrue(len(query.query_list) == 16)
-        l = self.resource.get_corpus_joins(query.query_list[0])
         # 1    2 3     4      5    6    7      8     9
         # more * than {NONE} {NONE NONE NONE} {[nn*] NONE}
 
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["word_label"])
         self.assertListEqual(
-            l,
+            lst,
             ["COQ_WORD_1.Word AS coq_word_label_1",
              "COQ_WORD_2.Word AS coq_word_label_2",
              "COQ_WORD_3.Word AS coq_word_label_3",
@@ -906,10 +910,10 @@ class TestCorpus(unittest.TestCase):
     def test_get_required_columns_NULL_1(self):
         # tests issue #256
         query = TokenQuery("_NULL *", self.Session)
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["word_label"])
         self.assertListEqual(
-            l,
+            lst,
             ["NULL AS coq_word_label_1",
              "COQ_WORD_2.Word AS coq_word_label_2",
              "ID2 AS coquery_invisible_corpus_id",
@@ -918,10 +922,10 @@ class TestCorpus(unittest.TestCase):
     def test_get_required_columns_NULL_2(self):
         # tests issue #256
         query = TokenQuery("_NULL *", self.Session)
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["word_label", "source_label"])
         self.assertListEqual(
-            l,
+            lst,
             ["NULL AS coq_word_label_1",
              "COQ_WORD_2.Word AS coq_word_label_2",
              "COQ_SOURCE_2.Title AS coq_source_label_1",
@@ -938,14 +942,6 @@ class TestCorpus(unittest.TestCase):
              INNER JOIN Files AS COQ_SOURCE_2
              ON COQ_SOURCE_2.FileId = FileId2""")])
         self.assertListEqual(l2, [])
-
-    #def test_get_annotations(self):
-        #s = self.resource.test_get_annotations(1, "segments")
-        #print(s)
-        ##self.assertEqual(s,
-                         ##simple("""
-
-                             ##""")
 
     ### QUERY STRINGS
 
@@ -1317,7 +1313,7 @@ class TestCorpus(unittest.TestCase):
         self.assertEqual(target, value)
 
 
-class TestSuperFlat(unittest.TestCase):
+class TestSuperFlat(CoqTestCase):
     """
     This TestCase tests issues with a corpus that doesn't have a Lexicon
     table, but in which the words (and other lexical features) are stored
@@ -1336,7 +1332,7 @@ class TestSuperFlat(unittest.TestCase):
         options.cfg.limit_matches = False
         options.cfg.regexp = False
         options.cfg.query_case_sensitive = False
-        self.Session = MockOptions()
+        self.Session = argparse.Namespace()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
 
@@ -1369,29 +1365,29 @@ class TestSuperFlat(unittest.TestCase):
 
     def test_get_required_columns(self):
         query = TokenQuery("*", self.Session)
-        l = self.resource.get_required_columns(query.query_list[0],
-                                               ["corpus_word"])
-        self.assertListEqual(l, ["Word1 AS coq_corpus_word_1",
-                                 "ID1 AS coquery_invisible_corpus_id",
-                                 "FileId1 AS coquery_invisible_origin_id"])
+        lst = self.resource.get_required_columns(query.query_list[0],
+                                                 ["corpus_word"])
+        self.assertListEqual(lst, ["Word1 AS coq_corpus_word_1",
+                                   "ID1 AS coquery_invisible_corpus_id",
+                                   "FileId1 AS coquery_invisible_origin_id"])
 
     def test_linked_feature_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
-        l1, l2 = self.resource.get_feature_joins(0, [ext_feature])
+        lst1, lst2 = self.resource.get_feature_joins(0, [ext_feature])
 
         self.assertListEqual(
-            l1,
+            lst1,
             [("LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1 "
               "ON EXTCORP_LEXICON_1.Word = COQ_CORPUS_1.Word1")])
-        self.assertListEqual(l2, [])
+        self.assertListEqual(lst2, [])
 
     def test_linked_required_columns(self):
         query = TokenQuery("*", self.Session)
         ext_feature = "{}.word_data".format(self.link.get_hash())
-        l = self.resource.get_required_columns(query.query_list[0],
-                                               [ext_feature])
+        lst = self.resource.get_required_columns(query.query_list[0],
+                                                 [ext_feature])
         self.assertListEqual(
-            l,
+            lst,
             ["EXTCORP_LEXICON_1.ExtData AS db_extcorp_coq_word_data_1",
              "ID1 AS coquery_invisible_corpus_id",
              "FileId1 AS coquery_invisible_origin_id"])
@@ -1418,18 +1414,18 @@ class TestSuperFlat(unittest.TestCase):
     def test_where_conditions_1(self):
         query = TokenQuery("a* b*", self.Session)
         join_list = self.resource.get_corpus_joins(query.query_list[0])
-        l = self.resource.get_condition_list(
+        lst = self.resource.get_condition_list(
             query.query_list[0], join_list, ["corpus_word"])
         self.assertListEqual(
-            l, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'b%')"])
+            lst, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'b%')"])
 
     def test_where_conditions_2(self):
         query = TokenQuery("a* bcd*", self.Session)
         join_list = self.resource.get_corpus_joins(query.query_list[0])
-        l = self.resource.get_condition_list(
+        lst = self.resource.get_condition_list(
             query.query_list[0], join_list, ["corpus_word"])
         self.assertListEqual(
-            l, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'bcd%')", "ID2 > 0"])
+            lst, ["(Word1 LIKE 'a%')", "(Word2 LIKE 'bcd%')", "ID2 > 0"])
 
     def test_get_external_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
@@ -1443,10 +1439,10 @@ class TestSuperFlat(unittest.TestCase):
     def test_get_required_columns_NULL_1(self):
         # tests issues related to #256
         query = TokenQuery("_NULL *", self.Session)
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["corpus_word"])
         self.assertListEqual(
-            l,
+            lst,
             ["NULL AS coq_corpus_word_1",
              "Word2 AS coq_corpus_word_2",
              "ID2 AS coquery_invisible_corpus_id",
@@ -1455,10 +1451,10 @@ class TestSuperFlat(unittest.TestCase):
     def test_get_required_columns_NULL_2(self):
         # tests issues related to #256
         query = TokenQuery("_NULL *", self.Session)
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["corpus_word", "file_path"])
         self.assertListEqual(
-            l,
+            lst,
             ["NULL AS coq_corpus_word_1",
              "Word2 AS coq_corpus_word_2",
              "COQ_FILE_2.Path AS coq_file_path_1",
@@ -1471,10 +1467,10 @@ class TestSuperFlat(unittest.TestCase):
         #282).
         """
         query = TokenQuery("_NULL o*", self.Session)
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["corpus_word", "corpus_starttime"])
         self.assertListEqual(
-            l,
+            lst,
             ["NULL AS coq_corpus_word_1",
              "Word2 AS coq_corpus_word_2",
              "NULL AS coq_corpus_starttime_1",
@@ -1483,7 +1479,7 @@ class TestSuperFlat(unittest.TestCase):
              "FileId2 AS coquery_invisible_origin_id"])
 
 
-class TestCorpusWithExternal(unittest.TestCase):
+class TestCorpusWithExternal(CoqTestCase):
     external = ExternalCorpus
     resource = CorpusResource
 
@@ -1495,7 +1491,7 @@ class TestCorpusWithExternal(unittest.TestCase):
         options.cfg.regexp = False
         options.cfg.experimental = True
         options.cfg.query_case_sensitive = False
-        self.Session = MockOptions()
+        self.Session = argparse.Namespace()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
         default = MockConnection(name=DEFAULT_CONFIGURATION,
@@ -1528,22 +1524,22 @@ class TestCorpusWithExternal(unittest.TestCase):
 
     def test_linked_feature_join(self):
         ext_feature = "{}.word_data".format(self.link.get_hash())
-        l1, l2 = self.resource.get_feature_joins(0, [ext_feature])
+        lst1, lst2 = self.resource.get_feature_joins(0, [ext_feature])
         self.assertListEqual(
-            l1,
+            lst1,
             [simple("INNER JOIN Lexicon AS COQ_WORD_1 "
                     "ON COQ_WORD_1.WordId = WordId1"),
              simple("LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1 "
                     "ON EXTCORP_LEXICON_1.Word = COQ_WORD_1.Word")])
-        self.assertListEqual(l2, [])
+        self.assertListEqual(lst2, [])
 
     def test_linked_required_columns(self):
         query = TokenQuery("*", self.Session)
         ext_feature = "{}.word_data".format(self.link.get_hash())
-        l = self.resource.get_required_columns(query.query_list[0],
-                                               [ext_feature])
+        lst = self.resource.get_required_columns(query.query_list[0],
+                                                 [ext_feature])
         self.assertListEqual(
-            l,
+            lst,
             ["EXTCORP_LEXICON_1.ExtData AS db_extcorp_coq_word_data_1",
              "ID1 AS coquery_invisible_corpus_id",
              "FileId1 AS coquery_invisible_origin_id"])
@@ -1555,14 +1551,14 @@ class TestCorpusWithExternal(unittest.TestCase):
         query = TokenQuery(s, self.Session)
         self.assertTrue(len(query.query_list) == 2)
 
-        l = self.resource.get_corpus_joins(query.query_list[0])
+        lst = self.resource.get_corpus_joins(query.query_list[0])
         # 1     2    3
         # happy {to} [n*]
 
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[0], ["word_label", ext_feature])
         self.assertListEqual(
-            l,
+            lst,
             ["COQ_WORD_1.Word AS coq_word_label_1",
              "NULL AS coq_word_label_2",
              "COQ_WORD_3.Word AS coq_word_label_3",
@@ -1572,10 +1568,10 @@ class TestCorpusWithExternal(unittest.TestCase):
              "ID1 AS coquery_invisible_corpus_id",
              "FileId1 AS coquery_invisible_origin_id"])
 
-        l = self.resource.get_required_columns(
+        lst = self.resource.get_required_columns(
             query.query_list[1], ["word_label", ext_feature])
         self.assertListEqual(
-            l,
+            lst,
             ["COQ_WORD_1.Word AS coq_word_label_1",
              "COQ_WORD_2.Word AS coq_word_label_2",
              "COQ_WORD_3.Word AS coq_word_label_3",
@@ -1586,7 +1582,7 @@ class TestCorpusWithExternal(unittest.TestCase):
              "FileId1 AS coquery_invisible_origin_id"])
 
 
-class TestNGramCorpus(unittest.TestCase):
+class TestNGramCorpus(CoqTestCase):
     resource = NGramResource
 
     def setUp(self):
@@ -1599,7 +1595,7 @@ class TestNGramCorpus(unittest.TestCase):
         options.cfg.experimental = True
         options.get_configuration_type = lambda: SQL_MYSQL
         options.cfg.no_ngram = False
-        self.Session = MockOptions()
+        self.Session = argparse.Namespace()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
 
@@ -1611,9 +1607,9 @@ class TestNGramCorpus(unittest.TestCase):
     def test_corpus_joins_one_item(self):
         S = "*"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
-        self.assertListEqual(l,
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
+        self.assertListEqual(lst,
                              [simple("FROM (SELECT End AS End1,"
                                      "             FileId AS FileId1,"
                                      "             ID AS ID1,"
@@ -1624,17 +1620,17 @@ class TestNGramCorpus(unittest.TestCase):
     def test_corpus_joins_three_items(self):
         S = "* * *"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
-        self.assertListEqual(l, ["FROM CorpusNgram"])
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
+        self.assertListEqual(lst, ["FROM CorpusNgram"])
 
     def test_corpus_joins_four_items(self):
         S = "* * * *"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
-            l,
+            lst,
             ["FROM CorpusNgram",
              simple("INNER JOIN (SELECT "
                     "              End AS End4,"
@@ -1648,10 +1644,10 @@ class TestNGramCorpus(unittest.TestCase):
     def test_corpus_joins_four_items_ref(self):
         S = ". the end *"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
-            l,
+            lst,
             ["FROM CorpusNgram",
              simple("INNER JOIN (SELECT "
                     "              End AS End4,"
@@ -1665,10 +1661,10 @@ class TestNGramCorpus(unittest.TestCase):
     def test_corpus_joins_ref_outside_1(self):
         S = ". . . the"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
-            l,
+            lst,
             [simple("FROM (SELECT "
                     "              End AS End4,"
                     "              FileId AS FileId4,"
@@ -1681,10 +1677,10 @@ class TestNGramCorpus(unittest.TestCase):
     def test_corpus_joins_ref_outside_2(self):
         S = ". . . the ."
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
-            l,
+            lst,
             [simple("FROM (SELECT "
                     "              End AS End4,"
                     "              FileId AS FileId4,"
@@ -1705,10 +1701,10 @@ class TestNGramCorpus(unittest.TestCase):
     def test_corpus_joins_ref_outside_3(self):
         S = ". . . the great"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
-            l,
+            lst,
             [simple("FROM (SELECT "
                     "              End AS End5,"
                     "              FileId AS FileId5,"
@@ -1736,10 +1732,10 @@ class TestNGramCorpus(unittest.TestCase):
     def test_corpus_required_columns_initial_null_placeholder(self):
         S = "_NULL a*"
         query = TokenQuery(S, self.Session)
-        l = self.resource.get_required_columns(query.query_list[0],
-                                               ["word_label"])
+        lst = self.resource.get_required_columns(query.query_list[0],
+                                                 ["word_label"])
         self.assertListEqual(
-            l,
+            lst,
             ["NULL AS coq_word_label_1",
              "COQ_WORD_2.Word AS coq_word_label_2",
              "ID1 AS coquery_invisible_corpus_id",
@@ -1794,7 +1790,7 @@ class TestNGramCorpus(unittest.TestCase):
                          simple(target_string))
 
 
-class TestBigramCorpus(unittest.TestCase):
+class TestBigramCorpus(CoqTestCase):
     """
     This test case addresses an issue that occured with look-up tables
     consisting of bigrams.
@@ -1818,7 +1814,7 @@ class TestBigramCorpus(unittest.TestCase):
         options.cfg.experimental = True
         options.get_configuration_type = lambda: SQL_MYSQL
         options.cfg.no_ngram = False
-        self.Session = MockOptions()
+        self.Session = argparse.Namespace()
         self.Session.Resource = self.resource
         self.Session.Corpus = None
 
@@ -1827,62 +1823,62 @@ class TestBigramCorpus(unittest.TestCase):
     def test_working_1(self):
         S = "* * xxx"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
 
         target = [
             simple("FROM (SELECT "
-                "              End AS End3,"
-                "              FileId AS FileId3,"
-                "              ID AS ID3,"
-                "              Start AS Start3,"
-                "              WordId AS WordId3"
-                "       FROM   Corpus) AS COQ_CORPUS_3"),
+                   "              End AS End3,"
+                   "              FileId AS FileId3,"
+                   "              ID AS ID3,"
+                   "              Start AS Start3,"
+                   "              WordId AS WordId3"
+                   "       FROM   Corpus) AS COQ_CORPUS_3"),
             simple("INNER JOIN CorpusNgram "
-                "ON ID1 = ID3 - 2")]
+                   "ON ID1 = ID3 - 2")]
 
-        self.assertListEqual(l, target)
+        self.assertListEqual(lst, target)
 
     def test_working_2(self):
         S = "* xxx xxx"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
 
         target = [
             simple("FROM CorpusNgram"),
             simple("INNER JOIN (SELECT "
-                "              End AS End3,"
-                "              FileId AS FileId3,"
-                "              ID AS ID3,"
-                "              Start AS Start3,"
-                "              WordId AS WordId3"
-                "       FROM   Corpus) AS COQ_CORPUS_3 "
-                "ON ID3 = ID1 + 2")]
+                   "              End AS End3,"
+                   "              FileId AS FileId3,"
+                   "              ID AS ID3,"
+                   "              Start AS Start3,"
+                   "              WordId AS WordId3"
+                   "       FROM   Corpus) AS COQ_CORPUS_3 "
+                   "ON ID3 = ID1 + 2")]
 
-        self.assertListEqual(l, target)
+        self.assertListEqual(lst, target)
 
     def test_issue(self):
         S = "* *.[v*] xxx"
         query = TokenQuery(S, self.Session)
-        l = [simple(s) for s
-             in self.resource.get_corpus_joins(query.query_list[0])]
+        lst = [simple(s) for s
+               in self.resource.get_corpus_joins(query.query_list[0])]
 
         target = [
             simple("FROM CorpusNgram"),
             simple("INNER JOIN (SELECT "
-                "              End AS End3,"
-                "              FileId AS FileId3,"
-                "              ID AS ID3,"
-                "              Start AS Start3,"
-                "              WordId AS WordId3"
-                "       FROM   Corpus) AS COQ_CORPUS_3 "
-                "ON ID3 = ID1 + 2")]
+                   "              End AS End3,"
+                   "              FileId AS FileId3,"
+                   "              ID AS ID3,"
+                   "              Start AS Start3,"
+                   "              WordId AS WordId3"
+                   "       FROM   Corpus) AS COQ_CORPUS_3 "
+                   "ON ID3 = ID1 + 2")]
 
-        print("\n".join(l))
+        print("\n".join(lst))
         print("\n".join(target))
 
-        self.assertListEqual(l, target)
+        self.assertListEqual(lst, target)
 
 
 def mock_get_available_resources(configuration):
@@ -1900,10 +1896,8 @@ provided_tests = [
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

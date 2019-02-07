@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import unittest
 import argparse
 import warnings
 
@@ -12,9 +11,10 @@ from coquery.queries import TokenQuery
 from coquery.session import Session
 from coquery.defines import DEFAULT_CONFIGURATION
 from coquery.connections import SQLiteConnection
+from test.testcase import CoqTestCase, run_tests
 
 
-class TestQueries(unittest.TestCase):
+class TestQueries(CoqTestCase):
     def setUp(self):
         options.cfg = argparse.Namespace()
         options.cfg.align_quantified = True
@@ -118,12 +118,12 @@ class TestQueries(unittest.TestCase):
         df = query.insert_static_data(self.df)
         value = df.columns.tolist()
         target = ["coq_word_label_1", "coq_word_label_2", "coq_word_label_3",
-                    "coquery_invisible_corpus_id",
-                    "coquery_invisible_dummy",
-                    "coquery_invisible_query_id",
-                    "coquery_query_token_1",
-                    "coquery_query_token_2",
-                    "coquery_query_token_3"]
+                  "coquery_invisible_corpus_id",
+                  "coquery_invisible_dummy",
+                  "coquery_invisible_query_id",
+                  "coquery_query_token_1",
+                  "coquery_query_token_2",
+                  "coquery_query_token_3"]
         self.assertListEqual(sorted(value), sorted(target))
 
         self.assertListEqual(df["coquery_query_token_1"].tolist(),
@@ -136,10 +136,10 @@ class TestQueries(unittest.TestCase):
 
 provided_tests = [TestQueries]
 
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestQueries)])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

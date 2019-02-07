@@ -3,27 +3,20 @@
 
 from __future__ import print_function
 
-import unittest
-import sys
-
 from coquery.unicode import utf8
 from coquery.gui.pyqt_compat import QtCore
+from test.testcase import CoqTestCase, run_tests
 
-class TestUnicodeModuleMethods(unittest.TestCase):
+
+class TestUnicodeModuleMethods(CoqTestCase):
     def test_namespace_conflict(self):
         """
         Test whether the module name 'unicode' interferes with the built-in
         type 'unicode' in Python 2.7.
-
-        There are two tests. For Python 2.7, the return value of
-        unicode("test") is tested against the explicit unicode string u"test".
-        For Python 3.x, a call to unicode() is expected to raise a NameError,
-        as this type is not defined.
         """
-        if sys.version_info < (3, 0):
-            self.assertEqual(unicode("test"), u"test")
-        else:
-            self.assertRaises(NameError, lambda: unicode())
+        if hasattr(__builtins__, "unicode"):
+            self.assertEqual(getattr(__builtins__, "unicode")("test"),
+                             u"test")
 
     def test_utf8_type(self):
         s1 = b'unaccented text for testing'
@@ -54,7 +47,7 @@ class TestUnicodeModuleMethods(unittest.TestCase):
 
         s2a = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
         s2b = QtCore.QString(s2a)
-        s2u  = u'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
+        s2u = u'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
 
         # test content:
         self.assertEqual(utf8(s1a), s1u)
@@ -63,12 +56,13 @@ class TestUnicodeModuleMethods(unittest.TestCase):
         self.assertEqual(utf8(s2a), s2u)
         self.assertEqual(utf8(s2b), s2u)
 
-def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestUnicodeModuleMethods),
-        ])
 
-    unittest.TextTestRunner().run(suite)
+provided_tests = [TestUnicodeModuleMethods]
+
+
+def main():
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()
