@@ -18,14 +18,6 @@ import sys
 import os
 import glob
 
-from .. import options
-from coquery.unicode import utf8
-from coquery.defines import (PALETTE_BW,
-                             msg_visualization_error,
-                             msg_visualization_module_error)
-
-from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window, tr)
-
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
@@ -37,13 +29,22 @@ from matplotlib.backends.backend_qt5 import SubplotToolQt
 import pandas as pd
 import seaborn as sns
 
-from ..visualizer.visualizer import get_grid_layout
+from coquery import options
+from coquery.unicode import utf8
+from coquery.defines import (PALETTE_BW,
+                             msg_visualization_error,
+                             msg_visualization_module_error)
+
+from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window, tr)
+
+from coquery.gui.ui.visualizationDesignerUi import Ui_VisualizationDesigner
+from coquery.gui.threads import CoqThread
+from coquery.gui.app import get_icon
+from coquery.visualizer.visualizer import get_grid_layout
 from coquery.visualizer.colorizer import (
     COQ_SINGLE, COQ_CUSTOM,
     Colorizer, ColorizeByFactor, ColorizeByNum)
-from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
-from .threads import CoqThread
-from .app import get_icon
+
 
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
@@ -63,14 +64,15 @@ def uniques(S):
 
 
 def deleteItemsOfLayout(layout):
-     if layout is not None:
-         while layout.count():
-             item = layout.takeAt(0)
-             widget = item.widget()
-             if widget is not None:
-                 widget.setParent(None)
-             else:
-                 deleteItemsOfLayout(item.layout())
+    if layout is not None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+            else:
+                deleteItemsOfLayout(item.layout())
+
 
 class MyTool(SubplotToolQt):
     def __init__(self, *args, **kwargs):
@@ -516,7 +518,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
             self.change_legend)
 
         # Hook up figure plotting.
-        for signal in (# (1) placing a feature in a tray
+        for signal in (
+                       # (1) placing a feature in a tray
                        self.ui.tray_data_x.featureChanged,
                        self.ui.tray_data_y.featureChanged,
                        self.ui.tray_data_z.featureChanged,
@@ -536,7 +539,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
                        # (4) selecting a different figure type
                        self.ui.list_figures.currentItemChanged):
 
-                       # (5)
             signal.connect(self.plot_figure)
 
         self.ui.color_test_area.itemPressed.connect(self.switch_stylesheet)
@@ -680,7 +682,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         data_x = self.ui.tray_data_x.data()
         data_y = self.ui.tray_data_y.data()
-        data_z = self.ui.tray_data_z.data()
 
         hide_unavailable = self.ui.check_hide_unavailable.isChecked()
 
@@ -691,7 +692,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         for label, icon, vis_class in self.figure_types:
             item = self.get_figure_item(label, icon, vis_class)
             visualizer = VisualizationDesigner.visualizers[item.text()]
-            if (visualizer.validate_data(data_x, data_y, data_z,
+            if (visualizer.validate_data(data_x, data_y,
                                          self.df, self.session) and
                     not ((data_x or data_y) and (data_x == data_y))):
                 item.setFlags(item.flags() | QtCore.Qt.ItemIsEnabled)
@@ -946,7 +947,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         return d
 
-    def get_colorizer(self, x, y, z, df, palette, color_number, vis, **kwargs):
+    def get_colorizer(self, x, y, z, df, palette, vis, **kwargs):
         z = z or vis.get_subordinated(x=x, y=y)
         if z:
             if df[z].dtype == object:
@@ -1132,7 +1133,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         else:
             self.vis.hide_legend(self.grid)
 
-
     def change_legend(self):
         print("change_legend()")
         if self.vis:
@@ -1163,7 +1163,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 ("data_z", gui["z"]),
                 ("layout_columns", gui["columns"]),
                 ("layout_rows", gui["rows"]),
-                ("figure_type", gui["figure_type"]), # CHECK
+                ("figure_type", gui["figure_type"]),  # CHECK
                 ("figure_font", gui["figure_font"]),
                 ("size_title", gui["size_title"]),
                 ("size_x_label", gui["size_xlab"]),
@@ -1204,8 +1204,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
         self.data_x = settings.value("visualizationdesinger_data_x", None)
         self.data_y = settings.value("visualizationdesigner_data_y", None)
-        self.layout_columns = settings.value("visualizationdesigner_layout_columns", None)
-        self.layout_rows = settings.value("visualizationdesigner_layout_rows", None)
+        self.layout_columns = settings.value(
+            "visualizationdesigner_layout_columns", None)
+        self.layout_rows = settings.value(
+            "visualizationdesigner_layout_rows", None)
         val = settings.value("visualizationdesigner_show_legend", "true")
         self.ui.check_show_legend.setChecked(val == "true")
 
@@ -1219,15 +1221,23 @@ class VisualizationDesigner(QtWidgets.QDialog):
             index = self.ui.combo_font_figure.findText(family)
         self.ui.combo_font_figure.setCurrentIndex(index)
 
-        self.legend_columns = settings.value("visualizationdesigner_legend_columns", 1)
+        self.legend_columns = settings.value(
+            "visualizationdesigner_legend_columns", 1)
 
-        self.ui.spin_size_title.setValue(get_or_set_size("visualizationdesigner_size_title", 1.2))
-        self.ui.spin_size_x_label.setValue(get_or_set_size("visualizationdesigner_size_x_label"))
-        self.ui.spin_size_y_label.setValue(get_or_set_size("visualizationdesigner_size_y_label"))
-        self.ui.spin_size_legend.setValue(get_or_set_size("visualizationdesigner_size_legend"))
-        self.ui.spin_size_x_ticklabels.setValue(get_or_set_size("visualizationdesigner_size_x_ticklabels", 0.8))
-        self.ui.spin_size_y_ticklabels.setValue(get_or_set_size("visualizationdesigner_size_y_ticklabels", 0.8))
-        self.ui.spin_size_legend_entries.setValue(get_or_set_size("visualizationdesigner_size_legend_entries", 0.8))
+        self.ui.spin_size_title.setValue(
+            get_or_set_size("visualizationdesigner_size_title", 1.2))
+        self.ui.spin_size_x_label.setValue(
+            get_or_set_size("visualizationdesigner_size_x_label"))
+        self.ui.spin_size_y_label.setValue(
+            get_or_set_size("visualizationdesigner_size_y_label"))
+        self.ui.spin_size_legend.setValue(
+            get_or_set_size("visualizationdesigner_size_legend"))
+        self.ui.spin_size_x_ticklabels.setValue(
+            get_or_set_size("visualizationdesigner_size_x_ticklabels", 0.8))
+        self.ui.spin_size_y_ticklabels.setValue(
+            get_or_set_size("visualizationdesigner_size_y_ticklabels", 0.8))
+        self.ui.spin_size_legend_entries.setValue(
+            get_or_set_size("visualizationdesigner_size_legend_entries", 0.8))
 
         val = settings.value("visualizationdesigner_reverse_palette", "true")
         self._reversed = (val == "true")

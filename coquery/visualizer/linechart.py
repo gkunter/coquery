@@ -2,7 +2,7 @@
 """
 linechart.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -10,15 +10,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from coquery.visualizer import visualizer as vis
-import math
 import seaborn as sns
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import logging
 
-from coquery.errors import *
-from coquery.gui.pyqt_compat import QtWidgets
 
 class LineChart(vis.Visualizer):
     name = "Line plot"
@@ -31,8 +25,6 @@ class LineChart(vis.Visualizer):
         x = kwargs.get("x")
         y = kwargs.get("y")
         z = kwargs.get("z")
-        levels_x = kwargs.get("levels_x")
-        levels_y = kwargs.get("levels_y")
         levels_z = kwargs.get("levels_z")
 
         category = None
@@ -79,11 +71,10 @@ class LineChart(vis.Visualizer):
             self.legend_title = z
             self.legend_levels = levels_z
 
-
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+            data_x, data_y, df, session)
 
         if len(num) != 1:
             return False

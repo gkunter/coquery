@@ -2,7 +2,7 @@
 """
 barcodeplot.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -179,9 +179,9 @@ class BarcodePlot(vis.Visualizer):
         return None
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+            data_x, data_y, df, session)
 
         if len(df) == 0:
             return False

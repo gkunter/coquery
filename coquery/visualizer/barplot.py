@@ -2,7 +2,7 @@
 """
 barplot.py is part of Coquery.
 
-Copyright (c) 2016–2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016–2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -211,9 +211,9 @@ class BarPlot(vis.Visualizer):
                      (self.df[self.x].dtype != self.df[self.y].dtype)))
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+            data_x, data_y, df, session)
 
         if len(num) > 1 or len(cat) == 0:
             return False

@@ -100,9 +100,9 @@ class BoxPlot(vis.Visualizer):
         plt.gcf().canvas.draw()
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+            data_x, data_y, df, session)
 
         if len(num) != 1:
             return False

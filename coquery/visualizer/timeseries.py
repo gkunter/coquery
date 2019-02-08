@@ -2,7 +2,7 @@
 """
 timeseries.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -157,7 +157,7 @@ class TimeSeries(vis.Visualizer):
             df.plot.line(*args, **kwargs)
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         """
         Validate the parameters.
 
@@ -165,7 +165,7 @@ class TimeSeries(vis.Visualizer):
         y is either a time feature or a numeric variable.
         """
         cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+            data_x, data_y, df, session)
 
         try:
             time_features = session.Resource.time_features

@@ -2,7 +2,7 @@
 """
 scatterplot.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,7 +13,7 @@ from coquery.visualizer import visualizer as vis
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.spatial.distance import pdist, squareform
+
 
 sequential_palettes = ["Blues", "Reds", "Greens", "Oranges", "Purples",
                        "BuGn", "BuPu", "RdPu", "OrRd", "YlGn",
@@ -57,8 +57,7 @@ class ScatterPlot(vis.Visualizer):
             else:
                 raise RuntimeError("Wrong data types for scatter plots")
 
-            cols = sns.color_palette(kwargs["palette"],
-                                        n_colors=len(levels))
+            cols = sns.color_palette(kwargs["palette"], n_colors=len(levels))
             for i, val in enumerate(levels):
                 df = data[data[category] == val]
                 self._xlab = num_x
@@ -108,7 +107,6 @@ class ScatterPlot(vis.Visualizer):
                                     y=pd.Series(range(len(df))),
                                     color=cols[i],
                                     fit_reg=self.fit_reg)
-                                    #ax=kwargs.get("ax", plt.gca()))
                         self._xlab = num_x
                         self._ylab = self._default
                     else:
@@ -116,7 +114,6 @@ class ScatterPlot(vis.Visualizer):
                                     y=df[num_y],
                                     color=cols[i],
                                     fit_reg=self.fit_reg)
-                                    #ax=kwargs.get("ax", plt.gca()))
                         self._xlab = self._default
                         self._ylab = num_y
             else:
@@ -193,14 +190,15 @@ class ScatterPlot(vis.Visualizer):
             #print(e)
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+            data_x, data_y, df, session)
 
         if len(num) > 2 or len(num) == 0 or len(cat) > 1:
             return False
         else:
             return True
+
 
 class RegressionPlot(ScatterPlot):
     name = "Regression plot"

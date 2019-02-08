@@ -2,7 +2,7 @@
 """
 treemap.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,11 +12,15 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import print_function
 
+# if squarify is not available, the TreeMap visualization will not be included
+# in provided_visualizations (see end of this file)
 try:
     import squarify
 except ImportError:
-    # the missing module is handled at the end of this script
-    pass
+    squarify_available = False
+else:
+    squarify_available = True
+
 
 from matplotlib.patches import Rectangle
 from matplotlib import pyplot as plt
@@ -26,7 +30,6 @@ from coquery.visualizer import visualizer as vis
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByFreq, ColorizeByNum)
 
-from coquery import options
 from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
 
@@ -282,9 +285,9 @@ class TreeMap(vis.Visualizer):
         return ax
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
-            data_x, data_y, data_z, df, session)
+            data_x, data_y, df, session)
 
         if len(num) > 1 or len(cat) == 0:
             return False
@@ -295,7 +298,7 @@ class TreeMap(vis.Visualizer):
         return self.z
 
 
-if "squarify" in globals():
+if squarify_available:
     provided_visualizations = [TreeMap]
 else:
     provided_visualizations = []

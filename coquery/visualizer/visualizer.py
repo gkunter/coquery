@@ -2,7 +2,7 @@
 """
 visualizer.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -201,7 +201,8 @@ class Visualizer(QtCore.QObject):
 
         return (legend_title, legend_levels, legend_palette)
 
-    def add_legend(self, grid, title=None, palette=None, levels=None, loc="lower left", **kwargs):
+    def add_legend(self, grid, title=None, palette=None, levels=None,
+                   loc="lower left", **kwargs):
         """
         Add a legend to the figure, using the current option settings.
         """
@@ -370,7 +371,7 @@ class Visualizer(QtCore.QObject):
             return None
 
     @staticmethod
-    def validate_data(data_x, data_y, data_z, df, session):
+    def validate_data(data_x, data_y, df, session):
         """
         Validate the data types.
 
@@ -407,12 +408,12 @@ class Visualizer(QtCore.QObject):
                 len(df) > 0)
 
     @staticmethod
-    def count_parameters(data_x, data_y, data_z, df, session):
+    def count_parameters(data_x, data_y, df, session):
         num_cols = df.select_dtypes(include=[pd.np.number]).columns
         cat_cols = df.select_dtypes(exclude=[pd.np.number]).columns
         categorical = [x for x in (data_x, data_y) if x in cat_cols]
         numeric = [x for x in (data_x, data_y) if x in num_cols]
-        empty = [x for x in (data_x, data_y, data_z) if x is None]
+        empty = [x for x in (data_x, data_y) if x is None]
 
         return categorical, numeric, empty
 
@@ -437,7 +438,8 @@ class Visualizer(QtCore.QObject):
         return pal
 
     @staticmethod
-    def get_colorizer(data, palette, color_number, z, levels_z=None, range_z=None):
+    def get_colorizer(data, palette, color_number,
+                      z, levels_z=None, range_z=None):
         if z:
             if data[z].dtype == object:
                 c = ColorizeByFactor(palette, color_number, levels_z)
@@ -460,10 +462,22 @@ class Visualizer(QtCore.QObject):
         specified, and to return Y if both are specified.
 
         This default behavior can be changed by descendant classes. The
-        method can also return None as a valie. In this case, the
+        method can also return None as a value. In this case, the
         visualization designer will select a colorizer class that ignores the
         data variables. Normally, this will result in a colorizer that cycles
         through the palette values.
+
+        Parameters
+        ----------
+        x, y : str or None
+            The names of columns that may be considered when determining which
+            element receives which color.
+
+        Returns
+        -------
+        z : str or None
+            The column name that should be used to determine the colorizers.
+            Can be None.
         """
         if x and y:
             return y
