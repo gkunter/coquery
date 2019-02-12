@@ -113,13 +113,15 @@ class Collapser(object):
 
     @classmethod
     def collapse(cls, word_list):
+        if not isinstance(word_list, pd.Series):
+            word_list = pd.Series(word_list)
         # return None if the word list contains only None:
-        if word_list.count(None) == len(word_list):
-            return None
+        if word_list.isnull().sum() == len(word_list):
+            val = None
         else:
             lst = cls._collapse_list(word_list)
-            return utf8("").join(lst).strip()
-
+            val = utf8("").join(lst).strip()
+        return val
 
 class EnglishCollapser(Collapser):
     clitics = {"s", "re", "m", "ve", "d", "ll", "t"}
