@@ -2,7 +2,7 @@
 """
 contextview.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -24,8 +24,9 @@ from coquery.unicode import utf8
 from . import classes
 from .threads import CoqThread
 from .widgets.coqstaticbox import CoqStaticBox
-from .pyqt_compat import QtCore, QtWidgets, QtGui
+from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from .ui.contextViewerUi import Ui_ContextView
+from coquery.gui.app import get_icon
 
 
 class ContextView(QtWidgets.QWidget):
@@ -42,8 +43,12 @@ class ContextView(QtWidgets.QWidget):
         self.context_thread = QtCore.QThread(self)
         self.rescheduled = False
 
+        self.meta_data = get_toplevel_window().table_model.invisible_content
+
         self.ui = Ui_ContextView()
         self.ui.setupUi(self)
+        self.ui.button_prev.setIcon(get_icon("Circled Chevron Left"))
+        self.ui.button_next.setIcon(get_icon("Circled Chevron Right"))
         self.ui.progress_bar.hide()
 
         if icon:
@@ -52,30 +57,16 @@ class ContextView(QtWidgets.QWidget):
         self.ui.slider_context_width.setTracking(True)
 
         # Add clickable header
-        self.ui.button_ids = classes.CoqDetailBox(
-            "{} – Token ID {}".format(self.resource.name, token_id))
-        self.ui.button_ids.clicked.connect(
-            lambda: options.settings.setValue(
-                "contextviewer_details",
-                utf8(not self.ui.button_ids.isExpanded())))
-        self.ui.verticalLayout_3.insertWidget(0, self.ui.button_ids)
-        self.ui.form_information = QtWidgets.QFormLayout(
+        self.ui.button_ids = classes.CoqDetailBox()
+        self.ui.button_ids.clicked.connect(self.remember_state)
+        self.ui.layout_main.insertWidget(0, self.ui.button_ids)
+        self.ui.layout_meta = QtWidgets.QFormLayout(
             self.ui.button_ids.box)
 
         self.audio = None
         if not self.resource.audio_features:
             self.ui.tab_widget.removeTab(1)
             self.ui.tab_widget.tabBar().hide()
-
-        L = self.resource.get_origin_data(token_id)
-        for table, fields in sorted(L):
-            self.add_source_label(table)
-            for label in sorted(fields.keys()):
-                if label not in self.resource.audio_features:
-                    self.add_source_label(label, fields[label])
-                else:
-                    from coquery import sound
-                    self.audio = sound.Sound(fields[label])
 
         words = options.settings.value("contextviewer_words", None)
         if words is not None:
@@ -87,18 +78,23 @@ class ContextView(QtWidgets.QWidget):
 
         self.ui.spin_context_width.valueChanged.connect(self.spin_changed)
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
+        self.ui.button_next.clicked.connect(self.next_context)
+        self.ui.button_prev.clicked.connect(self.previous_context)
 
         self.get_context()
+        self.set_meta_data()
 
         try:
             self.resize(options.settings.value("contextviewer_size"))
         except TypeError:
             pass
+
         try:
             self.ui.slider_context_width(
                 options.settings.value("contextviewer_words"))
         except TypeError:
             pass
+
         val = options.settings.value("contextviewer_details") != "False"
         if val:
             self.ui.button_ids.setExpanded(val)
@@ -107,6 +103,32 @@ class ContextView(QtWidgets.QWidget):
 
         self.ui.context_area.setStyleSheet(
             self.corpus.get_context_stylesheet())
+
+    def set_meta_data(self):
+        s = "{} – Token ID {}".format(self.resource.name, self.token_id)
+        self.ui.button_ids.setText(s)
+        self.ui.button_ids.setAlternativeText(s)
+
+        # clear meta information layout:
+        for i in reversed(range(self.ui.layout_meta.count())):
+            self.ui.layout_meta.itemAt(i).widget().setParent(None)
+
+        # fill meta information layout:
+        lst = self.resource.get_origin_data(self.token_id)
+        for table, fields in sorted(lst):
+            self.add_source_label(table)
+            for label in sorted(fields.keys()):
+                if label not in self.resource.audio_features:
+                    self.add_source_label(label, fields[label])
+                else:
+                    from coquery import sound
+                    self.audio = sound.Sound(fields[label])
+
+        self.ui.button_ids.update()
+
+    def remember_state(self):
+        options.settings.setValue("contextviewer_details",
+                                  utf8(not self.ui.button_ids.isExpanded()))
 
     def set_view(self, context):
         if context:
@@ -123,7 +145,7 @@ class ContextView(QtWidgets.QWidget):
         """
         Add the label 'name' with value 'content' to the context viewer.
         """
-        layout_row = self.ui.form_information.count()
+        layout_row = self.ui.layout_meta.count()
         self.ui.source_name = QtWidgets.QLabel(self)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
                                            QtWidgets.QSizePolicy.Minimum)
@@ -140,9 +162,9 @@ class ContextView(QtWidgets.QWidget):
             QtCore.Qt.LinksAccessibleByMouse |
             QtCore.Qt.TextSelectableByKeyboard |
             QtCore.Qt.TextSelectableByMouse)
-        self.ui.form_information.setWidget(layout_row,
-                                           QtWidgets.QFormLayout.LabelRole,
-                                           self.ui.source_name)
+        self.ui.layout_meta.setWidget(layout_row,
+                                      QtWidgets.QFormLayout.LabelRole,
+                                      self.ui.source_name)
         self.ui.source_content = QtWidgets.QLabel(self)
         self.ui.source_content.setWordWrap(True)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
@@ -159,9 +181,9 @@ class ContextView(QtWidgets.QWidget):
             QtCore.Qt.LinksAccessibleByMouse |
             QtCore.Qt.TextSelectableByKeyboard |
             QtCore.Qt.TextSelectableByMouse)
-        self.ui.form_information.setWidget(layout_row,
-                                           QtWidgets.QFormLayout.FieldRole,
-                                           self.ui.source_content)
+        self.ui.layout_meta.setWidget(layout_row,
+                                      QtWidgets.QFormLayout.FieldRole,
+                                      self.ui.source_content)
 
         if name:
             if content is None:
@@ -203,6 +225,7 @@ class ContextView(QtWidgets.QWidget):
         if hasattr(self, "context_thread"):
             self.context_thread.quit()
         self.next_value = self.ui.slider_context_width.value()
+
         if not self.context_thread.isRunning():
             self.context_thread = CoqThread(self.retrieve_context,
                                             next_value=self.next_value,
@@ -218,6 +241,42 @@ class ContextView(QtWidgets.QWidget):
                 self.context_thread.taskFinished.disconnect(
                     self.finalize_context)
                 self.context_thread.taskFinished.connect(self.get_context)
+
+        has_prev = self.lookup_row(self.token_id, self.meta_data, -1)
+        has_next = self.lookup_row(self.token_id, self.meta_data, +1)
+        self.ui.button_prev.setEnabled(has_prev is not None)
+        self.ui.button_next.setEnabled(has_next is not None)
+
+    @classmethod
+    def lookup_row(cls, token_id, df, offset):
+        """
+        Look up that row that precedes or follows the row specified by token_id
+        in the given data frame by the stated offset.
+        """
+        row = df[df["coquery_invisible_corpus_id"] == token_id]
+        try:
+            return df.loc[row.index + offset]
+        except KeyError:
+            return None
+
+    def change_context(self, row):
+        """
+        Changes the current context to the given row from the results table.
+        """
+        if row is not None:
+            self.token_id = int(row["coquery_invisible_corpus_id"])
+            self.source_id = int(row["coquery_invisible_origin_id"])
+            self.token_width = int(row["coquery_invisible_number_of_tokens"])
+            self.get_context()
+            self.set_meta_data()
+
+    def previous_context(self):
+        row = self.lookup_row(self.token_id, self.meta_data, -1)
+        self.change_context(row)
+
+    def next_context(self):
+        row = self.lookup_row(self.token_id, self.meta_data, +1)
+        self.change_context(row)
 
     def retrieve_context(self, next_value):
         try:

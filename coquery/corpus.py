@@ -2686,8 +2686,12 @@ class CorpusClass(object):
         context = pd.np.hstack(df.apply(lambda x: parse_row(x, tags),
                                         axis="columns"))
         s = collapse_words(context, self.resource.get_language())
-        s = s.replace("</p>", "</p>\n")
-        s = s.replace("<br/>", "<br/>\n")
+        if s is None:
+            s = ""
+        else:
+            s = s.replace("</p>", "</p>\n")
+            s = s.replace("<br/>", "<br/>\n")
+
         audio = self.resource.audio_features != []
         start_time = None
         end_time = None
