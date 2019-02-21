@@ -86,6 +86,51 @@ class CoqTestCase(unittest.TestCase):
             raise AssertionError(msg.format(d1=d1, d2=d2))
 
 
+class CoqQtTestCase(CoqTestCase):
+    """
+    Adopted from https://stackoverflow.com/a/48128768/5215507 (user zalavari)
+    """
+    def setUp(self):
+        from coquery.gui.pyqt_compat import QtWidgets
+
+        self.app = (QtWidgets.QApplication.instance() or
+                    QtWidgets.QApplication([]))
+
+    def tearDown(self):
+        del self.app
+
+    def assertSignalReceived(self, signal, *args):
+        return SignalReceiver(self, signal, *args)
+
+
+class SignalReceiver(object):
+    """
+    Class that can be used to test whether a signal was correctly emitted.
+
+    Adopted from https://stackoverflow.com/a/48128768/5215507 (user zalavari)
+    """
+    def __init__(self, test, signal, *args):
+        self.test = test
+        self.signal = signal
+        self.called = False
+        self.expected_args = args
+
+    def slot(self, *args):
+        self.actual_args = args
+        self.called = True
+
+    def __enter__(self):
+        self.signal.connect(self.slot)
+
+    def __exit__(self, e, msg, traceback):
+        if e:
+            raise e(msg)
+        self.test.assertTrue(self.called, "Signal not called!")
+        self.test.assertEqual(self.expected_args, self.actual_args, """Signal arguments don't match!
+            actual:   {}
+            expected: {}""".format(self.actual_args, self.expected_args))
+
+
 def run_tests(test_list):
     """
     This function is used to call the test cases from the list `test_list`.
