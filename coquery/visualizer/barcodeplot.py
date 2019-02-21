@@ -122,7 +122,8 @@ class BarcodePlot(vis.Visualizer):
 
     def plot_facet(self, **kwargs):
         self.horizontal = kwargs["horizontal"]
-        ax = self.draw_tokens(kwargs["x"], kwargs["y"], order=kwargs["order"])
+        ax = self.draw_tokens(kwargs["x"], kwargs["y"], order=kwargs["order"],
+                              rug=kwargs.get("rug"))
         return ax.collections
 
     def get_colors(self, colorizer, elements, **kwargs):
