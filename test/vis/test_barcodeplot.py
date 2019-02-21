@@ -13,14 +13,15 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from coquery.gui.pyqt_compat import QtCore, QtWidgets
 from coquery.visualizer.barcodeplot import BarcodePlot
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByNum)
 
-from test.testcase import CoqTestCase
+from test.testcase import CoqTestCase, CoqQtTestCase
 
 
-class TestBarcodePlot(CoqTestCase):
+class _MetaTestCase(CoqTestCase):
     ID_COLUMN = "ID"
 
     def setUp(self):
@@ -28,6 +29,8 @@ class TestBarcodePlot(CoqTestCase):
         self.df = self.get_default_df()
         plt.gca().clear()
 
+
+class TestBarcodePlot(_MetaTestCase):
     def test_horizontal_no_subgroup(self):
         """
         Basic test: only a single numerical variable along the `X` axis
@@ -235,14 +238,55 @@ class TestBarcodePlot(CoqTestCase):
              in self.df.sort_values(by=self.vis._id_column)[numeric]])]
         pd.np.testing.assert_array_equal(colors, target)
 
+    def test_validate_data(self):
+        valid1 = self.vis.validate_data(None, None, self.df, None)
+        valid2 = self.vis.validate_data("X", None, self.df, None)
+        valid3 = self.vis.validate_data(None, "X", self.df, None)
 
-class TestBarcodePlotRandomized(TestBarcodePlot):
+        self.assertTrue(valid1)
+        self.assertTrue(valid2)
+        self.assertTrue(valid3)
+
+        invalid1 = self.vis.validate_data("NUM", None, self.df, None)
+        invalid2 = self.vis.validate_data(None, "NUM", self.df, None)
+        invalid3 = self.vis.validate_data("X", "NUM", self.df, None)
+        invalid4 = self.vis.validate_data("NUM", "X", self.df, None)
+        invalid5 = self.vis.validate_data("X", "Y", self.df, None)
+        invalid6 = self.vis.validate_data("NUM", "NUM", self.df, None)
+
+        self.assertFalse(invalid1)
+        self.assertFalse(invalid2)
+        self.assertFalse(invalid3)
+        self.assertFalse(invalid4)
+        self.assertFalse(invalid5)
+        self.assertFalse(invalid6)
+
+
+class TestBarcodePlotWidgets(CoqQtTestCase):
+    def setUp(self):
+        super(TestBarcodePlotWidgets, self).setUp()
+        self.vis = BarcodePlot(None, None)
+        self.df = self.get_default_df()
+
+    def test_custom_widgets(self):
+        tup = self.vis.get_custom_widgets()
+        widgets, activate_signals, update_signals = tup
+        expected = [QtWidgets.QCheckBox()]
+
+        self.assertListEqual([type(x) for x in widgets],
+                             [type(y) for y in expected])
+
+        self.assertTrue(len(activate_signals) == 1)
+        self.assertListEqual(update_signals, [])
+
+
+class TestBarcodePlotRandomized(_MetaTestCase):
     def setUp(self):
         super(TestBarcodePlotRandomized, self).setUp()
         self.df = self.df.sample(frac=1).reset_index(drop=True)
 
 
-class TestBarcodePlotAxisArguments(TestBarcodePlot):
+class TestBarcodePlotAxisArguments(_MetaTestCase):
     def test_horizontal_no_subgroup(self):
         """
         Basic test: only a single numerical variable along the `X` axis
@@ -300,6 +344,7 @@ class TestBarcodePlotAxisArguments(TestBarcodePlot):
 
 provided_tests = (
     TestBarcodePlot,
+    TestBarcodePlotWidgets,
     TestBarcodePlotRandomized,
     TestBarcodePlotAxisArguments,
     )
