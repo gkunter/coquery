@@ -33,7 +33,7 @@ class LinkSelect(QtWidgets.QDialog):
         self.from_text = utf8(self.ui.label_from.text())
         self.from_corpus_text = utf8(self.ui.label_from_corpus.text())
         self.to_text = utf8(self.ui.label_to.text())
-        self.explain_text = utf8(self.ui.label_explain.text())
+        #self.explain_text = utf8(self.ui.label_explain.text())
 
         self.insert_data()
         self.ui.combo_corpus.currentIndexChanged.connect(
@@ -75,7 +75,7 @@ class LinkSelect(QtWidgets.QDialog):
 
     def set_to_labels(self, **kwargs):
         self.ui.label_to.setText(self.to_text.format(**kwargs))
-        self.ui.label_explain.setText(self.explain_text.format(**kwargs))
+        #self.ui.label_explain.setText(self.explain_text.format(**kwargs))
 
     def set_from_labels(self, **kwargs):
         self.ui.label_from.setText(self.from_text.format(**kwargs))
@@ -88,10 +88,13 @@ class LinkSelect(QtWidgets.QDialog):
     def exec_(self, *args, **kwargs):
         result = super(LinkSelect, self).exec_(*args, **kwargs)
         if result == self.Accepted:
+            join_type = ("LEFT JOIN" if self.ui.check_left_join.checkState()
+                         else "INNER JOIN")
             kwargs = {
                 "res_from": self.corpus_name,
                 "res_to": utf8(self.ui.combo_corpus.currentText()),
-                "case": bool(self.ui.checkBox.checkState())}
+                "case": bool(self.ui.checkBox.checkState()),
+                "join": join_type}
             from_item = self.ui.tree_resource.currentItem()
             try:
                 kwargs["rc_from"] = utf8(from_item.objectName())

@@ -1507,7 +1507,13 @@ class TestCorpusWithExternal(CoqTestCase):
                         self.resource.name, "word_label",
                         self.external.name, "word_label",
                         join="LEFT JOIN")
-        options.cfg.table_links = {DEFAULT_CONFIGURATION: [self.link]}
+        self.inner_link = coquery.links.Link(
+                        self.resource.name, "word_label",
+                        self.external.name, "word_label",
+                        join="INNER JOIN")
+
+        options.cfg.table_links = {
+            DEFAULT_CONFIGURATION: [self.link, self.inner_link]}
 
     def test_is_lexical(self):
         self.assertTrue(self.resource.is_lexical("word_label"))
@@ -1520,6 +1526,14 @@ class TestCorpusWithExternal(CoqTestCase):
         self.assertEqual(s,
                          simple("""
                              LEFT JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1
+                             ON EXTCORP_LEXICON_1.Word = COQ_WORD_1.Word"""))
+
+    def test_get_external_inner_join(self):
+        ext_feature = "{}.word_data".format(self.inner_link.get_hash())
+        s = self.resource.get_external_join(0, ext_feature)
+        self.assertEqual(s,
+                         simple("""
+                             INNER JOIN extcorp.Lexicon AS EXTCORP_LEXICON_1
                              ON EXTCORP_LEXICON_1.Word = COQ_WORD_1.Word"""))
 
     def test_linked_feature_join(self):
