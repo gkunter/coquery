@@ -2,7 +2,7 @@
 """
 editfilter.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -16,10 +16,15 @@ import pandas as pd
 
 from coquery.defines import (
     FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL,
+    # The following constants are not explicitly used in the code, but still
+    # need to be imported because the CoqEditFilters class uses some black
+    # magic to match these constants with elements in the GUI. This is really
+    # not nice.
+    OP_EQ, OP_NE, OP_GT, OP_GE, OP_LT, OP_LE, OP_MATCH, OP_NMATCH,
     OPERATOR_LABELS,
-    OP_EQ, OP_NE, OP_GT, OP_GE, OP_LT, OP_LE, OP_MATCH, OP_NMATCH)
+    )
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
+from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window, STYLE_WARN
 from .classes import CoqTableItem
 from coquery.filters import Filter
 
@@ -59,6 +64,8 @@ class CoqEditFilters(QtWidgets.QWidget):
         self.ui.button_remove.setIcon(
             get_toplevel_window().get_icon("Minus"))
 
+        # just make sure that the constants are really imported from defines.py
+        assert "OP_GE" in globals()
         operator_dict = {x: globals()[x] for x in globals()
                          if x.startswith("OP_")}
         radio_widgets = [x for x in dir(self.ui)
@@ -194,10 +201,11 @@ class CoqEditFilters(QtWidgets.QWidget):
                 filt.get_filter_string()
         except Exception as e:
             print(e)
-            self.ui.button_add.setDisabled(True)
+            self.ui.edit_value.setStyleSheet(STYLE_WARN)
             return
         else:
-            self.ui.button_add.setDisabled(False)
+            self.listChanged.emit()
+            self.ui.edit_value.setStyleSheet(None)
 
         row = self.ui.table_filters.currentRow()
         if row == self.ui.table_filters.rowCount() - 1:
