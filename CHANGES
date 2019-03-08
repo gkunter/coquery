@@ -8,10 +8,11 @@ Interface
 * Revised connection dialog
 * Use new class model for database connections
 * The database paths of non-MySQL connections can now be changed
-* Add an SQL query viewer
+* You can now browse through the contexts of the matches in the context viewer
 
 Queries
 * Can restrict query files to a number of rows
+* Add an SQL query viewer
 
 Corpora
 * Use new file option dialog for more flexible metadata files
@@ -42,7 +43,7 @@ Data management
 Functions
 * Errors in functions don't cause the whole function list to fail anymore
 * More flexible handling of function arguments
-* New functions: NOT, IF, IFANY, TRUE, FALSE, EMPTY, MISSING, Percentile,
+* New functions: NOT, IF, TRUE, FALSE, EMPTY, MISSING, Percentile,
   Log, Replace
 * Mathematical functions can now be applied column-wise
 
@@ -71,9 +72,7 @@ coquery/errors.py                                146     65    55%
 coquery/filters.py                               125     22    82%
 coquery/functionlist.py                           86     10    88%
 coquery/functions.py                             840    306    64%
-coquery/general.py                               256    122    52%
-coquery/gui/classes.py                          1092    868    21%
-coquery/gui/pyqt_compat.py                        44     22    50%
+coquery/general.py                               260     91    65%
 coquery/installer/coq_install_celex.py           258     74    71%
 coquery/installer/coq_install_switchboard.py     221     70    68%
 coquery/links.py                                  41     13    68%
@@ -85,12 +84,17 @@ coquery/sqlwrap.py                               255    215    16%
 coquery/tables.py                                261     90    66%
 coquery/tokens.py                                306     24    92%
 coquery/unicode.py                                19     10    47%
-coquery/visualizer/barcodeplot.py                227    116    49%
-coquery/visualizer/barplot.py                    212     94    56%
-coquery/visualizer/bubbleplot.py                 184     46    75%
-coquery/visualizer/colorizer.py                  117     13    89%
+coquery/visualizer/barcodeplot.py                123     35    72%
+coquery/visualizer/barplot.py                    227    107    53%
+coquery/visualizer/beeswarmplot.py                18      1    94%
+coquery/visualizer/boxplot.py                     73     16    78%
+coquery/visualizer/bubbleplot.py                 187     48    74%
+coquery/visualizer/colorizer.py                   95      9    91%
+coquery/visualizer/heatbarplot.py                118     94    20%
 coquery/visualizer/treemap.py                    188    155    18%
-coquery/visualizer/visualizer.py                 225    122    46%
+coquery/visualizer/visualizer.py                 234    130    44%
+------------------------------------------------------------------
+
 
 0.10.0 May 23, 2017
 
