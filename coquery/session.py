@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -616,6 +616,16 @@ class Session(object):
         """
         return [self.translate_header(x) for x in df.columns]
 
+    def limiter(self, df, column, subset=None):
+        """
+        Return a tuple that represents a suitable data range for the given
+        column.
+
+        Typically, this function is called by a visualization module that
+        wants to determine the maximum token id range. The parameter subset
+        is used to create a subcorpus.
+        """
+        return (0, self.session.Corpus.get_corpus_size())
 
 class StatisticsSession(Session):
     _is_statistics = True

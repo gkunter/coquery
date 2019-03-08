@@ -561,7 +561,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
             figure_type.text()]
 
         self.vis = vis_class(self.df, self.session,
-                             id_column="coquery_invisible_corpus_id")
+                             id_column="coquery_invisible_corpus_id",
+                             limiter_fnc=self.session.limiter)
         self.add_custom_widgets(self.vis)
 
     def add_custom_widgets(self, vis):
