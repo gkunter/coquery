@@ -101,7 +101,7 @@ class Visualizer(QtCore.QObject):
     DEFAULT_XLABEL = "X"
     DEFAULT_YLABEL = "Y"
 
-    def __init__(self, df, session, id_column=None):
+    def __init__(self, df, session, id_column=None, limiter_fnc=None):
         super(Visualizer, self).__init__()
         self.df = df
         self.session = session
@@ -114,6 +114,7 @@ class Visualizer(QtCore.QObject):
         self._xlab, self._ylab = self.DEFAULT_XLABEL, self.DEFAULT_YLABEL
         self._id_column = id_column
         self.frm_str = "{}"
+        self._limiter_fnc = limiter_fnc
         self.experimental = False
 
     def get_default_index(self):
@@ -299,6 +300,8 @@ class Visualizer(QtCore.QObject):
 
         self.params = self.prepare_arguments(data, **kwargs)
         self.elements = self.plot_facet(**self.params)
+        if not isinstance(self.elements, list):
+            raise ValueError("plot_facet() needs to return a list")
         self.set_titles(**self.params)
         self.colorize()
 
