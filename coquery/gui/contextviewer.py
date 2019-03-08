@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-contextview.py is part of Coquery.
+contextviewer.py is part of Coquery.
 
 Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
@@ -255,6 +255,11 @@ class ContextView(QtWidgets.QWidget):
         """
         row = df[df["coquery_invisible_corpus_id"] == token_id]
         try:
+            if offset < 0 and row.index.min() == 0:
+                return None
+            if offset > 0 and row.index.max() == df.index.max():
+                return None
+                offset = 0
             return df.loc[row.index + offset]
         except KeyError:
             return None
@@ -264,6 +269,7 @@ class ContextView(QtWidgets.QWidget):
         Changes the current context to the given row from the results table.
         """
         if row is not None:
+            row = row.iloc[0]
             self.token_id = int(row["coquery_invisible_corpus_id"])
             self.source_id = int(row["coquery_invisible_origin_id"])
             self.token_width = int(row["coquery_invisible_number_of_tokens"])
