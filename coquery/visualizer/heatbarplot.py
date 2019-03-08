@@ -2,7 +2,7 @@
 """
 heatbarplot.py is part of Coquery.
 
-Copyright (c) 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -151,9 +151,8 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
 
         return bins
 
-    def prepare_im_arguments(self, data, x, y, z, levels_x, levels_y,
-                             size, bw,
-                             **kwargs):
+    def img_arguments(self, data, x, y, z, levels_x, levels_y, size, bw,
+                      **kwargs):
         """
         Returns the arguments required for a subsequent call to plt.imshow().
 
@@ -167,7 +166,6 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         In addition, the argument `M` is produced, which is a list of arrays
         that contain the image data used by plt.imshow().
         """
-
         kwargs = {"aspect": "auto", "interpolation": "gaussian"}
 
         M = []
@@ -178,7 +176,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
             num_column = pd.Series(data.index)
 
         if x or y:
-            self.horizontal = bool(x)
+            self.horizontal = bool(y)
 
             for val in levels_x or levels_y:
                 binned = pd.np.zeros(1 + (size // bw))
@@ -188,7 +186,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
 
                 M.append(pd.np.array(binned))
         else:
-            self.horizontal = not self.force_horizontal
+            self.horizontal = self.force_horizontal
 
             binned = pd.np.zeros(1 + (size // bw))
             values = num_column.values
@@ -216,27 +214,36 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         self.spin_bandwidth.setValue(bw)
         self.spin_bandwidth.blockSignals(False)
 
-    def plot_facet(self, data, color, **kwargs):
+    def prepare_arguments(self, data, x, y, z, levels_x, levels_y, **kwargs):
+        dct = super(HeatbarPlot, self).prepare_arguments(
+            data, x, y, z, levels_x, levels_y, **kwargs)
+
+        size = self.session.Corpus.get_corpus_size()
+        if not self.bandwidth:
+            self.set_bandwidth(max(size / 250, 5))
+        dct["img"] = self.img_arguments(
+            data, bw=self.bandwidth, size=size,
+            x=x, y=y, z=z,
+            levels_x=levels_x, levels_y=levels_y, **kwargs)
+        dct["M"] = dct["img"].pop("M")
+        return dct
+
+    def plot_facet(self, **kwargs):
         """
         Plot a HeatBar plot.
 
         A heatbar plot is like a barcode plot, only that there is also a
         heat map plotted under the lines.
         """
-
-        size = self.session.Corpus.get_corpus_size()
-        if not self.bandwidth:
-            self.set_bandwidth(max(size / 250, 5))
-        param = self.prepare_im_arguments(data, bw=self.bandwidth, size=size,
-                                          **kwargs)
-        M = param.pop("M")
+        param = kwargs["img"]
+        M = kwargs["M"]
 
         left, right, bottom, top = param["extent"]
 
         if self.normalize:
             M = pd.np.array([[val / max(X) for val in X] for X in M])
 
-        if not self.horizontal:
+        if self.y:
             M = M[::-1]
 
         for i, x in enumerate(M):
@@ -250,13 +257,11 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
             plt.imshow(x, vmax=M.max(), **param)
 
         if self.plot_rug:
-            super(HeatbarPlot, self).plot_facet(
-                data, color, rug=("top", "bottom"), **kwargs)
-
-        if self.horizontal:
-            plt.xlim(0, len(M))
+            elements = super(HeatbarPlot, self).plot_facet(rug=True, **kwargs)
         else:
-            plt.ylim(0, len(M))
+            elements = []
+
+        return elements
 
 
 provided_visualizations = [HeatbarPlot]

@@ -102,7 +102,7 @@ class TestHeatbarPlotArguments(CoqTestCase):
         for i in self.df[self.NUM_COLUMN]:
             binned = self.vis.increment_bins(binned, i, 5)
 
-        args = self.vis.prepare_im_arguments(
+        args = self.vis.img_arguments(
             data=self.df,
             x=None, y=None, z=None, levels_x=None, levels_y=None,
             size=49, bw=5)
@@ -122,7 +122,7 @@ class TestHeatbarPlotArguments(CoqTestCase):
         for i in self.df[self.NUM_COLUMN]:
             binned = self.vis.increment_bins(binned, i, 5)
 
-        args = self.vis.prepare_im_arguments(
+        args = self.vis.img_arguments(
             data=self.df,
             x=None, y=None, z=None, levels_x=None, levels_y=None,
             size=49, bw=5)
@@ -142,7 +142,7 @@ class TestHeatbarPlotArguments(CoqTestCase):
             val = self.df.iloc[ix][self.NUM_COLUMN]
             M[row] = self.vis.increment_bins(M[row], val, 5)
 
-        args = self.vis.prepare_im_arguments(
+        args = self.vis.img_arguments(
             data=self.df,
             x=None, y="X", z=None, levels_x=None, levels_y=["A", "B"],
             size=49, bw=5)
@@ -166,7 +166,7 @@ class TestHeatbarPlotArguments(CoqTestCase):
             val = self.df.iloc[ix][self.NUM_COLUMN]
             M[row] = self.vis.increment_bins(M[row], val, 5)
 
-        args = self.vis.prepare_im_arguments(
+        args = self.vis.img_arguments(
             data=self.df,
             x="X", y=None, z=None, levels_x=["A", "B"], levels_y=None,
             size=49, bw=5)
