@@ -13,7 +13,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from coquery.gui.pyqt_compat import QtCore, QtWidgets
+from coquery.gui.pyqt_compat import QtWidgets
 from coquery.visualizer.barcodeplot import BarcodePlot
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByNum)
@@ -291,22 +291,37 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
         """
         Basic test: only a single numerical variable along the `X` axis
         """
-        dummy = pd.Series([""] * len(self.df))
-        ax_args = self.vis._get_axis_params(x=self.df["ID"], y=dummy,
-                                            order=[""])
-        target = {"yticklabels": [""], "ylim": (0, 1),
-                  "yticks": pd.np.array([0.5])}
+        self.vis.x = "ID"
+        self.vis.y = None
+        self.vis.levels_y = None
+        self.vis.horizontal = True
+        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
+
+        ax_args = self.vis._get_axis_params()
+        target = {"yticks": pd.np.array([0.5]),
+                  "yticklabels": [""],
+                  "ylim": (0, 1),
+                  "xlim": (0, 1000),
+                  }
         self.assertDictEqual(ax_args, target)
 
     def test_vertical_no_subgroup(self):
         """
         Basic test: only a single numerical variable along the `Y` axis
         """
-        dummy = pd.Series([""] * len(self.df))
-        ax_args = self.vis._get_axis_params(x=dummy, y=self.df["ID"],
-                                            order=[""])
-        target = {"xticklabels": [""], "xlim": (0, 1),
-                  "xticks": pd.np.array([0.5])}
+        self.vis.x = None
+        self.vis.y = "ID"
+        self.vis.levels_x = None
+        self.vis.levels_y = None
+        self.vis.horizontal = False
+        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
+
+        ax_args = self.vis._get_axis_params()
+        target = {"xticklabels": [""],
+                  "xticks": pd.np.array([0.5]),
+                  "xlim": (0, 1),
+                  "ylim": (0, 1000),
+                  }
         self.assertDictEqual(ax_args, target)
 
     def test_horizontal_subgroup(self):
@@ -316,12 +331,19 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
         category = "X"
         levels = sorted(self.df[category].unique())
 
-        ax_args = self.vis._get_axis_params(x=self.df["ID"],
-                                            y=self.df[category],
-                                            order=levels)
-        target = {"yticklabels": levels[::-1],
-                  "yticks": pd.np.array([0.5, 1.5]),
-                  "ylim": (0, 2)}
+        self.vis.x = category
+        self.vis.y = "ID"
+        self.vis.levels_x = levels
+        self.vis.levels_y = None
+        self.vis.horizontal = False
+        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
+
+        ax_args = self.vis._get_axis_params()
+        target = {"xticklabels": levels,
+                  "xticks": pd.np.array([0.5, 1.5]),
+                  "xlim": (0, 2),
+                  "ylim": (0, 1000),
+                  }
 
         self.assertDictEqual(ax_args, target)
 
@@ -332,12 +354,19 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
         category = "X"
         levels = sorted(self.df[category].unique())
 
-        ax_args = self.vis._get_axis_params(x=self.df[category],
-                                            y=self.df["ID"],
-                                            order=levels)
-        target = {"xticklabels": levels[::-1],
-                  "xticks": pd.np.array([0.5, 1.5]),
-                  "xlim": (0, 2)}
+        self.vis.x = "ID"
+        self.vis.y = category
+        self.vis.levels_x = None
+        self.vis.levels_y = levels
+        self.vis.horizontal = True
+        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
+
+        ax_args = self.vis._get_axis_params()
+        target = {"yticklabels": levels,
+                  "yticks": pd.np.array([0.5, 1.5]),
+                  "ylim": (0, 2),
+                  "xlim": (0, 1000),
+                  }
 
         self.assertDictEqual(ax_args, target)
 
