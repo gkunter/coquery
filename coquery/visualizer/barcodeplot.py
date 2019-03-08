@@ -46,17 +46,6 @@ class BarcodePlot(vis.Visualizer):
     def update_values(self):
         self.force_horizontal = self.check_horizontal.isChecked()
 
-    def _get_axis_params(self, x, y, order):
-        if x.dtype != object:
-            keys = ("yticks", "yticklabels", "ylim")
-        else:
-            keys = ("xticks", "xticklabels", "xlim")
-        values = (0.5 + pd.np.arange(len(order)),
-                  order[::-1],
-                  (0, len(order)))
-        dct = dict(zip(keys, values))
-        return dct
-
     def draw_tokens(self, x, y, order, rug=None):
         if self.horizontal:
             _func = plt.vlines
@@ -82,10 +71,6 @@ class BarcodePlot(vis.Visualizer):
                 lower = [pos, pos + 0.9] * len(values)
                 upper = [pos + 0.1, pos + 1] * len(values)
             _func(values, upper, lower)
-
-        ax = plt.gca()
-        ax.set(**self._get_axis_params(x, y, order))
-        return ax
 
     def _extract_data(self, coll, column):
         if self.horizontal:
@@ -122,9 +107,9 @@ class BarcodePlot(vis.Visualizer):
 
     def plot_facet(self, **kwargs):
         self.horizontal = kwargs["horizontal"]
-        ax = self.draw_tokens(kwargs["x"], kwargs["y"], order=kwargs["order"],
-                              rug=kwargs.get("rug"))
-        return ax.collections
+        self.draw_tokens(kwargs["x"], kwargs["y"], order=kwargs["order"],
+                         rug=kwargs.get("rug"))
+        return plt.gca().collections
 
     def get_colors(self, colorizer, elements, **kwargs):
         if kwargs["horizontal"]:
@@ -159,12 +144,25 @@ class BarcodePlot(vis.Visualizer):
     def get_num_frm(self):
         return self.get_default_frm()
 
-    def set_annotations(self, grid, values):
-        lim = (0, self.session.Corpus.get_corpus_size())
+    def _get_axis_params(self):
         if self.horizontal:
-            grid.set(xlim=lim)
+            keys = ("yticks", "yticklabels", "ylim", "xlim")
+            order = self.levels_y
         else:
-            grid.set(ylim=lim)
+            keys = ("xticks", "xticklabels", "xlim", "ylim")
+            order = self.levels_x
+
+        if not order:
+            order = [""]
+
+        return dict(zip(keys,
+                        (0.5 + pd.np.arange(len(order)),
+                         order,
+                         (0, len(order)),
+                         self._limiter_fnc(self.df, None, None))))
+
+    def set_annotations(self, grid, values):
+        grid.set(**self._get_axis_params())
         super(BarcodePlot, self).set_annotations(grid, values)
 
     def set_titles(self, **kwargs):
