@@ -241,10 +241,10 @@ class Session(object):
                 else:
                     logging.info("Start query: '{}'".format(
                         current_query.query_string))
+                self.sql_queries.append(current_query.sql_list)
                 df = current_query.run(connection=self.db_connection,
                                        to_file=to_file, **kwargs)
                 raw_length = len(df)
-                self.sql_queries.append(current_query.sql_list)
 
                 # apply clumsy hack that tries to make sure that the dtypes of
                 # data frames containing NaNs or empty strings does not change

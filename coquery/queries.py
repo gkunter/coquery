@@ -143,6 +143,8 @@ class TokenQuery(object):
                 selected=options.cfg.selected_features,
                 to_file=to_file)
 
+            self.sql_list.append(query_string)
+
             df = None
             if options.cfg.use_cache and query_string:
                 try:
@@ -222,8 +224,6 @@ class TokenQuery(object):
                     #print(dtype_list)
 
                     self.results_frame = self.results_frame.append(df)
-
-            self.sql_list.append(query_string)
 
         self.results_frame = self.results_frame.reset_index(drop=True)
         TokenQuery._id += 1
