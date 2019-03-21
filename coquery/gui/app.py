@@ -2863,7 +2863,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             True if a connection is available, or False otherwise.
         """
         current_connection = options.cfg.current_connection
-        if not current_connection:
+        if not current_connection or not current_connection.enabled:
             return False
         else:
             try:
