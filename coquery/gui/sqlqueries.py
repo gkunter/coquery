@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-logfile.py is part of Coquery.
+sqlqueries.py is part of Coquery.
 
 Copyright (c) 2019 Gero Kunter (gero.kunter@coquery.org)
 
@@ -11,6 +11,9 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
+import warnings
+
+
 from .pyqt_compat import QtCore, QtWidgets, QtGui
 
 try:
@@ -20,21 +23,31 @@ except ImportError:
 else:
     parsing_available = True
 
-
 try:
     from pygments import highlight
     from pygments.lexers import SqlLexer
     from pygments.formatters import HtmlFormatter
 except ImportError:
-    print("byebye")
+    warnings.warn("No syntax highlighting available")
+    import re
+
     def highlight(text, *args, **kwargs):
-        return text
+        text = text.split("\n")
+        lst = []
+        for line in text:
+            match = re.match("^(\s+)", line)
+            if match:
+                line = "{}{}".format(
+                    "&nbsp;" * len(match.group(1)),
+                    line.strip())
+            lst.append(line)
+        return "<br>".join(lst)
 
     class SqlLexer():
         pass
 
     class HtmlFormatter():
-        def get_style_defs(s):
+        def get_style_defs(self, s):
             return ""
 
 _translate = QtCore.QCoreApplication.translate
@@ -68,7 +81,7 @@ class SQLViewer(QtWidgets.QDialog):
                     lst = query_strings
                 sql_queries.append(";\n\n".join(lst))
             text = "\n\n-- next query --\n\n".join(sql_queries)
-        print(text)
+
         css = HtmlFormatter().get_style_defs(".highlight")
         html = highlight(text, SqlLexer(), HtmlFormatter())
 
@@ -83,4 +96,3 @@ class SQLViewer(QtWidgets.QDialog):
     def view(lines, parent=None):
         dialog = SQLViewer(lines, parent)
         dialog.show()
-        #return dialog.exec_()
