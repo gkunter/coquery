@@ -1814,9 +1814,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         df.columns = self.Session.translated_headers(df)
 
         sel_only = not df.equals(self.table_model.content)
+
+        # headers are provided if more than one column is selected (this should
+        # facilitate copy-pasting column data -- this may be a stupid idea,
+        # actually.
+        header = (len(df.columns) != 1
         try:
             s = df.to_csv(index=False,
                           sep=utf8("\t"),
+                          header=header,
                           encoding=options.cfg.output_encoding)
         except (UnicodeEncodeError, UnicodeDecodeError):
             critical_box(self, "Encoding error", msg_encoding_error)
