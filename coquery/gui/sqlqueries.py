@@ -13,8 +13,8 @@ from __future__ import unicode_literals
 
 import warnings
 
-
-from .pyqt_compat import QtCore, QtWidgets, QtGui
+from coquery import options
+from coquery.gui.pyqt_compat import QtCore, QtWidgets, QtGui
 
 try:
     import sqlparse
@@ -54,39 +54,48 @@ _translate = QtCore.QCoreApplication.translate
 
 
 class SQLViewer(QtWidgets.QDialog):
+    @classmethod
+    def lines_to_html(cls, lines):
+        sql_queries = []
+        for query_strings in lines:
+            if parsing_available:
+                lst = [sqlparse.format(s.strip(), reindent=True)
+                       for s in query_strings]
+            else:
+                lst = query_strings
+            sql_queries.append(";\n\n".join(lst))
+        text = "\n\n-- next query --;\n\n".join(sql_queries)
+
+        return highlight(text,
+                         SqlLexer(),
+                         HtmlFormatter(prestyles="font-family: monospace;"))
+
     def __init__(self, text=None, lines=None, parent=None):
         super(SQLViewer, self).__init__(parent)
-        self.resize(640, 480)
         self.setObjectName("SQLViewerDialog")
         self.setWindowTitle(_translate("SQLViewerDialog",
                                        "SQL Viewer – Coquery"))
-        self.layout = QtWidgets.QHBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        self.document = QtGui.QTextDocument()
+        self.document.setDefaultFont(QtGui.QFont("monospace"))
+        self.document.setDefaultStyleSheet(HtmlFormatter().get_style_defs())
+
         self.viewer = QtWidgets.QTextEdit()
         self.viewer.setReadOnly(True)
-        self.layout.addWidget(self.viewer)
-        self.document = QtGui.QTextDocument()
-        self.font = self.document.defaultFont()
-        self.font.setFamily("monospace")
-        self.document.setDefaultFont(self.font)
         self.viewer.setDocument(self.document)
 
-        if lines:
-            sql_queries = []
-            for query_strings in lines:
-                if parsing_available:
-                    lst = [sqlparse.format(s.strip(), reindent=True)
-                           for s in query_strings]
-                else:
-                    lst = query_strings
-                sql_queries.append(";\n\n".join(lst))
-            text = "\n\n-- next query --\n\n".join(sql_queries)
+        self.layout = QtWidgets.QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.addWidget(self.viewer)
 
-        css = HtmlFormatter().get_style_defs(".highlight")
-        html = highlight(text, SqlLexer(), HtmlFormatter())
+        self.document.setHtml(text or self.lines_to_html(lines))
+        try:
+            self.resize(options.settings.value("sqlviewer_size"))
+        except TypeError:
+            self.resize(640, 480)
 
-        self.document.setDefaultStyleSheet(css)
-        self.document.setHtml(html)
+    def closeEvent(self, event):
+        options.settings.setValue("sqlviewer_size", self.size())
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
