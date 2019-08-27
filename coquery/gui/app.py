@@ -1818,7 +1818,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # headers are provided if more than one column is selected (this should
         # facilitate copy-pasting column data -- this may be a stupid idea,
         # actually.
-        header = (len(df.columns) != 1
+        header = len(df.columns) != 1
         try:
             s = df.to_csv(index=False,
                           sep=utf8("\t"),
