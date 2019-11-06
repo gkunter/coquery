@@ -15,7 +15,7 @@ import numpy as np
 
 from coquery.general import (
     check_fs_case_sensitive, has_module,
-    pretty, collapse_words)
+    pretty, collapse_words, EnglishCollapser)
 from test.testcase import CoqTestCase, run_tests
 
 
@@ -266,16 +266,90 @@ class TestEnglishCollapseWords(CoqTestCase):
         self.assertEqual(target, value)
 
     def test_single_quoting_1(self):
-        lst = ["he", "said", "\N{LEFT SINGLE QUOTATION MARK}", "no",
-               "\N{RIGHT SINGLE QUOTATION MARK}", "to", "me", "."]
+        lst = ["he", "said",
+               "\N{LEFT SINGLE QUOTATION MARK}",
+               "no",
+               "\N{RIGHT SINGLE QUOTATION MARK}",
+               "to", "me", "."]
+        target = ("he said \N{LEFT SINGLE QUOTATION MARK}no"
+                  "\N{RIGHT SINGLE QUOTATION MARK} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_single_quoting_1(self):
+        """
+        Test LEFT/RIGHT SINGLE QUOTATION MARK with broken opening tokenization
+        """
+        lst = ["he", "said",
+               "\N{LEFT SINGLE QUOTATION MARK}no",
+               "\N{RIGHT SINGLE QUOTATION MARK}",
+               "to", "me", "."]
+        target = ("he said \N{LEFT SINGLE QUOTATION MARK}no"
+                  "\N{RIGHT SINGLE QUOTATION MARK} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_single_quoting_2(self):
+        """
+        Test LEFT/RIGHT SINGLE QUOTATION MARK with broken closing tokenization
+        """
+        lst = ["he", "said",
+               "\N{LEFT SINGLE QUOTATION MARK}",
+               "no\N{RIGHT SINGLE QUOTATION MARK}",
+               "to", "me", "."]
         target = ("he said \N{LEFT SINGLE QUOTATION MARK}no"
                   "\N{RIGHT SINGLE QUOTATION MARK} to me.")
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
     def test_double_quoting_1(self):
-        lst = ["he", "said", "\N{LEFT DOUBLE QUOTATION MARK}", "no",
-               "\N{RIGHT DOUBLE QUOTATION MARK}", "to", "me", "."]
+        """
+        Test LEFT/RIGHT DOUBLE QUOTATION MARK
+        """
+        lst = ["he", "said",
+               "\N{LEFT DOUBLE QUOTATION MARK}",
+               "no",
+               "\N{RIGHT DOUBLE QUOTATION MARK}",
+               "to", "me", "."]
+        target = ("he said \N{LEFT DOUBLE QUOTATION MARK}no"
+                  "\N{RIGHT DOUBLE QUOTATION MARK} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_double_quoting_1(self):
+        """
+        Test LEFT/RIGHT DOUBLE QUOTATION MARK with broken opening tokenization
+        """
+        lst = ["he", "said",
+               "\N{LEFT DOUBLE QUOTATION MARK}no",
+               "\N{RIGHT DOUBLE QUOTATION MARK}",
+               "to", "me", "."]
+        target = ("he said \N{LEFT DOUBLE QUOTATION MARK}no"
+                  "\N{RIGHT DOUBLE QUOTATION MARK} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_double_quoting_2(self):
+        """
+        Test LEFT/RIGHT DOUBLE QUOTATION MARK with broken closing tokenization
+        """
+        lst = ["he", "said",
+               "\N{LEFT DOUBLE QUOTATION MARK}",
+               "no\N{RIGHT DOUBLE QUOTATION MARK}",
+               "to", "me", "."]
+        target = ("he said \N{LEFT DOUBLE QUOTATION MARK}no"
+                  "\N{RIGHT DOUBLE QUOTATION MARK} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_double_quoting_3(self):
+        """
+        Test LEFT/RIGHT DOUBLE QUOTATION MARK with fully broken tokenization
+        """
+        lst = [
+            "he", "said",
+            "\N{LEFT DOUBLE QUOTATION MARK}no\N{RIGHT DOUBLE QUOTATION MARK}",
+            "to", "me", "."]
         target = ("he said \N{LEFT DOUBLE QUOTATION MARK}no"
                   "\N{RIGHT DOUBLE QUOTATION MARK} to me.")
         value = collapse_words(lst, "en")
@@ -283,24 +357,79 @@ class TestEnglishCollapseWords(CoqTestCase):
 
     def test_single_tick_quoting_1(self):
         """
-        Use single LaTeX-style tick quotes, which are actually (GRAVE ACCENT)
-        and (ACUTE ACCENT).
+        Use single LaTeX-style tick quotes (GRAVE ACCENT and ACUTE ACCENT)
         """
         lst = ["he", "said",
-               "\N{GRAVE ACCENT}", "no", "\N{ACUTE ACCENT}",
+               "\N{GRAVE ACCENT}",
+               "no",
+               "\N{ACUTE ACCENT}",
                "to", "me", "."]
         target = ("he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me.")
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
-    def test_single_tick_quoting_2(self):
+    def test_broken_single_tick_quoting_1(self):
         """
-        Use double LaTeX-style tick quotes, which are actually (GRAVE ACCENT)
-        and (ACUTE ACCENT).
+        Use single LaTeX-style tick quotes (GRAVE ACCENT and ACUTE ACCENT) with
+        broken opening tokenization
         """
         lst = ["he", "said",
-               "\N{GRAVE ACCENT}\N{GRAVE ACCENT}", "no",
+               "\N{GRAVE ACCENT}no",
+               "\N{ACUTE ACCENT}",
+               "to", "me", "."]
+        target = ("he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_single_tick_quoting_2(self):
+        """
+        Use single LaTeX-style tick quotes (GRAVE ACCENT and ACUTE ACCENT) with
+        broken closing tokenization
+        """
+        lst = ["he", "said",
+               "\N{GRAVE ACCENT}",
+               "no\N{ACUTE ACCENT}",
+               "to", "me", "."]
+        target = ("he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_double_tick_quoting_1(self):
+        """
+        Use double LaTeX-style tick quotes (GRAVE ACCENT and ACUTE ACCENT)
+        """
+        lst = ["he", "said",
+               "\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
+               "no",
                "\N{ACUTE ACCENT}\N{ACUTE ACCENT}",
+               "to", "me", "."]
+        target = ("he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}no"
+                  "\N{ACUTE ACCENT}\N{ACUTE ACCENT} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_double_tick_quoting_1(self):
+        """
+        Use double LaTeX-style tick quotes (GRAVE ACCENT and ACUTE ACCENT) with
+        broken opening tokenization
+        """
+        lst = ["he", "said",
+               "\N{GRAVE ACCENT}\N{GRAVE ACCENT}no",
+               "\N{ACUTE ACCENT}\N{ACUTE ACCENT}",
+               "to", "me", "."]
+        target = ("he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}no"
+                  "\N{ACUTE ACCENT}\N{ACUTE ACCENT} to me.")
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_double_tick_quoting_2(self):
+        """
+        Use double LaTeX-style tick quotes (GRAVE ACCENT and ACUTE ACCENT) with
+        broken closing tokenization
+        """
+        lst = ["he", "said",
+               "\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
+               "no\N{ACUTE ACCENT}\N{ACUTE ACCENT}",
                "to", "me", "."]
         target = ("he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}no"
                   "\N{ACUTE ACCENT}\N{ACUTE ACCENT} to me.")
@@ -311,20 +440,95 @@ class TestEnglishCollapseWords(CoqTestCase):
         """
         Use single ASCII quoting.
         """
-        lst = ["he", "said", "'" "xxx", "'", "to", "me", "."]
+        lst = ["he", "said",
+               "'"
+               "xxx",
+               "'",
+               "to", "me", "."]
         target = "he said 'xxx' to me."
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
-    def test_double_ascii_quoting_2(self):
+    def test_broken_single_ascii_quoting_1(self):
+        """
+        Use single ASCII quoting with broken opening tokenization
+        """
+        lst = ["he", "said",
+               "'xxx",
+               "'", "to", "me", "."]
+        target = "he said 'xxx' to me."
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_single_ascii_quoting_2(self):
+        """
+        Use single ASCII quoting with broken closing tokenization
+        """
+        lst = ["he", "said",
+               "'",
+               "xxx'",
+               "to", "me", "."]
+        target = "he said 'xxx' to me."
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_double_ascii_quoting_1(self):
         """
         Use double ASCII quoting.
         """
-        lst = ["he", "said", '"', "xxx", '"', "to", "me", "."]
+        lst = ["he", "said",
+               '"',
+               "xxx",
+               '"',
+               "to", "me", "."]
         target = 'he said "xxx" to me.'
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
+    def test_broken_double_ascii_quoting_1(self):
+        """
+        Use double ASCII quoting with broken opening tokenization
+        """
+        lst = ["he", "said",
+               '"xxx',
+               '"',
+               "to", "me", "."]
+        target = 'he said "xxx" to me.'
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_double_ascii_quoting_2(self):
+        """
+        Use double ASCII quoting with broken closing tokenization
+        """
+        lst = ["he", "said",
+               '"',
+               'xxx"',
+               "to", "me", "."]
+        target = 'he said "xxx" to me.'
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_broken_punctuation_1(self):
+        lst = ["cats,", "dogs", ",", "and", "carrots"]
+        target = 'cats, dogs, and carrots'
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_empty_1(self):
+        lst = []
+        target = None
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+    def test_empty_2(self):
+        lst = None
+        target = None
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+
+class TestFailing(CoqTestCase):
     def test_double_mixed_quote_1(self):
         lst = ["he", "said", "\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
                "xxx", "''", "to", "me", "."]
@@ -333,8 +537,20 @@ class TestEnglishCollapseWords(CoqTestCase):
         self.assertEqual(target, value)
 
 
-provided_tests = [TestGeneral, TestPretty,
-                  TestCollapseWords, TestEnglishCollapseWords]
+
+
+
+
+    pass
+
+
+
+provided_tests = [
+                  TestGeneral, TestPretty,
+                  TestCollapseWords,
+                  TestEnglishCollapseWords,
+                  TestFailing,
+                  ]
 
 
 def main():
