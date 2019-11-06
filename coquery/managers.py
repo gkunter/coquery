@@ -98,9 +98,8 @@ class Group(CoqObject):
         considered a duplicate and is removed from the data group.
         """
         function_list = FunctionList(self.get_functions())
-        df = df.drop_duplicates(self.columns +
-                                [x.get_id()
-                                 for x in function_list.get_list()])
+        func_columns = [x.get_id() for x in function_list.get_list()]
+        df = df.drop_duplicates(self.columns + func_columns)
         return df
 
     def get_functions(self):
