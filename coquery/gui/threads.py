@@ -17,6 +17,42 @@ from coquery import general
 from .pyqt_compat import QtCore
 
 
+class CoqWorker(QtCore.QObject):
+    """
+    The CoqWorker class uses a thread to work a specified activity.
+    It raises the signal `started` when it starts working on the activity, and
+    it raises the signal `finished` when the activity is completed. If an
+    exception occurs during the work on the activity, the signal
+    `exceptionRaised` is raised.
+    """
+
+    started = QtCore.Signal()
+    finished = QtCore.Signal()
+    exceptionRaised = QtCore.Signal(Exception)
+
+    def __init__(self, activity, *args, **kwargs):
+        super(CoqWorker, self).__init__(parent=None)
+        self._activity = activity
+        self._thread = QtCore.QThread()
+        self._args = args
+        self._kwargs = kwargs
+        self.moveToThread(self._thread)
+        self._thread.started.connect(self._perform_activity)
+
+    @QtCore.Slot()
+    def _perform_activity(self):
+        try:
+            self._activity(*self._args, **self._kwargs)
+        except Exception as e:
+            self.exceptionRaised.emit(e)
+        self._thread.quit()
+        self.finished.emit()
+
+    def start(self):
+        self._thread.start()
+        self.started.emit()
+
+
 class CoqThread(QtCore.QThread):
     taskStarted = QtCore.Signal()
     taskFinished = QtCore.Signal()
