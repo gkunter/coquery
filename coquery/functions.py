@@ -1450,6 +1450,8 @@ class ContextColumns(Function):
         session = get_toplevel_window().Session
         resource = session.Resource
         with session.db_engine.connect() as db_connection:
+            # check if df misses information needed to produce the context
+            # columns:
             if ("coquery_invisible_corpus_id" not in df.columns or
                     "coquery_invisible_origin_id" not in df.columns or
                     "coquery_invisible_number_of_tokens" not in df.columns or
