@@ -270,7 +270,8 @@ class EnglishCollapser(Collapser):
             if not closer_found and not ignore_openers:
                 # check if the current element may be a quote-opening sequence:
                 if lw.startswith(tuple(opening)):
-                    next_sep = ""
+                    if lw in opening:
+                        next_sep = ""
                     # add the quote-opening sequence to the stack:
                     for opener in opening:
                         if lw.startswith(opener):

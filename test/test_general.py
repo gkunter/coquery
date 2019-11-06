@@ -436,6 +436,16 @@ class TestEnglishCollapseWords(CoqTestCase):
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
+    def test_double_mixed_quote_1(self):
+        """
+        Use double mixed quotes `` and '' (like in BROWN)
+        """
+        lst = ["he", "said", "\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
+               "xxx", "''", "to", "me", "."]
+        target = "he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}xxx'' to me."
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
     def test_single_ascii_quoting_1(self):
         """
         Use single ASCII quoting.
@@ -471,6 +481,17 @@ class TestEnglishCollapseWords(CoqTestCase):
         target = "he said 'xxx' to me."
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
+
+    def test_broken_incomplete_single_quoting(self):
+        """
+        Use single ASCII quoting with broken opening tokenization and no closer
+        """
+        lst = ["he", "said", "'who", "is", "this"]
+        target = "he said 'who is this"
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
+
 
     def test_double_ascii_quoting_1(self):
         """
@@ -528,18 +549,8 @@ class TestEnglishCollapseWords(CoqTestCase):
         self.assertEqual(target, value)
 
 
+
 class TestFailing(CoqTestCase):
-    def test_double_mixed_quote_1(self):
-        lst = ["he", "said", "\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
-               "xxx", "''", "to", "me", "."]
-        target = "he said \N{GRAVE ACCENT}\N{GRAVE ACCENT}xxx'' to me."
-        value = collapse_words(lst, "en")
-        self.assertEqual(target, value)
-
-
-
-
-
 
     pass
 
