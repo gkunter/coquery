@@ -946,6 +946,16 @@ class Collocations(Manager):
         # FIXME:
         # If the context span is zero (i.e. neither a left nor a right
         # context, the program should alert the user somehow.
+
+        # If this is a new query, reset the context cache so that the contexts
+        # have to be retrieved new. Otherwise, leave the context cache
+        # unchanged. In this case, changing the collocation window to values
+        # that have previously used for the collocations will recylce the
+        # cached collocation list.
+        if self._last_query_id != session.query_id:
+            self.reset_context_cache()
+            self._last_query_id = session.query_id
+
         return [ContextColumns(left=options.cfg.collo_left,
                                right=options.cfg.collo_right)]
 
