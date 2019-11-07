@@ -1077,6 +1077,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 pass
 
             self.add_annotations()
+            self.set_limits()
             self.change_legend()
 
             self.grid.fig.tight_layout()
@@ -1114,6 +1115,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
             values = self.get_gui_values()
             try:
                 self.vis.set_annotations(self.grid, values)
+            except Exception as e:
+                print("ERROR: ", e)
+                logging.error(str(e))
+            else:
+                self.canvas.draw()
+
+    def set_limits(self):
+        if self.vis:
+            values = self.get_gui_values()
+            try:
+                self.vis.set_limits(self.grid, values)
             except Exception as e:
                 print("ERROR: ", e)
                 logging.error(str(e))
