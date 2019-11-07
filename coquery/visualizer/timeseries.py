@@ -116,7 +116,9 @@ class TimeSeries(vis.Visualizer):
             levels = levels_z
         val = fun(data[numeric])
         if not category:
-            col = self.get_palette(palette, kwargs["color_number"])[0]
+            #FIXME: obsolete call
+            #col = self.get_palette(palette, kwargs["color_number"])[0]
+            col = (1, 0, 0)
             tab = val.value_counts().sort_index()
 
             self.plot_func(S=tab, color=col, ax=plt.gca())
@@ -132,7 +134,9 @@ class TimeSeries(vis.Visualizer):
                 labels = x_range
             plt.xticks(x_range, labels)
         else:
-            col = self.get_palette(palette, len(levels))[::-1]
+            #FIXME: obsolete call
+            #col = self.get_palette(palette, len(levels))[::-1]
+            col = (1, 0, 0)
             index = (val.dropna()
                         .drop_duplicates()
                         .sort_values())
