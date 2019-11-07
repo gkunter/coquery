@@ -22,7 +22,7 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
     name = "Beeswarm plot"
     icon = "Beeswarm_plot"
 
-    def draw_tokens(self, *args, **kwargs):
+    def draw_tokens(self, *args, rug=None, **kwargs):
         return sns.swarmplot(*args, **kwargs)
 
     def _extract_data(self, coll, column):
@@ -33,6 +33,9 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
 
         data = pd.np.rint(lst)
         return pd.DataFrame(data=data, columns=[column])
+
+    def set_limits(self, grid, values):
+        pass  # use default sns.swarmplot() limits
 
 
 provided_visualizations = [BeeswarmPlot]

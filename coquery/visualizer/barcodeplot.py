@@ -144,25 +144,29 @@ class BarcodePlot(vis.Visualizer):
     def get_num_frm(self):
         return self.get_default_frm()
 
-    def _get_axis_params(self):
+    def get_tick_params(self):
         if self.horizontal:
-            keys = ("yticks", "yticklabels", "ylim", "xlim")
-            order = self.levels_y
+            keys = ("yticks", "yticklabels")
+            order = self.levels_y or [""]
         else:
-            keys = ("xticks", "xticklabels", "xlim", "ylim")
-            order = self.levels_x
-
-        if not order:
-            order = [""]
+            keys = ("xticks", "xticklabels")
+            order = self.levels_x or [""]
 
         return dict(zip(keys,
-                        (0.5 + pd.np.arange(len(order)),
-                         order,
-                         (0, len(order)),
-                         self._limiter_fnc(self.df, None, None))))
+                        (0.5 + pd.np.arange(len(order)), order)))
+
+    def set_limits(self, grid, values):
+        if self.horizontal:
+            keys = ("ylim", "xlim")
+            lim = (0, len(self.levels_y or [""]))
+        else:
+            keys = ("xlim", "ylim")
+            lim = (0, len(self.levels_x or [""]))
+        grid.set(**dict(
+            zip(keys, (lim, self._limiter_fnc(self.df, None, None)))))
 
     def set_annotations(self, grid, values):
-        grid.set(**self._get_axis_params())
+        grid.set(**self.get_tick_params())
         super(BarcodePlot, self).set_annotations(grid, values)
 
     def set_titles(self, **kwargs):
