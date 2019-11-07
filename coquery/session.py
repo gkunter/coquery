@@ -625,7 +625,8 @@ class Session(object):
         wants to determine the maximum token id range. The parameter subset
         is used to create a subcorpus.
         """
-        return (0, self.session.Corpus.get_corpus_size())
+        #FIXME: implement corpus subests
+        return (0, self.Corpus.get_corpus_size())
 
 class StatisticsSession(Session):
     _is_statistics = True
