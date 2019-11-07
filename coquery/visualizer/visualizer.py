@@ -92,6 +92,10 @@ class Visualizer(QtCore.QObject):
     plot_facet()
     set_titles()
     colorize_elements()
+
+    Other frequently used methods are:
+    set_annotations()
+    set_limits()
     """
 
     axes_style = None
@@ -306,16 +310,24 @@ class Visualizer(QtCore.QObject):
         self.colorize()
 
     def rotate_annotations(self, grid):
+        x_overlap = False
+        y_overlap = False
+
         for ax in grid.fig.axes:
             xtl = ax.get_xticklabels()
             ytl = ax.get_yticklabels()
             plt.setp(xtl, rotation="horizontal")
             plt.setp(ytl, rotation="horizontal")
 
-            sns_overlap = sns.utils.axis_ticklabels_overlap(xtl)
+            if sns.utils.axis_ticklabels_overlap(xtl):
+                x_overlap = True
+            if sns.utils.axis_ticklabels_overlap(ytl):
+                y_overlap = True
 
-        if sns_overlap:
+        if x_overlap:
             grid.fig.autofmt_xdate()
+        if y_overlap:
+            grid.fig.autofmt_ydate()
 
     def set_annotations(self, grid, values):
         if values.get("title"):
@@ -349,6 +361,9 @@ class Visualizer(QtCore.QObject):
                 tick.label.set_fontname(values["figure_font"])
 
         self.rotate_annotations(grid)
+
+    def set_limits(self, grid, values):
+        pass
 
     @staticmethod
     def get_figure_size():
@@ -419,26 +434,6 @@ class Visualizer(QtCore.QObject):
         empty = [x for x in (data_x, data_y) if x is None]
 
         return categorical, numeric, empty
-
-    @staticmethod
-    def get_palette(pal, n, nlevels=None):
-        nlevels = nlevels or n
-        base, _, rev = pal.partition("_")
-
-        if base == PALETTE_BW:
-            col = ([(0, 0, 0), (1, 1, 1)] * (1 + n // 2))[:n]
-        else:
-            col = sns.color_palette(base, n)
-
-        if rev:
-            col = col[::-1]
-        if nlevels > n:
-            pal = (col * ((nlevels // n) + 1))[:nlevels]
-        else:
-            pal = col[:nlevels]
-
-        assert len(pal) == nlevels
-        return pal
 
     @staticmethod
     def get_colorizer(data, palette, color_number,
