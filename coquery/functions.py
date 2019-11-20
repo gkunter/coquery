@@ -90,7 +90,7 @@ class Function(CoqObject):
                  "check": []}
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Base functions"
 
     def __init__(self, columns=None, label=None, alias=None,
@@ -117,6 +117,10 @@ class Function(CoqObject):
             return COLUMN_NAMES[cls._name]
         else:
             return cls._name
+
+    @classmethod
+    def get_description(cls):
+        return getattr(cls, "_description", None)
 
     def get_flag(self, flag):
         if flag == "case":
@@ -233,7 +237,7 @@ class Function(CoqObject):
 
 class ConversionFunction(Function):
     @staticmethod
-    def get_description():
+    def get_group():
         return "Conversion"
 
 
@@ -257,6 +261,14 @@ class ToNumeric(ConversionFunction):
         return pd.DataFrame({col: pd.to_numeric(df[col], errors="coerce")
                              for col in self.columns})
 
+class ToInteger(ConversionFunction):
+    _name = "INTEGER"
+    _description = "Round to integer"
+
+    def evaluate(self, df, **kwargs):
+        return pd.DataFrame(
+            {col: pd.to_numeric(df[col], errors="coerce").round().astype(int)
+             for col in self.columns})
 
 #############################################################################
 ## String functions
@@ -265,7 +277,7 @@ class ToNumeric(ConversionFunction):
 
 class StringFunction(Function):
     @staticmethod
-    def get_description():
+    def get_group():
         return "Strings"
 
     @classmethod
@@ -437,7 +449,7 @@ class NumFunction(Function):
     _name = "virtual"
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Mathematics"
 
     def coerce_value(self, df, value):
@@ -498,7 +510,7 @@ class OperatorFunction(CalcFunction):
     """
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Calculations"
 
 
@@ -545,6 +557,21 @@ class Log(OperatorFunction):
         return val
 
 
+class Modulo(OperatorFunction):
+    _name = "MOD"
+    _func = operator.mod
+    _description = ("Apply the modulo operation, i.e. determine the "
+                    "remainder after division")
+
+
+class Binning(OperatorFunction):
+    _name = "BINNING"
+    _description = ("Transforms a number to the bin value given the "
+                    "argument")
+
+    def _func(self, val, bw):
+        return (val // bw) * bw
+
 class StatisticalFunction(CalcFunction):
     """
     NumpyFunction is a wrapper for statistical functions provided by Numpy.
@@ -554,7 +581,7 @@ class StatisticalFunction(CalcFunction):
     arguments = {}
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Statistics"
 
     def evaluate(self, df, **kwargs):
@@ -628,7 +655,7 @@ class Comparison(CalcFunction):
     arguments = {"string": [("value", "Value:", "")]}
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Comparisons"
 
 
@@ -667,7 +694,7 @@ class LogicFunction(CalcFunction):
     _ignore_na = False
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Logic"
 
 
@@ -764,7 +791,7 @@ class BaseFreq(Function):
     _name = "virtual"
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Frequencies"
 
 
@@ -938,7 +965,7 @@ class BaseReferenceCorpus(Function):
     _name = "virtual"
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Reference corpus functions"
 
 
@@ -1122,7 +1149,7 @@ class BaseProportion(Function):
     _name = "virtual"
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Distribution statistics"
 
 
@@ -1322,7 +1349,7 @@ class BaseCorpusFunction(Function):
     _name = "virtual"
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Corpus statistics"
 
 
@@ -1331,7 +1358,7 @@ class CorpusSize(BaseCorpusFunction):
     no_column_labels = True
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Corpus size functions"
 
     def evaluate(self, df, **kwargs):
@@ -1438,7 +1465,7 @@ class ContextColumns(Function):
                            for i in range(self.right)]
 
     @staticmethod
-    def get_description():
+    def get_group():
         return "Context functions"
 
     def get_id(self):
@@ -1563,7 +1590,7 @@ class ContextString(ContextColumns):
     #_name = "virtual"
 
     #@staticmethod
-    #def get_description():
+    #def get_group():
         #return "Query functions"
 
 
