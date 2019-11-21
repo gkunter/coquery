@@ -956,7 +956,7 @@
                 <enum>QFrame::Sunken</enum>
                </property>
                <property name="text">
-                <string>(no &amp;query file selected)</string>
+                <string/>
                </property>
               </widget>
              </item>

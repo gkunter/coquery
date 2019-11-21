@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -243,8 +243,8 @@ class Session(object):
                         current_query.query_string))
                 df = current_query.run(connection=self.db_connection,
                                        to_file=to_file, **kwargs)
-                raw_length = len(df)
                 self.sql_queries.append(current_query.sql_list)
+                raw_length = len(df)
 
                 # apply clumsy hack that tries to make sure that the dtypes of
                 # data frames containing NaNs or empty strings does not change

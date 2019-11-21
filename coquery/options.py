@@ -602,7 +602,10 @@ class Options(object):
             connection_name = config_file.str("sql", "active_configuration")
         except Exception:
             pass
-        self.args.current_connection = self.args.connections[connection_name]
+        if self.args.connections[connection_name].enabled:
+            self.args.current_connection = self.args.connections[connection_name]
+        else:
+            self.args.current_connection = self.args.connections[DEFAULT_CONFIGURATION]
 
         # read reference corpora
         for key, val in config_file.items("reference_corpora"):

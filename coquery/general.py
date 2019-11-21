@@ -123,40 +123,93 @@ class Collapser(object):
             val = utf8("").join(lst).strip()
         return val
 
+
 class EnglishCollapser(Collapser):
-    clitics = {"s", "re", "m", "ve", "d", "ll", "t"}
-    apostrophe_char = ("'", "\N{RIGHT SINGLE QUOTATION MARK}",
-                       "\N{MODIFIER LETTER APOSTROPHE}")
-    nonspacing_punctuation = (".", ",", ":", ";", "?", "!",
+    CLITICS = {"s", "re", "m", "ve", "d", "ll", "t"}
+    CONTRACTION_PUNCTUATION = ("'", "\N{RIGHT SINGLE QUOTATION MARK}",
+                               "\N{MODIFIER LETTER APOSTROPHE}")
+    NONSPACING_PUNCTUATION = (".", ",", ":", ";", "?", "!",
                               ")", "}", "]",
                               "%")
-    nontrailing_punctuation = ("(", "{", "[")
-    contracting_punctuation = ("\N{EM DASH}")
-    opening_quotes = ("\N{LEFT SINGLE QUOTATION MARK}",
-                      "\N{LEFT DOUBLE QUOTATION MARK}",
-                      '"', "'",  # ASCII quotes
-                      "\N{GRAVE ACCENT}",  # tick quote
-                      )
-    closing_quotes = ("\N{RIGHT SINGLE QUOTATION MARK}",
-                      "\N{RIGHT DOUBLE QUOTATION MARK}",
-                      '"', "''", "'",  # ASCII quotes
-                      "\N{ACUTE ACCENT}",  # tick quote
-                      )
+    NONTRAILING_PUNCTUATION = ("(", "{", "[")
+    CONJOINING_PUNCTUATION = ("\N{EM DASH}")
 
-    track_quotes = {'"': '"',
-                    "'": "'",
-                    "\N{GRAVE ACCENT}\N{GRAVE ACCENT}":
-                         "\N{ACUTE ACCENT}\N{ACUTE ACCENT}",
-                    # FIXME: we need some way to allow the same opening mark
-                    # with different closing marks!
-                    #"\N{GRAVE ACCENT}\N{GRAVE ACCENT}": "''",
-                    }
+    QUOTE_PAIRS = (("\N{LEFT SINGLE QUOTATION MARK}",
+                    "\N{RIGHT SINGLE QUOTATION MARK}"),
+                   ("\N{LEFT DOUBLE QUOTATION MARK}",
+                    "\N{RIGHT DOUBLE QUOTATION MARK}"),
+                   ("'", "'"),
+                   ('"', '"'),
+                   ("\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
+                    "\N{ACUTE ACCENT}\N{ACUTE ACCENT}"),
+                   ("\N{GRAVE ACCENT}\N{GRAVE ACCENT}", "''"),
+                   ("\N{GRAVE ACCENT}", "\N{ACUTE ACCENT}"))
+
+    @classmethod
+    def _corresponding_openers(cls, closer):
+        lst = []
+        for o, c in cls.QUOTE_PAIRS:
+            if c == closer:
+                lst.append(o)
+        return lst
+
+    @classmethod
+    def _corresponding_closers(cls, opener):
+        lst = []
+        for o, c in cls.QUOTE_PAIRS:
+            if o == opener:
+                lst.append(c)
+        return lst
 
     @classmethod
     def _collapse_list(cls, word_list):
+        """
+        Take the element from the word list and concatenate them into a string
+        with whitespaces corresponding to English spelling conventions.
+
+        This is not a function that I'm proud of, especially when it comes to
+        quotation marks. The general idea is that the algorithm goes through
+        the list element by element. For each element, it adds a separator
+        and the element itself to a list. The value of the separator depends on
+        the element itself, but can also be affected by the previous element in
+        the list.
+
+        For elements like contracted forms like 've or 's, the separator is
+        empty because here, the element is expected to be attached to the
+        previous element.
+
+        For elements like opening brackets, the separator for the NEXT
+        separator is set to be empty, because here, the current element (i.e.
+        the opening bracket) and the next element are expected to be attached
+        to each other.
+
+        For elements that may be quote-closing sequences, the algorithm tries
+        to determine whether a matching quote-opening sequence has already been
+        encountered. In this case, the value of the separator is set to empty,
+        because the closing sequence is expected to be attached to the previous
+        element.
+
+        If the element is not a quote-closing sequence, the algorithm checks if
+        if may be a quote-opening sequence. In this case, the NEXT separator is
+        set to be empty because quote-opening sequences are expected to be
+        attached to the following element.
+
+        The algorithm corrects some cases of broken quotation sequences. A
+        broken quotation sequence is one where the quotation punctuation is not
+        correctly tokenized, i.e. where the punctation is still attached to the
+        token, as in <word'>, <"happy>, etc. These tokens will be treated as if
+        they consisted of a sequence of the token and the punctuation mark.
+
+        This correction was, I hate to say it, developed in a trial-and-error
+        fashion. As a result, the code may not be as clear as you'd hope. Any
+        change to this function therefore needs to be tested very thoroughly by
+        running the tests from the test suite!
+        """
         lst = []
         next_sep = cls.whitespace
-        open_counter = {k: 0 for k in cls.track_quotes.keys()}
+
+        opening, closing = zip(*cls.QUOTE_PAIRS)
+        quote_stack = []
 
         for word in word_list:
             # per default, words will be joined using the language's
@@ -165,58 +218,71 @@ class EnglishCollapser(Collapser):
             next_sep = cls.whitespace
             lw = word.lower()
 
-            if lw.startswith(cls.apostrophe_char) and lw[1:] in cls.clitics:
+            closer_found = False
+            ignore_openers = False
+
+            # handle punctuation, contractions and clitics:
+            if (lw.startswith(cls.CONTRACTION_PUNCTUATION) and
+                    lw[1:] in cls.CLITICS):
                 sep = ""
-            elif lw in cls.nonspacing_punctuation:
+                ignore_openers = True
+            elif lw in cls.NONSPACING_PUNCTUATION:
                 sep = ""
-            elif lw in cls.nontrailing_punctuation:
+            elif lw in cls.NONTRAILING_PUNCTUATION:
                 next_sep = ""
-            elif lw.startswith(cls.contracting_punctuation):
+            elif lw.startswith(cls.CONJOINING_PUNCTUATION):
                 sep = ""
                 next_sep = ""
                 if lst[-1] == cls.whitespace:
                     lst[-1] = ""
-            elif lw.startswith(cls.opening_quotes):
-                for quote in cls.opening_quotes:
-                    # check if the quotation mark is one that can occur both
-                    # as a opening and a closing mark
-                    if (lw.startswith(quote) and quote in cls.track_quotes):
-                        count = open_counter[quote]
-                        # if the current quote count is even, the mark is
-                        # interpreted as an opening quotation mark, otherwise
-                        # it is interpreted as a closing quotation mark.
-                        if (count // 2) * 2 == count:
-                            next_sep = ""
-                            open_counter[quote] = open_counter[quote] + 1
-                        else:
-                            sep = ""
-                            open_counter[quote] = open_counter[quote] - 1
-                        break
-                else:
-                    # if the quotation mark is not any of the quotation marks
-                    # that can occur bot has opening and closing marks, treat
-                    # it as an opening quotation mark
-                    next_sep = ""
 
-            elif lw.startswith(cls.closing_quotes):
-                # use the same special case rules for quotation marks as for
-                # opening marks
-                for quote in cls.closing_quotes:
-                    if lw.startswith(quote) and quote in cls.track_quotes:
-                        count = open_counter[quote]
-                        if (count // 2) * 2 == count:
-                            next_sep = ""
-                            open_counter[quote] = open_counter[quote] + 1
-                        else:
-                            sep = ""
-                            open_counter[quote] = open_counter[quote] - 1
-                        break
-                else:
-                    sep = ""
+            # check if the current element ends in an element which may be a
+            # quote-closing sequence:
+            elif lw.endswith(tuple(closing)):
+                if not quote_stack:
+                    closer_found = lw in closing
+                for closer in closing:
+                    if lw.endswith(closer):
+                        # check if no corresponding quote-opening sequence was
+                        # previously encountered:
+                        if not quote_stack:
+                            # don't treat this element as a quote-closing
+                            # sequence if there is a regular token attached to
+                            # it:
+                            closer_found = closer != lw
+                            break
 
+                        # check if there are quote-opening sequences that may
+                        # be a match for the current quote-closing sequence:
+                        matching_openers = cls._corresponding_openers(closer)
+                        for i, stack_element in enumerate(quote_stack):
+                            if stack_element in matching_openers:
+                                # if a match is found, remove the quote-opening
+                                # sequence from the stack, and treat this
+                                # element as a quote-closing sequence.
+                                quote_stack = quote_stack[i:]
+                                sep = ""
+                                closer_found = True
+                                break
+
+            # check if the current element is not treated as a quote-closing
+            # sequence or a clitic element (or similar):
+            if not closer_found and not ignore_openers:
+                # check if the current element may be a quote-opening sequence:
+                if lw.startswith(tuple(opening)):
+                    if lw in opening:
+                        next_sep = ""
+                    # add the quote-opening sequence to the stack:
+                    for opener in opening:
+                        if lw.startswith(opener):
+                            quote_stack.insert(0, opener)
+                            break
+
+            # add the current separator value and the current element to the
+            # final list:
             lst += [sep, cls.tag_spacing(word)]
 
-        return [x for x in lst if x]
+        return lst
 
 
 def collapser_factory(language):
@@ -227,7 +293,6 @@ def collapser_factory(language):
 def collapse_words(word_list, language=None):
     """ Concatenate the words in the word list, taking clitics, punctuation
     and some other stop words into account."""
-
     return collapser_factory(language).collapse(word_list)
 
 
