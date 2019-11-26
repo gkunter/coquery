@@ -2,7 +2,7 @@
 """
 Connectionconfiguration.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -400,6 +400,10 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             S = ("The Python package 'pymysql' is not installed on this "
                  "system. MySQL connections are not available.")
             self.noConnection.emit(Exception(S))
+
+            self.ui.group_credentials.setDisabled(True)
+            self.ui.group_server.setDisabled(True)
+
             return
 
         if self.ui.radio_local.isChecked:
@@ -574,6 +578,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         def style_button(color):
             S = 'QPushButton {{ background-color: {col}; color: {col}; }}'
             return S.format(col=color)
+
         if state == "noConnection":
             match = re.search(r'\"(.*)\"', str(exc))
             if match:
