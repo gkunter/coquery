@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -279,23 +279,23 @@ class BuilderClass(BaseCorpusBuilder):
         # merge the data frames:
         df = df.merge(df2, how="inner", on=[self.file_name])
 
-        l = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
-             Column(self.file_path, "VARCHAR(4096) NOT NULL"),
-             Column(self.file_name, "VARCHAR({}) NOT NULL".format(
-                 int(max(df[self.file_name].str.len()))))]
+        lst = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
+               Column(self.file_path, "VARCHAR(4096) NOT NULL"),
+               Column(self.file_name, "VARCHAR({}) NOT NULL".format(
+                   int(max(df[self.file_name].str.len()))))]
 
         for col in meta_columns:
             rc_feature = "file_{}".format(col.lower())
             setattr(self, rc_feature, col)
             if df[col].dtype == int:
-                l.append(Column(col, "MEDIUMINT"))
+                lst.append(Column(col, "MEDIUMINT"))
             elif df[col].dtype == float:
-                l.append(Column(col, "REAL"))
+                lst.append(Column(col, "REAL"))
             else:
-                l.append(Column(col, "VARCHAR({})".format(
+                lst.append(Column(col, "VARCHAR({})".format(
                     int(max(df[col].str.len())))))
 
-        self.create_table_description(self.file_table, l)
+        self.create_table_description(self.file_table, lst)
         self.special_files.append(os.path.basename(file_name))
 
         self._meta_table = df
@@ -390,7 +390,13 @@ class BuilderClass(BaseCorpusBuilder):
             print(s)
             logging.warning(s)
 
-        raw_text = self._read_text(file_name)
+        try:
+            raw_text = self._read_text(file_name)
+        except Exception as e:
+            s = "Could not read file {}: {}".format(basename, str(e))
+            print(s)
+            logging.warning(s)
+            return
 
         tokens = []
 

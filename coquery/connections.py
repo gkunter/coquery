@@ -2,7 +2,7 @@
 """
 connections.py is part of Coquery.
 
-Copyright (c) 2017, 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -29,6 +29,7 @@ class Connection(CoqObject):
         self.name = name
         self._resources = {}
         self._db_type = db_type
+        self.enabled = True
 
     def db_type(self):
         return self._db_type
@@ -125,7 +126,13 @@ class Connection(CoqObject):
         return len(self._resources)
 
     def get_engine(self, database=None):
-        return sqlalchemy.create_engine(self.url(database))
+        try:
+            return sqlalchemy.create_engine(self.url(database))
+        except (ModuleNotFoundError):
+            return None
+
+    def url(self, database=None):
+        return None
 
     def __repr__(self):
         template = "{name}({arguments})"
@@ -174,6 +181,12 @@ class MySQLConnection(Connection):
         if params is None:
             params = ["charset=utf8mb4", "local_infile=1"]
         self.params = params
+        try:
+            import pymysql
+        except ImportError:
+            self.enabled = False
+        else:
+            self.enabled = True
 
     def url(self, database=None):
         template = ("mysql+pymysql://{user}:{password}@{host}:{port}"
@@ -192,6 +205,9 @@ class MySQLConnection(Connection):
 
     def test(self):
         engine = self.get_engine()
+        if not engine:
+            return False, ""
+
         try:
             with engine.connect() as connection:
                 result = connection.execute("SELECT VERSION()")

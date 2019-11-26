@@ -304,10 +304,10 @@ class GroupDialog(QtWidgets.QDialog):
         function_groups = self.get_function_groups()
 
         for fun_base in sorted(function_groups,
-                               key=lambda x: x.get_description()):
+                               key=lambda x: x.get_group()):
 
             group_item = QtWidgets.QListWidgetItem(
-                fun_base.get_description())
+                fun_base.get_group())
             function_items = []
             for fnc in function_groups[fun_base]:
                 list_item = QtGui.QStandardItem()

@@ -98,9 +98,8 @@ class Group(CoqObject):
         considered a duplicate and is removed from the data group.
         """
         function_list = FunctionList(self.get_functions())
-        df = df.drop_duplicates(self.columns +
-                                [x.get_id()
-                                 for x in function_list.get_list()])
+        func_columns = [x.get_id() for x in function_list.get_list()]
+        df = df.drop_duplicates(self.columns + func_columns)
         return df
 
     def get_functions(self):
@@ -946,6 +945,16 @@ class Collocations(Manager):
         # FIXME:
         # If the context span is zero (i.e. neither a left nor a right
         # context, the program should alert the user somehow.
+
+        # If this is a new query, reset the context cache so that the contexts
+        # have to be retrieved new. Otherwise, leave the context cache
+        # unchanged. In this case, changing the collocation window to values
+        # that have previously used for the collocations will recylce the
+        # cached collocation list.
+        if self._last_query_id != session.query_id:
+            self.reset_context_cache()
+            self._last_query_id = session.query_id
+
         return [ContextColumns(left=options.cfg.collo_left,
                                right=options.cfg.collo_right)]
 

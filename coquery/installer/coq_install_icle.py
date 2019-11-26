@@ -19,6 +19,38 @@ from coquery.corpusbuilder import *
 from coquery.unicode import utf8
 from coquery.bibliography import *
 
+"""
+Right now, there's no straightforward way to make this installer work cross-
+platform because the corpus uses the MS Access file format .mdb for the
+meta data. These files can be read in Linux if the mdbtools are installed
+first. Also, the meza module (available via PyPi) is required. The meta data
+can be extracted like so:
+
+In [1]: from meza import io
+In [2]: import pandas as pd
+
+In [3]: records = io.read(
+    "/usr/local/share/corpora/source/ICLE/DATA/_icle.mdb")
+In [4]: lst = list(records)
+
+In [5]: df = pd.DataFrame(lst)
+In [6]: df = df.dropna(axis="index", how="all")
+In [7]: df = df.loc[df["country"].notna()]
+In [8]: df["monthseng"] = (df["monthseng"].replace("None", pd.np.nan)
+                                          .astype(float))
+In [9]: df["unieng"] = (df["unieng"].replace("None", pd.np.nan)
+                                    .astype(float))
+In [10]: df["filename"] = df["file"] + ".txt"
+In [11]: df.to_csv(
+    "/usr/local/share/corpora/source/ICLE/meta.csv", index=False)
+
+Now, the ICLE can be build from the .txt files with the meta.csv file just
+created as the meta data file. What is important is that the .txt files are
+stored in a separate folder – on the CD, they are placed in the DATA folder
+alongside some binaries which will confuse the corpus builder.
+"""
+
+
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "*.*"
 
