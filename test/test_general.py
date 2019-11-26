@@ -14,7 +14,7 @@ import os
 import numpy as np
 
 from coquery.general import (
-    check_fs_case_sensitive, has_module,
+    check_fs_case_sensitive, has_module, recycle,
     pretty, collapse_words, EnglishCollapser)
 from test.testcase import CoqTestCase, run_tests
 
