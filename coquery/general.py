@@ -125,9 +125,14 @@ class Collapser(object):
 
 
 class EnglishCollapser(Collapser):
-    CLITICS = {"s", "re", "m", "ve", "d", "ll", "t"}
+    CLITICS = {"#s", "#re", "#m", "#ve", "#d", "#ll", "#t", "n#t"}
     CONTRACTION_PUNCTUATION = ("'", "\N{RIGHT SINGLE QUOTATION MARK}",
                                "\N{MODIFIER LETTER APOSTROPHE}")
+    CONTRACTIONS = []
+    for p in CONTRACTION_PUNCTUATION:
+        for c in CLITICS:
+            CONTRACTIONS.append(c.replace("#", p))
+
     NONSPACING_PUNCTUATION = (".", ",", ":", ";", "?", "!",
                               ")", "}", "]",
                               "%")
@@ -222,8 +227,7 @@ class EnglishCollapser(Collapser):
             ignore_openers = False
 
             # handle punctuation, contractions and clitics:
-            if (lw.startswith(cls.CONTRACTION_PUNCTUATION) and
-                    lw[1:] in cls.CLITICS):
+            if (lw in cls.CONTRACTIONS):
                 sep = ""
                 ignore_openers = True
             elif lw in cls.NONSPACING_PUNCTUATION:

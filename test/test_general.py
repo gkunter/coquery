@@ -259,6 +259,12 @@ class TestEnglishCollapseWords(CoqTestCase):
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
+    def test_contractions_4(self):
+        lst = ["'I", "ca", "n't", "help", "it", ",", "'", "said"]
+        target = "'I can't help it,' said"
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
     def test_brackets_1(self):
         lst = list("a(b)c[d]e{f}")
         target = "a (b) c [d] e {f}"
@@ -547,7 +553,6 @@ class TestEnglishCollapseWords(CoqTestCase):
         target = None
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
-
 
 
 class TestFailing(CoqTestCase):
