@@ -211,6 +211,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.label_dimensions.setText(self.get_label())
         self.check_figure_types()
 
+        if self.vis is not None:
+            self.update_figure()
+
         self.ui.button_refresh_data.hide()
 
         self.blockSignals(False)
