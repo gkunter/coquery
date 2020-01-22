@@ -206,7 +206,7 @@ class Session(object):
         Session.query_id += 1
 
         number_of_queries = len(self.query_list)
-        manager = self.get_manager(options.cfg.MODE)
+        manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
@@ -346,7 +346,8 @@ class Session(object):
                 index=False)
             output_file.flush()
 
-    def get_manager(self, query_mode):
+    def get_manager(self, query_mode=None):
+        query_mode = query_mode or options.cfg.MODE
         if not self.Resource:
             return None
         else:
@@ -381,7 +382,7 @@ class Session(object):
         a cached table (e.g. for sorting when no recalculation is needed).
         """
 
-        manager = self.get_manager(options.cfg.MODE)
+        manager = self.get_manager()
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
@@ -502,7 +503,7 @@ class Session(object):
 
         # deal with function headers:
         if header.startswith("func_"):
-            manager = self.get_manager(options.cfg.MODE)
+            manager = self.get_manager()
             # check if there is a parenthesis in the header (there shouldn't
             # ever be one, actually)
             match = re.search("(.*)\((.*)\)", header)
