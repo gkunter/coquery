@@ -828,6 +828,16 @@ class TestCorpus(CoqTestCase):
             simple(d["word"][1]),
             simple("COQ_WORD_1.POS LIKE 'n%'"))
 
+    def test_token_conditions_id_query_1(self):
+        S = "=123"
+        token = COCAToken(S)
+        d = self.resource.get_token_conditions(0, token)
+        print(d)
+        self.assertEqual(
+            simple(d["corpus"][0]),
+            simple("""ID1 = '123'"""))
+
+
     ### SELECT COLUMNS
 
     def test_get_required_columns_1(self):
