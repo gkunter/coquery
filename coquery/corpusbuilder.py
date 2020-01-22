@@ -235,7 +235,13 @@ class BaseCorpusBuilder(corpus.SQLResource):
         for x in self.auto_create:
             table = getattr(self, "{}_table".format(x), None)
             columns = getattr(self, "{}_columns".format(x), None)
-            if table and columns:
+            if not table:
+                logging.warning(
+                    "Could not find a table name for '{}'".format(x))
+            elif not columns:
+                logging.warning(
+                    "No columns specified for table '{}'".format(table))
+            else:
                 self.create_table_description(table, columns)
 
     def get_table_names(self):
@@ -2077,6 +2083,12 @@ class XMLCorpusBuilder(BaseCorpusBuilder):
         self.body = tree.find(self.body_tag,
                               namespaces=self._namespaces)
         self.process_element(self.body)
+
+    def preprocess_element(self, element):
+        return
+
+    def postprocess_element(self, element):
+        return
 
     def process_element(self, element):
         self.preprocess_element(element)
