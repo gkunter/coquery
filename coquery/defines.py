@@ -25,6 +25,7 @@ QUERY_ITEM_LEMMA = "query_item_lemma"
 QUERY_ITEM_TRANSCRIPT = "query_item_transcript"
 QUERY_ITEM_POS = "query_item_pos"
 QUERY_ITEM_GLOSS = "query_item_gloss"
+QUERY_ITEM_ID = "corpus_id"
 
 QUERY_MODE_TOKENS = "Do not transform"
 QUERY_MODE_TYPES = "Only distinct rows"

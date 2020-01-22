@@ -10,6 +10,9 @@ Interface
 * The database paths of non-MySQL connections can now be changed
 * You can now browse through the contexts of the matches in the context viewer
 
+Syntax
+* Add syntax to search for IDs, example: =123
+
 Queries
 * Can restrict query files to a number of rows
 * Add an SQL query viewer

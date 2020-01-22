@@ -3,7 +3,7 @@
 """
 tokens.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -64,6 +64,7 @@ class QueryToken(object):
         self.lemma_specifiers = []
         self.transcript_specifiers = []
         self.gloss_specifiers = []
+        self.id_specifiers = []
         self.negated = None
         self.wildcards = None
         self.lemmatize = None
@@ -198,6 +199,11 @@ class QueryToken(object):
             mapping of the current resource. If the list contains more than
             one element, the match will combine them using the OR relation.
 
+        id_specifiers : list
+            A list of integers that are matched against the corpus ID of the
+            current resource. If the list contains more than one element, the
+            match will combine them using the OR relation.
+
         negated : bool
             True if the current query item is negated, and False otherwise.
 
@@ -237,7 +243,11 @@ class COCAToken(QueryToken):
     quote_close = '"'
 
     def parse(self):
-        def split_spec(s, or_char=self.or_character):
+        def split_spec(s, or_char=None):
+            """
+            Split the string into a list based on the provided OR character
+            """
+            or_char = or_char or self.or_character
             if not s:
                 return []
             else:
@@ -257,9 +267,13 @@ class COCAToken(QueryToken):
         class_specification = None
         transcript_specification = None
         gloss_specification = None
+        id_specification = None
 
-        pat = r"^\s*(?P<negated>~*)(?P<lemmatize>#*)(?P<item>.*)"
+        pat = r"^\s*(?P<negated>~*)(?P<id>=*)(?P<lemmatize>#*)(?P<item>.*)"
         match = re.search(pat, self.S)
+
+
+        id_search = bool(match.groupdict()["id"])
 
         if match.groupdict()["negated"]:
             self.negated = bool(len(match.groupdict()["negated"]) % 2)
@@ -270,40 +284,45 @@ class COCAToken(QueryToken):
         work = (match.groupdict()["item"]
                      .replace(r"\#", "#")
                      .replace(r"\~", "~")
+                     .replace(r"\=", "=")
                      .replace("'", "''")
                      .replace(r"\{", "{"))
 
-        if work == "//" or work == "[]":
-            word_specification = work
+        if id_search:
+            id_specification = work
         else:
-            # try to match WORD|LEMMA|TRANS.[POS]:
-            regex = ("(\[(?P<lemma>.*)\]|"
-                     "/(?P<trans>.*)/|"
-                     "(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}")
-            match = re.match(regex, work)
-            if not match:
-                # try to match WORD|LEMMA|TRANS:
+            if work == "//" or work == "[]":
+                word_specification = work
+            else:
+                # try to match WORD|LEMMA|TRANS.[POS]:
                 regex = ("(\[(?P<lemma>.*)\]|"
-                         "/(?P<trans>.*)/|"
-                         "(?P<word>.*)){1}")
+                        "/(?P<trans>.*)/|"
+                        "(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}")
                 match = re.match(regex, work)
+                if not match:
+                    # try to match WORD|LEMMA|TRANS:
+                    regex = ("(\[(?P<lemma>.*)\]|"
+                            "/(?P<trans>.*)/|"
+                            "(?P<word>.*)){1}")
+                    match = re.match(regex, work)
 
-            word_specification = match.groupdict()["word"]
-            # word specification that begin and end with quotation marks '"'
-            # are considered GLOSS specifications:
-            if word_specification and re.match('".+"', word_specification):
-                gloss_specification = word_specification
-                word_specification = None
-                gloss_specification = gloss_specification.strip('"')
+                word_specification = match.groupdict()["word"]
+                # word specification that begin and end with quotation marks
+                # '"' are considered GLOSS specifications:
+                if word_specification and re.match('".+"', word_specification):
+                    gloss_specification = word_specification
+                    word_specification = None
+                    gloss_specification = gloss_specification.strip('"')
 
-            lemma_specification = match.groupdict()["lemma"]
-            transcript_specification = match.groupdict()["trans"]
-            try:
-                class_specification = match.groupdict()["class"]
-            except KeyError:
-                class_specification = None
+                lemma_specification = match.groupdict()["lemma"]
+                transcript_specification = match.groupdict()["trans"]
+                try:
+                    class_specification = match.groupdict()["class"]
+                except KeyError:
+                    class_specification = None
 
         self.word_specifiers = split_spec(word_specification)
+        self.id_specifiers = split_spec(id_specification)
         self.transcript_specifiers = split_spec(transcript_specification)
         self.lemma_specifiers = split_spec(lemma_specification)
         self.class_specifiers = split_spec(class_specification)
@@ -322,6 +341,7 @@ class COCAToken(QueryToken):
 
         self.wildcards = any([self.has_wildcards(x)
                               for x in (self.word_specifiers +
+                                        self.id_specifiers +
                                         self.transcript_specifiers +
                                         self.lemma_specifiers +
                                         self.class_specifiers +

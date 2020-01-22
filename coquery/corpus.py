@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -29,7 +29,7 @@ from datetime import datetime
 from .errors import UnsupportedQueryItemError
 from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
-    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
+    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS, QUERY_ITEM_ID,
     SQL_MYSQL, SQL_SQLITE,
     CONTEXT_NONE,
     PREFERRED_ORDER)
@@ -1487,19 +1487,25 @@ class SQLResource(BaseResource):
                 (token.word_specifiers, QUERY_ITEM_WORD, "Word"),
                 (token.lemma_specifiers, QUERY_ITEM_LEMMA, "Lemma"),
                 (token.class_specifiers, QUERY_ITEM_POS, "Part-of-speech"),
-                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT, "Transcription"),
-                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss")]:
+                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT,
+                 "Transcription"),
+                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss"),
+                (token.id_specifiers, QUERY_ITEM_ID, "ID")]:
             if not spec_list:
                 continue
 
             if spec_list == ["*"]:
                 continue
 
-            try:
-                col = getattr(cls, getattr(cls, label))
-            except AttributeError:
-                raise UnsupportedQueryItemError(item_type)
-            _, tab, _ = cls.split_resource_feature(getattr(cls, label))
+            if item_type == "ID":
+                col = getattr(cls, "corpus_id")
+                tab = "corpus"
+            else:
+                try:
+                    col = getattr(cls, getattr(cls, label))
+                except AttributeError:
+                    raise UnsupportedQueryItemError(item_type)
+                _, tab, _ = cls.split_resource_feature(getattr(cls, label))
 
             if tab == "corpus":
                 template = "{name}{N}"
