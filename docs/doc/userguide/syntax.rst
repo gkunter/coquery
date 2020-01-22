@@ -21,10 +21,12 @@ has to contain at least one query item. The number of query items is not
 limited, but the time required to execute a query increases with the 
 number of query items.
 
-Query items are not case-sensitive: ``Walk``, ``walk``,
-and ``WALK`` all specify the same query item. There are four 
-different types of query items. Word items, Transcription items, Lemma 
-items, and Gloss items.
+By default, query items are not case-sensitive: ``Walk``, ``walk``,
+and ``WALK`` all specify the same query item. If case-sensitive queries are
+required, this behavior can be changed in the Settings dialog.
+
+There are five different types of query items: Word items, Transcription items,
+Lemma items, Gloss items, and ID items.
 
 Word items
 ++++++++++
@@ -58,9 +60,20 @@ Word items. For example, ``[walk]`` in CELEX matches the tokens
 
 Gloss items
 +++++++++++
+
 Gloss items are used to match tokens for which a gloss or a translation is 
-available, for example in a dictionary corpus. Double quotation marks are 
+available, for example in a dictionary corpus. Double quotation marks ``"`` are
 used to mark gloss items.
+
+ID items
+++++++++
+
+ID items are used to match tokens that have a particular unique identifier. The
+ID of each token is immutable, and will be the same for all installations of a
+given corpus. Thus, the ID can be used for example in a publication to refer to
+a linguistic example. An ID query item can then be used to look up the token in
+the corpus. ID items are marked by an initial equation sign ``=``. For example,
+``=2864`` matches the token with the ID 2864.
 
 Part-of-speech specifiers
 -------------------------
@@ -79,16 +92,16 @@ first right-clicking on the part-of-speech column column in the Output
 column list, and then selecting "View unique values" from the context 
 menu.
 
-For convenience, and in order to retain syntactic compatibility with the
-BYU syntax (see below), POS specifiers can also be used without providing
-also a query item. Thus, ``[nn1]`` matches all tokens 
-tagged as singular nouns (NN1) in the BNC. Note that this syntax is 
-potentially ambiguous: For example, the tag POS is used in the BNC to 
-tag the possessive marker *'s*. At the same time, there are a few 
-tokens that have *POS* as their lemma. Similarly, articles in CLAWS7
-are tagged by AT, which also exists as a lemma *at*. In the case of 
-such ambiguities between POS tags and lemmas, Coquery is compatible to 
-BYU-COCA and gives precedence to the part-of-speech tag. 
+# For convenience, and in order to retain syntactic compatibility with the
+# BYU syntax (see below), POS specifiers can also be used without providing
+# also a query item. Thus, ``[nn1]`` matches all tokens
+# tagged as singular nouns (NN1) in the BNC. Note that this syntax is
+# potentially ambiguous: For example, the tag POS is used in the BNC to
+# tag the possessive marker *'s*. At the same time, there are a few
+# tokens that have *POS* as their lemma. Similarly, articles in CLAWS7
+# are tagged by AT, which also exists as a lemma *at*. In the case of
+# such ambiguities between POS tags and lemmas, Coquery is compatible to
+# BYU-COCA and gives precedence to the part-of-speech tag.
 
 Some corpora (e.g. the CMUdict Pronunciation Dictionary) are not tagged 
 for part-of-speech. With these corpora, POS specifiers cannot be used.
@@ -152,8 +165,8 @@ Escaping characters
 
 If you want to query any character that has a special meaning in query 
 items (for example the wildcard characters, the square brackets, the 
-quotation mark, or the slashes), you must precede it by the 'escape' 
-character ``\\`` (the backslash). For example, if you want to match 
+quotation mark, the slashes, or the equation sign), you must precede it by the
+'escape' character ``\\`` (the backslash). For example, if you want to match
 all occurrences of the asterisk character in a corpus, you have to use the 
 query string ``\\*``, because the unescaped asterisk ``*`` is interpreted as 
 a wildcard that matches any word.
@@ -166,16 +179,16 @@ corpus that differ in the number of tokens. This is done by appending to a
 query item, the range of occurrences that the query should match. The range is
 enclosed in curly brackets (similar to quantification in regular expressions).
 
-For example, the query string ``the [n*]{1,3} [v*]`` any sequence of one, two,
+For example, the query string ``the *.[n*]{1,3} [v*]`` any sequence of one, two,
 or three nouns in the corpus that is preceded by the word *the* and followed 
 by a verb. In the current absence of a way that allows users to query phrasal 
 constituents in a corpus, this syntax can be used to construct queries that 
 approximate phrasal constructions. Many English noun phrases can be queried by 
-using the query string ``[DT]{0,1} [jj*|,]{0,6} [n*]{1,3} ~[n*]``: this matches 
-any sequence of words that starts either with one or no determiner, followed 
-by a group of up to six tokens that can either be adjectives or commas, 
-followed by a group of one, two, or three nouns, followed by a word that is 
-not a noun. 
+using the query string ``[DT]{0,1} *.[jj*|,]{0,6} *.[n*]{1,3} ~[n*]``: this
+matches any sequence of words that starts either with one or no determiner,
+followed by a group of up to six tokens that can either be adjectives or
+commas, followed by a group of one, two, or three nouns, followed by a word
+that is not a noun.
 
 OR operator
 -----------
@@ -183,9 +196,9 @@ OR operator
 The pipe symbol ``|`` acts as an OR operator. The OR operator is available for
 all query types. The results table will contain the union of the matching 
 tokens. For example, ``walk|walked|walks`` matches either *walk*, *walked*, 
-*walks*, but not *walking*. ``[walk|talk]`` in CELEX matches the tokens *walk*, *walking*, 
-*walks*, and *walked*, as well as the tokens *talk*, *talks*, *talking*, and
-*talked*.
+*walks*, but not *walking*. ``[walk|talk]`` in CELEX matches the tokens *walk*,
+*walking*, *walks*, and *walked*, as well as the tokens *talk*, *talks*,
+*talking*, and *talked*.
 
 Query item lemmatization
 ------------------------
@@ -197,11 +210,31 @@ lemma will be returned as well. For example, the query string ``#wrote`` will
 match all tokens of the lemma WRITE, i.e. *write*, *writes*, *writing*, 
 *wrote*, and *written*.
 
+Query item negation
+-------------------
+
+Any query item can be prefixed by the tilde ``~``. This prefix indicates a
+negation of the query item: only those tokens will be returned that do not
+match the specification of the negated query item. For example, the query
+string ``going ~to`` will match only those instances of *going* that are
+followed by any word other than *to*. Thus, the sequences *going downstairs*,
+*going along*, or *going on* will be included in the results, but *going to* is
+excluded from the results.
+
+The tilde can be added to any query item type. For instance, ``to ~*.[v*]``
+will return any sequence of *to* and another token for as long as the second
+token is not tagged as a verb in the corpus. Thus, the results may include
+e.g. *to Spain* or *to her*, but not *to go* or *to walk*.
+
 Additional examples
 -------------------
 
+``??*`` matches all tokens that consist of two or more letters.
+
 ``/?/`` matches all tokens with a transcription that consists of 
 only a single character.
+
+
 
 COCA/BYU syntax compatibility
 -----------------------------
@@ -213,12 +246,11 @@ COCA or BYU-BNC. A description of the BYU syntax can be found here:
 
 Most query strings that are valid in the BYU web interfaces are also
 valid query strings in Coquery. However, where BYU-COCA uses 
-``-`` to negate query items, Coquery uses the hash mark 
-``#``. Also, Coquery currently does not support synonym matching: 
-``[=beat].[v*]`` matches verbs like *hit*, *strike*,
-or *defeat* in BYU-COCA. In contrast, Coquery matches this query 
-string to all tokens that are tagged as verbs, and which are written as
-*=beat*. Most likely, no token will be matched.
+``-`` to negate query items, Coquery uses the tilde ``#``. Also, Coquery
+currently does not support synonym matching: ``[=beat].[v*]`` matches verbs
+like *hit*, *strike*, or *defeat* in BYU-COCA. In contrast, Coquery matches
+this query string to all tokens that are tagged as verbs, and which are written
+as *=beat*. Most likely, no token will be matched.
 
 Coquery extends the BYU syntax by allowing for quantified query items. 
 Also, Transcription queries are not supported by the BYU syntax. 
