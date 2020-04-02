@@ -2,7 +2,7 @@
 """
 functions.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2020 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -208,7 +208,8 @@ class Function(CoqObject):
     def validate_input(cls, value):
         return bool(value) or cls.allow_null
 
-    def constant(self, df, value):
+    @staticmethod
+    def constant(df, value):
         """
         Return a Series with constant values.
         """
@@ -495,7 +496,7 @@ class CalcFunction(NumFunction):
                 const = self.coerce_value(df, parameter)
                 val = self._func(val, const)
             if not self._ignore_na:
-                nan_rows = pd.np.any(pd.isnull(df[self.columns].values),
+                nan_rows = np.any(pd.isnull(df[self.columns].values),
                                      axis=1)
                 if nan_rows.any():
                     val = val.astype(object)
@@ -542,9 +543,9 @@ class Log(OperatorFunction):
 
     def evaluate(self, df, **kwargs):
         base = kwargs.get("base")
-        func = {"Log2": pd.np.log2,
-                "Log10": pd.np.log10,
-                "LogN": pd.np.log}[base]
+        func = {"Log2": np.log2,
+                "Log10": np.log10,
+                "LogN": np.log}[base]
 
         val = func(df[self.columns].values)
         if len(self.columns) > 1:
@@ -598,43 +599,43 @@ class Min(StatisticalFunction):
     _name = "MIN"
 
     def _func(self, values, axis=1, **kwargs):
-        return pd.np.nanmin(values, axis=axis)
+        return np.nanmin(values, axis=axis)
 
 
 class Max(StatisticalFunction):
     _name = "MAX"
 
     def _func(self, values, axis=1, **kwargs):
-        return pd.np.nanmax(values, axis=axis)
+        return np.nanmax(values, axis=axis)
 
 
 class Mean(StatisticalFunction):
     _name = "MEAN"
 
     def _func(self, values, axis=1, **kwargs):
-        return pd.np.mean(values, axis=axis)
+        return np.mean(values, axis=axis)
 
 
 class Median(StatisticalFunction):
     _name = "MEDIAN"
 
     def _func(self, values, axis=1, **kwargs):
-        return pd.np.median(values, axis=axis)
+        return np.median(values, axis=axis)
 
 
 class StandardDeviation(StatisticalFunction):
     _name = "SD"
 
     def _func(self, values, axis=1, **kwargs):
-        return pd.np.std(values, axis=axis)
+        return np.std(values, axis=axis)
 
 
 class InterquartileRange(StatisticalFunction):
     _name = "IQR"
 
     def _func(self, values, axis=1, **kwargs):
-        return pd.np.subtract(
-            *pd.np.percentile(values, [75, 25], axis=axis))
+        return np.subtract(
+            *np.percentile(values, [75, 25], axis=axis))
 
 
 class Percentile(StatisticalFunction):
@@ -642,7 +643,7 @@ class Percentile(StatisticalFunction):
     arguments = {"float": [("value", "Percentile", 95, (0, 100))]}
 
     def _func(self, values, axis=1, **kwargs):
-        return pd.np.percentile(values, kwargs["value"], axis=axis)
+        return np.percentile(values, kwargs["value"], axis=axis)
 
 
 #############################################################################
@@ -700,22 +701,22 @@ class LogicFunction(CalcFunction):
 
 class And(LogicFunction):
     _name = "AND"
-    _func = pd.np.logical_and
+    _func = np.logical_and
 
 
 class Or(LogicFunction):
     _name = "OR"
-    _func = pd.np.logical_or
+    _func = np.logical_or
 
 
 class Xor(LogicFunction):
     _name = "XOR"
-    _func = pd.np.logical_xor
+    _func = np.logical_xor
 
 
 class Not(LogicFunction):
     _name = "NOT"
-    _func = pd.np.logical_not
+    _func = np.logical_not
 
 
 class If(And):
@@ -730,10 +731,10 @@ class If(And):
         val = super(If, self).evaluate(df, **kwargs)
 
         # apply conditional replacement:
-        recode = pd.np.where(val, then_val, else_val)
+        recode = np.where(val, then_val, else_val)
 
         _null = pd.isnull(val)
-        # replace NaN results by NaN (because pd.np.nan AND True evaluates to
+        # replace NaN results by NaN (because np.nan AND True evaluates to
         # True, see e.g. https://stackoverflow.com/q/17273312/)
         if _null.any():
             recode = recode.astype(object)
@@ -750,7 +751,7 @@ class IsTrue(LogicFunction):
     parameters = 0
 
     def evaluate(self, df, **kwargs):
-        return pd.DataFrame(data=pd.np.vectorize(operator.truth)(df.values),
+        return pd.DataFrame(data=np.vectorize(operator.truth)(df.values),
                             index=df.index,
                             columns=df.columns)
 
@@ -800,7 +801,7 @@ class Freq(BaseFreq):
     no_column_labels = True
     drop_on_na = False
 
-    DUMMY_STR = pd.np.array(list(string.ascii_uppercase + string.digits))
+    DUMMY_STR = np.array(list(string.ascii_uppercase + string.digits))
 
     def evaluate(self, df, **kwargs):
         """
@@ -838,18 +839,27 @@ class Freq(BaseFreq):
         # which makes grouping unreliable if there are columns with missing
         # values.
         # Reference:
-        # http://pandas.pydata.org/pandas-docs/stable/missing_data.html#na-values-in-groupby
+        # https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#na-values-in-groupby
         # This is considered rather a bug in this Github issue:
         # https://github.com/pydata/pandas/issues/3729
 
         # The replacement workaround based on this post:
         # https://stackoverflow.com/a/18431417
+        #
+        # What the workaround does is this:
+        # 1. Try to find a replacement value that doesn't occur as a valid
+        #    value in the involved columns
+        # 2. Replace the missing values in that column by the replacement value
+        # 3. Calculate the frequencies of each valid value in the selected
+        #    columns
+        # 4. Replace the replacement value by NaN
+
         replace_dict = {}
         for x in columns:
             if df[x].isnull().any():
                 while True:
                     if df[x].dtype == object:
-                        repl = "".join(pd.np.random.choice(Freq.DUMMY_STR, 20))
+                        repl = "".join(np.random.choice(Freq.DUMMY_STR, 20))
                     elif df[x].dtype == int:
                         repl = random.randint(-sys.maxsize, +sys.maxsize)
                     elif df[x].dtype == float:
@@ -880,7 +890,7 @@ class Freq(BaseFreq):
             val[df["coquery_invisible_dummy"].isnull()] = 0
 
         for x in replace_dict:
-            df[x] = df[x].replace(replace_dict[x], pd.np.nan)
+            df[x] = df[x].replace(replace_dict[x], np.nan)
 
         return val
 
@@ -1035,7 +1045,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
     _name = "reference_ll_keyness"
 
     def _func(self, x, size, ext_size, width):
-        obs = pd.np.array(
+        obs = np.array(
             [[x.freq1, x.freq2],
              [size - x.freq1 * width, ext_size - x.freq2 * width]])
         try:
@@ -1043,7 +1053,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
                                          lambda_="log-likelihood")
         except ValueError as e:
             print(e)
-            return pd.np.nan
+            return np.nan
 
         return tmp[0]
 
@@ -1183,6 +1193,40 @@ class TypeTokenRatio(Types):
         val = pd.Series(data=types.values / tokens.values,
                         index=df.index)
         return val
+
+
+class StandardizedTypeTokenRatio(Types):
+    _name = "STTR"
+    no_column_labels = True
+
+    arguments = {"int": [("value", "Bandwidth:", 2500)]}
+
+    def evaluate(self, df, **kwargs):
+        parameter = kwargs.get("value", 2500)
+        tty_list = []
+        ix = df.sample(len(df)).index
+        for i in range(len(df) // parameter):
+            dsub = df.loc[ix].iloc[(i * parameter):(i + 1) * parameter]
+            types = super(StandardizedTypeTokenRatio, self).evaluate(dsub,
+                                                                     **kwargs)
+            tokens = Tokens(group=self.group,
+                            columns=self.columns).evaluate(dsub, **kwargs)
+            n_types = types.values[0]
+            n_tokens = tokens.values[0]
+            tty_list.append(n_types / n_tokens)
+
+        if tty_list:
+            val = self.constant(df, sum(tty_list) / len(tty_list))
+        else:
+            val = None
+        return val
+
+
+class StandardizedTypeTokenRatio250(StandardizedTypeTokenRatio):
+    _name = "STTR250"
+
+    def evaluate(self, df, **kwargs):
+        return super(StandardizedTypeTokenRatio250, self).evaluate(df, value=250)
 
 
 class Proportion(BaseProportion):
@@ -1329,8 +1373,8 @@ class MutualInformation(Proportion):
 
     def evaluate(self, df, f_1, f_2, f_coll, size, span, **kwargs):
         try:
-            val = (pd.np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) /
-                   pd.np.log(2))
+            val = (np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) /
+                   np.log(2))
         except (ZeroDivisionError, TypeError, Exception) as e:
             print(("Error while calculating mutual information:"
                    "\nf1={} f2='{}' fcol='{}' size={} span={}").format(
@@ -1389,7 +1433,7 @@ class SubcorpusSize(CorpusSize):
                                in session.Resource.get_corpus_features()]
             column_list = [x for x in corpus_features
                            if "coq_{}_1".format(x) in self.columns]
-            if df.iloc[0].coquery_invisible_dummy is not pd.np.nan:
+            if df.iloc[0].coquery_invisible_dummy is not np.nan:
                 val = df.apply(session.Corpus.get_subcorpus_size,
                                columns=column_list,
                                axis=1,
