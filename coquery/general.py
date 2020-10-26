@@ -305,10 +305,12 @@ def get_chunk(iterable, chunk_size=250000):
     """
     iterable = iter(iterable)
     while True:
-        yield itertools.chain(
-            [next(iterable)],
-            itertools.islice(iterable, chunk_size - 1))
-
+        try:
+            yield itertools.chain(
+                [next(iterable)],
+                itertools.islice(iterable, chunk_size - 1))
+        except StopIteration:
+            return
 
 def get_directory_size(path):
     total_size = 0
