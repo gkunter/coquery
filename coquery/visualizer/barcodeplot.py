@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 
 from coquery.visualizer import visualizer as vis
 from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
@@ -109,6 +110,8 @@ class BarcodePlot(vis.Visualizer):
         self.horizontal = kwargs["horizontal"]
         self.draw_tokens(kwargs["x"], kwargs["y"], order=kwargs["order"],
                          rug=kwargs.get("rug"))
+        if kwargs["x"] is not None:
+            plt.gca().set_ylim(0, 1000)
         return plt.gca().collections
 
     def get_colors(self, colorizer, elements, **kwargs):
@@ -147,7 +150,7 @@ class BarcodePlot(vis.Visualizer):
     def get_tick_params(self):
         if self.horizontal:
             keys = ("yticks", "yticklabels")
-            order = self.levels_y or [""]
+            order = self.levels_y[::-1] or [""]
         else:
             keys = ("xticks", "xticklabels")
             order = self.levels_x or [""]
@@ -165,9 +168,46 @@ class BarcodePlot(vis.Visualizer):
         grid.set(**dict(
             zip(keys, (lim, self._limiter_fnc(self.df, None, None)))))
 
+        self.column_feature = None
+        self.row_feature = None
+        columns = values.get("columns")
+        rows = values.get("rows")
+        if columns or rows:
+            res = self.session.Resource
+            for feature, name in res.get_corpus_features():
+                if columns and (feature in columns):
+                    self.column_feature = feature
+                if rows and (feature in rows):
+                    self.row_feature = feature
+
+            for ax in grid.fig.axes:
+                level = ax.title.get_text()
+
+                filters = []
+                if self.column_feature:
+                    filters.append((self.column_feature, [level]))
+                #if row_feature:
+                    #filters.append((row_feature, [ax.yaxis.label.get_text()]))
+                if filters:
+                    min_id = res.corpus.get_corpus_statistic(
+                        "MIN({})".format(res.corpus_id),
+                        filters)
+                    max_id = res.corpus.get_corpus_statistic(
+                        "MAX({})".format(res.corpus_id),
+                        filters)
+                    if values.get("x"):
+                        ax.set_ylim(min_id, max_id)
+                    else:
+                        ax.set_xlim(min_id, max_id)
+
     def set_annotations(self, grid, values):
         grid.set(**self.get_tick_params())
         super(BarcodePlot, self).set_annotations(grid, values)
+
+        if self.column_feature:
+            for ax in grid.fig.axes:
+                ax.get_yaxis().set_visible(True)
+                ax.tick_params(labelbottom=True)
 
     def set_titles(self, **kwargs):
         self._xlab = self.x or ""
@@ -192,6 +232,20 @@ class BarcodePlot(vis.Visualizer):
         if len(num) > 0 or len(cat) > 1:
             return False
         return True
+
+    def get_grid(self, **kwargs):
+        values = kwargs.pop("values")
+
+        kwargs["data"] = self.df
+        if kwargs.get("col") or kwargs.get("row"):
+            if values.get("x"):
+                kwargs["sharey"] = False
+            elif values.get("y"):
+                kwargs["sharex"] = False
+        with sns.axes_style(self.axes_style):
+            with sns.plotting_context(self.plotting_context):
+                grid = sns.FacetGrid(**kwargs)
+        return grid
 
 
 provided_visualizations = [BarcodePlot]
