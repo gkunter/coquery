@@ -759,6 +759,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def get_current_palette(self):
         self._palette_name = self.get_palette_name()
+        print("get_current_palette", self._palette_name)
         self._color_number = self.ui.spin_number.value()
 
         name, _, rev = self._palette_name.partition("_")

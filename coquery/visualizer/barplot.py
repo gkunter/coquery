@@ -148,7 +148,9 @@ class BarPlot(vis.Visualizer):
         self.plt_func(ax=plt.gca(), **self.args)
 
     def colorize_artists(self, ax=None):
-        self.colorize_artists(ax or plt.gca())
+        if ax is None:
+            ax = plt.gca()
+        self.colorize_artists(ax)
 
     def get_colors(self, colorizer, elements, **kwargs):
         if ((self.x and not self.y) or (self.y and not self.x) or

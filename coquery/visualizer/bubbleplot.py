@@ -74,6 +74,12 @@ class BubblePlot(TreeMap):
 
         return lst
 
+    def colorize_artists(self):
+        for circ, col in zip(self.artists, self.colors):
+            circ.set_color(col)
+            if self.box_border:
+                circ.set_edgecolor("black")
+
     @classmethod
     def rotate_vector(cls, x, theta):
         """
@@ -144,12 +150,8 @@ class BubblePlot(TreeMap):
             frm_str = ": M={}".format(self.frm_str)
         else:
             frm_str = " ({})"
-<<<<<<< Updated upstream
         label = "{}{}".format(cat_label,
                               frm_str.format(self.frm_str.format(val)))
-=======
-        label = "{}{}".format(cat_label, frm_str.format(val))
->>>>>>> Stashed changes
 
         return label
 
@@ -346,7 +348,6 @@ class BubblePlot(TreeMap):
     def plot_facet(self, **kwargs):
         self.args = kwargs
         artists = self.draw_circles(**kwargs)
-
         ax = plt.gca()
         ax.set_aspect(1)
         ax.autoscale(True, "both", True)
