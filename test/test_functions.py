@@ -14,6 +14,7 @@ from __future__ import division
 import warnings
 import argparse
 import pandas as pd
+import numpy as np
 from numpy import testing as npt
 
 
@@ -43,7 +44,7 @@ df1 = pd.DataFrame(
      'coquery_invisible_corpus_id': {0: 209958039, 1: 222147309, 2: 270672183, 3: 273669329, 4: 338252544, 5: 502550702, 6: 674478400, 7: 679851596, 8: 248429324, 9: 297611776, 10: 473032852, 11: 473034740, 12: 571814551, 13: 597679391, 14: 679683583, 15: 681286004, 16: 429535765, 17: 571814444, 18: 571814457, 19: 571814459, 20: 571814461, 21: 284683786, 22: 433840744, 23: 278745314, 24: 278745314, 25: 278745314, 26: 278745314, 27: 278745314, 28: 278745314, 29: 278745314, 30: 278745314, 31: 278745314, 32: 278745314, 33: 278745314, 34: 278745314, 35: 278745314, 36: 278745314, 37: 278745314, 38: 278745314, 39: 519017348, 40: 519017348, 41: 519017348, 42: 519017348, 43: 519017348, 44: 519017348, 45: 519017348, 46: 519017348, 47: 519017348, 48: 519017348, 49: 519017348, 50: 519017348, 51: 519017348, 52: 519017348, 53: 519017348, 54: 519017348},
      'coquery_dummy': {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0, 19: 0, 20: 0, 21: 0, 22: 0, 23: 0, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 0, 30: 0, 31: 0, 32: 0, 33: 0, 34: 0, 35: 0, 36: 0, 37: 0, 38: 0, 39: 0, 40: 0, 41: 0, 42: 0, 43: 0, 44: 0, 45: 0, 46: 0, 47: 0, 48: 0, 49: 0, 50: 0, 51: 0, 52: 0, 53: 0, 54: 0},
      'db_celex_coq_phonoword_phonstrsdisc_1': {0: None, 1: None, 2: None, 3: None, 4: None, 5: None, 6: None, 7: None, 8: None, 9: None, 10: None, 11: None, 12: None, 13: None, 14: None, 15: None, 16: None, 17: None, 18: None, 19: None, 20: None, 21: None, 22: None, 23: '"dIs-In-\'kl2n', 24: '"dIs-In-\'kl2n', 25: '"dIs-In-\'kl2n', 26: '"dIs-In-\'kl2n', 27: '"dIs-In-\'kl2n', 28: '"dIs-In-\'kl2n', 29: '"dIs-In-\'kl2n', 30: '"dIs-In-\'kl2n', 31: '"dIs-In-\'kl2n', 32: '"dIs-In-\'kl2n', 33: '"dIs-In-\'kl2n', 34: '"dIs-In-\'kl2n', 35: '"dIs-In-\'kl2n', 36: '"dIs-In-\'kl2n', 37: '"dIs-In-\'kl2n', 38: '"dIs-In-\'kl2n', 39: '"dIs-In-\'kl2n', 40: '"dIs-In-\'kl2n', 41: '"dIs-In-\'kl2n', 42: '"dIs-In-\'kl2n', 43: '"dIs-In-\'kl2n', 44: '"dIs-In-\'kl2n', 45: '"dIs-In-\'kl2n', 46: '"dIs-In-\'kl2n', 47: '"dIs-In-\'kl2n', 48: '"dIs-In-\'kl2n', 49: '"dIs-In-\'kl2n', 50: '"dIs-In-\'kl2n', 51: '"dIs-In-\'kl2n', 52: '"dIs-In-\'kl2n', 53: '"dIs-In-\'kl2n', 54: '"dIs-In-\'kl2n'},
-     'db_celex_coq_corpus_cob_1': {0: pd.np.nan, 1: pd.np.nan, 2: pd.np.nan, 3: pd.np.nan, 4: pd.np.nan, 5: pd.np.nan, 6: pd.np.nan, 7: pd.np.nan, 8: pd.np.nan, 9: pd.np.nan, 10: pd.np.nan, 11: pd.np.nan, 12: pd.np.nan, 13: pd.np.nan, 14: pd.np.nan, 15: pd.np.nan, 16: pd.np.nan, 17: pd.np.nan, 18: pd.np.nan, 19: pd.np.nan, 20: pd.np.nan, 21: pd.np.nan, 22: pd.np.nan, 23: 0.0, 24: 0.0, 25: 0.0, 26: 0.0, 27: 0.0, 28: 0.0, 29: 0.0, 30: 0.0, 31: 0.0, 32: 0.0, 33: 0.0, 34: 0.0, 35: 0.0, 36: 0.0, 37: 0.0, 38: 0.0, 39: 0.0, 40: 0.0, 41: 0.0, 42: 0.0, 43: 0.0, 44: 0.0, 45: 0.0, 46: 0.0, 47: 0.0, 48: 0.0, 49: 0.0, 50: 0.0, 51: 0.0, 52: 0.0, 53: 0.0, 54: 0.0},
+     'db_celex_coq_corpus_cob_1': {0: np.nan, 1: np.nan, 2: np.nan, 3: np.nan, 4: np.nan, 5: np.nan, 6: np.nan, 7: np.nan, 8: np.nan, 9: np.nan, 10: np.nan, 11: np.nan, 12: np.nan, 13: np.nan, 14: np.nan, 15: np.nan, 16: np.nan, 17: np.nan, 18: np.nan, 19: np.nan, 20: np.nan, 21: np.nan, 22: np.nan, 23: 0.0, 24: 0.0, 25: 0.0, 26: 0.0, 27: 0.0, 28: 0.0, 29: 0.0, 30: 0.0, 31: 0.0, 32: 0.0, 33: 0.0, 34: 0.0, 35: 0.0, 36: 0.0, 37: 0.0, 38: 0.0, 39: 0.0, 40: 0.0, 41: 0.0, 42: 0.0, 43: 0.0, 44: 0.0, 45: 0.0, 46: 0.0, 47: 0.0, 48: 0.0, 49: 0.0, 50: 0.0, 51: 0.0, 52: 0.0, 53: 0.0, 54: 0.0},
      'coq_word_label_1': {0: 'DISINVESTING', 1: 'DISINVESTING', 2: 'DISINVESTING', 3: 'DISINVESTING', 4: 'DISINVESTING', 5: 'DISINVESTING', 6: 'DISINVESTING', 7: 'DISINVESTING', 8: 'DISINVEST', 9: 'DISINVEST', 10: 'DISINVEST', 11: 'DISINVEST', 12: 'DISINVEST', 13: 'DISINVEST', 14: 'DISINVEST', 15: 'DISINVEST', 16: 'DISINVESTING', 17: 'DISINVEST', 18: 'DISINVEST', 19: 'DISINVEST', 20: 'DISINVEST', 21: 'DISINFORM', 22: 'DISINFORM', 23: 'DISINCLINE', 24: 'DISINCLINE', 25: 'DISINCLINE', 26: 'DISINCLINE', 27: 'DISINCLINE', 28: 'DISINCLINE', 29: 'DISINCLINE', 30: 'DISINCLINE', 31: 'DISINCLINE', 32: 'DISINCLINE', 33: 'DISINCLINE', 34: 'DISINCLINE', 35: 'DISINCLINE', 36: 'DISINCLINE', 37: 'DISINCLINE', 38: 'DISINCLINE', 39: 'DISINCLINE', 40: 'DISINCLINE', 41: 'DISINCLINE', 42: 'DISINCLINE', 43: 'DISINCLINE', 44: 'DISINCLINE', 45: 'DISINCLINE', 46: 'DISINCLINE', 47: 'DISINCLINE', 48: 'DISINCLINE', 49: 'DISINCLINE', 50: 'DISINCLINE', 51: 'DISINCLINE', 52: 'DISINCLINE', 53: 'DISINCLINE', 54: 'DISINCLINE'},
      'coquery_invisible_origin_id': {0: 3007917, 1: 3070300, 2: 3036553, 3: 4003221, 4: 4001564, 5: 4060924, 6: 4112423, 7: 4114852, 8: 3049412, 9: 4008118, 10: 4028862, 11: 4028862, 12: 220882, 13: 232557, 14: 4114423, 15: 4119065, 16: 1050494, 17: 220882, 18: 220882, 19: 220882, 20: 220882, 21: 4001783, 22: 1051016, 23: 4004373, 24: 4004373, 25: 4004373, 26: 4004373, 27: 4004373, 28: 4004373, 29: 4004373, 30: 4004373, 31: 4004373, 32: 4004373, 33: 4004373, 34: 4004373, 35: 4004373, 36: 4004373, 37: 4004373, 38: 4004373, 39: 4076097, 40: 4076097, 41: 4076097, 42: 4076097, 43: 4076097, 44: 4076097, 45: 4076097, 46: 4076097, 47: 4076097, 48: 4076097, 49: 4076097, 50: 4076097, 51: 4076097, 52: 4076097, 53: 4076097, 54: 4076097},
      'coq_source_genre_1': {0: 'NEWS', 1: 'NEWS', 2: 'NEWS', 3: 'ACAD', 4: 'ACAD', 5: 'NEWS', 6: 'MAG', 7: 'NEWS', 8: 'NEWS', 9: 'ACAD', 10: 'ACAD', 11: 'ACAD', 12: 'SPOK', 13: 'SPOK', 14: 'NEWS', 15: 'ACAD', 16: 'FIC', 17: 'SPOK', 18: 'SPOK', 19: 'SPOK', 20: 'SPOK', 21: 'ACAD', 22: 'FIC', 23: 'ACAD', 24: 'ACAD', 25: 'ACAD', 26: 'ACAD', 27: 'ACAD', 28: 'ACAD', 29: 'ACAD', 30: 'ACAD', 31: 'ACAD', 32: 'ACAD', 33: 'ACAD', 34: 'ACAD', 35: 'ACAD', 36: 'ACAD', 37: 'ACAD', 38: 'ACAD', 39: 'FIC', 40: 'FIC', 41: 'FIC', 42: 'FIC', 43: 'FIC', 44: 'FIC', 45: 'FIC', 46: 'FIC', 47: 'FIC', 48: 'FIC', 49: 'FIC', 50: 'FIC', 51: 'FIC', 52: 'FIC', 53: 'FIC', 54: 'FIC'}})
@@ -61,7 +62,7 @@ FLOAT_COLUMN = "coq_fraction_1"
 df2 = pd.DataFrame({
         STRING_COLUMN: ['abc', "Peter's", 'xxx', None],
         INT_COLUMN: [1, 2, 3, 7],
-        FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan]})
+        FLOAT_COLUMN: [-1.2345, 0, 1.2345, np.nan]})
 
 
 class FncTestCase(CoqTestCase):
@@ -106,7 +107,7 @@ class TestFrequencyFunctions(FncTestCase):
 
     def test_freq_with_nan1(self):
         df = df0.copy()
-        df["coq_test_label_1"] = [pd.np.nan, "A", pd.np.nan, "B", pd.np.nan]
+        df["coq_test_label_1"] = [np.nan, "A", np.nan, "B", np.nan]
         func = Freq(columns=["coq_word_label_1", "coq_test_label_1"])
         val = FunctionList([func]).lapply(df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [2, 1, 2, 1, 1])
@@ -253,7 +254,7 @@ class TestStringFunctions(FncTestCase):
         func = StringExtract(columns=["Query string"], pat="^? ???")
 
         df = FunctionList([func]).lapply(df, session=None)
-        pd.np.testing.assert_array_equal(
+        np.testing.assert_array_equal(
             df[func.get_id()].values, [None] * len(df))
 
     def test_upper(self):
@@ -330,7 +331,7 @@ class TestMathFunctions(FncTestCase):
         self.df = pd.DataFrame(
                     {"column_1": [2, 5, 7, 9],
                      "column_2": [3, 3, 3, 3],
-                     "column_3": [2, pd.np.nan, pd.np.nan, 0],
+                     "column_3": [2, np.nan, np.nan, 0],
                      "column_4": [2.1, 2.2, 2.3, 2.4],
                      "column_5": list("abcd"),
                      "column_6": [0, 1, 0, 1]})
@@ -501,7 +502,7 @@ class TestMathFunctions(FncTestCase):
 
     def test_div_zero(self):
         columns = ["column_1", "column_3"]
-        expected = [1, None, None, pd.np.inf]
+        expected = [1, None, None, np.inf]
         func = Div
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -509,8 +510,8 @@ class TestMathFunctions(FncTestCase):
 
     def test_log2(self):
         columns = ["column_1", "column_2"]
-        expected = [[pd.np.log2(x) for x in self.df[columns[0]]],
-                    [pd.np.log2(x) for x in self.df[columns[1]]]]
+        expected = [[np.log2(x) for x in self.df[columns[0]]],
+                    [np.log2(x) for x in self.df[columns[1]]]]
         base = "Log2"
         func = Log(columns=columns, base=base)
         val = FunctionList([func]).lapply(self.df, session=None)
@@ -521,21 +522,21 @@ class TestMathFunctions(FncTestCase):
 
     def test_log2_columnwise(self):
         columns = ["column_1"]
-        expected = [pd.np.log2(x) for x in self.df.column_1]
+        expected = [np.log2(x) for x in self.df.column_1]
         func = Log
         base = "Log2"
         self.assert_result(func, self.df, columns, expected, base=base)
 
     def test_log10_columnwise(self):
         columns = ["column_1"]
-        expected = [pd.np.log10(x) for x in self.df.column_1]
+        expected = [np.log10(x) for x in self.df.column_1]
         func = Log
         base = "Log10"
         self.assert_result(func, self.df, columns, expected, base=base)
 
     def test_logN_columnwise(self):
         columns = ["column_1"]
-        expected = [pd.np.log(x) for x in self.df.column_1]
+        expected = [np.log(x) for x in self.df.column_1]
         func = Log
         base = "LogN"
         self.assert_result(func, self.df, columns, expected, base=base)
@@ -574,10 +575,10 @@ class TestMathFunctions(FncTestCase):
 
     def test_mean(self):
         columns = ["column_1", "column_2"]
-        expected = [pd.np.mean((2, 3)),
-                    pd.np.mean((5, 3)),
-                    pd.np.mean((7, 3)),
-                    pd.np.mean((9, 3))]
+        expected = [np.mean((2, 3)),
+                    np.mean((5, 3)),
+                    np.mean((7, 3)),
+                    np.mean((9, 3))]
         func = Mean
         self.assert_result(func, self.df, columns, expected)
 
@@ -593,10 +594,10 @@ class TestMathFunctions(FncTestCase):
 
     def test_median(self):
         columns = ["column_1", "column_2"]
-        expected = [pd.np.median((2, 3)),
-                    pd.np.median((5, 3)),
-                    pd.np.median((7, 3)),
-                    pd.np.median((9, 3))]
+        expected = [np.median((2, 3)),
+                    np.median((5, 3)),
+                    np.median((7, 3)),
+                    np.median((9, 3))]
         func = Median
         self.assert_result(func, self.df, columns, expected)
 
@@ -612,10 +613,10 @@ class TestMathFunctions(FncTestCase):
 
     def test_sd(self):
         columns = ["column_1", "column_2"]
-        expected = [pd.np.std((2, 3)),
-                    pd.np.std((5, 3)),
-                    pd.np.std((7, 3)),
-                    pd.np.std((9, 3))]
+        expected = [np.std((2, 3)),
+                    np.std((5, 3)),
+                    np.std((7, 3)),
+                    np.std((9, 3))]
         func = StandardDeviation
         self.assert_result(func, self.df, columns, expected)
 
@@ -625,7 +626,7 @@ class TestMathFunctions(FncTestCase):
         "Mathematics function should optionally operate column-wise"
         """
         columns = ["column_1"]
-        expected = [pd.np.std((2, 5, 7, 9))] * len(self.df)
+        expected = [np.std((2, 5, 7, 9))] * len(self.df)
         func = StandardDeviation
         self.assert_result(func, self.df, columns, expected)
 
@@ -927,8 +928,8 @@ class TestConversionFunctions(FncTestCase):
                            "str3": list("1bc")})
 
         expected1 = [1, 2, 3]
-        expected2 = [pd.np.nan, pd.np.nan, pd.np.nan]
-        expected3 = [1, pd.np.nan, pd.np.nan]
+        expected2 = [np.nan, np.nan, np.nan]
+        expected3 = [1, np.nan, np.nan]
 
         self.assert_result(ToNumeric, df, ["str1"], expected1)
         self.assert_result(ToNumeric, df, ["str2"], expected2)
