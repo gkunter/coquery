@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 
 import unittest
 import os
+import sys
 import argparse
 
 from coquery.defines import SQL_SQLITE, SQL_MYSQL
@@ -55,8 +56,9 @@ class TestGenericPackage(unittest.TestCase):
         options.cfg.corpora_path = os.path.expanduser("~/tmp")
         options.cfg.adhoc_path = os.path.expanduser("~/tmp")
 
-        self.installer = BuilderClass(
-            package=os.path.expanduser("~/ALICE.coq"))
+        package_path = os.path.join(os.path.split(sys.argv[0])[0], "ALICE.coq")
+
+        self.installer = BuilderClass(package=package_path)
         self.installer.arguments = argparse.Namespace()
         self.installer.arguments.name = "ALICE2"
         self.installer.arguments.db_name = "coq_alice2"
@@ -76,7 +78,7 @@ class TestGenericPackage(unittest.TestCase):
         self.installer.arguments.only_module = False
         self.installer.arguments.metadata = None
         self.installer.arguments.lookup_ngram = None
-        self.installer.arguments.path = os.path.expanduser("~/ALICE.coq")
+        self.installer.arguments.path = package_path
 
         db = SqlDB(
             self.installer.arguments.db_host,
