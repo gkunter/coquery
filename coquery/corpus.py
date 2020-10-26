@@ -146,7 +146,8 @@ class BaseResource(CoqObject):
             hashed = None
         table, _, feature = s.partition("_")
         if not table or not feature:
-            raise ValueError("either no table or no feature: '{}'".format(rc_feature))
+            raise ValueError(
+                "either no table or no feature: '{}'".format(rc_feature))
 
         return (hashed, table, feature)
 
@@ -213,7 +214,8 @@ class BaseResource(CoqObject):
 
         # return the features that can be constructed from the feature name
         # and the table:
-        return ["{}_{}".format(table, feature) for _, table, feature in split_features if table in tables]
+        return ["{}_{}".format(table, feature)
+                for _, table, feature in split_features if table in tables]
 
     @classmethod
     def get_queryable_features(cls):
@@ -344,7 +346,8 @@ class BaseResource(CoqObject):
         requested_features = []
         children = []
         for rc_feature in cls.get_resource_features():
-            if rc_feature.endswith("_{}_id".format(rc_tab)) and not rc_feature.startswith(rc_tab):
+            if (rc_feature.endswith("_{}_id".format(rc_tab)) and
+                    not rc_feature.startswith(rc_tab)):
                 D["parent"] = "{}_table".format(rc_feature.split("_")[0])
             if rc_feature.startswith("{}_".format(rc_tab)):
                 if not rc_feature.endswith("_table"):
@@ -382,7 +385,8 @@ class BaseResource(CoqObject):
             A list of strings, each representing a resource feature that has
             the same display name as 'name'.
         """
-        return [x for x in cls.get_resource_features() if getattr(cls, x) == name]
+        return [x for x in cls.get_resource_features()
+                if getattr(cls, x) == name]
 
     @classmethod
     def get_corpus_features(cls):
@@ -403,7 +407,8 @@ class BaseResource(CoqObject):
                     if y not in cls_lexical_features:
                         if y == "corpus_id":
                             corpus_variables.append((y, cls.corpus_id))
-                        elif not y.endswith("_id") and not y.startswith("{}_table".format(x)):
+                        elif (not y.endswith("_id") and
+                                not y.startswith("{}_table".format(x))):
                             corpus_variables.append((y, getattr(cls, y)))
         return corpus_variables
 
@@ -2117,27 +2122,32 @@ class CorpusClass(object):
     _subcorpus_size_cache = {}
     _corpus_range_cache = {}
     _context_cache = {}
+    _corpus_statistcs_cache = {}
 
     def __init__(self):
         super(CorpusClass, self).__init__()
         self.resource = None
 
-    def get_corpus_size(self, filters=None):
+    def get_corpus_statistic(self, statistic, filters=None):
         """
-        Return the number of tokens in the corpus.
+        Return a specific statistic from the corpus.
 
         The corpus can be filtered by providing a filter list.
 
         Parameters
         ----------
+        statistic : str
+            A string that is inserted into the SQL query such as COUNT(*) or
+            MIN(...)
+
         filters : list
             A list of tuples. The first element is a corpus feature, and
             the second is a list of possible values.
 
         Returns
         -------
-        size : int
-            The number of tokens in the corpus, or in the filtered corpus.
+        value : int
+            The value of the query.
         """
         filters = filters or []
 
@@ -2174,21 +2184,49 @@ class CorpusClass(object):
 
         if filter_strings:
             from_str = "{} WHERE {}".format(
-                " ".join([self.resource.corpus_table] + self.resource.table_list),
+                " ".join(
+                    [self.resource.corpus_table] + self.resource.table_list),
                 " AND ".join(filter_strings))
         else:
             from_str = self.resource.corpus_table
 
-        S = "SELECT COUNT(*) FROM {}".format(from_str)
-        if S not in self._corpus_size_cache:
+        S = "SELECT {} FROM {}".format(statistic, from_str)
+
+        if S not in self._corpus_statistcs_cache:
             engine = options.cfg.current_connection.get_engine(
                 self.resource.db_name)
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
-            self._corpus_size_cache[S] = df.values.ravel()[0]
-        if not filters:
-            self.resource.number_of_tokens = self._corpus_size_cache[S]
-        return self._corpus_size_cache[S]
+            self._corpus_statistcs_cache[S] = df.values.ravel()[0]
+
+        return self._corpus_statistcs_cache[S]
+
+    def get_corpus_size(self, filters=None):
+        """
+        Return the number of tokens in the corpus.
+
+        The corpus can be filtered by providing a filter list.
+
+        Parameters
+        ----------
+        filters : list
+            A list of tuples. The first element is a corpus feature, and
+            the second is a list of possible values.
+
+        Returns
+        -------
+        size : int
+            The number of tokens in the corpus, or in the filtered corpus.
+        """
+
+        _key = tuple(sorted(filters))
+        try:
+            size = self._corpus_size_cache[_key]
+        except KeyError:
+            size = self.get_corpus_statistic("COUNT(*)", filters)
+            self._corpus_size_cache[_key] = size
+
+        return self._corpus_size_cache[_key]
 
     def get_subcorpus_size(self, row, columns=None, subst=None):
         """
@@ -2204,7 +2242,9 @@ class CorpusClass(object):
         filter_list = []
         if columns is None:
             columns = row.index
-            corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+            corpus_features = [x
+                               for x, _ in self.resource.get_corpus_features()
+                               if x in options.cfg.selected_features]
             for column in columns:
                 match = re.match("coq_(.*)_1", column)
                 if match:
@@ -2213,7 +2253,8 @@ class CorpusClass(object):
                     col = None
                 if col in corpus_features:
                     value = row[column]
-                    raw_values = self.reverse_substitution(column, value, subst)
+                    raw_values = self.reverse_substitution(column,
+                                                           value, subst)
                     filter_list.append((col, raw_values))
         else:
             for column in columns:
