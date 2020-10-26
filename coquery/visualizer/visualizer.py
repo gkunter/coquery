@@ -163,6 +163,8 @@ class Visualizer(QtCore.QObject):
         This method is used to set up a FacetGrid object with the appropriate
         context settings.
         """
+        # values argument is not used for the default grid:
+        kwargs.pop("values")
         kwargs["data"] = self.df
         with sns.axes_style(self.axes_style):
             with sns.plotting_context(self.plotting_context):

@@ -1002,7 +1002,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
                                       row=values["rows"],
                                       col_wrap=col_wrap,
                                       legend_out=True,
-                                      sharex=True, sharey=True)
+                                      sharex=True, sharey=True,
+                                      values=values)
         logging.info("VIS: Grid initialized")
 
         self.setup_canvas(self.grid.fig)
