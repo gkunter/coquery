@@ -142,8 +142,13 @@ class BarPlot(vis.Visualizer):
 
         return args
 
-    def plot_facet(self, **kwargs):
-        return self.plt_func(ax=plt.gca(), **kwargs)
+    def plot_facet(self, data, color, **kwargs):
+        self.args = self.prepare_arguments(data, self.x, self.y, self.z,
+                                           self.levels_x, self.levels_y)
+        self.plt_func(ax=plt.gca(), **self.args)
+
+    def colorize_artists(self, ax=None):
+        self.colorize_artists(ax or plt.gca())
 
     def get_colors(self, colorizer, elements, **kwargs):
         if ((self.x and not self.y) or (self.y and not self.x) or
