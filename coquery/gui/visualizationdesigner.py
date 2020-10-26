@@ -547,6 +547,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.ui.color_test_area.model().dataChanged.connect(
             self.set_custom_palette)
 
+    def print_signal(self, s, *args):
+        print(s, *args)
+
     def change_figure_type(self):
         self.ui.group_custom.hide()
 
@@ -756,7 +759,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def get_current_palette(self):
         self._palette_name = self.get_palette_name()
-        #print("get_current_palette", self._palette_name)
         self._color_number = self.ui.spin_number.value()
 
         name, _, rev = self._palette_name.partition("_")
@@ -851,6 +853,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
             radio.setChecked(True)
         self.change_palette()
         radio.blockSignals(False)
+
 
     def display_values(self):
         # set up Layout tab:

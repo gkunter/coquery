@@ -144,8 +144,12 @@ class BubblePlot(TreeMap):
             frm_str = ": M={}".format(self.frm_str)
         else:
             frm_str = " ({})"
+<<<<<<< Updated upstream
         label = "{}{}".format(cat_label,
                               frm_str.format(self.frm_str.format(val)))
+=======
+        label = "{}{}".format(cat_label, frm_str.format(val))
+>>>>>>> Stashed changes
 
         return label
 
@@ -330,6 +334,7 @@ class BubblePlot(TreeMap):
         self.x = x
         self.y = y
         self.z = z
+
         df_freq = self.get_dataframe(data, x, y, z)
         circles = self.place_circles(df_freq)
         if z:
