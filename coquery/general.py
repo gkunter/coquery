@@ -2,7 +2,7 @@
 """
 general.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2020 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -20,6 +20,7 @@ import os
 import tempfile
 import itertools
 import pandas as pd
+import numpy as np
 import io
 import ctypes
 import logging
@@ -524,27 +525,27 @@ def pretty(vrange, n, endpoint=False):
     exp_min = None
 
     if vmin >= 0 and vmax <= 1:
-        exp = abs(pd.np.ceil(pd.np.log10(abs(vmax))) + 2)
+        exp = abs(np.ceil(np.log10(abs(vmax))) + 2)
 
-        niced_min = pd.np.floor(vmin * 10 ** exp) / 10 ** exp
-        niced_max = pd.np.ceil(vmax * 10 ** exp) / 10 ** exp
+        niced_min = np.floor(vmin * 10 ** exp) / 10 ** exp
+        niced_max = np.ceil(vmax * 10 ** exp) / 10 ** exp
     elif vmin != 0:
         # limit the exponent of the lower boundary so that it does not exceed
         # three, i.e. only the lowest three digits will be cleared (this may
         # need revision):
-        exp_min = min(pd.np.floor(pd.np.log10(abs(vmin))), 3)
+        exp_min = min(np.floor(np.log10(abs(vmin))), 3)
 
-        pretty_min = pd.np.floor(vmin / 10 ** exp_min) * 10 ** exp_min
-        exp_max = pd.np.ceil(pd.np.log10(abs(vmax - pretty_min)))
+        pretty_min = np.floor(vmin / 10 ** exp_min) * 10 ** exp_min
+        exp_max = np.ceil(np.log10(abs(vmax - pretty_min)))
         exp = exp_max - exp_min
 
-        pretty_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
+        pretty_min = np.floor(vmin / 10 ** exp) * 10 ** exp
         return pretty((0, vmax - pretty_min), n) + pretty_min
 
     else:
-        exp = pd.np.floor(pd.np.log10(abs(vmax)))
+        exp = np.floor(np.log10(abs(vmax)))
 
-        if pd.np.floor(10 ** exp) < vmax < pd.np.floor(1.5 * 10 ** exp):
+        if np.floor(10 ** exp) < vmax < np.floor(1.5 * 10 ** exp):
             # Special case for ranges such as (0, 125) or any multiple by
             # ten: use   (0, 150) as boundary
             # instead of (0, 200)
@@ -553,13 +554,10 @@ def pretty(vrange, n, endpoint=False):
             niced_min = fiver_offset if vmin > fiver_offset else 0
             niced_max = 1.5 * 10 ** exp
         else:
-            niced_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
-            niced_max = pd.np.ceil(vmax / 10 ** exp) * 10 ** exp
+            niced_min = np.floor(vmin / 10 ** exp) * 10 ** exp
+            niced_max = np.ceil(vmax / 10 ** exp) * 10 ** exp
 
-    val = pd.np.linspace(niced_min,
-                         niced_max,
-                         n,
-                         endpoint=endpoint)
+    val = np.linspace(niced_min, niced_max, n, endpoint=endpoint)
     return val
 
 
