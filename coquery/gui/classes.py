@@ -1760,6 +1760,16 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
     @staticmethod
     def format_content(source, num_to_str=True):
+        """
+        Create a data frame that contains the visual representations of the
+        input data frame.
+
+        This function is required for several reasons:
+        - QTableView is very slow for data types that are not strings
+        - Handling of missing values has increased in Pandas starting with
+          version 1.0, but still needs some attention
+        - Boolean and float columns require special formatting
+        """
         df = pd.DataFrame(index=source.index)
 
         for col in source:
@@ -1783,25 +1793,25 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                     # try to downcast from float to int:
                     dtype = val.dropna().convert_dtypes().dtype
                     if pd.api.types.is_integer_dtype(dtype):
-                        val = (val.astype(dtype)
-                                 .replace({pd.NA: options.cfg.na_string}))
+                        val = map(lambda x: str(x) if not pd.isna(x) else
+                                            options.cfg.na_string,
+                                  val.values)
                     else:
                         # use float format string to show specified number of
                         # digits:
-                        val = val.apply(
-                            lambda x: (
-                                options.cfg.float_format.format(x)
-                                if not pd.isna(x) else
-                                options.cfg.na_string))
+                        val = map(lambda x: (options.cfg.float_format.format(x)
+                                             if not pd.isna(x) else
+                                             options.cfg.na_string),
+                                  val.values)
 
             # use bool substitute labels:
             elif pd.api.types.is_bool_dtype(val):
-                val = val.apply(lambda x: (
-                    ("yes" if x else "no") if not pd.isna(x)
-                    else options.cfg.na_string))
+                val = map(lambda x: (("yes" if x else "no") if not pd.isna(x)
+                                     else options.cfg.na_string),
+                          val.values)
             else:
-                val = val.fillna(options.cfg.na_string)
-            df[col] = val
+                val = val.astype(str).fillna(options.cfg.na_string)
+            df[col] = pd.Series(val)
 
         return df
 
