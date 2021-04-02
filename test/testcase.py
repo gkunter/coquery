@@ -2,7 +2,7 @@
 """
 testcase.py is part of Coquery.
 
-Copyright (c) 2018-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -10,7 +10,20 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import unittest
+import tempfile
 import pandas as pd
+
+
+def tmp_path():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        path = tmp_dir
+    return path
+
+
+def tmp_filename():
+    temp_file = tempfile.NamedTemporaryFile("w")
+    temp_file.close()
+    return temp_file.name
 
 
 class CoqTestCase(unittest.TestCase):
