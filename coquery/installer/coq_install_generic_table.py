@@ -11,13 +11,16 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
+import os
 import re
 import numpy as np
 import logging
+import time
 
-from coquery.corpusbuilder import BaseCorpusBuilder
+from coquery.corpusbuilder import BaseCorpusBuilder, disambiguate_label
 from coquery.corpusbuilder import (Column, Link, Identifier)
 from coquery.capturer import Capturer
+from coquery.general import utf8
 
 
 class BuilderClass(BaseCorpusBuilder):
@@ -63,6 +66,8 @@ class BuilderClass(BaseCorpusBuilder):
         # all corpus builders have to call the inherited __init__ method:
         super(BuilderClass, self).__init__(gui)
         self._table_options = table_options
+        self._is_tagged_label = "table-based corpus"
+
         _columns = []
 
         for i, label in enumerate(dtypes.index.values):
@@ -89,8 +94,10 @@ class BuilderClass(BaseCorpusBuilder):
             setattr(self, rc_feature, label)
 
         self.corpus_table = "Corpus"
-        self.corpus_id = "ID"
-        self.corpus_file_id = "FileId"
+        # ensure that the internal labels don't interfere with labels that
+        # exist as column headers:
+        self.corpus_id = disambiguate_label("ID", dtypes.index.values)
+        self.corpus_file_id = disambiguate_label("FileId", dtypes.index.values)
 
         self.file_table = "Files"
         self.file_id = "FileId"
@@ -110,6 +117,21 @@ class BuilderClass(BaseCorpusBuilder):
             l.append(Column(label, dtype))
 
         self.create_table_description(self.corpus_table, l)
+
+    def create_description_text(self):
+        desc_template = """<p>The table-based corpus '{name}' was created on
+            {date}. It contains {tokens} text tokens.</p>
+            <p>Directory:<br/> <code>{path}</code></p>
+            <p>File:<br/><code>{file}</code></p>"""
+
+        path, filename = os.path.split(self.arguments.path)
+        description = [desc_template.format(
+            name=utf8(self.arguments.name),
+            date=utf8(time.strftime("%c")),
+            tokens=self._corpus_id,
+            path=path,
+            file=filename)]
+        return description
 
     def validate_path(self, path):
         return path == self.arguments.path
@@ -134,6 +156,7 @@ class BuilderClass(BaseCorpusBuilder):
         df[self.corpus_file_id] = 1
         self.DB.load_dataframe(df, self.corpus_table, self.corpus_id)
         self.store_filename(self.arguments.path)
+        self._corpus_id = len(df)
 
     @classmethod
     def get_file_list(cls, path, file_filter, sort=True):
