@@ -2177,7 +2177,7 @@ class TEICorpusBuilder(XMLCorpusBuilder):
     def open_word(self, element):
         pass
 
-    def process_tree(self, tree):
+    def process_tree(self, tree, file_name=None):
         root = tree.root
         if root.tag == "teiCorpus":
             # assume that this is a file containing several TEI documents
