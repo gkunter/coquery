@@ -12,13 +12,12 @@ from __future__ import unicode_literals
 
 import os
 import argparse
-import tempfile
 
 from coquery.coquery import options
 from coquery.installer.coq_install_generic import BuilderClass
 from coquery.tables import Table
 from coquery.options import CSVOptions
-from test.testcase import CoqTestCase, run_tests
+from test.testcase import CoqTestCase, run_tests, tmp_filename, tmp_path
 
 
 class MockTable(Table):
@@ -49,8 +48,7 @@ class TestGeneric(CoqTestCase):
             sep=",", header=True, quote_char='"', skip_lines=None,
             encoding="utf-8")
 
-        with tempfile.NamedTemporaryFile() as tmp:
-            self.installer.arguments.metadata = tmp.name
+        self.installer.arguments.metadata = tmp_filename()
 
         with open(self.installer.arguments.metadata, "w") as meta_file:
             meta_file.write("Filename,Time,Code\n")
@@ -59,8 +57,7 @@ class TestGeneric(CoqTestCase):
             meta_file.write("file3.txt,2019,C\n")
             meta_file.write("file4.txt,2019,D\n")
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self.installer.arguments.path = tmp_dir
+        self.installer.arguments.path = tmp_path()
 
         os.mkdir(self.installer.arguments.path)
         for file_name in DATA_FILES:
