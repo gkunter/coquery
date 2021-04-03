@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -164,10 +164,10 @@ class Session(object):
                 match = re.search(expr, item, re.IGNORECASE)
             return match is not None
 
-        self.db_connection = self.db_engine.connect()
+        dbc = self.db_engine.connect()
         if options.cfg.current_connection.db_type() == SQL_SQLITE:
-            self.db_connection.connection.create_function("REGEXP", 2,
-                                                          _sqlite_regexp)
+            dbc.connection.create_function("REGEXP", 2, _sqlite_regexp)
+        return dbc
 
     def prepare_queries(self):
         self.query_list = []
@@ -199,8 +199,6 @@ class Session(object):
         if self.db_engine is None:
             raise SQLNoConnectorError
 
-        self.connect_to_db()
-
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
         Session.query_id += 1
@@ -211,11 +209,12 @@ class Session(object):
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
 
-        dtype_list = []
         self.queries = {}
         _queried = []
 
         self.sql_queries = []
+
+        db_connection = self.connect_to_db()
 
         try:
             for i, current_query in enumerate(self.query_list):
@@ -229,6 +228,7 @@ class Session(object):
 
                 if options.cfg.gui and number_of_queries > 1:
                     options.cfg.main_window.updateMultiProgress.emit(i+1)
+
                 if not self.quantified_number_labels:
                     self.quantified_number_labels = [
                         current_query.get_token_numbering(i)
@@ -241,47 +241,13 @@ class Session(object):
                 else:
                     logging.info("Start query: '{}'".format(
                         current_query.query_string))
-                df = current_query.run(connection=self.db_connection,
+
+                df = current_query.run(connection=db_connection,
                                        to_file=to_file, **kwargs)
                 self.sql_queries.append(current_query.sql_list)
                 raw_length = len(df)
 
-                # apply clumsy hack that tries to make sure that the dtypes of
-                # data frames containing NaNs or empty strings does not change
-                # when appending the new data frame to the previous.
-
-                # The same hack is also needed in TokenQuery.run().
-                if (len(self.data_table) > 0 and
-                        df.dtypes.tolist() != dtype_list.tolist()):
-                    for x in df.columns:
-                        # the idea is that pandas/numpy use the 'object'
-                        # dtype as a fall-back option for strange results,
-                        # including those with NaNs.
-                        # One problem is that integer columns become floats
-                        # in the process. This is so because Pandas does not
-                        # have an integer NA type:
-                        # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
-
-                        try:
-                            df.dtypes[x] != dtype_list[x]
-                        except (IndexError, KeyError):
-                            continue
-
-                        if df.dtypes[x] != dtype_list[x]:
-                            if df.dtypes[x] == object:
-                                if not df[x].any():
-                                    df[x] = [pd.np.nan] * len(df)
-                                    dtype_list[x] = self.data_table[x].dtype
-                            elif dtype_list[x] == object:
-                                if not self.data_table[x].any():
-                                    dummy = [pd.np.nan] * len(self.data_table)
-                                    self.data_table[x] = dummy
-                                    dtype_list[x] = df[x].dtype
-                else:
-                    dtype_list = df.dtypes
-
                 df = current_query.insert_static_data(df)
-
                 self.to_file = to_file
 
                 if not to_file:
@@ -302,22 +268,12 @@ class Session(object):
                 logging.info(
                     "Query executed ({})".format(", ".join(s_list)))
         finally:
-            self.db_connection.close()
-
-        ordered_columns = self.set_preferred_order(
-            list(self.data_table.columns))
-        self.data_table = self.data_table[ordered_columns]
+            db_connection.close()
 
         if sys.version_info < (3, 0):
-            for col in self.data_table.columns:
-                if self.data_table.dtypes[col] == object:
-                    try:
-                        self.data_table[col] = (
-                            self.data_table[col].str
-                                                .encode("utf-8"))
-                    except Exception as e:
-                        print(e)
-                        logging.warning(e)
+            raise Warning("Python 2.7 is not supported anymore.")
+
+        self.finalize_table()
 
         if not options.cfg.gui:
             self.aggregate_data()
@@ -345,6 +301,34 @@ class Session(object):
                 float_format="%.{}f".format(options.cfg.digits),
                 index=False)
             output_file.flush()
+
+    def finalize_table(self):
+        """
+        Apply final fixes to the data table retrieved by the current queries.
+
+        The following fixes are applied:
+
+        - Set preferred column order
+        - Guess best dtypes, taking missing values into account
+        - Resetting the internal index
+        """
+
+        ordered_columns = self.set_preferred_order(
+            list(self.data_table.columns))
+        self.data_table = self.data_table[ordered_columns]
+
+        for col in self.data_table.columns:
+            S = self.data_table[col]
+            if S.dtype == object:
+                S = S.replace({"": pd.NA, None: pd.NA})
+            else:
+                S = S.replace({None: pd.NA})
+            dtype = S.dropna().convert_dtypes().dtype
+            if pd.api.types.is_numeric_dtype(dtype):
+                self.data_table[col] = pd.to_numeric(S,
+                                                     errors="coerce",
+                                                     downcast="integer")
+        self.data_table = self.data_table.reset_index(drop=True)
 
     def get_manager(self, query_mode):
         if not self.Resource:
@@ -387,12 +371,13 @@ class Session(object):
         manager.set_column_order(options.cfg.column_order)
 
         column_properties = {}
-        try:
-            column_properties = options.settings.value("column_properties",
-                                                       {})
-        finally:
-            options.settings.setValue("column_properties",
-                                      column_properties)
+        if options.cfg.gui:
+            try:
+                column_properties = options.settings.value(
+                    "column_properties", {})
+            finally:
+                options.settings.setValue(
+                    "column_properties", column_properties)
         prop = column_properties.get(options.cfg.corpus, {})
         manager.set_column_substitutions(prop.get("substitutions", {}))
 

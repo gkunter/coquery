@@ -2,7 +2,7 @@
 """
 queries.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -79,8 +79,10 @@ class TokenQuery(object):
                             fnc = str.lower
                         else:
                             fnc = str.upper
-                        print(fnc)
-                        df[x] = list(map(lambda s: fnc(s) if s else s, df[x]))
+                        df[x] = pd.Series(
+                            map(lambda s: fnc(s) if not pd.isna(s) else
+                                          pd.NA,
+                                df[x].values))
                     except AttributeError:
                         print("attribute error!")
                         pass
@@ -171,9 +173,7 @@ class TokenQuery(object):
                         print(e)
                         raise e
 
-                    df = pd.DataFrame(list(iter(results)),
-                                      columns=results.keys())
-
+                    df = pd.DataFrame(results, columns=results.keys())
                     if len(df) == 0:
                         df = pd.DataFrame(columns=results.keys())
 
@@ -193,39 +193,6 @@ class TokenQuery(object):
                 if self.results_frame.empty:
                     self.results_frame = df
                 else:
-                    # apply clumsy hack that tries to make sure that the dtypes
-                    # of data frames containing NaNs or empty strings does not
-                    # change when appending the new data frame to the previous.
-
-                    if (df.dtypes.tolist() !=
-                            self.results_frame.dtypes.tolist()):
-                        print("DIFFERENT DTYPES!")
-
-                    ## The same hack is also needed in session.run_queries().
-                    #if len(self.results_frame) > 0 and df.dtypes.tolist() != dtype_list.tolist():
-                        #for x in df.columns:
-                            ## the idea is that pandas/numpy use the 'object'
-                            ## dtype as a fall-back option for strange results,
-                            ## including those with NaNs.
-                            ## One problem is that integer columns become floats
-                            ## in the process. This is so because Pandas does not
-                            ## have an integer NA type:
-                            ## http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
-
-                            #if df.dtypes[x] != dtype_list[x]:
-                                #_working = None
-                                #if df.dtypes[x] == object:
-                                    #if not df[x].any():
-                                        #df[x] = [np.nan] * len(df)
-                                        #dtype_list[x] = self.results_frame[x].dtype
-                                #elif dtype_list[x] == object:
-                                    #if not self.results_frame[x].any():
-                                        #self.results_frame[x] = [np.nan] * len(self.results_frame)
-                                        #dtype_list[x] = df[x].dtype
-                    #else:
-                        #dtype_list = df.dtypes
-                    #print(dtype_list)
-
                     self.results_frame = self.results_frame.append(df)
 
         self.results_frame = self.results_frame.reset_index(drop=True)

@@ -2,7 +2,7 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,6 +15,7 @@ from __future__ import (unicode_literals, print_function,
 import logging
 import os
 import pandas as pd
+import numpy as np
 from collections import deque
 
 from coquery import options
@@ -1659,7 +1660,7 @@ class CoqTableView(QtWidgets.QTableView):
             (df.columns[i], QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)) for i in range(self.horizontalHeader().count())])
 
         df[cols].apply(
-            lambda x: set_height(pd.np.where(df.index == x.name)[0], x),
+            lambda x: set_height(np.where(df.index == x.name)[0], x),
             axis="columns")
 
     def resizeColumnsToContents(self, *args, **kwargs):
@@ -1715,7 +1716,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if sorter and sorter.reverse:
                 # right-align columns with reverse sorting:
                 self._align.append(_right_align)
-            elif df[col].dtype in (int, float):
+            elif pd.api.types.is_numeric_dtype(df[col]):
                 # always right-align numeric columns:
                 self._align.append(_right_align)
             elif col == "coq_context_left":
@@ -1759,77 +1760,59 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
     @staticmethod
     def format_content(source, num_to_str=True):
+        """
+        Create a data frame that contains the visual representations of the
+        input data frame.
+
+        This function is required for several reasons:
+        - QTableView is very slow for data types that are not strings
+        - Handling of missing values has increased in Pandas starting with
+          version 1.0, but still needs some attention
+        - Boolean and float columns require special formatting
+        """
         df = pd.DataFrame(index=source.index)
 
-        for col in source.columns:
+        for col in source:
+            val = source[col]
+
             # copy invisible columns:
             if col.startswith("coquery_invisible"):
-                df[col] = source[col]
+                df[col] = val
                 continue
 
             # special case: only NAs?
-            if source[col].isnull().all():
-                df[col] = source[col].astype(object)
+            if val.isnull().all():
+                df[col] = val.astype(object)
                 continue
 
-            dtype = pd.Series(source[col].dropna().tolist()).dtype
-            # float
-            if dtype in (float, pd.np.float64):
-                # try to force floats to int:
-                try:
-                    as_int = source[col].astype(int, error_on_fail=False)
-                except (ValueError, TypeError):
-                    as_int = pd.Series(index=source[col].index)
-
+            if pd.api.types.is_numeric_dtype(val):
                 if num_to_str:
-                    if all(as_int == source[col]):
-                        df[col] = as_int.apply(
-                            lambda x: str(x) if (
-                                x is not None and
-                                x is not pd.np.nan) else None)
+                    if col.startswith("statistics_g_test"):
+                        val = abs(val)
+
+                    # try to downcast from float to int:
+                    dtype = val.dropna().convert_dtypes().dtype
+                    if pd.api.types.is_integer_dtype(dtype):
+                        val = map(lambda x: str(x) if not pd.isna(x) else
+                                            options.cfg.na_string,
+                                  val.values)
                     else:
-                        if col.startswith("statistics_g_test"):
-                            val = abs(source[col])
-                        else:
-                            val = source[col]
+                        # use float format string to show specified number of
+                        # digits:
+                        val = map(lambda x: (options.cfg.float_format.format(x)
+                                             if not pd.isna(x) else
+                                             options.cfg.na_string),
+                                  val.values)
 
-                        df[col] = val.apply(
-                            lambda x: options.cfg.float_format.format(x) if (
-                                x is not None and
-                                x is not pd.np.nan) else None)
-                else:
-                    if all(as_int == source[col]):
-                        df[col] = as_int.apply(
-                            lambda x: int(x) if (
-                                x is not None and
-                                x is not pd.np.nan) else None)
-                    else:
-                        df[col] = source[col]
-
-            # int
-            elif dtype in (int, pd.np.int64):
-                if num_to_str:
-                    df[col] = source[col].apply(
-                        lambda x: str(x) if (
-                            x is not None and
-                            x is not pd.np.nan) else None)
-                else:
-                    df[col] = source[col]
-
-            # bool
-            elif dtype == bool:
-                df[col] = source[col].apply(
-                    lambda x: ["no", "yes"][bool(x)] if (
-                        x is not None and
-                        x is not pd.np.nan) else None)
-            # object
-            elif dtype == object:
-                df[col] = source[col]
-            # unknown column type
+            # use bool substitute labels:
+            elif pd.api.types.is_bool_dtype(val):
+                val = map(lambda x: (("yes" if x else "no") if not pd.isna(x)
+                                     else options.cfg.na_string),
+                          val.values)
             else:
-                df[col] = source[col].astype(str)
+                val = val.astype(str).fillna(options.cfg.na_string)
+            df[col] = pd.Series(val)
 
-        df = df.fillna(options.cfg.na_string)
         return df
 
     def data(self, index, role):
@@ -1888,7 +1871,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if role == QtCore.Qt.DisplayRole:
                 val = self.content.index[index]
                 return (utf8(val + 1)
-                        if isinstance(val, (pd.np.integer, int))
+                        if isinstance(val, (np.integer, int))
                         else utf8(val))
             else:
                 return None

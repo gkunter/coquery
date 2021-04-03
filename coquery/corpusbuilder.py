@@ -111,6 +111,24 @@ new_code_str = """
         return ['''{description}''']
     """
 
+def disambiguate_label(base, lst):
+    """
+    Returns a label that is based on the string 'base' and which is not already
+    contained in the list 'lst'.
+
+    Disambiguation is done by adding a number if needed. This method is not
+    case-sensitive.
+    """
+    i = 0
+    label = base
+    lst = [s.lower() for s in lst]
+    while True:
+        if label.lower() in lst:
+            i = i + 1
+            label = "{}{}".format(base, i)
+        else:
+            return label
+
 def to_enum(lst, allow_null=False, normalize_strings=True):
     """
     Returns a string that represents the values of `lst` as a valid SQL ENUM
@@ -1909,19 +1927,10 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 raise e
         self.DB.engine.dispose()
 
-    def create_installer_module(self):
-        """
-        Read the Python source of coq_install_generic.py, and modify it so that
-        it can be stored as an adhoc installer module.
-        """
-        with codecs.open(
-                os.path.join(options.cfg.installer_path,
-                             "coq_install_generic.py"), "r") as input_file:
-            source = input_file.readlines()
-
+    def create_description_text(self):
         if self.arguments.use_nltk:
             import nltk
-            is_tagged_label = "POS-tagged text corpus"
+            self._is_tagged_label = "POS-tagged text corpus"
             try:
                 tagging_state = msg_nltk_tagger.format(
                     tagger=nltk.tag._POS_TAGGER.split("/")[1],
@@ -1930,16 +1939,16 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 tagging_state = msg_nltk_tagger_fallback.format(
                     version=nltk.__version__)
         else:
-            is_tagged_label = "text corpus"
+            self._is_tagged_label = "text corpus"
             tagging_state = ("Part-of-speech tags are not available for this "
                              "corpus.")
 
         desc_template = """<p>The {label} '{name}' was created on {date}.
             It contains {tokens} text tokens. {tagging_state}</p>
             <p>Directory:<br/> <code>{path}</code></p>
-            <p>File{s}:<br/><code>{files}</code></p><p>"""
+            <p>File{s}:<br/><code>{files}</code></p>"""
         description = [desc_template.format(
-            label=utf8(is_tagged_label),
+            label=utf8(self._is_tagged_label),
             date=utf8(time.strftime("%c")),
             user=utf8(getpass.getuser()),
             name=utf8(self.arguments.name),
@@ -1950,10 +1959,24 @@ class BaseCorpusBuilder(corpus.SQLResource):
             tokens=self._corpus_id,
             tagging_state=utf8(tagging_state))]
 
+        return description
+
+    def create_installer_module(self):
+        """
+        Read the Python source of coq_install_generic.py, and modify it so that
+        it can be stored as an adhoc installer module.
+        """
+        with codecs.open(
+                os.path.join(options.cfg.installer_path,
+                             "coq_install_generic.py"), "r") as input_file:
+            source = input_file.readlines()
+
+        description = self.create_description_text()
+
         new_code = new_code_str.format(
             name=self.name,
             db_name=self.arguments.db_name,
-            is_tagged_corpus=is_tagged_label,
+            is_tagged_corpus=self._is_tagged_label,
             description=" ".join(description))
         new_code = new_code.replace("\\", "\\\\")
         in_class = False
@@ -2177,7 +2200,7 @@ class TEICorpusBuilder(XMLCorpusBuilder):
     def open_word(self, element):
         pass
 
-    def process_tree(self, tree):
+    def process_tree(self, tree, file_name=None):
         root = tree.root
         if root.tag == "teiCorpus":
             # assume that this is a file containing several TEI documents
