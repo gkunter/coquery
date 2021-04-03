@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,7 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 import re
-import pandas as pd
+import numpy as np
 import logging
 
 from coquery.corpusbuilder import BaseCorpusBuilder
@@ -51,9 +51,9 @@ class BuilderClass(BaseCorpusBuilder):
                 # But at this stage, the data frame is not available yet, so
                 # we have to use a fixed maximum string length:
                 dtype = "VARCHAR({})".format(self.MAX_VARCHAR_LENGTH)
-            elif dtypes[i] == pd.np.float64:
+            elif dtypes[i] == np.float64:
                 dtype = "REAL"
-            elif dtypes[i] == pd.np.int64:
+            elif dtypes[i] == np.int64:
                 dtype = "INTEGER"
             lst.append((rc_feature, label, dtype))
         return lst
@@ -81,9 +81,9 @@ class BuilderClass(BaseCorpusBuilder):
                 # we have to use a fixed maximum string length:
                 max_length = 128
                 dtype = "VARCHAR({})".format(max_length)
-            elif dtypes[i] == pd.np.float64:
+            elif dtypes[i] == np.float64:
                 dtype = "REAL"
-            elif dtypes[i] == pd.np.int64:
+            elif dtypes[i] == np.int64:
                 dtype = "INTEGER"
             _columns.append((i, rc_feature, label, dtype))
             setattr(self, rc_feature, label)
