@@ -23,7 +23,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
@@ -65,7 +65,7 @@
           <item>
            <widget class="QRadioButton" name="radio_output_case_upper">
             <property name="text">
-             <string>&amp;Upper case</string>
+             <string>Upper &amp;case</string>
             </property>
            </widget>
           </item>
@@ -203,13 +203,22 @@
        <property name="spacing">
         <number>6</number>
        </property>
-       <property name="margin">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
         <number>6</number>
        </property>
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>&amp;Automatically apply:</string>
+          <string>Automatica&amp;lly apply:</string>
          </property>
          <property name="buddy">
           <cstring>list_auto_apply</cstring>
@@ -464,6 +473,115 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_nlp">
+      <attribute name="title">
+       <string>NLP</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0,1">
+       <item>
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>NLTK</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="0" colspan="2">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>The NLTK modules required for tagging and parsing are currently not installed. Automatic parsing and tagging is not available for new user corpora.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>499</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButton">
+            <property name="text">
+             <string>Install</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_4">
+         <property name="title">
+          <string>Select NLTK module</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <widget class="QRadioButton" name="radio_nltk_tagging">
+            <property name="text">
+             <string>Defau&amp;lt</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QRadioButton" name="radio_corenlp_tagging">
+            <property name="text">
+             <string>&amp;CoreNLP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLineEdit" name="line_corenlp_server"/>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLabel" name="label_corenlp_port">
+            <property name="text">
+             <string>Port: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QSpinBox" name="spin_corenlp_port">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="value">
+             <number>9000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="label_corenlp_server">
+            <property name="text">
+             <string>Server:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <spacer name="verticalSpacer_7">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tab">
       <attribute name="title">
        <string>Fonts</string>
@@ -696,8 +814,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -736,8 +853,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -753,7 +869,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>&amp;Visualizers:</string>
+             <string>Visua&amp;lizers:</string>
             </property>
             <property name="buddy">
              <cstring>edit_visualizer_path</cstring>
@@ -776,8 +892,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
             <property name="shortcut">
              <string>Alt+B</string>
@@ -804,8 +919,7 @@
             </property>
             <property name="icon">
              <iconset theme="folder">
-              <normaloff/>
-             </iconset>
+              <normaloff>.</normaloff>.</iconset>
             </property>
            </widget>
           </item>
@@ -896,6 +1010,38 @@
     <hint type="destinationlabel">
      <x>319</x>
      <y>239</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radio_nltk_tagging</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>line_corenlp_server</receiver>
+   <slot>setDisabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>60</x>
+     <y>211</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>388</x>
+     <y>244</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radio_nltk_tagging</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_corenlp_port</receiver>
+   <slot>setDisabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>64</x>
+     <y>211</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>388</x>
+     <y>282</y>
     </hint>
    </hints>
   </connection>
