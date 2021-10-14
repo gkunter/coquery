@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -22,6 +22,7 @@ import logging
 import re
 
 import pandas as pd
+import numpy as np
 
 from . import options
 from .errors import (
@@ -270,11 +271,11 @@ class Session(object):
                         if df.dtypes[x] != dtype_list[x]:
                             if df.dtypes[x] == object:
                                 if not df[x].any():
-                                    df[x] = [pd.np.nan] * len(df)
+                                    df[x] = [np.nan] * len(df)
                                     dtype_list[x] = self.data_table[x].dtype
                             elif dtype_list[x] == object:
                                 if not self.data_table[x].any():
-                                    dummy = [pd.np.nan] * len(self.data_table)
+                                    dummy = [np.nan] * len(self.data_table)
                                     self.data_table[x] = dummy
                                     dtype_list[x] = df[x].dtype
                 else:
