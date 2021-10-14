@@ -110,6 +110,8 @@ def _read_as_wav(source):
             in_wav = wave.open(io.BytesIO(source))
         else:
             in_wav = wave.open(source, "rb")
+    except FileNotFoundError:
+        raise IOError("Could not read WAV file '{}'.".format(source))
     except wave.Error:
         raise TypeError("WAV file not readable")
     else:
