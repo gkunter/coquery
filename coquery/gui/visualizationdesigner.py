@@ -2,7 +2,7 @@
 """
 visualizationDesigner.py is part of Coquery.
 
-Copyright (c) 2017-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -216,6 +216,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.populate_variable_lists()
         self.ui.label_dimensions.setText(self.get_label())
         self.check_figure_types()
+
+        if self.vis is not None:
+            self.update_figure()
 
         self.ui.button_refresh_data.hide()
 
@@ -918,19 +921,31 @@ class VisualizationDesigner(QtWidgets.QDialog):
         d["range_z"] = None
 
         if x:
-            d["levels_x"] = uniques(self.df[x])
-            d["range_x"] = (self.df[x].dropna().min(),
-                            self.df[x].dropna().max())
+            try:
+                d["levels_x"] = uniques(self.df[x])
+            except KeyError:
+                self.ui.tray_data_x.clear(no_return=True)
+            else:
+                d["range_x"] = (self.df[x].dropna().min(),
+                                self.df[x].dropna().max())
 
         if y:
-            d["levels_y"] = uniques(self.df[y])
-            d["range_y"] = (self.df[y].dropna().min(),
-                            self.df[y].dropna().max())
+            try:
+                d["levels_y"] = uniques(self.df[y])
+            except KeyError:
+                self.ui.tray_data_y.clear(no_return=True)
+            else:
+                d["range_y"] = (self.df[y].dropna().min(),
+                                self.df[y].dropna().max())
 
         if z:
-            d["levels_z"] = uniques(self.df[z])
-            d["range_z"] = (self.df[z].dropna().min(),
-                            self.df[z].dropna().max())
+            try:
+                d["levels_z"] = uniques(self.df[z])
+            except KeyError:
+                self.ui.tray_data_z.clear(no_return=True)
+            else:
+                d["range_z"] = (self.df[z].dropna().min(),
+                                self.df[z].dropna().max())
 
         return d
 

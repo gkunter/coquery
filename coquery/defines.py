@@ -2,7 +2,7 @@
 """
 defines.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2020 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -25,6 +25,7 @@ QUERY_ITEM_LEMMA = "query_item_lemma"
 QUERY_ITEM_TRANSCRIPT = "query_item_transcript"
 QUERY_ITEM_POS = "query_item_pos"
 QUERY_ITEM_GLOSS = "query_item_gloss"
+QUERY_ITEM_ID = "corpus_id"
 
 QUERY_MODE_TOKENS = "Do not transform"
 QUERY_MODE_TYPES = "Only distinct rows"
@@ -211,6 +212,8 @@ FUNCTION_DESC = {
     "statistics_tokens": "Count the number of tokens",
     "statistics_types": "Count the number of unique matches",
     "statistics_ttr": "Calculate the type-token ratio",
+    "STTR": "Calculate the standardized type-token ratio (chunk size: 2500 words)",
+    "STTR250": "Calculate the standardized type-token ratio (chunk size: 250 words)",
     "reference_frequency": "Count the frequeny of the match in the reference corpus",
     "reference_frequency_ptw": "Calculate the frequency per million words in the reference corpus",
     "reference_frequency_pmw": "Calculate the frequency per thousand words in the reference corpus",
@@ -364,6 +367,11 @@ MODULE_INFORMATION = {
              "1.0",
              "Data input from Microsoft Excel files",
              "http://www.python-excel.org/"),
+    "sqlparse": ("sqlparse – A non-validating SQL parser module for Python",
+                 "0.2.0",
+                 "Show SQL queries well-formatted",
+                 "https://github.com/andialbrecht/sqlparse"),
+
     }
 
 # Python 3 does not have unicode and long, so define them here:
@@ -452,7 +460,7 @@ msg_escapable_template = """
 <p><code>{{}}<br>{{}}</code></p>
 <p>{}</p>
 <p>If you want to query for the character that caused this error as a
-literal character, try to precede it by the backslash: <code>\</code><p>
+literal character, try to precede it by the backslash: <code>\\</code><p>
 """
 
 msg_unexpected_quantifier_start = msg_escapable_template.format("""

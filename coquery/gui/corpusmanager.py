@@ -2,7 +2,7 @@
 """
 corpusmanager.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -136,7 +136,7 @@ class CoqAccordionEntry(QtWidgets.QWidget):
             QtWidgets.QApplication.clipboard().setText("\n".join(
                 [utf8(x) for x in self._reference_list]))
         else:
-            QtWidgets.QDesktopServices.openUrl(QtCore.QUrl(link))
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(link))
 
     def setup_buttons(self, installed, entry_widget):
         """
@@ -201,7 +201,7 @@ class CoqAccordionEntry(QtWidgets.QWidget):
                 if self._stack:
                     self.button_remove.clicked.connect(
                         lambda: self._stack.removeCorpus.emit(self))
-
+            if installed:
                 self.button_dump = button_dump
                 self.button_dump.setParent(entry_widget)
                 self.widget_layout.addWidget(self.button_dump)

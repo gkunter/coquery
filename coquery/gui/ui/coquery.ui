@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>821</width>
-    <height>684</height>
+    <width>831</width>
+    <height>722</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -430,7 +430,16 @@
                   <property name="spacing">
                    <number>1</number>
                   </property>
-                  <property name="margin">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
                    <number>0</number>
                   </property>
                   <item>
@@ -665,7 +674,16 @@
                  <property name="spacing">
                   <number>1</number>
                  </property>
-                 <property name="margin">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
                   <number>0</number>
                  </property>
                 </layout>
@@ -723,10 +741,19 @@
                </item>
                <item row="3" column="1">
                 <layout class="QGridLayout" name="gridLayout_8" columnstretch="0,1">
-                 <property name="verticalSpacing">
+                 <property name="leftMargin">
                   <number>0</number>
                  </property>
-                 <property name="margin">
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="verticalSpacing">
                   <number>0</number>
                  </property>
                  <item row="0" column="0">
@@ -739,7 +766,7 @@
                  <item row="0" column="1">
                   <widget class="QLabel" name="label">
                    <property name="text">
-                    <string>Show &amp;random sample:</string>
+                    <string>Show rando&amp;m sample:</string>
                    </property>
                    <property name="buddy">
                     <cstring>spin_sample_size</cstring>
@@ -810,7 +837,16 @@
            <item>
             <widget class="QWidget" name="button_box_reaggregate" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <property name="margin">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
                <number>0</number>
               </property>
               <item>
@@ -920,7 +956,7 @@
                 <enum>QFrame::Sunken</enum>
                </property>
                <property name="text">
-                <string>(no &amp;query file selected)</string>
+                <string/>
                </property>
               </widget>
              </item>
@@ -998,7 +1034,16 @@
             <property name="spacing">
              <number>0</number>
             </property>
-            <property name="margin">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
              <number>0</number>
             </property>
             <item>
@@ -1088,8 +1133,8 @@ background-color: rgb(244, 165, 130);</string>
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Oxygen-Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans'; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans [GOOG]'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="textInteractionFlags">
            <set>Qt::NoTextInteraction</set>
@@ -1121,8 +1166,8 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>821</width>
-     <height>26</height>
+     <width>831</width>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1189,6 +1234,8 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_add_function"/>
     <addaction name="separator"/>
     <addaction name="action_find"/>
+    <addaction name="separator"/>
+    <addaction name="action_view_sql"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
@@ -1443,7 +1490,12 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_pos_helper">
    <property name="text">
-    <string>POS Tag helper..</string>
+    <string>&amp;POS Tag helper..</string>
+   </property>
+  </action>
+  <action name="action_view_sql">
+   <property name="text">
+    <string>View SQL queries...</string>
    </property>
   </action>
  </widget>

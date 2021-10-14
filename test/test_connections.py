@@ -11,28 +11,22 @@ coquery$ python -m test.test_connections
 from __future__ import unicode_literals
 from __future__ import print_function
 
-import unittest
 import os
 import sys
 import select
 import random
 import string
 
-try:
-    import pymysql
-    no_mysql = False
-except ImportError:
-    no_mysql = True
-
 from coquery.connections import (Connection,
                                  MySQLConnection,
                                  SQLiteConnection)
 from coquery.defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
 from coquery.corpus import BaseResource, CorpusClass
-from coquery.general import get_home_dir
+from coquery.general import get_home_dir, has_module
+from test.testcase import CoqTestCase, run_tests
 
 
-class TestConnection(unittest.TestCase):
+class TestConnection(CoqTestCase):
     def setUp(self):
         self.name = "test_virtual"
         self._db_type = "TEST"
@@ -100,19 +94,19 @@ class TestConnection(unittest.TestCase):
         self.assertEqual(con.count_resources(), 0)
 
 
-class TestMySQLConnection(unittest.TestCase):
+class TestMySQLConnection(CoqTestCase):
     skip_root = False
     root_password = None
 
     def setUp(self):
-        if no_mysql:
-            raise unittest.SkipTest
-        
+        if not has_module("pymysql"):
+            self.skipTest("Module 'pymysql' is not available")
+
         self.name = "test_mysql"
         self.host = "127.0.0.1"
         self.port = 3306
         self.user = "mysql"
-        self.password = "abcde" # just because I can
+        self.password = "abcde"
         self.db_name = "coq_corpus"
 
     @staticmethod
@@ -147,7 +141,7 @@ class TestMySQLConnection(unittest.TestCase):
 
     def get_root_password(self):
         if TestMySQLConnection.skip_root:
-            raise unittest.SkipTest
+            self.skipTest("No MySQL password provided")
 
         if not TestMySQLConnection.root_password:
             try:
@@ -159,7 +153,7 @@ class TestMySQLConnection(unittest.TestCase):
 
         if not TestMySQLConnection.root_password:
             TestMySQLConnection.skip_root = True
-            raise unittest.SkipTest
+            self.skipTest("No MySQL password provided")
         else:
             return self.root_password
 
@@ -210,7 +204,8 @@ class TestMySQLConnection(unittest.TestCase):
                               user="root", password=root_password)
 
         self.assertTrue(con.has_user("root"))
-        self.assertFalse(con.has_user("*\n ")) # assuming that this is illegal
+        # assuming that a user name '*\n ' is illegal, it should not exist:
+        self.assertFalse(con.has_user("*\n "))
 
     def test_create_and_drop_user(self):
         root_password = self.get_root_password()
@@ -235,7 +230,6 @@ class TestMySQLConnection(unittest.TestCase):
 
         self.assertFalse(con.has_user(random_name))
 
-
     #def test_remove_resource(self):
         #cor = CorpusClass()
         #res_name = "TestCorpus"
@@ -252,7 +246,7 @@ class TestMySQLConnection(unittest.TestCase):
         #con.remove_resource(res_name, con.MODULE)
 
 
-class TestSQLiteConnection(unittest.TestCase):
+class TestSQLiteConnection(CoqTestCase):
     def setUp(self):
         self.name = "test_sqlite"
         self.db_path = os.path.expanduser("~/tmp")
@@ -273,10 +267,17 @@ class TestSQLiteConnection(unittest.TestCase):
                                       DEFAULT_CONFIGURATION,
                                       "databases"))
 
+    def test_db_path(self):
+        con = SQLiteConnection(self.name, self.db_path)
+
+        value = con.db_path(self.db_name)
+        target = os.path.join(self.db_path, "{}.db".format(self.db_name))
+        self.assertEqual(value, target)
+
     def test_url(self):
         con = SQLiteConnection(self.name, self.db_path)
 
-        path = os.path.join(self.db_path, "{}.db".format(self.db_name))
+        path = con.db_path(self.db_name)
         url = "sqlite+pysqlite:///{path}".format(path=path)
 
         self.assertEqual(url, con.url(self.db_name))
@@ -286,10 +287,7 @@ provided_tests = (TestConnection, TestMySQLConnection, TestSQLiteConnection)
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

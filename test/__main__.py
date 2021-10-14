@@ -1,8 +1,21 @@
+# -*- coding: utf-8 -*-
+
+"""
+__main__.py is part of Coquery.
+
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+
+Coquery is released under the terms of the GNU General Public License (v3).
+For details, see the file LICENSE that you should have received along
+with Coquery. If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import print_function
 
 import unittest
 import sys
 from pprint import pprint
+
 
 def main():
     test_list = []
@@ -16,16 +29,8 @@ def main():
         print("Running complete tests")
 
     if not args or "bibliography" in args:
-        from test.test_bibliography import (
-            TestPerson, TestPersonList, TestEditorList, TestReference,
-            TestArticle, TestBook, TestInCollection)
-        test_list += [TestPerson, TestPersonList, TestEditorList,
-                      TestReference, TestArticle, TestBook,
-                      TestInCollection]
-
-    if not args or "celex" in args:
-        from test.test_celex import TestCELEX
-        test_list += [TestCELEX]
+        from test.test_bibliography import provided_tests
+        test_list += provided_tests
 
     if not args or "colorizers" in args:
         from test.test_colorizers import provided_tests
@@ -48,33 +53,49 @@ def main():
         test_list += provided_tests
 
     if not args or "functionlist" in args:
-        from test.test_functionlist import TestFunctionList
-        test_list += [TestFunctionList]
+        from test.test_functionlist import provided_tests
+        test_list += provided_tests
 
     if not args or "functions" in args:
-        from test import test_functions
-        test_list += test_functions.provided_tests
+        from test.test_functions import provided_tests
+        test_list += provided_tests
 
     if not args or "general" in args:
-        from test import test_general
-        test_list += test_general.provided_tests
+        from test.test_general import provided_tests
+        test_list += provided_tests
+
+    if not args or "installer" in args:
+        from test.test_install_generic import provided_tests
+        test_list += provided_tests
+        from test.test_install_generic_table import provided_tests
+        test_list += provided_tests
+        from test.test_install_generic_package import provided_tests
+        test_list += provided_tests
+
+        from test.test_celex import provided_tests
+        test_list += provided_tests
+        from test.test_ice_ng import provided_tests
+        test_list += provided_tests
+        from test.test_obc2 import provided_tests
+        test_list += provided_tests
+        from test.test_switchboard import provided_tests
+        test_list += provided_tests
 
     if not args or "managers" in args:
-        from test.test_managers import TestManager
-        test_list += [TestManager]
+        from test.test_managers import provided_tests
+        test_list += provided_tests
 
     if not args or "options" in args:
-        from test.test_options import TestQueryStringParse
-        test_list += [TestQueryStringParse]
+        from test.test_options import provided_tests
+        test_list += provided_tests
+
+    if not args or "queries" in args:
+        from test.test_queries import provided_tests
+        test_list += provided_tests
 
     if not args or "sessions" in args:
-        from test.test_sessions import (
-            TestSessionInputFile, TestSessionMethods)
-        test_list += [TestSessionInputFile, TestSessionMethods]
-
-    if not args or "switchboard" in args:
-        from test.test_switchboard import TestSwitchboard
-        test_list += [TestSwitchboard]
+        from test.test_sessions import provided_tests
+        test_list += provided_tests
 
     if not args or "tables" in args:
         from test.test_tables import provided_tests
@@ -85,14 +106,12 @@ def main():
         test_list += provided_tests
 
     if not args or "tokens" in args:
-        from test.test_tokens import (
-            TestTokensModuleMethods, TestQueryTokenCOCA, TestQuantification)
-        test_list += [TestTokensModuleMethods, TestQueryTokenCOCA,
-                      TestQuantification]
+        from test.test_tokens import provided_tests
+        test_list += provided_tests
 
     if not args or "unicode" in args:
-        from test.test_unicode import TestUnicodeModuleMethods
-        test_list += [TestUnicodeModuleMethods]
+        from test.test_unicode import provided_tests
+        test_list += provided_tests
 
     if not args or "visualizer" in args:
         from test.vis.test_barcodeplot import provided_tests
@@ -111,6 +130,7 @@ def main():
         [unittest.TestLoader().loadTestsFromTestCase(x)
          for x in test_list])
     unittest.TextTestRunner().run(suite)
+
 
 if __name__ == '__main__':
     main()

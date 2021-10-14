@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import unittest
 import sys
 import tempfile
 import os
@@ -13,9 +12,9 @@ from coquery.corpusbuilder import (
     BaseCorpusBuilder, XMLCorpusBuilder, TEICorpusBuilder)
 from coquery.tables import Table, Column, Identifier, Link
 
-from .test_corpora import simple
+from test.testcase import CoqTestCase, run_tests
+from test.test_corpora import simple
 
-options.cfg = argparse.Namespace()
 
 try:
     from lxml import etree as ET
@@ -285,18 +284,18 @@ class NGramBuilderFlat(BaseCorpusBuilder):
     auto_create = ["corpus"]
 
 
-class TestCorpusNgram(unittest.TestCase):
-
+class TestCorpusNgram(CoqTestCase):
     def setUp(self):
         self.builder = NgramBuilder()
         self.maxDiff = None
+        options.cfg = argparse.Namespace()
         options.cfg.no_ngram = False
-
+        options.cfg.experimental = True
 
     def test_get_ngram_columns(self):
-        l = self.builder.build_lookup_get_ngram_columns()
-        self.assertEqual(
-            l, ["ID1", "FileId1", "WordId1", "WordId2", "WordId3"])
+        lst = self.builder.build_lookup_get_ngram_columns()
+        self.assertEqual(["ID1", "FileId1", "WordId1", "WordId2", "WordId3"],
+                         lst)
 
     def test_get_ngram_padding_1(self):
         s = self.builder.build_lookup_get_padding_string()
@@ -346,19 +345,22 @@ class TestCorpusNgram(unittest.TestCase):
         self.assertEqual(simple(s1), simple(s2))
 
 
-class TestFlatCorpusBuilder(unittest.TestCase):
+class TestFlatCorpusBuilder(CoqTestCase):
     def test_get_ngram_padding_1(self):
         self.builder = NGramBuilderFlat()
         s = self.builder.build_lookup_get_padding_string()
         self.assertEqual(simple(s),
                          simple("""
-        INSERT INTO CorpusNgram (ID1, FileId1, POS1, POS2, POS3, Word1, Word2, Word3)
-        VALUES ({last_row} + 1, {FileId1}, {POS2}, {POS3}, {na_value},{WordId2}, {WordId3}, {na_value}),
-               ({last_row} + 2, {FileId1}, {POS3}, {na_value}, {na_value}, {WordId3}, {na_value}, {na_value})
+        INSERT INTO CorpusNgram (ID1, FileId1, POS1, POS2, POS3,
+                                 Word1, Word2, Word3)
+        VALUES ({last_row} + 1, {FileId1}, {POS2}, {POS3}, {na_value},
+                {WordId2}, {WordId3}, {na_value}),
+               ({last_row} + 2, {FileId1}, {POS3}, {na_value}, {na_value},
+                {WordId3}, {na_value}, {na_value})
                """))
 
 
-class TestXMLCorpusBuilder(unittest.TestCase):
+class TestXMLCorpusBuilder(CoqTestCase):
     def setUp(self):
         self.temp_file = tempfile.NamedTemporaryFile("w")
         self.temp_file_name = self.temp_file.name
@@ -384,9 +386,11 @@ class TestXMLCorpusBuilder(unittest.TestCase):
         builder = TestingXML()
 
         result = builder.read_file(self.temp_file_name)
-        self.assertListEqual(
-            ["{}\n".format(x) for x in xml_content.split("\n") if x.strip("\n")],
-            [x for x in result if x.strip("\n")])
+
+        lst1 = ["{}\n".format(x) for x in xml_content.split("\n")
+                if x.strip("\n")]
+        lst2 = [x for x in result if x.strip("\n")]
+        self.assertListEqual(lst1, lst2)
 
     def test_preprocess_data(self):
         with open(self.temp_file_name, "w") as temp_file:
@@ -501,10 +505,7 @@ provided_tests = [TestCorpusNgram, TestFlatCorpusBuilder,
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

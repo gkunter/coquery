@@ -2,7 +2,7 @@
 """
 groups.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -34,6 +34,7 @@ from coquery.functions import (
                     Percent, Proportion,
                     Tokens, Types,
                     TypeTokenRatio,
+                    StandardizedTypeTokenRatio, StandardizedTypeTokenRatio250,
                     CorpusSize, SubcorpusSize)
 
 from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
@@ -251,7 +252,10 @@ class GroupFunctionDelegate(QtWidgets.QItemDelegate):
 
 class GroupDialog(QtWidgets.QDialog):
     function_list = (Freq, FreqNorm, FreqPTW, FreqPMW,
-                     RowNumber, Tokens, Types, TypeTokenRatio,
+                     RowNumber, Tokens, Types,
+                     TypeTokenRatio,
+                     StandardizedTypeTokenRatio,
+                     StandardizedTypeTokenRatio250,
                      Add,
                      Min, Max, Mean, Median, StandardDeviation,
                      InterquartileRange,
@@ -304,10 +308,10 @@ class GroupDialog(QtWidgets.QDialog):
         function_groups = self.get_function_groups()
 
         for fun_base in sorted(function_groups,
-                               key=lambda x: x.get_description()):
+                               key=lambda x: x.get_group()):
 
             group_item = QtWidgets.QListWidgetItem(
-                fun_base.get_description())
+                fun_base.get_group())
             function_items = []
             for fnc in function_groups[fun_base]:
                 list_item = QtGui.QStandardItem()
@@ -447,7 +451,7 @@ class SummaryDialog(GroupDialog):
                     RowNumber,
                     Percent, Proportion,
                     Tokens, Types,
-                    TypeTokenRatio,
+                    TypeTokenRatio, StandardizedTypeTokenRatio,
                     CorpusSize, SubcorpusSize)
 
     def __init__(self, group, all_columns, parent=None):

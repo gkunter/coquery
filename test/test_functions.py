@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 This module tests the functions module.
 
@@ -12,11 +12,10 @@ from __future__ import unicode_literals
 from __future__ import division
 
 import warnings
-import unittest
+import argparse
 import pandas as pd
 from numpy import testing as npt
 
-from .mockmodule import MockOptions, MockSettings
 
 from coquery.functions import (
     get_base_func,
@@ -30,11 +29,13 @@ from coquery.functions import (
     Min, Max, Mean, Median, StandardDeviation, InterquartileRange,
     Percentile,
     Equal, NotEqual, GreaterThan, GreaterEqual, LessThan, LessEqual,
-    And, Or, Xor, If, IfAny, Empty, Missing,
+    And, Or, Xor, If, Empty, Missing,
     ToNumeric, ToCategory,
     )
 from coquery.functionlist import FunctionList
 from coquery import options
+from test.testcase import CoqTestCase, run_tests
+
 
 df1 = pd.DataFrame(
     {'coquery_invisible_number_of_tokens': {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1, 35: 1, 36: 1, 37: 1, 38: 1, 39: 1, 40: 1, 41: 1, 42: 1, 43: 1, 44: 1, 45: 1, 46: 1, 47: 1, 48: 1, 49: 1, 50: 1, 51: 1, 52: 1, 53: 1, 54: 1},
@@ -63,10 +64,9 @@ df2 = pd.DataFrame({
         FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan]})
 
 
-class CoqTestCase(unittest.TestCase):
+class FncTestCase(CoqTestCase):
     def setUp(self):
-        options.cfg = MockOptions()
-        options.settings = MockSettings()
+        options.cfg = argparse.Namespace()
 
         options.cfg.verbose = False
         options.cfg.drop_on_na = False
@@ -75,7 +75,7 @@ class CoqTestCase(unittest.TestCase):
         self.df = df0.copy()
 
 
-class TestModuleFunctions(CoqTestCase):
+class TestModuleFunctions(FncTestCase):
     def test_get_base_func_1(self):
         func = Function()
         self.assertEqual(Function, get_base_func(func))
@@ -89,7 +89,7 @@ class TestModuleFunctions(CoqTestCase):
                          get_base_func(ReferenceCorpusFrequencyPTW))
 
 
-class TestFrequencyFunctions(CoqTestCase):
+class TestFrequencyFunctions(FncTestCase):
     def test_freq(self):
         df = df0.copy()
         func = Freq(columns=[x for x in df.columns
@@ -112,7 +112,7 @@ class TestFrequencyFunctions(CoqTestCase):
         self.assertListEqual(val.tolist(), [2, 1, 2, 1, 1])
 
 
-class TestStringFunctions(CoqTestCase):
+class TestStringFunctions(FncTestCase):
     def test_count_1(self):
         func = StringCount(columns=["coq_word_label_1"], pat="x")
         val = FunctionList([func]).lapply(self.df, session=None)[func.get_id()]
@@ -237,7 +237,7 @@ class TestStringFunctions(CoqTestCase):
         df = FunctionList([func1]).lapply(df, session=None)
         func2 = Equal(columns=df.columns[-2:])
         val = FunctionList([func2]).lapply(df, session=None)
-        raise unittest.SkipTest
+        self.skipTest("Test not implemented")
 
     def test_extract_with_illegal_regexp(self):
         """
@@ -323,7 +323,7 @@ class TestStringFunctions(CoqTestCase):
             ["A"] * 4 + [None])
 
 
-class TestMathFunctions(CoqTestCase):
+class TestMathFunctions(FncTestCase):
     def setUp(self):
         super(TestMathFunctions, self).setUp()
 
@@ -335,7 +335,8 @@ class TestMathFunctions(CoqTestCase):
                      "column_5": list("abcd"),
                      "column_6": [0, 1, 0, 1]})
 
-    def assert_result(self, func_class, df, columns, expected, value=None, **kwargs):
+    def assert_result(self, func_class, df, columns, expected,
+                      value=None, **kwargs):
         func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
         npt.assert_equal(result[func.get_id()].values, expected)
@@ -659,7 +660,7 @@ class TestMathFunctions(CoqTestCase):
         self.assert_result(func, self.df, columns, expected, value=value)
 
 
-class TestLogicalFunctions(CoqTestCase):
+class TestLogicalFunctions(FncTestCase):
     def setUp(self):
         super(TestLogicalFunctions, self).setUp()
 
@@ -669,12 +670,12 @@ class TestLogicalFunctions(CoqTestCase):
              "column_3": [1, None, 2, None, 3, None],
              "column_4": [0, 1, 0, 1, 0, 1],
              "column_5": [2, 2, 2, 2, 0, 0],
+             "column_6": [None, None, None, None, None, None],
              "str_1": ["aaa", "bbb", "ccc", "ddd", "eee", "fff"],
              "str_2": ["ccc", "ccc", "ccc", "ddd", "ddd", "ddd"],
              "str_3": ["aaa", None, "ccc", None, "eee", None],
              "str_4": ["X", ""] * 3,
              })
-
 
     def assert_result(self, func_class, df, columns, expected, value=None,
                       **kwargs):
@@ -913,35 +914,7 @@ class TestLogicalFunctions(CoqTestCase):
         npt.assert_equal(val["str_4"].values, [False, True] * 3)
 
 
-class TestDistributionalFunctions(CoqTestCase):
-    def test_cond_prob_1(self):
-        df = pd.DataFrame(
-            {"left1": list("abcd"),
-             "word": list("XXYY")})
-        raise unittest.SkipTest
-        val = SuperCondProb().get_freq_str(df)
-        self.assertListEqual(
-            val.values.tolist(),
-            ["a X", "b X", "c Y", "d Y"])
-
-    def test_cond_prob_2(self):
-        df = pd.DataFrame(
-            {"left1": list("abcd"),
-             "word": ["{vocnoise}", "?funny", "[comment]", "*illegal"]})
-        raise unittest.SkipTest
-
-        val = SuperCondProb().get_freq_str(df)
-        self.assertListEqual(
-            val.values.tolist(),
-            ["a \\{vocnoise}", "b \\?funny", "c \\[comment]", "d \\*illegal"])
-
-        val = SuperCondProb().get_freq_str(df[["left1"]])
-        self.assertListEqual(
-            val.values.tolist(),
-            ["a", "b", "c", "d"])
-
-
-class TestConversionFunctions(CoqTestCase):
+class TestConversionFunctions(FncTestCase):
     def assert_result(self, func_class, df, columns, expected, value=None,
                       **kwargs):
         func = func_class(columns=columns, value=value, **kwargs)
@@ -975,22 +948,18 @@ class TestConversionFunctions(CoqTestCase):
         self.assert_result(ToCategory, df, ["num3"], expected3)
 
 
-provided_tests = (
-                  TestFrequencyFunctions,
+provided_tests = [TestFrequencyFunctions,
                   TestStringFunctions,
                   TestMathFunctions,
                   TestLogicalFunctions,
-                  TestDistributionalFunctions,
                   TestModuleFunctions,
                   TestConversionFunctions,
-                  )
+                  ]
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

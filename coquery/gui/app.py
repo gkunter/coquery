@@ -164,6 +164,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     dataChanged = QtCore.Signal()
     updatePackStage = QtCore.Signal(tuple)
     updateFileChunk = QtCore.Signal(tuple)
+    customInstallerPathChanged = QtCore.Signal()
 
     def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -475,6 +476,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             (self.ui.action_add_column, self.add_column),
             (self.ui.action_add_function, self.menu_add_function),
             (self.ui.action_find, lambda: self.ui.widget_find.show()),
+            (self.ui.action_view_sql, self.show_sql),
             (self.ui.action_visualization_designer,
              self.visualization_designer),
             (self.ui.action_toggle_management, self.toggle_data_management),
@@ -724,6 +726,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.action_show_hidden.setEnabled(enable)
         self.ui.action_find.setEnabled(enable)
         self.ui.action_visualization_designer.setEnabled(enable)
+        self.ui.action_view_sql.setEnabled(
+            len(self.Session.sql_queries) > 0)
 
     def show_options_menu(self):
         self.ui.spin_query_limit.setValue(options.cfg.number_of_tokens)
@@ -876,7 +880,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         else:
             col = "#7f0000"
 
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
         if manager.dropped_na_count:
             rows = self.unfiltered_tokens - manager.dropped_na_count
         else:
@@ -906,7 +910,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         filter_icon = "Filter"
         error_icon = "Error"
         try:
-            manager = self.Session.get_manager()
+            manager = self.Session.get_manager(options.cfg.MODE)
         except Exception:
             manager = None
         if not manager:
@@ -1101,7 +1105,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         from .columnproperties import ColumnPropertiesDialog
 
         columns = columns or []
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
 
         #FIXME: the whole way column properties are handled needs to be
         # revised!
@@ -1170,7 +1174,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             options.settings.setValue("column_properties", properties)
 
     def show_hidden_columns(self):
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
         manager.reset_hidden_columns()
         self.update_table_models()
         self.update_columns()
@@ -1278,7 +1282,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         token_width = 1
 
         if index is not None:
-            manager = self.Session.get_manager()
+            manager = self.Session.get_manager(options.cfg.MODE)
             try:
                 if isinstance(manager, managers.ContrastMatrix):
                     from .independencetestviewer import (
@@ -1379,7 +1383,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.aggr_thread.taskFinished.connect(self.finalize_reaggregation)
         self.abortRequested.connect(self.kill_reaggregation)
 
-        if not self.Session.has_cached_data():
+        if not self.Session.has_cached_data(options.cfg.MODE):
             self.start_progress_indicator()
         self.reaggregating = True
 
@@ -1390,7 +1394,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def finalize_reaggregation(self):
         self.reaggregating = False
-        manager = self.Session.get_manager()
+        manager = self.Session.get_manager(options.cfg.MODE)
         self.display_results(drop=False)
         self.stop_progress_indicator()
         self.resize_rows()
@@ -1574,7 +1578,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def update_table_models(self, visible=None, hidden=None):
         if visible is None and hidden is None:
-            manager = self.Session.get_manager()
+            manager = self.Session.get_manager(options.cfg.MODE)
             manager.reset_hidden_columns()
             for col in self.hidden_features:
                 manager.hide_column(col)
@@ -1613,8 +1617,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             if not self.Session.Resource:
                 hide()
                 return
-            manager = managers.get_manager(options.cfg.MODE,
-                                           self.Session.Resource.name)
+            manager = self.Session.get_manager(options.cfg.MODE)
             if len(manager.hidden_columns) == 0:
                 hide()
             else:
@@ -1738,68 +1741,100 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 else:
                     self.enable_apply_button()
 
-    def save_results(self, selection=False, clipboard=False):
-        name = None
-        if not clipboard:
-            if selection:
-                caption = "Save selected query results – Coquery"
-            else:
-                caption = "Save query results – Coquery"
-            name = QtWidgets.QFileDialog.getSaveFileName(
-                caption=caption,
-                directory=options.cfg.results_file_path)
-            if type(name) == tuple:
-                name = name[0]
-            if not name:
-                return
-            options.cfg.results_file_path = os.path.dirname(name)
+    def get_selection(self, df):
+        """
+        Return a slice of the current data table representing the selected
+        data. If no data is selected, the whole data table is returned.
+
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame that will be spliced
+
+        Returns
+        -------
+        df : DataFrame
+            The spliced data frame
+        """
+        ix_selected = (self.ui.data_preview.selectionModel()
+                                           .selection()
+                                           .indexes())
+        if ix_selected:
+            rows, columns = zip(*[(x.row(), x.column()) for x in ix_selected])
+            df = df.iloc[list(set(rows)), list(set(columns))]
+
+        return df
+
+    def save_results(self, sel_only=False):
+        if sel_only:
+            caption = "Save selected query results – Coquery"
+        else:
+            caption = "Save query results – Coquery"
+
+        name = QtWidgets.QFileDialog.getSaveFileName(
+            caption=caption,
+            directory=options.cfg.results_file_path)
+
+        if type(name) == tuple:
+            name = name[0]
+        if not name:
+            return
+
+        options.cfg.results_file_path = os.path.dirname(name)
+
+        # restrict to selection?
+        if sel_only:
+            df = self.get_selection(self.table_model.content)
+        else:
+            df = self.table_model.content
+
+        df.columns = self.Session.translated_headers(df)
+
         try:
-            tab = self.table_model.content
-
-            # restrict to selection?
-            if selection or clipboard:
-                select_range = (self.ui.data_preview.selectionModel()
-                                                    .selection())
-                selected_rows = set([])
-                selected_columns = set([])
-                for x in select_range.indexes():
-                    selected_rows.add(x.row())
-                    selected_columns.add(x.column())
-
-                tab = tab.ix[selected_rows, selected_columns]
-
-            if clipboard:
-                cb = QtWidgets.QApplication.clipboard()
-                cb.clear(mode=cb.Clipboard)
-                cb.setText(
-                    tab.to_csv(sep=str("\t"),
-                               index=False,
-                               header=[self.Session.translate_header(x) for x in tab.columns],
-                               encoding=options.cfg.output_encoding), mode=cb.Clipboard)
-                self.showMessage("{} copied to clipboard.".format(
-                    "Selection" if selection else "Results table"))
-            else:
-                tab.to_csv(name,
-                           sep=options.cfg.output_separator,
-                           index=False,
-                           header=[self.Session.translate_header(x) for x in tab.columns],
-                           encoding=options.cfg.output_encoding)
-                self.showMessage("{} saved to file {}.".format(
-                    "Selection" if selection else "Results table",
-                    name))
+            df.to_csv(name,
+                      sep=options.cfg.output_separator,
+                      index=False,
+                      encoding=options.cfg.output_encoding)
         except IOError:
             critical_box(self, "Disk error", msg_disk_error)
         except (UnicodeEncodeError, UnicodeDecodeError):
             critical_box(self, "Encoding error", msg_encoding_error)
         else:
-            if not selection and not clipboard:
+            if not sel_only:
                 self.last_results_saved = True
+            msg = "{data} saved to file {filename}.".format(
+                data="Selection" if sel_only else "Results table",
+                filename=name)
+            self.showMessage(msg)
 
     def save_selection(self):
-        self.save_results(selection=True)
+        self.save_results(sel_only=True)
 
     def copy_to_clipboard(self):
-        self.save_results(selection=True, clipboard=True)
+        df = self.get_selection(self.table_model.content)
+        df.columns = self.Session.translated_headers(df)
+
+        sel_only = not df.equals(self.table_model.content)
+
+        # headers are provided if more than one column is selected (this should
+        # facilitate copy-pasting column data -- this may be a stupid idea,
+        # actually.
+        header = len(df.columns) != 1
+        try:
+            s = df.to_csv(index=False,
+                          sep=utf8("\t"),
+                          header=header,
+                          encoding=options.cfg.output_encoding)
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            critical_box(self, "Encoding error", msg_encoding_error)
+        else:
+            cb = QtWidgets.QApplication.clipboard()
+            cb.clear(mode=cb.Clipboard)
+            cb.setText(s, mode=cb.Clipboard)
+
+            msg = "{} copied to clipboard.".format(
+                "Selection" if sel_only else "Results table")
+            self.showMessage(msg)
 
     def create_textgrids(self):
         if not options.use_tgt:
@@ -2036,18 +2071,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         return menu
 
-    def get_row_submenu(self, selection=pd.Series(), point=None):
+    def get_row_submenu(self, selection=None, point=None):
         """
         Create a submenu for one or more rows.
 
-        Column submenus contain obtions for hiding, showing, and colorizing
-        result rows. The set of available options depends on the number of
-        rows selected, and their current visibility.
+        Column submenus contain obtions for colorizing result rows. The set of
+        available options depends on the number of rows selected, and their
+        current visibility.
 
-        Row submenus can either be generated as context menus for the row
-        names in the results table, or from the Output main menu entry.
-        In the former case, the parameter 'point' indicates the screen
-        position of the context menu. In the latter case, point is None.
+        Row submenus can either be generated as context menus for the row names
+        in the results table, or from the Output main menu entry. In the former
+        case, the parameter 'point' indicates the screen position of the
+        context menu. In the latter case, point is None.
 
         Parameters
         ----------
@@ -2056,6 +2091,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         point : QPoint
             The screen position for which the context menu is requested
         """
+        if selection is None:
+            selection = pd.Series()
 
         menu = QtWidgets.QMenu("Row options", self)
         if len(selection) == 0:
@@ -2110,7 +2147,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             # Check if any row has a custom color:
             if any([x in options.cfg.row_color for x in selection]):
                 action = QtWidgets.QAction("&Reset color", self)
-                action.triggered.connect(lambda: self.reset_row_color(selection))
+                action.triggered.connect(
+                    lambda: self.reset_row_color(selection))
                 menu.addAction(action)
 
             action = QtWidgets.QAction("&Change color...", self)
@@ -2135,7 +2173,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for x in model.selectionModel().selectedColumns():
             selection.append(table.header[x.column()])
 
-        self.menu = self.get_column_submenu(selection=selection, point=point, hidden=hidden)
+        self.menu = self.get_column_submenu(selection=selection,
+                                            point=point,
+                                            hidden=hidden)
         self.menu.popup(header.mapToGlobal(point))
 
     def show_row_header_menu(self, point=None):
@@ -2242,8 +2282,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def change_sorting_order(self, tup):
         column, ascending, reverse = tup
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Session.Resource.name)
+        manager = self.Session.get_manager(options.cfg.MODE)
         if ascending is None:
             manager.remove_sorter(column)
         else:
@@ -2348,10 +2387,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 options.cfg.query_list = [x.strip() for x
                                           in options.cfg.query_list[0].splitlines()
                                           if x.strip()]
-                self.new_session = SessionCommandLine()
+                self.new_session = SessionCommandLine(
+                    summary_groups=options.cfg.summary_groups)
                 self.new_session.prepare_queries()
             else:
-                self.new_session = SessionInputFile()
+                self.new_session = SessionInputFile(
+                    summary_groups=options.cfg.summary_groups)
                 if not self.verify_file_name():
                     QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
@@ -2695,8 +2736,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.corpus_manager.buildCorpusFromTable.connect(
                 self.build_corpus_from_table)
             self.corpus_manager.launchBuilder.connect(self.launch_builder)
+
             self.corpusListUpdated.connect(self.corpus_manager.update)
             #self.corpus_manager.check_orphans()
+            self.customInstallerPathChanged.connect(
+                self.corpus_manager.update)
 
             try:
                 self.corpus_manager.exec_()
@@ -2752,6 +2796,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         old_context_font = options.cfg.context_font
         last_wrap = options.cfg.word_wrap
         old_drop_on_na = options.cfg.drop_on_na
+        old_custom_installer_path = options.cfg.custom_installer_path
 
         settings_changed = settings.Settings.manage(options.cfg, self)
         if settings_changed:
@@ -2766,6 +2811,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             try:
                 self.table_model.formatted = self.table_model.format_content(
                     self.table_model.content)
+            except AttributeError:
+                # raised if no query has been run yet, and therefore no
+                # table_model is available
+                pass
             except Exception as e:
                 print(e)
 
@@ -2774,6 +2823,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 for widget in self.widget_list:
                     if isinstance(widget, contextviewer.ContextView):
                         widget.get_context()
+
+            if options.cfg.custom_installer_path != old_custom_installer_path:
+                self.customInstallerPathChanged.emit()
 
             if (old_drop_on_na != options.cfg.drop_on_na):
                 self.reaggregate(start=True)
@@ -2829,7 +2881,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             True if a connection is available, or False otherwise.
         """
         current_connection = options.cfg.current_connection
-        if not current_connection:
+        if not current_connection or not current_connection.enabled:
             return False
         else:
             try:
@@ -2897,7 +2949,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """ Set the values in options.cfg.* depending on the current values
         in the GUI. """
         if options.cfg:
-            options.cfg.summary_group = [self.Session.summary_group]
+            options.cfg.summary_groups = [self.Session.summary_group]
             options.cfg.corpus = utf8(self.ui.combo_corpus.currentText())
             options.cfg.MODE = self.get_aggregate()
             options.cfg.context_restrict = (
@@ -2941,7 +2993,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         def traverse(node):
             checked = []
-            for child in [node.child(i) for i in range(node.childCount())]:
+            children = [node.child(i) for i in range(node.childCount())]
+            for child in children:
                 checked += traverse(child)
             if node.checkState(0) == QtCore.Qt.Checked:
                 try:
@@ -2960,6 +3013,12 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                      for i in range(tree.topLevelItemCount())]:
             lst += traverse(root)
         return lst
+
+    def show_sql(self):
+        from . import sqlqueries
+        sql_view = sqlqueries.SQLViewer(
+            lines=self.Session.sql_queries, parent=self)
+        sql_view.show()
 
     def show_log(self):
         from . import logfile
@@ -2992,7 +3051,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         available.show()
 
     def setGUIDefaults(self):
-        """ Set up the gui values based on the values in options.cfg.* """
+        """
+        Set up the gui values based on the values in options.cfg.*
+        """
         self.ui.tool_widget.blockSignals(True)
 
         # add restored groups to the UI:

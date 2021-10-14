@@ -2,7 +2,7 @@
 """
 independencetestviewer.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -150,7 +150,7 @@ class IndependenceTestViewer(QtWidgets.QDialog):
         # Calculate Cramér's Phi for the 2x2 case:
         try:
             phi = math.sqrt(chi2/obs.sum())
-        except:
+        except Exception:
             phi = "(undefined)"
 
         # calculate odds ratio (with correction for empty cells):
@@ -258,7 +258,6 @@ class IndependenceTestViewer(QtWidgets.QDialog):
         self.ui.button_copy_latex.clicked.connect(
             lambda: self.copy_to_clipboard("latex"))
 
-
         highlight = QtWidgets.QApplication.instance().palette().color(
             QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
         window = QtWidgets.QApplication.instance().palette().color(
@@ -293,12 +292,9 @@ class IndependenceTestViewer(QtWidgets.QDialog):
         cb.clear(mode=cb.Clipboard)
         if mode == "text":
             cb.setText(self.ui.textBrowser.toPlainText())
-            button = self.ui.button_copy_text
         elif mode == "html":
             cb.setText(self._html)
-            button = self.ui.button_copy_html
         elif mode == "latex":
             cb.setText(self._latex)
-            button = self.ui.button_copy_latex
 
         CoqWidgetFader(self.ui.textBrowser, 125).fade()

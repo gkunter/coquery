@@ -2,7 +2,7 @@
 """
 managers.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,6 +15,7 @@ import logging
 import itertools
 import collections
 import pandas as pd
+import numpy as np
 import re
 import scipy
 
@@ -98,9 +99,8 @@ class Group(CoqObject):
         considered a duplicate and is removed from the data group.
         """
         function_list = FunctionList(self.get_functions())
-        df = df.drop_duplicates(self.columns +
-                                [x.get_id()
-                                 for x in function_list.get_list()])
+        func_columns = [x.get_id() for x in function_list.get_list()]
+        df = df.drop_duplicates(self.columns + func_columns)
         return df
 
     def get_functions(self):
@@ -823,7 +823,7 @@ class ContingencyTable(FrequencyList):
             if row[1] == "All":
                 if agg_fnc[row[0]] == sum:
                     s = "{}(TOTAL)"
-                elif agg_fnc[row[0]] == pd.np.mean:
+                elif agg_fnc[row[0]] == np.mean:
                     s = "{}(MEAN)"
                 else:
                     s = "{}({}=ANY)"
@@ -843,7 +843,7 @@ class ContingencyTable(FrequencyList):
         cat_col = list(df[vis_cols]
                        .select_dtypes(include=[object]).columns.values)
         num_col = (list(df[vis_cols]
-                        .select_dtypes(include=[pd.np.number])
+                        .select_dtypes(include=[np.number])
                         .columns.values) +
                    ["coquery_invisible_number_of_tokens",
                     "coquery_invisible_corpus_id",
@@ -862,7 +862,7 @@ class ContingencyTable(FrequencyList):
             elif col.startswith(("func_statistics_frequency_")):
                 agg_fnc[col] = sum
             else:
-                agg_fnc[col] = pd.np.mean
+                agg_fnc[col] = np.mean
 
         if len(cat_col) > 1:
             # Create pivot table:
@@ -946,6 +946,16 @@ class Collocations(Manager):
         # FIXME:
         # If the context span is zero (i.e. neither a left nor a right
         # context, the program should alert the user somehow.
+
+        # If this is a new query, reset the context cache so that the contexts
+        # have to be retrieved new. Otherwise, leave the context cache
+        # unchanged. In this case, changing the collocation window to values
+        # that have previously used for the collocations will recylce the
+        # cached collocation list.
+        if self._last_query_id != session.query_id:
+            self.reset_context_cache()
+            self._last_query_id = session.query_id
+
         return [ContextColumns(left=options.cfg.collo_left,
                                right=options.cfg.collo_right)]
 
@@ -1147,7 +1157,7 @@ class ContrastMatrix(FrequencyList):
         # using the False Discovery Rate method (Benjamini & Hochberg 1995,
         # described in Narum 2006).
         self.p_values = self.p_values.sort_values().reset_index(drop=True)
-        threshold = ((pd.Series(pd.np.arange(len(self.p_values))) + 1) /
+        threshold = ((pd.Series(np.arange(len(self.p_values))) + 1) /
                      len(self.p_values)) * 0.05
         check = (self.p_values <= threshold)
         try:

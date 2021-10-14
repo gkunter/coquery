@@ -329,9 +329,10 @@ class CoqTextgridView(QtWidgets.QWidget):
         self.ax_textgrid.yaxis.set_ticklabels(reversed(tier_labels))
 
     def plotTicks(self):
-        x_ticks = self.ax_textgrid.get_xticklabels()
-        x_ticks = [str(self.offset + float(x.get_text()))
-                   if x.get_text() else "" for x in x_ticks]
+        x_ticks = [x.get_text().replace("\N{MINUS SIGN}", "-")
+                   for x in self.ax_textgrid.get_xticklabels()]
+        x_ticks = [str(self.offset + float(x))
+                   if x else "" for x in x_ticks]
         lower = self.offset + self.ax_textgrid.get_xlim()[0]
         upper = self.offset + self.ax_textgrid.get_xlim()[1]
         self.ax_textgrid.set_xticklabels(x_ticks)

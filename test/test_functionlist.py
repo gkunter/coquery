@@ -10,7 +10,6 @@ coquery$ python -m test.test_functionlist
 
 from __future__ import unicode_literals
 
-import unittest
 import warnings
 import pandas as pd
 from argparse import Namespace
@@ -19,6 +18,7 @@ import logging
 from coquery.functionlist import FunctionList
 from coquery.functions import Function, StringChain, StringLength
 from coquery import options
+from test.testcase import CoqTestCase, run_tests
 
 
 class BreakFunction(StringLength):
@@ -28,7 +28,7 @@ class BreakFunction(StringLength):
         raise RuntimeError
 
 
-class TestFunctionList(unittest.TestCase):
+class TestFunctionList(CoqTestCase):
     def setUp(self):
         options.cfg = Namespace()
         options.cfg.drop_on_na = False
@@ -185,11 +185,12 @@ class TestFunctionList(unittest.TestCase):
             df[breaking.get_id()].values, [None] * len(df))
 
 
+provided_tests = [TestFunctionList]
+
+
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestFunctionList),
-        ])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

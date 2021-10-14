@@ -1,9 +1,9 @@
 sqlalchemy
 numpy
+numexpr
 lxml
 matplotlib
 pandas
 seaborn
-tgt
 scipy
 pyqt

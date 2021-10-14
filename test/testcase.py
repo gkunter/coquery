@@ -2,7 +2,7 @@
 """
 testcase.py is part of Coquery.
 
-Copyright (c) 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -45,7 +45,6 @@ class CoqTestCase(unittest.TestCase):
         d_np1 = {}
         d_np2 = {}
 
-
         map_dtypes = ((pd.Series, d_s1, d_s2),
                       (pd.Index, d_i1, d_i2),
                       (pd.np.ndarray, d_np1, d_np2),
@@ -65,19 +64,35 @@ class CoqTestCase(unittest.TestCase):
 
         super(CoqTestCase, self).assertDictEqual(D1, D2)
 
-        self.assertEqual(sorted(d_df1.keys()), sorted(d_df2.keys()))
-        self.assertEqual(sorted(d_s1.keys()), sorted(d_s2.keys()))
-        self.assertEqual(sorted(d_i1.keys()), sorted(d_i2.keys()))
-        self.assertEqual(sorted(d_np1.keys()), sorted(d_np2.keys()))
+        try:
+            self.assertEqual(sorted(d_df1.keys()), sorted(d_df2.keys()))
+            self.assertEqual(sorted(d_s1.keys()), sorted(d_s2.keys()))
+            self.assertEqual(sorted(d_i1.keys()), sorted(d_i2.keys()))
+            self.assertEqual(sorted(d_np1.keys()), sorted(d_np2.keys()))
 
-        for key in d_s1.keys():
-            pd.testing.assert_series_equal(d_s1[key], d_s2[key])
+            for key in d_s1.keys():
+                pd.testing.assert_series_equal(d_s1[key], d_s2[key])
 
-        for key in d_i1.keys():
-            pd.testing.assert_index_equal(d_i1[key], d_i2[key])
+            for key in d_i1.keys():
+                pd.testing.assert_index_equal(d_i1[key], d_i2[key])
 
-        for key in d_df1.keys():
-            pd.testing.assert_frame_equal(d_df1[key], d_df2[key])
+            for key in d_df1.keys():
+                pd.testing.assert_frame_equal(d_df1[key], d_df2[key])
 
-        for key in d_np1.keys():
-            pd.np.testing.assert_array_almost_equal(d_np1[key], d_np2[key])
+            for key in d_np1.keys():
+                pd.np.testing.assert_array_almost_equal(d_np1[key], d_np2[key])
+        except AssertionError:
+            msg = "Dictionaries are different\n\nLeft:  {d1}\nRight: {d2}"
+            raise AssertionError(msg.format(d1=d1, d2=d2))
+
+
+def run_tests(test_list):
+    """
+    This function is used to call the test cases from the list `test_list`.
+
+    It's supposed to be used by a test module inside of its main() function.
+    """
+    suite = unittest.TestSuite(
+        [unittest.TestLoader().loadTestsFromTestCase(x)
+         for x in test_list])
+    unittest.TextTestRunner().run(suite)

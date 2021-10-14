@@ -2,7 +2,7 @@
 """
 link.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2020 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,20 +12,12 @@ from __future__ import unicode_literals
 
 import logging
 import re
-import pandas as pd
+import numpy as np
 
-from .general import CoqObject
+from coquery.general import CoqObject
+from coquery.defines import (OP_MATCH, OP_NMATCH, OP_RANGE, OP_NE, OP_EQ,
+                             OPERATOR_STRINGS, FILTER_STAGE_FINAL)
 
-# Since Filter.__repr__() uses globals() to look up the strings corresponding
-# to the operator type, a complete import of the constants from defines.py is
-# necessary:
-from .defines import *
-
-try:
-    import numexpr
-    _query_engine = "numexpr"
-except ImportError:
-    _query_engine = "python"
 
 try:
     string_types = (unicode, str)
@@ -62,13 +54,14 @@ def parse_filter_text(s):
                     pass
             kwargs[kwd] = val
     except Exception as e:
-        raise ValueError(s)
+        raise ValueError("Exception with filter '{}': {}".format(s, e))
 
     return Filter(**kwargs)
 
 
 class Filter(CoqObject):
-    def __init__(self, feature, dtype, operator, value, stage=FILTER_STAGE_FINAL):
+    def __init__(self, feature, dtype, operator, value,
+                 stage=FILTER_STAGE_FINAL):
         super(Filter, self).__init__()
         if operator not in OPERATOR_STRINGS:
             raise ValueError("Invalid filter operator '{}'".format(operator))
@@ -98,16 +91,16 @@ class Filter(CoqObject):
         A fixed string is enclosed in simple quotation marks. Quotation
         marks inside the string are escaped.
         """
-        if pd.np.issubdtype(self.dtype, pd.np.number):
+        if np.issubdtype(self.dtype, np.number):
             if x == "":
                 val = None
             else:
                 # attempt to coerce the value to a numeric variable
                 if not isinstance(x, (int, float)):
-                    val = pd.np.float(x)
+                    val = np.float(x)
                     try:
-                        if x == pd.np.int(x):
-                            val = pd.np.int(x)
+                        if x == np.int(x):
+                            val = np.int(x)
                     except ValueError:
                         pass
                 else:
@@ -144,7 +137,7 @@ class Filter(CoqObject):
         #
         # This trick involves testing equality between values and themselves,
         # i.e. ``df.query("value1 == value1")``. Cells with NAs in the column
-        # ``value1`` will return ``False`` because ``pd.np.nan == pd.np.nan``
+        # ``value1`` will return ``False`` because ``np.nan == np.nan``
         # is always ``False``.
         #
         # Thus, testing whether FEATURE equals NA returns the query string
@@ -159,14 +152,15 @@ class Filter(CoqObject):
                 raise ValueError("Filter uses an empty range.")
             if not isinstance(min(self.value), type(max(self.value))):
                 raise TypeError("Range values have different types.")
-        if self.value is None or self.value is pd.np.nan:
+        if self.value is None or self.value is np.nan:
             if op not in [OP_NE, OP_EQ]:
-                raise ValueError("Only OP_EQ and OP_NE are allowed with NA values")
+                msg = "Only OP_EQ and OP_NE are allowed with NA values"
+                raise ValueError(msg)
 
-        if (self.value is None or self.value is pd.np.nan or
-            (pd.np.issubdtype(self.dtype, pd.np.number)
-             and self.value == "") or
-            (self.dtype == bool and self.value == "")):
+        if (self.value is None or
+                self.value is np.nan or
+                (np.issubdtype(self.dtype, np.number) and self.value == "") or
+                (self.dtype == bool and self.value == "")):
             val = self.feature
             if op == OP_EQ:
                 op = OP_NE
@@ -185,9 +179,8 @@ class Filter(CoqObject):
         else:
             val = self.fix(self.value)
 
-        S = "{} {} {}".format(
-            self.feature, OPERATOR_STRINGS[op], val)
-        return S
+        s = "{} {} {}".format(self.feature, OPERATOR_STRINGS[op], val)
+        return s
 
     def apply(self, df):
         # ignore filters that refer to non-existing columns:
@@ -207,13 +200,11 @@ class Filter(CoqObject):
             return df.iloc[col[matching].index]
         else:
             try:
-                return df.query(self.get_filter_string(),
-                                engine=_query_engine)
+                return df.query(self.get_filter_string())
             except SyntaxError as e:
-                S = "Could not apply filter {}: {}".format(self, str(e))
-                print(S)
-                logging.warning(S)
+                s = "Could not apply filter {}: {}".format(self, str(e))
+                logging.warning(s)
                 return df
-            except TypeError as e:
-                S = "Could not apply filter {}: are there missing values in your data?"
-                raise RuntimeError(S)
+            except TypeError:
+                s = "Could not apply filter {}: undetectable format"
+                raise RuntimeError(s)
