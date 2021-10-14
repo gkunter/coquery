@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -19,6 +19,7 @@ import re
 import logging
 import math
 import pandas as pd
+import numpy as np
 import os
 import tempfile
 import zipfile
@@ -34,7 +35,7 @@ from .defines import (
     CONTEXT_NONE,
     PREFERRED_ORDER)
 
-from .general import collapse_words, CoqObject, html_escape
+from .general import collapse_words, CoqObject, html_escape, Print
 from . import tokens
 from . import options
 from .links import get_by_hash
@@ -1891,7 +1892,7 @@ class SQLResource(BaseResource):
         n_tokens = int(number_of_tokens if not pd.isna(number_of_tokens)
                        else 0)
 
-        if pd.np.isnan(origin_id):
+        if np.isnan(origin_id):
             results = ([(None, 0)] * left_span +
                        [(None, 1)] * n_tokens +
                        [(None, 2)] * right_span)
@@ -2549,9 +2550,7 @@ class CorpusClass(object):
                 "    AND {corpus}.{source_id} = '{current_source_id}'")
         S = format_string.format(**kwargs)
 
-        if options.cfg.verbose:
-            logging.info(S)
-            print(S)
+        Print(S)
         engine = options.cfg.current_connection.get_engine(
             self.resource.db_name)
         df = pd.read_sql(S, engine)
@@ -2602,14 +2601,15 @@ class CorpusClass(object):
             return s2.format(tag)
 
     def parse_row(self, row, tags, token_id, token_width):
+        Print("parse_row", len(tags))
         word = row.coq_word_label_1
         word_id = row.coquery_invisible_corpus_id
         if len(tags):
             opening = tags[(tags.COQ_ID == word_id) &
-                            ((tags.COQ_TAG_TYPE == "open") |
+                           ((tags.COQ_TAG_TYPE == "open") |
                             (tags.COQ_TAG_TYPE == "empty"))]
             closing = tags[(tags.COQ_ID == word_id) &
-                            ((tags.COQ_TAG_TYPE == "close") |
+                           ((tags.COQ_TAG_TYPE == "close") |
                             (tags.COQ_TAG_TYPE == "empty"))]
         else:
             opening = pd.DataFrame(columns=tags.columns)
@@ -2698,12 +2698,11 @@ class CorpusClass(object):
         if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
-        time_lst = [datetime.now()] # 0
+        time_lst = [(datetime.now().timestamp(), "start")]
 
-        time_lst.append(datetime.now()) #1
         if not (token_id, source_id, token_width) in self._context_cache:
             self._read_context_for_renderer(token_id, source_id, token_width)
-        time_lst.append(datetime.now()) #2
+        time_lst.append((datetime.now().timestamp(), "reading context"))
         df, tags = self._context_cache[(token_id, source_id, token_width)]
         df = df.reset_index(drop=True)
 
@@ -2712,7 +2711,7 @@ class CorpusClass(object):
         context_end = ix + token_width + context_width
 
         df = df[(df.index >= context_start) & (df.index < context_end)]
-        time_lst.append(datetime.now()) #3
+        time_lst.append((datetime.now().timestamp(), "limiting rows"))
 
         # create a list of all token ids that are also listed in the results
         # table:
@@ -2721,25 +2720,32 @@ class CorpusClass(object):
                 template.format(lower=token_id - 1000,
                                 upper=token_id + 1000 + token_width))
 
-        time_lst.append(datetime.now()) #4
+        time_lst.append((datetime.now().timestamp(), "retrieving ids"))
         self.id_start_list = tab["coquery_invisible_corpus_id"]
         self.id_end_list = (self.id_start_list +
                             tab["coquery_invisible_number_of_tokens"] - 1)
 
-        time_lst.append(datetime.now()) #5
+        time_lst.append((datetime.now().timestamp(), "creating id lists"))
         context = self.parse_df(df, tags, token_id, token_width)
 
-        time_lst.append(datetime.now()) #6
+        time_lst.append((datetime.now().timestamp(), "parsing dataframe"))
         s = collapse_words(context, self.resource.get_language())
-        time_lst.append(datetime.now()) #7
+        time_lst.append((datetime.now().timestamp(), "collapsing words"))
         if s is None:
             s = ""
         else:
             s = s.replace("</p>", "</p>\n")
             s = s.replace("<br/>", "<br/>\n")
-        time_lst.append(datetime.now()) #8
-        time_lst = [dt.timestamp() for dt in time_lst]
-        print("\n".join(["{}: {}".format(i, str(x)) for i, x in enumerate(time_lst)]))
+        time_lst.append((datetime.now().timestamp(), "fixing breaks"))
+
+        lst = [(t1 - t2, stage) for ((t1, stage), (t2, _)) in
+               list(zip(time_lst[1:], time_lst[:-1]))]
+
+        Print("\n".join(
+            ["{}: {:6.1f} ms ({})".format(i, 1000 * x, stage)
+             for i, (x, stage) in enumerate(lst)]))
+        Print("Total: {:6.1f} ms".format(
+            1000 * (time_lst[-1][0] - time_lst[0][0])))
 
         audio = self.resource.audio_features != []
         start_time = None
