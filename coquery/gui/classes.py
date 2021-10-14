@@ -42,6 +42,12 @@ class inputFocusFilter(QtCore.QObject):
         return super(inputFocusFilter, self).eventFilter(widget, event)
 
 
+try:
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+except Exception as e:
+    print(e)
+
+
 class CoqApplication(QtWidgets.QApplication):
     def __init__(self, *arg, **kwarg):
         super(CoqApplication, self).__init__(*arg, **kwarg)
