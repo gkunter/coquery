@@ -2,7 +2,7 @@
 """
 contextviewer.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -43,6 +43,7 @@ class ContextView(QtWidgets.QWidget):
         self.token_id = token_id
         self.source_id = source_id
         self.token_width = token_width
+        self.context = None
 
         self.meta_data = get_toplevel_window().table_model.invisible_content
 
@@ -127,7 +128,10 @@ class ContextView(QtWidgets.QWidget):
                     self.add_source_label(label, fields[label])
                 else:
                     from coquery import sound
-                    self.audio = sound.Sound(fields[label])
+                    try:
+                        self.audio = sound.Sound(fields[label])
+                    except (IOError, TypeError) as e:
+                        self.audio = None
 
         self.ui.button_ids.update()
 
@@ -393,9 +397,13 @@ class ContextViewAudio(ContextView):
         super(ContextViewAudio, self).finalize_context()
         audio = self.audio.extract_sound(self.context["start_time"],
                                          self.context["end_time"])
-        textgrid = self.prepare_textgrid(self.context["df"],
-                                         self.context["start_time"])
-
-        self.ui.textgrid_area.setSound(audio)
-        self.ui.textgrid_area.setTextgrid(textgrid)
-        self.ui.textgrid_area.display(offset=self.context["start_time"])
+        if audio:
+            try:
+                textgrid = self.prepare_textgrid(self.context["df"],
+                                                 self.context["start_time"])
+            except:
+                pass
+            else:
+                self.ui.textgrid_area.setSound(audio)
+                self.ui.textgrid_area.setTextgrid(textgrid)
+                self.ui.textgrid_area.display(offset=self.context["start_time"])
