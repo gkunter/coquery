@@ -2,7 +2,7 @@
 """
 tables.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -46,6 +46,14 @@ def smallint(n, unsigned=True, not_null=True):
     return "SMALLINT({}){}{}".format(n,
                                      " UNSIGNED" if unsigned else "",
                                      " NOT NULL" if not_null else "")
+
+
+def real(n, m, not_null=True):
+    """
+    Returns a string that can be used in an SQL table definition to specify
+    REAL field types.
+    """
+    return "REAL({},{}){}".format(n, m, " NOT NULL" if not_null else "")
 
 
 def enum(*values, not_null=True):
