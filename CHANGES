@@ -51,8 +51,7 @@ Functions
 * Errors in functions don't cause the whole function list to fail anymore
 * More flexible handling of function arguments
 * New functions: NOT, IF, IFANY, TRUE, FALSE, EMPTY, MISSING, MOD, Percentile,
-* New functions: NOT, IF, IFANY, TRUE, FALSE, EMPTY, MISSING, MOD, Percentile,
-  Log, Replace
+  Log, Replace, STTR
 * Mathematical functions can now be applied column-wise
 
 EXPERIMENTAL features
