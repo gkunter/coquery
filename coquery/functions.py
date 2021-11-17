@@ -1356,32 +1356,45 @@ class ConditionalProbability(Proportion):
         return df[freq_cond] / df[freq_total]
 
 
-class MutualInformation(Proportion):
-    _name = "statistics_mutual_information"
-    """ Calculate the Mutual Information for two words. f_1 and f_2 are
-    the frequencies of the two words, f_coll is the frequency of
-    word 2 in the neighbourhood of word 1, size is the corpus size, and
-    span is the size of the neighbourhood in words to the left and right
-    of word 2.
+class MutualInformation(ConditionalProbability2):
+    """ Calculate the Mutual Information for the words in the first and the
+    second column using this formula (cf. Bezina 2018):
 
-    Following http://corpus.byu.edu/mutualinformation.asp, MI is
-    calculated as:
+    MI = log f(C1, C2) * N / (f(C1) * f(C2)),
 
-        MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
+    where f(C1, C2) is the frequency of the bigram, N is the size of the
+    corpus, and f(C1) and f(C2) are the frequencies of the words,
+    respectively.
 
     """
 
-    def evaluate(self, df, f_1, f_2, f_coll, size, span, **kwargs):
+    _name = "Mutual Information"
+    def evaluate(self, df, **kwargs):
+        resource = self.get_resource(**kwargs)
+        if resource is None:
+            return self.constant(df, None)
+
+        span = df[self.columns[0]] + " " + df[self.columns[1]]
+        left = df[self.columns[0]]
+        right = df[self.columns[1]]
+        engine = options.cfg.current_connection.get_engine(resource.db_name)
+        session = get_toplevel_window().Session
         try:
-            val = (np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) /
-                   np.log(2))
-        except (ZeroDivisionError, TypeError, Exception) as e:
-            print(("Error while calculating mutual information:"
-                   "\nf1={} f2='{}' fcol='{}' size={} span={}").format(
-                       f_1, f_2, f_coll, size, span))
-            print(df.head())
-            print(e)
-            return None
+            freq_full = span.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+            freq_left = left.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+            freq_right = right.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+            size = session.Corpus.get_corpus_size()
+        except Exception as e:
+            print(str(e))
+            logging.error(str(e))
+            val = self.constant(df, None)
+        else:
+            val = np.log2(freq_full * size / (freq_left * freq_right))
+        finally:
+            engine.dispose()
         return val
 
 
@@ -1422,13 +1435,12 @@ class SubcorpusSize(CorpusSize):
             manager = session.get_manager(options.cfg.MODE)
             fun = SubcorpusSize(session=session,
                                 columns=self.columns, group=self.group)
+            if options.cfg.verbose:
+                print(self._name,
+                      f"using {self}" if self.find_function(df, fun)
+                      else f"calculating(self)")
             if self.find_function(df, fun):
-                if options.cfg.verbose:
-                    print(self._name, "using {}".format(self))
                 return df[fun.get_id()]
-            else:
-                if options.cfg.verbose:
-                    print(self._name, "calculating {}".format(self))
             corpus_features = [x for x, _
                                in session.Resource.get_corpus_features()]
             column_list = [x for x in corpus_features
@@ -1450,7 +1462,7 @@ class SubcorpusRangeMin(CorpusSize):
     _name = "statistics_subcorpus_range_min"
 
     def _func(self, row, session):
-        min_r, max_r = session.Corpus.get_subcorpus_range(row)
+        min_r, _ = session.Corpus.get_subcorpus_range(row)
         return min_r
 
     def evaluate(self, df, *args, **kwargs):
@@ -1468,7 +1480,7 @@ class SubcorpusRangeMax(SubcorpusRangeMin):
     _name = "statistics_subcorpus_range_max"
 
     def _func(self, row, session):
-        min_r, max_r = session.Corpus.get_subcorpus_range(row)
+        _, max_r = session.Corpus.get_subcorpus_range(row)
         return max_r
 
 
@@ -1507,6 +1519,7 @@ class ContextColumns(Function):
                           for i in range(self.left)]
         self.right_cols = ["coq_context_rc{}".format(i + 1)
                            for i in range(self.right)]
+        self._sentence_column = None
 
     @staticmethod
     def get_group():
