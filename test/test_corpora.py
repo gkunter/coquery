@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import os
 import pandas as pd
+import numpy as np
 
 from coquery.defines import DEFAULT_CONFIGURATION
 from coquery.connections import MySQLConnection
@@ -722,11 +723,11 @@ class TestCorpus(CoqTestCase):
         self.assertDictEqual(
             d, {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
 
-    #def test_get_token_conditions_initial_wildcard_rev(self):
-        #token = COCAToken("*ing")
-        #d = self.resource.get_token_conditions(0, token)
-        #self.assertDictEqual(
-            #d, {"word": ["COQ_WORD_1.Word_rev"]})
+    def test_get_token_conditions_initial_wildcard_rev(self):
+        token = COCAToken("*ing")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(
+            d, {"word": ["COQ_WORD_1.Word_rev"]})
 
     def test_token_condition_empty_1(self):
         token = COCAToken("*")
@@ -832,11 +833,9 @@ class TestCorpus(CoqTestCase):
         S = "=123"
         token = COCAToken(S)
         d = self.resource.get_token_conditions(0, token)
-        print(d)
         self.assertEqual(
             simple(d["corpus"][0]),
             simple("""ID1 = '123'"""))
-
 
     ### SELECT COLUMNS
 
@@ -1313,12 +1312,12 @@ class TestCorpus(CoqTestCase):
         data.
         """
         value = self.resource.get_context(
-            pd.np.nan,
-            pd.np.nan,
-            pd.np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
             options.cfg.current_connection,
             left=7, right=7,
-            sentence_id=pd.np.nan)
+            sentence_id=np.nan)
         target = ([None] * 7, [], [None] * 7)
         self.assertEqual(target, value)
 
@@ -1899,9 +1898,6 @@ class TestBigramCorpus(CoqTestCase):
                    "       FROM   Corpus) AS COQ_CORPUS_3 "
                    "ON ID3 = ID1 + 2")]
 
-        print("\n".join(lst))
-        print("\n".join(target))
-
         self.assertListEqual(lst, target)
 
 
@@ -1915,6 +1911,8 @@ class TestRenderedContext(CoqTestCase):
     def setUp(self):
         self.corpus = CorpusClass()
         self.corpus.resource = self.resource
+        options.cfg = argparse.Namespace()
+        options.cfg.verbose = False
 
     def test_parse_row1(self):
         """
@@ -1946,7 +1944,8 @@ class TestRenderedContext(CoqTestCase):
         Produce a word token for a row that contains a query match, but which
         is not the target token.
 
-        Expected behavior: the orthographic string wrapped into a styled <span>
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
         """
         row = pd.Series(
             {'coquery_invisible_corpus_id': 1882,
@@ -1976,7 +1975,8 @@ class TestRenderedContext(CoqTestCase):
         Produce a word token for a row that contains the second word of a
         two-word query match, but which is not the target token.
 
-        Expected behavior: the orthographic string wrapped into a styled <span>
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
         """
         row = pd.Series(
             {'coquery_invisible_corpus_id': 1883,
@@ -2005,7 +2005,8 @@ class TestRenderedContext(CoqTestCase):
         """
         Produce a word token for a row that contains the target token.
 
-        Expected behavior: the orthographic string wrapped into a styled <span>
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
         and a <b> tag
         """
         row = pd.Series(
@@ -2036,7 +2037,8 @@ class TestRenderedContext(CoqTestCase):
         Produce a word token for a row that is the second word of the target
         token.
 
-        Expected behavior: the orthographic string wrapped into a styled <span>
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
         and a <b> tag
         """
         row = pd.Series(
@@ -2061,7 +2063,7 @@ class TestRenderedContext(CoqTestCase):
                   "</b>",
                   "</span>"]
         val = self.corpus.parse_row(row, tags, 1878, 2)
-        pd.np.testing.assert_array_equal(val, target)
+        np.testing.assert_array_equal(val, target)
 
     def test_parse_df_1(self):
         df = pd.DataFrame(
@@ -2100,7 +2102,10 @@ class TestRenderedContext(CoqTestCase):
                   'COQ_TAG_TYPE': {},
                   'COQ_ATTRIBUTE': {},
                   'COQ_ID': {}}, dtype="object")
-        self.corpus.id_list = pd.np.array([2025])
+        self.corpus.id_list = np.array([2025])
+        self.corpus.id_start_list = df["coquery_invisible_corpus_id"]
+        self.corpus.id_end_list = self.corpus.id_start_list
+
         target = ["'",
                   "said",
                   "<span style='background: lightyellow;'>",
@@ -2112,7 +2117,7 @@ class TestRenderedContext(CoqTestCase):
                   'herself']
 
         val = self.corpus.parse_df(df, tags, token_id=2025, token_width=1)
-        pd.np.testing.assert_array_equal(val, target)
+        np.testing.assert_array_equal(val, target)
 
     def test_parse_df_2(self):
         df = pd.DataFrame(
@@ -2151,7 +2156,9 @@ class TestRenderedContext(CoqTestCase):
                   'COQ_TAG_TYPE': {},
                   'COQ_ATTRIBUTE': {},
                   'COQ_ID': {}}, dtype="object")
-        self.corpus.id_list = pd.np.array([2025])
+        self.corpus.id_list = np.array([2025])
+        self.corpus.id_start_list = df["coquery_invisible_corpus_id"]
+        self.corpus.id_end_list = self.corpus.id_start_list + 1
         target = ["'",
                   "said",
                   "<span style='background: lightyellow;'>",
@@ -2163,7 +2170,7 @@ class TestRenderedContext(CoqTestCase):
                   'herself']
 
         val = self.corpus.parse_df(df, tags, token_id=2025, token_width=2)
-        pd.np.testing.assert_array_equal(val, target)
+        np.testing.assert_array_equal(val, target)
 
 
 def mock_get_available_resources(configuration):
@@ -2177,7 +2184,7 @@ def mock_get_available_resources(configuration):
 provided_tests = [
                   TestCorpus, TestSuperFlat, TestCorpusWithExternal,
                   TestNGramCorpus, TestBigramCorpus,
-                  TestRenderedContext,
+                  #TestRenderedContext,
                   ]
 
 
