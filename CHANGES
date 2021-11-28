@@ -10,6 +10,9 @@ Interface
 * The database paths of non-MySQL connections can now be changed
 * You can now browse through the contexts of the matches in the context viewer
 
+Syntax
+* Add syntax to search for IDs, example: =123
+
 Queries
 * Can restrict query files to a number of rows
 * Add an SQL query viewer
@@ -40,11 +43,15 @@ Data management
 * New dialogs for Column, Group and Summary functions
 * Contexts are now retrieved faster
 
+Context viewer
+* Add Next and Prev buttons
+* Much better handling of context span changes
+
 Functions
 * Errors in functions don't cause the whole function list to fail anymore
 * More flexible handling of function arguments
-* New functions: NOT, IF, TRUE, FALSE, EMPTY, MISSING, Percentile,
-  Log, Replace
+* New functions: NOT, IF, IFANY, TRUE, FALSE, EMPTY, MISSING, MOD, Percentile,
+  Log, Replace, STTR
 * Mathematical functions can now be applied column-wise
 
 EXPERIMENTAL features

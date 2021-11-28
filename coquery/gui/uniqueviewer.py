@@ -127,20 +127,8 @@ class UniqueViewer(QtWidgets.QDialog):
             self.df = pd.read_sql(S, engine)
         engine.dispose()
 
-        items = (self.df[self.column].apply(utf8)
-                                     .apply(QtWidgets.QTableWidgetItem))
-        self.ui.tableWidget.setRowCount(len(items))
-        self.ui.tableWidget.setColumnCount(1)
-        for row, item in enumerate(items):
-            self.ui.tableWidget.setItem(row, 0, item)
-
     def finalize(self):
-        self.ui.progress_bar.setRange(1, 0)
-        self.ui.progress_bar.hide()
-        self.ui.tableWidget.show()
-        self.ui.button_details.show()
-        self.ui.label_inform.hide()
-        self.ui.label.show()
+        # update dialog appearance
         if self._uniques:
             self.ui.label.setText(
                 str(self.ui.label.text()).format(len(self.df.index)))
@@ -155,6 +143,22 @@ class UniqueViewer(QtWidgets.QDialog):
             s = "{} ({})".format(len(uniques), value_str)
             self.ui.label.setText(
                 str(self.ui.label.text()).format(len(self.df.index), s))
+
+        self.ui.tableWidget.setRowCount(len(self.df))
+        self.ui.tableWidget.setColumnCount(1)
+
+        # populate table
+        items = (self.df[self.column].apply(utf8)
+                                     .apply(QtWidgets.QTableWidgetItem))
+        for row, item in enumerate(items):
+            self.ui.tableWidget.setItem(row, 0, item)
+
+        self.ui.progress_bar.setRange(1, 0)
+        self.ui.progress_bar.hide()
+        self.ui.tableWidget.show()
+        self.ui.button_details.show()
+        self.ui.label_inform.hide()
+        self.ui.label.show()
 
         self.ui.buttonBox.setEnabled(True)
         self.ui.button_details.setEnabled(True)

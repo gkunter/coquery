@@ -4,10 +4,11 @@ from __future__ import print_function
 import argparse
 import os
 import pandas as pd
+import numpy as np
 
 from coquery.defines import DEFAULT_CONFIGURATION
 from coquery.connections import MySQLConnection
-from coquery.corpus import SQLResource, CorpusClass
+from coquery.corpus import SQLResource, CorpusClass, BaseResource
 from coquery.coquery import options
 from coquery.defines import SQL_MYSQL, CONTEXT_NONE
 from coquery.queries import TokenQuery
@@ -722,11 +723,11 @@ class TestCorpus(CoqTestCase):
         self.assertDictEqual(
             d, {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
 
-    #def test_get_token_conditions_initial_wildcard_rev(self):
-        #token = COCAToken("*ing")
-        #d = self.resource.get_token_conditions(0, token)
-        #self.assertDictEqual(
-            #d, {"word": ["COQ_WORD_1.Word_rev"]})
+    def test_get_token_conditions_initial_wildcard_rev(self):
+        token = COCAToken("*ing")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(
+            d, {"word": ["COQ_WORD_1.Word_rev"]})
 
     def test_token_condition_empty_1(self):
         token = COCAToken("*")
@@ -827,6 +828,14 @@ class TestCorpus(CoqTestCase):
         self.assertEqual(
             simple(d["word"][1]),
             simple("COQ_WORD_1.POS LIKE 'n%'"))
+
+    def test_token_conditions_id_query_1(self):
+        S = "=123"
+        token = COCAToken(S)
+        d = self.resource.get_token_conditions(0, token)
+        self.assertEqual(
+            simple(d["corpus"][0]),
+            simple("""ID1 = '123'"""))
 
     ### SELECT COLUMNS
 
@@ -1303,12 +1312,12 @@ class TestCorpus(CoqTestCase):
         data.
         """
         value = self.resource.get_context(
-            pd.np.nan,
-            pd.np.nan,
-            pd.np.nan,
+            np.nan,
+            np.nan,
+            np.nan,
             options.cfg.current_connection,
             left=7, right=7,
-            sentence_id=pd.np.nan)
+            sentence_id=np.nan)
         target = ([None] * 7, [], [None] * 7)
         self.assertEqual(target, value)
 
@@ -1889,10 +1898,279 @@ class TestBigramCorpus(CoqTestCase):
                    "       FROM   Corpus) AS COQ_CORPUS_3 "
                    "ON ID3 = ID1 + 2")]
 
-        print("\n".join(lst))
-        print("\n".join(target))
-
         self.assertListEqual(lst, target)
+
+
+class TestRenderedContext(CoqTestCase):
+    """
+    This test case addresses the way contexts are rendered.
+    """
+
+    resource = BaseResource
+
+    def setUp(self):
+        self.corpus = CorpusClass()
+        self.corpus.resource = self.resource
+        options.cfg = argparse.Namespace()
+        options.cfg.verbose = False
+
+    def test_parse_row1(self):
+        """
+        Produce a word token for a row that does not contain a query match.
+
+        Expected behavior: the orthographic string without any embellishment
+        """
+        row = pd.Series(
+            {'coquery_invisible_corpus_id': 1882,
+             'coq_word_label_1': 'it',
+             'COQ_TAG_TAG': None,
+             'COQ_TAG_TYPE': None,
+             'COQ_ATTRIBUTE': None,
+             'COQ_TAG_ID': None})
+        tags = pd.DataFrame(
+            data={'COQ_TAG_TAG': {},
+                  'COQ_TAG_TYPE': {},
+                  'COQ_ATTRIBUTE': {},
+                  'COQ_ID': {}}, dtype="object")
+
+        self.corpus.id_list = [1878, 1879]
+
+        target = ["it"]
+        val = self.corpus.parse_row(row, tags, 1878, 1)
+        self.assertListEqual(val, target)
+
+    def test_parse_row2(self):
+        """
+        Produce a word token for a row that contains a query match, but which
+        is not the target token.
+
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
+        """
+        row = pd.Series(
+            {'coquery_invisible_corpus_id': 1882,
+             'coq_word_label_1': 'it',
+             'COQ_TAG_TAG': None,
+             'COQ_TAG_TYPE': None,
+             'COQ_ATTRIBUTE': None,
+             'COQ_TAG_ID': None})
+        tags = pd.DataFrame(
+            data={'COQ_TAG_TAG': {},
+                  'COQ_TAG_TYPE': {},
+                  'COQ_ATTRIBUTE': {},
+                  'COQ_ID': {}}, dtype="object")
+
+        self.corpus.id_list = [1878, 1882]
+
+        target = [
+            "<span style='{};'>".format(
+                self.corpus.resource.render_token_style),
+            "it",
+            "</span>"]
+        val = self.corpus.parse_row(row, tags, 1878, 1)
+        self.assertListEqual(val, target)
+
+    def test_parse_row2a(self):
+        """
+        Produce a word token for a row that contains the second word of a
+        two-word query match, but which is not the target token.
+
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
+        """
+        row = pd.Series(
+            {'coquery_invisible_corpus_id': 1883,
+             'coq_word_label_1': 'it',
+             'COQ_TAG_TAG': None,
+             'COQ_TAG_TYPE': None,
+             'COQ_ATTRIBUTE': None,
+             'COQ_TAG_ID': None})
+        tags = pd.DataFrame(
+            data={'COQ_TAG_TAG': {},
+                  'COQ_TAG_TYPE': {},
+                  'COQ_ATTRIBUTE': {},
+                  'COQ_ID': {}}, dtype="object")
+
+        self.corpus.id_list = [1878, 1879, 1882, 1883]
+
+        target = [
+            "<span style='{};'>".format(
+                self.corpus.resource.render_token_style),
+            "it",
+            "</span>"]
+        val = self.corpus.parse_row(row, tags, 1878, 2)
+        self.assertListEqual(val, target)
+
+    def test_parse_row3(self):
+        """
+        Produce a word token for a row that contains the target token.
+
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
+        and a <b> tag
+        """
+        row = pd.Series(
+            {'coquery_invisible_corpus_id': 1878,
+             'coq_word_label_1': 'it',
+             'COQ_TAG_TAG': None,
+             'COQ_TAG_TYPE': None,
+             'COQ_ATTRIBUTE': None,
+             'COQ_TAG_ID': None})
+        tags = pd.DataFrame(
+            data={'COQ_TAG_TAG': {},
+                  'COQ_TAG_TYPE': {},
+                  'COQ_ATTRIBUTE': {},
+                  'COQ_ID': {}}, dtype="object")
+
+        self.corpus.id_list = [1878, 1882]
+
+        target = [
+            "<span style='{};'>".format(
+                self.corpus.resource.render_token_style),
+            "<b>", "it", "</b>",
+            "</span>"]
+        val = self.corpus.parse_row(row, tags, 1878, 1)
+        self.assertListEqual(val, target)
+
+    def test_parse_row3a(self):
+        """
+        Produce a word token for a row that is the second word of the target
+        token.
+
+        Expected behavior: the orthographic string wrapped into a styled
+        <span>
+        and a <b> tag
+        """
+        row = pd.Series(
+            {'coquery_invisible_corpus_id': 1879,
+             'coq_word_label_1': 'it',
+             'COQ_TAG_TAG': None,
+             'COQ_TAG_TYPE': None,
+             'COQ_ATTRIBUTE': None,
+             'COQ_TAG_ID': None})
+        tags = pd.DataFrame(
+            data={'COQ_TAG_TAG': {},
+                  'COQ_TAG_TYPE': {},
+                  'COQ_ATTRIBUTE': {},
+                  'COQ_ID': {}}, dtype="object")
+
+        self.corpus.id_list = [1878, 1879, 1882, 1883]
+
+        target = ["<span style='{};'>".format(
+                    self.corpus.resource.render_token_style),
+                  "<b>",
+                  "it",
+                  "</b>",
+                  "</span>"]
+        val = self.corpus.parse_row(row, tags, 1878, 2)
+        np.testing.assert_array_equal(val, target)
+
+    def test_parse_df_1(self):
+        df = pd.DataFrame(
+            {'coquery_invisible_corpus_id': {998: 2023,
+                                             999: 2024,
+                                             1000: 2025,
+                                             1001: 2026,
+                                             1002: 2027},
+             'coq_word_label_1': {998: "'",
+                                  999: 'said',
+                                  1000: 'Alice',
+                                  1001: 'to',
+                                  1002: 'herself'},
+             'COQ_TAG_TAG': {998: None,
+                             999: None,
+                             1000: None,
+                             1001: None,
+                             1002: None},
+             'COQ_TAG_TYPE': {998: None,
+                              999: None,
+                              1000: None,
+                              1001: None,
+                              1002: None},
+             'COQ_ATTRIBUTE': {998: None,
+                               999: None,
+                               1000: None,
+                               1001: None,
+                               1002: None},
+             'COQ_TAG_ID': {998: None,
+                            999: None,
+                            1000: None,
+                            1001: None,
+                            1002: None}})
+        tags = pd.DataFrame(
+            data={'COQ_TAG_TAG': {},
+                  'COQ_TAG_TYPE': {},
+                  'COQ_ATTRIBUTE': {},
+                  'COQ_ID': {}}, dtype="object")
+        self.corpus.id_list = np.array([2025])
+        self.corpus.id_start_list = df["coquery_invisible_corpus_id"]
+        self.corpus.id_end_list = self.corpus.id_start_list
+
+        target = ["'",
+                  "said",
+                  "<span style='background: lightyellow;'>",
+                  "<b>",
+                  "Alice",
+                  "</b>",
+                  "</span>",
+                  "to",
+                  'herself']
+
+        val = self.corpus.parse_df(df, tags, token_id=2025, token_width=1)
+        np.testing.assert_array_equal(val, target)
+
+    def test_parse_df_2(self):
+        df = pd.DataFrame(
+            {'coquery_invisible_corpus_id': {998: 2023,
+                                             999: 2024,
+                                             1000: 2025,
+                                             1001: 2026,
+                                             1002: 2027},
+             'coq_word_label_1': {998: "'",
+                                  999: 'said',
+                                  1000: 'Alice',
+                                  1001: 'to',
+                                  1002: 'herself'},
+             'COQ_TAG_TAG': {998: None,
+                             999: None,
+                             1000: None,
+                             1001: None,
+                             1002: None},
+             'COQ_TAG_TYPE': {998: None,
+                              999: None,
+                              1000: None,
+                              1001: None,
+                              1002: None},
+             'COQ_ATTRIBUTE': {998: None,
+                               999: None,
+                               1000: None,
+                               1001: None,
+                               1002: None},
+             'COQ_TAG_ID': {998: None,
+                            999: None,
+                            1000: None,
+                            1001: None,
+                            1002: None}})
+        tags = pd.DataFrame(
+            data={'COQ_TAG_TAG': {},
+                  'COQ_TAG_TYPE': {},
+                  'COQ_ATTRIBUTE': {},
+                  'COQ_ID': {}}, dtype="object")
+        self.corpus.id_list = np.array([2025])
+        self.corpus.id_start_list = df["coquery_invisible_corpus_id"]
+        self.corpus.id_end_list = self.corpus.id_start_list + 1
+        target = ["'",
+                  "said",
+                  "<span style='background: lightyellow;'>",
+                  "<b>",
+                  "Alice",
+                  "to",
+                  "</b>",
+                  "</span>",
+                  'herself']
+
+        val = self.corpus.parse_df(df, tags, token_id=2025, token_width=2)
+        np.testing.assert_array_equal(val, target)
 
 
 def mock_get_available_resources(configuration):
@@ -1905,7 +2183,8 @@ def mock_get_available_resources(configuration):
 
 provided_tests = [
                   TestCorpus, TestSuperFlat, TestCorpusWithExternal,
-                  TestNGramCorpus, TestBigramCorpus
+                  TestNGramCorpus, TestBigramCorpus,
+                  #TestRenderedContext,
                   ]
 
 

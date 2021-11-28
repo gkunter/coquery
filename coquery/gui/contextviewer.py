@@ -2,7 +2,7 @@
 """
 contextviewer.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -21,15 +21,18 @@ except ImportError:
 
 from coquery import options
 from coquery.unicode import utf8
-from . import classes
-from .threads import CoqThread
-from .widgets.coqstaticbox import CoqStaticBox
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
-from .ui.contextViewerUi import Ui_ContextView
+from coquery.gui.threads import CoqWorker
+from coquery.gui.widgets.coqstaticbox import CoqStaticBox
+from coquery.gui.pyqt_compat import (QtCore, QtWidgets, QtGui,
+                                     get_toplevel_window)
+from coquery.gui.ui.contextViewerUi import Ui_ContextView
+from coquery.gui.ui.contextViewerAudioUi import Ui_ContextViewAudio
 from coquery.gui.app import get_icon
 
 
 class ContextView(QtWidgets.QWidget):
+    ui_class = Ui_ContextView
+
     def __init__(self, resource, token_id, source_id, token_width,
                  icon=None, parent=None):
 
@@ -40,33 +43,26 @@ class ContextView(QtWidgets.QWidget):
         self.token_id = token_id
         self.source_id = source_id
         self.token_width = token_width
-        self.context_thread = QtCore.QThread(self)
-        self.rescheduled = False
+        self.context = None
 
         self.meta_data = get_toplevel_window().table_model.invisible_content
 
-        self.ui = Ui_ContextView()
+        self.ui = self.ui_class()
         self.ui.setupUi(self)
+        self.ui.progress_bar.hide()
         self.ui.button_prev.setIcon(get_icon("Circled Chevron Left"))
         self.ui.button_next.setIcon(get_icon("Circled Chevron Right"))
-        self.ui.progress_bar.hide()
 
         if icon:
             self.setWindowIcon(icon)
 
         self.ui.slider_context_width.setTracking(True)
 
-        # Add clickable header
-        self.ui.button_ids = classes.CoqDetailBox()
         self.ui.button_ids.clicked.connect(self.remember_state)
-        self.ui.layout_main.insertWidget(0, self.ui.button_ids)
         self.ui.layout_meta = QtWidgets.QFormLayout(
             self.ui.button_ids.box)
 
         self.audio = None
-        if not self.resource.audio_features:
-            self.ui.tab_widget.removeTab(1)
-            self.ui.tab_widget.tabBar().hide()
 
         words = options.settings.value("contextviewer_words", None)
         if words is not None:
@@ -80,6 +76,19 @@ class ContextView(QtWidgets.QWidget):
         self.ui.slider_context_width.valueChanged.connect(self.slider_changed)
         self.ui.button_next.clicked.connect(self.next_context)
         self.ui.button_prev.clicked.connect(self.previous_context)
+
+        self.ui.context_area.setStyleSheet(
+            self.corpus.get_context_stylesheet())
+
+        # The context timer will trigger an update of the context
+        self.context_timer = QtCore.QTimer(self)
+        self.context_timer.timeout.connect(self.get_context)
+        self.context_timer.setSingleShot(True)
+
+        # The progress timer will trigger the display of the progressbar
+        self.progress_timer = QtCore.QTimer(self)
+        self.progress_timer.timeout.connect(self.ui.progress_bar.show)
+        self.progress_timer.setSingleShot(True)
 
         self.get_context()
         self.set_meta_data()
@@ -101,9 +110,6 @@ class ContextView(QtWidgets.QWidget):
         else:
             self.ui.button_ids.setExpanded(False)
 
-        self.ui.context_area.setStyleSheet(
-            self.corpus.get_context_stylesheet())
-
     def set_meta_data(self):
         s = "{} – Token ID {}".format(self.resource.name, self.token_id)
         self.ui.button_ids.setText(s)
@@ -122,7 +128,10 @@ class ContextView(QtWidgets.QWidget):
                     self.add_source_label(label, fields[label])
                 else:
                     from coquery import sound
-                    self.audio = sound.Sound(fields[label])
+                    try:
+                        self.audio = sound.Sound(fields[label])
+                    except (IOError, TypeError) as e:
+                        self.audio = None
 
         self.ui.button_ids.update()
 
@@ -207,45 +216,43 @@ class ContextView(QtWidgets.QWidget):
         self.ui.slider_context_width.blockSignals(True)
         self.ui.slider_context_width.setValue(
             self.ui.spin_context_width.value())
-        self.get_context()
         self.ui.slider_context_width.blockSignals(False)
+        if self.context_timer.isActive():
+            self.context_timer.stop()
+        self.context_timer.start(10)
         options.settings.setValue("contextviewer_words",
                                   self.ui.slider_context_width.value())
 
     def slider_changed(self):
-        self.ui.spin_context_width.blockSignals(True)
         self.ui.spin_context_width.setValue(
             self.ui.slider_context_width.value())
-        self.get_context()
-        self.ui.spin_context_width.blockSignals(False)
-        options.settings.setValue("contextviewer_words",
-                                  self.ui.slider_context_width.value())
 
     def get_context(self):
-        if hasattr(self, "context_thread"):
-            self.context_thread.quit()
         self.next_value = self.ui.slider_context_width.value()
 
-        if not self.context_thread.isRunning():
-            self.context_thread = CoqThread(self.retrieve_context,
-                                            next_value=self.next_value,
-                                            parent=self)
-            self.context_thread.taskFinished.connect(self.finalize_context)
-            self.context_thread.taskException.connect(self.onException)
-            self.ui.progress_bar.show()
-            self.context_thread.start()
-        else:
-            print("rescheduled: ", self.rescheduled)
-            if not self.rescheduled:
-                self.rescheduled = True
-                self.context_thread.taskFinished.disconnect(
-                    self.finalize_context)
-                self.context_thread.taskFinished.connect(self.get_context)
+        self.work = CoqWorker(self.retrieve_context,
+                              next_value=self.next_value)
+        self.work.started.connect(lambda: self.progress_timer.start(250))
+        self.work.finished.connect(self.ui.progress_bar.hide)
+        self.work.finished.connect(self.progress_timer.stop)
+        self.work.finished.connect(self.finalize_context)
+        self.work.exceptionRaised.connect(self.onException)
+        self.work.exceptionRaised.connect(self.ui.progress_bar.hide)
+        self.work.exceptionRaised.connect(self.progress_timer.stop)
+        self.work.start()
 
-        has_prev = self.lookup_row(self.token_id, self.meta_data, -1)
-        has_next = self.lookup_row(self.token_id, self.meta_data, +1)
-        self.ui.button_prev.setEnabled(has_prev is not None)
-        self.ui.button_next.setEnabled(has_next is not None)
+    @QtCore.pyqtSlot()
+    def retrieve_context(self, next_value):
+        try:
+            context = self.corpus.get_rendered_context(
+                self.token_id,
+                self.source_id,
+                self.token_width,
+                next_value, self)
+        except Exception as e:
+            print("Exception in retrieve_context(): ", e)
+            raise e
+        self.context = context
 
     @classmethod
     def lookup_row(cls, token_id, df, offset):
@@ -284,27 +291,12 @@ class ContextView(QtWidgets.QWidget):
         row = self.lookup_row(self.token_id, self.meta_data, +1)
         self.change_context(row)
 
-    def retrieve_context(self, next_value):
-        try:
-            context = self.corpus.get_rendered_context(
-                self.token_id,
-                self.source_id,
-                self.token_width,
-                next_value, self)
-        except Exception as e:
-            print("Exception in retrieve_context(): ", e)
-            raise e
-        if not self.context_thread.quitted:
-            self.context = context
-
     def onException(self):
-        self.ui.progress_bar.hide()
         QtWidgets.QMessageBox.critical(self,
                                        "Context error – Coquery",
                                        "Error retrieving context")
 
     def finalize_context(self):
-        self.rescheduled = False
         font = options.cfg.context_font
 
         if int(font.style()) == int(QtGui.QFont.StyleItalic):
@@ -353,7 +345,10 @@ class ContextView(QtWidgets.QWidget):
         s = "<div style='{}'>{}</div>".format("; ".join(styles), text)
         self.ui.context_area.setText(s)
 
-        self.ui.progress_bar.hide()
+        has_prev = self.lookup_row(self.token_id, self.meta_data, -1)
+        has_next = self.lookup_row(self.token_id, self.meta_data, +1)
+        self.ui.button_prev.setEnabled(has_prev is not None)
+        self.ui.button_next.setEnabled(has_next is not None)
 
     def prepare_textgrid(self, df, offset):
         if not use_tgt:
@@ -378,22 +373,14 @@ class ContextView(QtWidgets.QWidget):
 
 class ContextViewAudio(ContextView):
     _run_first = True
+    ui_class = Ui_ContextViewAudio
 
-    def __init__(self, resource, token_id, source_id, token_width,
-                 icon=None, parent=None):
-        super(ContextViewAudio, self).__init__(resource, token_id, source_id,
-                                               token_width, icon=None,
-                                               parent=None)
+    def __init__(self, *args, **kwargs):
+        super(ContextViewAudio, self).__init__(*args, **kwargs)
         if ContextViewAudio._run_first:
             s = "Initializing sound system.<br><br>Please wait..."
             title = "Initializing sound system – Coquery"
             msg_box = CoqStaticBox(title, s, parent=self)
-
-        from .textgridview import CoqTextgridView
-
-        self.ui.textgrid_area = CoqTextgridView(self.ui.tab_textgrid)
-        self.ui.layout_audio_tab.insertWidget(0, self.ui.textgrid_area)
-        self.ui.layout_audio_tab.setStretch(0, 1)
 
         if ContextViewAudio._run_first:
             msg_box.close()
@@ -410,11 +397,13 @@ class ContextViewAudio(ContextView):
         super(ContextViewAudio, self).finalize_context()
         audio = self.audio.extract_sound(self.context["start_time"],
                                          self.context["end_time"])
-        textgrid = self.prepare_textgrid(self.context["df"],
-                                         self.context["start_time"])
-
-        self.ui.textgrid_area.setSound(audio)
-        self.ui.textgrid_area.setTextgrid(textgrid)
-        self.ui.textgrid_area.display(offset=self.context["start_time"])
-
-        self.ui.progress_bar.hide()
+        if audio:
+            try:
+                textgrid = self.prepare_textgrid(self.context["df"],
+                                                 self.context["start_time"])
+            except:
+                pass
+            else:
+                self.ui.textgrid_area.setSound(audio)
+                self.ui.textgrid_area.setTextgrid(textgrid)
+                self.ui.textgrid_area.display(offset=self.context["start_time"])

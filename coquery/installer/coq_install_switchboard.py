@@ -3,7 +3,7 @@
 """
 coq_install_switchboard.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,11 +14,14 @@ from __future__ import unicode_literals
 import tarfile
 import os
 import pandas as pd
+import numpy as np
 import logging
 import re
+from io import BytesIO
+
 
 from coquery import options
-from coquery.corpusbuilder import BaseCorpusBuilder, IO_Stream
+from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.unicode import utf8
 from coquery.bibliography import Book, PersonList, Person
 from coquery.tables import Column, Identifier, Link
@@ -29,14 +32,14 @@ class resource_code():
         path, file_name = os.path.split(audio_name)
         base, ext = os.path.splitext(file_name)
         n = base[3:]
-        return ["sw{}A-ms98-a-word".format(n),
-                "sw{}B-ms98-a-word".format(n)]
+        return [f"sw{n}A-ms98-a-word",
+                f"sw{n}B-ms98-a-word"]
 
     def convert_source_to_audio(self, source_name):
         path, file_name = os.path.split(source_name)
         base, ext = os.path.splitext(file_name)
         n = base[2:6]
-        return "sw0{}".format(n)
+        return f"sw0{n}"
 
 
 class BuilderClass(BaseCorpusBuilder):
@@ -117,7 +120,7 @@ class BuilderClass(BaseCorpusBuilder):
                      "rating_tab.csv"]
     expected_files = special_files + ["switchboard_word_alignments.tar.gz"]
 
-    _regexp = re.compile("sw(\d\d\d\d)([A|B])-ms98-a-word\.text")
+    _regexp = re.compile(r"sw(\d\d\d\d)([A|B])-ms98-a-word\.text")
 
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
@@ -237,12 +240,12 @@ class BuilderClass(BaseCorpusBuilder):
         appear first in the actual file list. The order from that variable is
         retained.
         """
-        l = super(BuilderClass, cls).get_file_list(*args, **kwargs)
+        lst = super(BuilderClass, cls).get_file_list(*args, **kwargs)
         new_pos = 0
         for i, x in enumerate(cls.special_files):
-            if x in l:
-                l.remove(x)
-                l.insert(new_pos, x)
+            if x in lst:
+                lst.remove(x)
+                lst.insert(new_pos, x)
                 new_pos += 1
 
         cls._binary_files = {}
@@ -250,7 +253,7 @@ class BuilderClass(BaseCorpusBuilder):
             for f in files:
                 cls._binary_files[f] = path
 
-        return l
+        return lst
 
     @classmethod
     def process_call_con(cls, file_name):
@@ -267,7 +270,7 @@ class BuilderClass(BaseCorpusBuilder):
         df["Side"] = df["Side"].str.strip('"\' ').apply(utf8)
 
         # replace unknown ivi_no by NA:
-        df["ivi_no"] = df["ivi_no"].replace("UNK", pd.np.nan).astype(float)
+        df["ivi_no"] = df["ivi_no"].replace("UNK", np.nan).astype(float)
         return df.drop(["V1", "V2", "V3"], axis=1)
 
     @classmethod
@@ -283,8 +286,8 @@ class BuilderClass(BaseCorpusBuilder):
             text = [x.replace("\", ", "\",").replace(", \"", ",\"")
                     for x in input_file.readlines()]
 
-        df = pd.read_csv(IO_Stream(bytearray("\n".join(text),
-                                             encoding="utf-8")),
+        stream = BytesIO(bytearray("\n".join(text), encoding="utf-8"))
+        df = pd.read_csv(stream,
                          sep=str(","),
                          names=[cls.source_topic,
                                 "ivi_no",
@@ -358,9 +361,8 @@ class BuilderClass(BaseCorpusBuilder):
                 for i, member in enumerate(members):
                     match = self._regexp.match(os.path.basename(member.name))
                     if match:
-                        s = "Processing {}...".format(
-                            os.path.basename(member.name))
-                        self._widget.labelSet.emit("{} (%v of %m)".format(s))
+                        s = f"Processing {os.path.basename(member.name)}..."
+                        self._widget.labelSet.emit(f"{s} (%v of %m)")
                         self._widget.progressUpdate.emit(i)
                         logging.info(s)
 
@@ -382,8 +384,8 @@ class BuilderClass(BaseCorpusBuilder):
 
                         # store currently extracted file:
                         self._file_id += 1
-                        d = {self.file_name:
-                                 os.path.join(basename, member.name),
+                        d = {self.file_name: os.path.join(basename,
+                                                          member.name),
                              self.file_id: self._file_id,
                              self.file_duration: duration,
                              self.file_path: os.path.split(file_name)[0],
@@ -397,7 +399,7 @@ class BuilderClass(BaseCorpusBuilder):
     @classmethod
     def find_audio_path(cls, file_name):
         conv_id = file_name[2:6]
-        audio_name = "sw0{}.sph".format(conv_id)
+        audio_name = f"sw0{conv_id}.sph"
         try:
             return os.path.join(cls._binary_files[audio_name], audio_name)
         except KeyError:
@@ -447,12 +449,12 @@ class BuilderClass(BaseCorpusBuilder):
                 source, start, end, label = [x.strip()
                                              for x in utf8(row).split()]
             except ValueError:
-                s = "Row number {} doesn't contain valid data: '{}'"
-                logging.warning(s.format(n_row, row))
+                s = f"Row number {n_row} doesn't contain valid data: '{row}'"
+                logging.warning(s)
                 continue
 
             uttered = label
-            match = re.match("(.*)\[(.*)\](.*)", label)
+            match = re.match(r"(.*)\[(.*)\](.*)", label)
             if match:
                 matched = match.group(2)
                 if matched.startswith("laughter-"):

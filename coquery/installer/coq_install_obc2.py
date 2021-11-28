@@ -3,7 +3,7 @@
 """
 coq_install_obc2.py is part of Coquery.
 
-Copyright (c) 2017, 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -117,8 +117,7 @@ class BuilderClass(TEICorpusBuilder):
         Link(corpus_source_id, source_table),
         Link(corpus_event_id, event_table)]
 
-    auto_create = ["word", "file", "speaker", "event", "offence", "source",
-                   "corpus"]
+    auto_create = ["word", "file", "speaker", "event", "source", "corpus"]
 
     expected_files = [
      "OBC2POS-17200427.xml", "OBC2POS-17550116.xml", "OBC2POS-18210912.xml",
@@ -530,7 +529,7 @@ class BuilderClass(TEICorpusBuilder):
     def _process_charge(self, charge, trial, d):
         targets = charge.attrib["targets"]
         for target in targets.split():
-            rs = trial.find(".//rs[@id='{}']".format(target))
+            rs = trial.find(f".//rs[@id='{target}']")
             if rs is not None:
                 if rs.attrib["type"] == "offenceDescription":
                     for interp in rs.findall(".//interp"):
@@ -564,7 +563,7 @@ class BuilderClass(TEICorpusBuilder):
             date_node = tree.xpath(".//interp[@type='year' or @type='date']")
             if date_node:
                 year = date_node[0].attrib["value"][:4]
-                decade = "{0}0-{0}9".format(year[:-1])
+                decade = f"{year[:-1]}0-{year[:-1]}9"
             else:
                 year = "?"
                 decade = "?"

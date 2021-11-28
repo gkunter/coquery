@@ -3,7 +3,7 @@
 """
 coq_install_buckeye.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -50,6 +50,7 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_lemmatranscript = "Canonical_Transcript"
     corpus_starttime = "Start"
     corpus_endtime = "End"
+    corpus_duration = "Duration"
     corpus_file_id = "FileId"
     corpus_speaker_id = "SpeakerId"
 
@@ -316,7 +317,8 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.corpus_transcript, "VARCHAR(41) NOT NULL"),
              Column(self.corpus_lemmatranscript, "VARCHAR(41) NOT NULL"),
              Column(self.corpus_starttime, "REAL(17,6) NOT NULL"),
-             Column(self.corpus_endtime, "REAL(17,6) NOT NULL")])
+             Column(self.corpus_endtime, "REAL(17,6) NOT NULL"),
+             Column(self.corpus_duration, "REAL(17,6) NOT NULL")])
 
         # Specify that the corpus-specific code is contained in the dummy
         # class 'corpus_code' defined above:
@@ -325,9 +327,10 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_audio_feature(self.file_audio_path)
         self.add_time_feature(self.corpus_starttime)
         self.add_time_feature(self.corpus_endtime)
+        self.add_time_feature(self.corpus_duration)
         for x in ["corpus_word", "corpus_pos", "corpus_transcript",
                   "corpus_lemmatranscript", "corpus_id", "corpus_starttime",
-                  "corpus_endtime"]:
+                  "corpus_endtime", "corpus_duration"]:
             self.add_lexical_feature(x)
 
         self.add_annotation("segment", "corpus")
@@ -627,6 +630,7 @@ class BuilderClass(BaseCorpusBuilder):
 
             d.update({self.corpus_starttime: start_time,
                       self.corpus_endtime: end_time,
+                      self.corpus_duration: end_time - start_time,
                       self.corpus_speaker_id: self._speaker_id,
                       self.corpus_file_id: self._file_id + 1})
 

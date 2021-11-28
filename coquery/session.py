@@ -22,6 +22,7 @@ import logging
 import re
 
 import pandas as pd
+import numpy as np
 
 from . import options
 from .errors import (
@@ -209,6 +210,7 @@ class Session(object):
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
 
+        dtype_list = []
         self.queries = {}
         _queried = []
 
@@ -246,6 +248,40 @@ class Session(object):
                                        to_file=to_file, **kwargs)
                 self.sql_queries.append(current_query.sql_list)
                 raw_length = len(df)
+
+                # apply clumsy hack that tries to make sure that the dtypes of
+                # data frames containing NaNs or empty strings does not change
+                # when appending the new data frame to the previous.
+
+                # The same hack is also needed in TokenQuery.run().
+                if (len(self.data_table) > 0 and
+                        df.dtypes.tolist() != dtype_list.tolist()):
+                    for x in df.columns:
+                        # the idea is that pandas/numpy use the 'object'
+                        # dtype as a fall-back option for strange results,
+                        # including those with NaNs.
+                        # One problem is that integer columns become floats
+                        # in the process. This is so because Pandas does not
+                        # have an integer NA type:
+                        # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
+
+                        try:
+                            df.dtypes[x] != dtype_list[x]
+                        except (IndexError, KeyError):
+                            continue
+
+                        if df.dtypes[x] != dtype_list[x]:
+                            if df.dtypes[x] == object:
+                                if not df[x].any():
+                                    df[x] = [np.nan] * len(df)
+                                    dtype_list[x] = self.data_table[x].dtype
+                            elif dtype_list[x] == object:
+                                if not self.data_table[x].any():
+                                    dummy = [np.nan] * len(self.data_table)
+                                    self.data_table[x] = dummy
+                                    dtype_list[x] = df[x].dtype
+                else:
+                    dtype_list = df.dtypes
 
                 df = current_query.insert_static_data(df)
                 self.to_file = to_file
@@ -336,7 +372,7 @@ class Session(object):
         else:
             return managers.get_manager(query_mode, self.Resource.name)
 
-    def set_preferred_order(self, l):
+    def set_preferred_order(self, lst):
         """
         Arrange the column names in l so that they occur in the preferred
         order.
@@ -345,12 +381,12 @@ class Session(object):
         """
         resource_order = self.Resource.get_preferred_output_order()
         for x in resource_order[::-1]:
-            lex_list = [y for y in l if x in y]
+            lex_list = [y for y in lst if x in y]
             lex_list = sorted(lex_list)[::-1]
             for lex in lex_list:
-                l.remove(lex)
-                l.insert(0, lex)
-        return l
+                lst.remove(lex)
+                lst.insert(0, lex)
+        return lst
 
     def has_cached_data(self, query_mode):
         return (self, self.get_manager(query_mode)) in self._manager_cache

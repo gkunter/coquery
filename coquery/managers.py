@@ -2,7 +2,7 @@
 """
 managers.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,6 +15,7 @@ import logging
 import itertools
 import collections
 import pandas as pd
+import numpy as np
 import re
 import scipy
 
@@ -822,7 +823,7 @@ class ContingencyTable(FrequencyList):
             if row[1] == "All":
                 if agg_fnc[row[0]] == sum:
                     s = "{}(TOTAL)"
-                elif agg_fnc[row[0]] == pd.np.mean:
+                elif agg_fnc[row[0]] == np.mean:
                     s = "{}(MEAN)"
                 else:
                     s = "{}({}=ANY)"
@@ -842,7 +843,7 @@ class ContingencyTable(FrequencyList):
         cat_col = list(df[vis_cols]
                        .select_dtypes(include=[object]).columns.values)
         num_col = (list(df[vis_cols]
-                        .select_dtypes(include=[pd.np.number])
+                        .select_dtypes(include=[np.number])
                         .columns.values) +
                    ["coquery_invisible_number_of_tokens",
                     "coquery_invisible_corpus_id",
@@ -861,7 +862,7 @@ class ContingencyTable(FrequencyList):
             elif col.startswith(("func_statistics_frequency_")):
                 agg_fnc[col] = sum
             else:
-                agg_fnc[col] = pd.np.mean
+                agg_fnc[col] = np.mean
 
         if len(cat_col) > 1:
             # Create pivot table:
@@ -1156,7 +1157,7 @@ class ContrastMatrix(FrequencyList):
         # using the False Discovery Rate method (Benjamini & Hochberg 1995,
         # described in Narum 2006).
         self.p_values = self.p_values.sort_values().reset_index(drop=True)
-        threshold = ((pd.Series(pd.np.arange(len(self.p_values))) + 1) /
+        threshold = ((pd.Series(np.arange(len(self.p_values))) + 1) /
                      len(self.p_values)) * 0.05
         check = (self.p_values <= threshold)
         try:

@@ -5,6 +5,7 @@ import argparse
 import warnings
 
 import pandas as pd
+import numpy as np
 
 from coquery.coquery import options
 from coquery.session import Session
@@ -63,7 +64,7 @@ class TestManager(CoqTestCase):
 
     def test_manager_basic_1(self):
         df = self.manager.process(self.df, session=self.Session)
-        pd.np.testing.assert_array_equal(df.values, self.df.values)
+        np.testing.assert_array_equal(df.values, self.df.values)
 
     def test_manager_arrange_groups_1(self):
         group = Group("Test", ["coq_word_label_2"])
@@ -98,7 +99,7 @@ class TestManager(CoqTestCase):
         self.manager.set_groups([group])
         df = self.manager.process(self.df, session=self.Session)
 
-        pd.np.testing.assert_array_equal(df.values, sorted_df.values)
+        np.testing.assert_array_equal(df.values, sorted_df.values)
 
     def test_manager_mutate_groups_tokens_1(self):
         group = Group("Test",

@@ -10,6 +10,7 @@ coquery$ python -m test.test_filters
 
 from __future__ import unicode_literals
 
+import numpy as np
 import pandas as pd
 import re
 
@@ -28,7 +29,7 @@ class TestFilterString(CoqTestCase):
     df = pd.DataFrame({
             STRING_COLUMN: ['abc', "Peter's", 'xxx', None],
             INT_COLUMN: [1, 2, 3, 7],
-            FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan],
+            FLOAT_COLUMN: [-1.2345, 0, 1.2345, np.nan],
             BOOL_COLUMN: [True, True, False, False]})
 
     def test_string_values(self):
@@ -166,14 +167,14 @@ class TestFilterString(CoqTestCase):
         filt2 = Filter(STRING_COLUMN, str, OP_EQ, None)
         filt3 = Filter(STRING_COLUMN, str, OP_NE, None)
         filt4 = Filter(STRING_COLUMN, str, OP_GT, None)
-        filt5 = Filter(INT_COLUMN, int, OP_EQ, pd.np.nan)
-        filt6 = Filter(INT_COLUMN, int, OP_NE, pd.np.nan)
+        filt5 = Filter(INT_COLUMN, int, OP_EQ, np.nan)
+        filt6 = Filter(INT_COLUMN, int, OP_NE, np.nan)
 
         filt7 = Filter(FLOAT_COLUMN, float, OP_EQ, "")
         filt8 = Filter(FLOAT_COLUMN, float, OP_EQ, None)
         filt9 = Filter(FLOAT_COLUMN, float, OP_NE, None)
-        filt10 = Filter(FLOAT_COLUMN, float, OP_EQ, pd.np.nan)
-        filt11 = Filter(FLOAT_COLUMN, float, OP_NE, pd.np.nan)
+        filt10 = Filter(FLOAT_COLUMN, float, OP_EQ, np.nan)
+        filt11 = Filter(FLOAT_COLUMN, float, OP_NE, np.nan)
 
         self.assertEqual(filt1.get_filter_string(),
                          "coq_word_label_1 == ''")
@@ -232,7 +233,7 @@ class TestApply(CoqTestCase):
     df = pd.DataFrame({
             STRING_COLUMN: ['abc', "Peter's", 'xxx', None],
             INT_COLUMN: [1, 2, 3, 7],
-            FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan],
+            FLOAT_COLUMN: [-1.2345, 0, 1.2345, np.nan],
             BOOL_COLUMN: [True, True, False, False]})
 
     def assert_index_equal(self, df1, df2):

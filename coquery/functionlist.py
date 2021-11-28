@@ -2,7 +2,7 @@
 """
 functionlist.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -22,11 +22,11 @@ from .errors import RegularExpressionError
 
 
 class FunctionList(CoqObject):
-    def __init__(self, l=None, *args, **kwargs):
+    def __init__(self, lst=None, *args, **kwargs):
         super(FunctionList, self).__init__()
         self._exceptions = []
-        if l:
-            self._list = l
+        if lst:
+            self._list = lst
         else:
             self._list = []
 
@@ -54,16 +54,16 @@ class FunctionList(CoqObject):
 
         self._exceptions = []
         for fun in list(self._list):
+            fun.kwargs["session"] = session
             if any(col not in df.columns for col in fun.columns):
                 self._list.remove(fun)
                 continue
-
             if options.cfg.drop_on_na:
                 drop_on_na = True
             else:
                 drop_on_na = drop_on_na and fun.drop_on_na
-
             new_column = fun.get_id()
+
             try:
                 if options.cfg.benchmark:
                     print(fun.get_name())
@@ -77,11 +77,10 @@ class FunctionList(CoqObject):
                 # if an exception occurs, the error is logged, and an empty
                 # column containing only NAs is added
                 if isinstance(e, RegularExpressionError):
-                    error = e.error_message.strip()
+                    msg = e.error_message.strip()
                 else:
-                    error = "Error during function call {}".format(
-                        fun.get_label(session))
-                self._exceptions.append((error, e, sys.exc_info()))
+                    msg = f"Error in function call {fun.get_label(session)}"
+                self._exceptions.append((msg, e, sys.exc_info()))
                 val = pd.Series([None] * len(df), name=new_column)
             finally:
                 # Functions can return either single columns or data frames.
@@ -120,7 +119,7 @@ class FunctionList(CoqObject):
         if not self.has_function(fun):
             self._list.append(fun)
         else:
-            warnings.warn("Function duplicate not added: {}".format(fun))
+            warnings.warn(f"Function duplicate not added: {fun}")
 
     def remove_function(self, fun):
         self._list.remove(fun)
@@ -143,5 +142,4 @@ class FunctionList(CoqObject):
 
     def __repr__(self):
         s = super(FunctionList, self).__repr__()
-        return "{}({})".format(
-            s, self._list.__repr__())
+        return f"{s}({self._list.__repr__()})"

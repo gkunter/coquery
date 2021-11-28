@@ -2,7 +2,7 @@
 """
 barcodeplot.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,6 +15,7 @@ import math
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 from coquery.visualizer import visualizer as vis
 from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
@@ -51,12 +52,12 @@ class BarcodePlot(vis.Visualizer):
     def prepare_ax_kwargs(self, data, x, y, z, levels_x, levels_y, **kwargs):
         if x and not y:
             ax_kwargs = {
-                "xticks": 0.5 + pd.np.arange(len(levels_x)),
+                "xticks": 0.5 + np.arange(len(levels_x)),
                 "xticklabels": levels_x,
                 "xlim": (0, len(levels_x))}
         elif y and not x:
             ax_kwargs = {
-                "yticks": 0.5 + pd.np.arange(len(levels_y)),
+                "yticks": 0.5 + np.arange(len(levels_y)),
                 "yticklabels": levels_y[::-1],
                 "ylim": (0, len(levels_y))}
         else:
@@ -355,21 +356,21 @@ class HeatbarPlot(BarcodePlot):
             self.horizontal = bool(x)
 
             for val in levels_x or levels_y:
-                binned = pd.np.zeros(1 + (size // bw))
+                binned = np.zeros(1 + (size // bw))
                 values = (num_column[data[x or y] == val]).values
                 for i in values:
                     binned = self.increment_bins(binned, i, bw)
 
-                M.append(pd.np.array(binned))
+                M.append(np.array(binned))
         else:
             self.horizontal = not self.force_horizontal
 
-            binned = pd.np.zeros(1 + (size // bw))
+            binned = np.zeros(1 + (size // bw))
             values = num_column.values
             for i in values:
                 binned = self.increment_bins(binned, i, bw)
 
-            M.append(pd.np.array(binned))
+            M.append(np.array(binned))
 
         width = len(binned) * bw - 1
         if x:
@@ -381,7 +382,7 @@ class HeatbarPlot(BarcodePlot):
         else:
             kwargs["extent"] = (None, None, 0, width)
 
-        kwargs["M"] = pd.np.array(M)
+        kwargs["M"] = np.array(M)
         return kwargs
 
     def set_bandwidth(self, bw):
@@ -408,7 +409,7 @@ class HeatbarPlot(BarcodePlot):
         left, right, bottom, top = param["extent"]
 
         if self.normalize:
-            M = pd.np.array([[val / max(X) for val in X] for X in M])
+            M = np.array([[val / max(X) for val in X] for X in M])
 
         if not self.horizontal:
             M = M[::-1]
@@ -416,16 +417,15 @@ class HeatbarPlot(BarcodePlot):
         for i, x in enumerate(M):
             if left is None and right is None:
                 param["extent"] = (i, i+1, bottom, top)
-                x = pd.np.array([x[::-1]]).T
+                x = np.array([x[::-1]]).T
             else:
                 param["extent"] = (left, right, i, i+1)
-                x = pd.np.array([x])
+                x = np.array([x])
 
             plt.imshow(x, vmax=M.max(), **param)
 
         if self.plot_rug:
-            super(HeatbarPlot, self).plot_facet(
-                data, color, rug=("top", "bottom"), **kwargs)
+            super().plot_facet(data, color, rug=("top", "bottom"), **kwargs)
 
         ax = kwargs.get("ax", plt.gca())
         ax_kwargs = self.prepare_ax_kwargs(data, **kwargs)
