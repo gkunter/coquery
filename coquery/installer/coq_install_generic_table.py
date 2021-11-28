@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,7 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 import re
-import pandas as pd
+import numpy as np
 import logging
 
 from coquery.corpusbuilder import BaseCorpusBuilder
@@ -39,9 +39,9 @@ class BuilderClass(BaseCorpusBuilder):
         for i, label in enumerate(dtypes.index.values):
             if i in mapping.values():
                 query_type = dict(zip(mapping.values(), mapping.keys()))[i]
-                rc_feature = "corpus_{}".format(query_type)
+                rc_feature = f"corpus_{query_type}"
             else:
-                rc_feature = "corpus_x{}".format(i)
+                rc_feature = f"corpus_x{i}"
             if dtypes[i] == object:
                 # It would be nice to be able to determine the maximum length
                 # if string data columns from the data frame, like so:
@@ -50,10 +50,10 @@ class BuilderClass(BaseCorpusBuilder):
                 #
                 # But at this stage, the data frame is not available yet, so
                 # we have to use a fixed maximum string length:
-                dtype = "VARCHAR({})".format(self.MAX_VARCHAR_LENGTH)
-            elif dtypes[i] == pd.np.float64:
+                dtype = f"VARCHAR({self.MAX_VARCHAR_LENGTH})"
+            elif dtypes[i] == np.float64:
                 dtype = "REAL"
-            elif dtypes[i] == pd.np.int64:
+            elif dtypes[i] == np.int64:
                 dtype = "INTEGER"
             lst.append((rc_feature, label, dtype))
         return lst
@@ -68,9 +68,9 @@ class BuilderClass(BaseCorpusBuilder):
         for i, label in enumerate(dtypes.index.values):
             if i in mapping.values():
                 query_type = dict(zip(mapping.values(), mapping.keys()))[i]
-                rc_feature = "corpus_{}".format(query_type)
+                rc_feature = f"corpus_{query_type}"
             else:
-                rc_feature = "corpus_x{}".format(i)
+                rc_feature = f"corpus_x{i}"
             if dtypes[i] == object:
                 # It would be nice to be able to determine the maximum length
                 # if string data columns from the data frame, like so:
@@ -80,10 +80,10 @@ class BuilderClass(BaseCorpusBuilder):
                 # But at this stage, the data frame is not available yet, so
                 # we have to use a fixed maximum string length:
                 max_length = 128
-                dtype = "VARCHAR({})".format(max_length)
-            elif dtypes[i] == pd.np.float64:
+                dtype = f"VARCHAR({max_length})"
+            elif dtypes[i] == np.float64:
                 dtype = "REAL"
-            elif dtypes[i] == pd.np.int64:
+            elif dtypes[i] == np.int64:
                 dtype = "INTEGER"
             _columns.append((i, rc_feature, label, dtype))
             setattr(self, rc_feature, label)
@@ -103,13 +103,13 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.file_name, "VARCHAR(2048) NOT NULL"),
              Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
-        l = [Identifier(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
-             Link(self.corpus_file_id, self.file_table)]
+        lst = [Identifier(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
+               Link(self.corpus_file_id, self.file_table)]
 
         for _, _, label, dtype in _columns:
-            l.append(Column(label, dtype))
+            lst.append(Column(label, dtype))
 
-        self.create_table_description(self.corpus_table, l)
+        self.create_table_description(self.corpus_table, lst)
 
     def validate_path(self, path):
         return path == self.arguments.path
@@ -123,12 +123,12 @@ class BuilderClass(BaseCorpusBuilder):
         with capt:
             df = self._table_options.read_file(self.arguments.path)
         for x in capt:
-            s = "File {} – {}".format(self.arguments.path, x)
+            s = f"File {self.arguments.path} – {x}"
             logging.warning(s)
             print(s)
 
         if not self._table_options.header:
-            df.columns = ["X{}".format(x) for x in df.columns]
+            df.columns = [f"X{num}" for num in df.columns]
         else:
             df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x) for x in df.columns]
         df[self.corpus_file_id] = 1
@@ -142,6 +142,7 @@ class BuilderClass(BaseCorpusBuilder):
 
 def main():
     BuilderClass().build()
+
 
 if __name__ == "__main__":
     main()
