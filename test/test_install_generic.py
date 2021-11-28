@@ -86,7 +86,9 @@ class TestGeneric(CoqTestCase):
         self.assertFalse(self.installer.has_metadata("file5.txt"))
 
 
-provided_tests = [TestGeneric]
+provided_tests = [
+    TestGeneric,
+    ]
 
 
 def main():

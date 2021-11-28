@@ -91,7 +91,9 @@ class TestOBC2(CoqTestCase):
                     for x in BuilderClass.expected_files]))
 
 
-provided_tests = [TestOBC2]
+provided_tests = [
+    TestOBC2,
+    ]
 
 
 def main():
