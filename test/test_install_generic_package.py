@@ -16,6 +16,7 @@ import argparse
 import tempfile
 import zipfile
 import json
+from pathlib import Path
 
 from coquery.coquery import options
 from coquery.installer.coq_install_generic_package import BuilderClass
@@ -32,16 +33,18 @@ class CorpusResource(SQLResource):
 
 class TestGenericPackage(CoqTestCase):
     def create_package(self, name):
-        pass
+        raise NotImplementedError
 
 
     def setUp(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             self.temp_path = tmp_dir
-        os.mkdir(self.temp_path)
+
+        Path(self.temp_path).mkdir(parents=True, exist_ok=True)
+
         self.temp_name = "test_db"
-        self.package_path = os.path.join(self.temp_path,
-                                         "{}.coq".format(self.temp_name))
+        self.file_name = f"{self.temp_name}.coq"
+        self.package_path = os.path.join(self.temp_path, self.file_name)
 
         options.cfg = argparse.Namespace()
         default = SQLiteConnection("temporary", self.temp_path)
@@ -74,7 +77,9 @@ class TestGenericPackage(CoqTestCase):
         self.installer.build()
 
 
-provided_tests = [TestGenericPackage]
+provided_tests = [
+    TestGenericPackage,
+    ]
 
 
 def main():
