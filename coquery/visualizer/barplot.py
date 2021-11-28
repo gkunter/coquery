@@ -2,7 +2,7 @@
 """
 barplot.py is part of Coquery.
 
-Copyright (c) 2016–2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -372,9 +372,13 @@ class StackedBars(BarPlot):
             # FIXME: I'm pretty sure that the code used below to calculate the
             # cumulative sums can be streamlined!
 
-            levels = args["hue_order"]
+            if args["hue"]:
+                levels = args["hue_order"]
+                data = args["data"].sort_values([category, args["hue"]])
+            else:
+                levels = args["order"]
+                data = args["data"].sort_values([category])
 
-            data = args["data"].sort_values([category, args["hue"]])
             data = data.reset_index(drop=True)
 
             if len(data[category].unique()) > 1:
@@ -385,13 +389,16 @@ class StackedBars(BarPlot):
             else:
                 data[self.NUM_COLUMN] = self.transform(data[self.NUM_COLUMN])
 
-            expand = pd.DataFrame(
-                data=list(itertools.product(args["order"],
-                                            args["hue_order"])),
-                columns=[category, self.COL_COLUMN])
+            if args["hue_order"]:
+                expand = pd.DataFrame(
+                    data=list(itertools.product(args["order"],
+                                                args["hue_order"])),
+                    columns=[category, self.COL_COLUMN])
 
-            df = (data.merge(expand, how="right")
-                      .sort_values(by=[category]))
+                df = (data.merge(expand, how="right")
+                          .sort_values(by=[category]))
+            else:
+                df = data
         else:
             # If no subordinate category is given, or if the subordinate
             # category has just one value, the numeric variable is just the
@@ -413,9 +420,10 @@ class StackedBars(BarPlot):
     def plt_func(self, **kwargs):
         levels = kwargs.pop("levels")
         df = kwargs.pop("data")
-
         for val in levels[::-1]:
             _ax = sns.barplot(data=df[df[self.COL_COLUMN] == val], **kwargs)
+        else:
+            _ax = plt.gca()
 
         if not (self.x and self.y):
             if kwargs["x"] != self.NUM_COLUMN:
