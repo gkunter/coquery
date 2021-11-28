@@ -2,7 +2,7 @@
 """
 colorizer.py is part of Coquery.
 
-Copyright (c) 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,7 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 from __future__ import unicode_literals
 
-import pandas as pd
+import numpy as np
 import seaborn as sns
 
 from coquery.gui.pyqt_compat import QtCore, QtGui
@@ -27,7 +27,7 @@ COQ_CUSTOM = "COQCUSTOM"
 
 class Colorizer(QtCore.QObject):
     def __init__(self, palette, ncol, values=None):
-        super(Colorizer, self).__init__()
+        super().__init__()
         self.palette = palette
         self.ncol = ncol
         self.values = values
@@ -71,25 +71,24 @@ class Colorizer(QtCore.QObject):
                 for s in l]
 
     @staticmethod
-    def rgb_to_hex(l):
-        return ["#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
-                for r, g, b in l]
+    def rgb_to_hex(lst):
+        return [f"#{int(r):02x}{int(g):02x}{int(b):02x}" for r, g, b in lst]
 
     @staticmethod
-    def rgb_to_mpt(l):
-        return [(r / 255, g / 255, b / 255) for r, g, b in l]
+    def rgb_to_mpt(lst):
+        return [(r / 255, g / 255, b / 255) for r, g, b in lst]
 
     @staticmethod
-    def mpt_to_rgb(l):
-        return [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in l]
+    def mpt_to_rgb(lst):
+        return [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in lst]
 
     @staticmethod
-    def hex_to_mpt(l):
-        return Colorizer.rgb_to_mpt(Colorizer.hex_to_rgb(l))
+    def hex_to_mpt(lst):
+        return Colorizer.rgb_to_mpt(Colorizer.hex_to_rgb(lst))
 
     @staticmethod
-    def mpt_to_hex(l):
-        return Colorizer.rgb_to_hex(Colorizer.mpt_to_rgb(l))
+    def mpt_to_hex(lst):
+        return Colorizer.rgb_to_hex(Colorizer.mpt_to_rgb(lst))
 
     def legend_title(self, z):
         return self._title_frm.format(z=z)
@@ -109,7 +108,7 @@ class Colorizer(QtCore.QObject):
 
 class ColorizeByFactor(Colorizer):
     def __init__(self, palette, ncol, values):
-        super(ColorizeByFactor, self).__init__(palette, ncol, values)
+        super().__init__(palette, ncol, values)
         self.set_title_frm("{z}")
 
     def get_hues(self, data):
@@ -129,7 +128,7 @@ class ColorizeByFactor(Colorizer):
 
 class ColorizeByNum(Colorizer):
     def __init__(self, palette, ncol, values, vrange=None):
-        super(ColorizeByNum, self).__init__(palette, ncol, values)
+        super().__init__(palette, ncol, values)
 
         if not vrange:
             vmin, vmax = values.min(), values.max()
@@ -161,7 +160,7 @@ class ColorizeByNum(Colorizer):
         if not self._direct_mapping:
             pal = pal[::-1]
 
-        binned = pd.np.digitize(data, self.bins, right=False) - 1
+        binned = np.digitize(data, self.bins, right=False) - 1
         return [pal[val] for val in binned]
 
     def legend_palette(self):
@@ -184,9 +183,8 @@ class ColorizeByNum(Colorizer):
 
 class ColorizeByFreq(Colorizer):
     def get_hues(self, data):
-        self.bins = pd.np.linspace(data.min(), data.max(),
-                                   self.ncol,
-                                   endpoint=False)
+        self.bins = np.linspace(data.min(), data.max(),
+                                self.ncol, endpoint=False)
         pal = self.get_palette(n=self.ncol)
-        binned = pd.np.digitize(data, self.bins, right=False) - 1
+        binned = np.digitize(data, self.bins, right=False) - 1
         return [pal[val] for val in binned]
