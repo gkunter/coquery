@@ -10,13 +10,8 @@ coquery$ python -m test.vis.test_barcodeplot
 
 import unittest
 import pandas as pd
-import seaborn as sns
-import scipy.stats as st
-import itertools
-import argparse
+import numpy as np
 import matplotlib.pyplot as plt
-
-from coquery.coquery import options
 
 from test.testcase import CoqTestCase
 
@@ -27,12 +22,12 @@ class TestBarcodePlotArguments(CoqTestCase):
     def setUp(self):
         from coquery.visualizer.barcodeplot import BarcodePlot
 
-        pd.np.random.seed(123)
+        np.random.seed(123)
         self.df = pd.DataFrame(
             {"X": list("AAAAAAAAAAAAAAAAAAABBBBBBBBBBB"),
              "Y": list("xxxxxxxxyyyyyyyyyyyxxxxxxxyyyy"),
              "Z": list("111122221111222211221122112222"),
-             self.NUM_COLUMN: pd.np.random.randint(0, 100, 30)})
+             self.NUM_COLUMN: np.random.randint(0, 100, 30)})
 
         self.vis = BarcodePlot(None, None, self.NUM_COLUMN)
 
@@ -117,8 +112,8 @@ class TestBarcodePlotAxisArguments(TestBarcodePlotArguments):
         Basic test: only a single numerical variable along the `X` axis
         """
         ax_args = self.vis.prepare_ax_kwargs(data=self.df,
-                                              x=None, y=None, z=None,
-                                              levels_x=None, levels_y=None)
+                                             x=None, y=None, z=None,
+                                             levels_x=None, levels_y=None)
         target = {"yticklabels": []}
         self.assertDictEqual(ax_args, target)
 
@@ -129,8 +124,8 @@ class TestBarcodePlotAxisArguments(TestBarcodePlotArguments):
         self.vis.force_horizontal = False
 
         ax_args = self.vis.prepare_ax_kwargs(data=self.df,
-                                              x=None, y=None, z=None,
-                                              levels_x=None, levels_y=None)
+                                             x=None, y=None, z=None,
+                                             levels_x=None, levels_y=None)
         target = {"xticklabels": []}
         self.assertDictEqual(ax_args, target)
 
@@ -143,10 +138,10 @@ class TestBarcodePlotAxisArguments(TestBarcodePlotArguments):
         levels = sorted(self.df[category].unique())
 
         ax_args = self.vis.prepare_ax_kwargs(data=self.df,
-                                              x=category, y=None, z=None,
-                                              levels_x=levels, levels_y=None)
+                                             x=category, y=None, z=None,
+                                             levels_x=levels, levels_y=None)
         target = {"xticklabels": levels,
-                  "xticks": pd.np.array([0.5, 1.5]),
+                  "xticks": np.array([0.5, 1.5]),
                   "xlim": (0, 2)}
 
         self.assertDictEqual(ax_args, target)
@@ -160,10 +155,10 @@ class TestBarcodePlotAxisArguments(TestBarcodePlotArguments):
         levels = sorted(self.df[category].unique())
 
         ax_args = self.vis.prepare_ax_kwargs(data=self.df,
-                                              x=None, y=category, z=None,
-                                              levels_x=None, levels_y=levels)
+                                             x=None, y=category, z=None,
+                                             levels_x=None, levels_y=levels)
         target = {"yticklabels": levels[::-1],
-                  "yticks": pd.np.array([0.5, 1.5]),
+                  "yticks": np.array([0.5, 1.5]),
                   "ylim": (0, 2)}
 
         self.assertDictEqual(ax_args, target)
@@ -237,14 +232,14 @@ class TestHeatbarPlotArguments(CoqTestCase):
                       [0.0, 0.7, 0.3],
                       [0.0, 0.6, 0.4]]
 
-        for i, p in enumerate(pd.np.arange(0, 1, 0.1)):
+        for i, p in enumerate(np.arange(0, 1, 0.1)):
             bins = [0, 0, 0]
-            pd.np.testing.assert_array_almost_equal(
+            np.testing.assert_array_almost_equal(
                 increments[i],
                 self.vis.increment_bins(bins, 5 + p * 5, 5))
 
     def test_horizontal_no_subgroup(self):
-        binned = pd.np.zeros(10)
+        binned = np.zeros(10)
 
         for i in self.df[self.NUM_COLUMN]:
             binned = self.vis.increment_bins(binned, i, 5)
@@ -257,14 +252,14 @@ class TestHeatbarPlotArguments(CoqTestCase):
         target = {"aspect": "auto",
                   "interpolation": "gaussian",
                   "extent": (0, 49, None, None),
-                  "M": pd.np.array([binned])}
+                  "M": np.array([binned])}
 
         self.assertDictEqual(args, target)
 
     def test_vertical_no_subgroup(self):
         self.vis.force_horizontal = False
 
-        binned = pd.np.zeros(10)
+        binned = np.zeros(10)
 
         for i in self.df[self.NUM_COLUMN]:
             binned = self.vis.increment_bins(binned, i, 5)
@@ -277,12 +272,12 @@ class TestHeatbarPlotArguments(CoqTestCase):
         target = {"aspect": "auto",
                   "interpolation": "gaussian",
                   "extent": (None, None, 0, 49),
-                  "M": pd.np.array([binned])}
+                  "M": np.array([binned])}
 
         self.assertDictEqual(args, target)
 
     def test_horizontal_subgroup(self):
-        M = pd.np.array(pd.np.zeros((2, 10)))
+        M = np.array(np.zeros((2, 10)))
 
         for ix in self.df.index:
             row = 0 if self.df.iloc[ix]["X"] == "A" else 1
@@ -306,7 +301,7 @@ class TestHeatbarPlotArguments(CoqTestCase):
         Test vertical subgroups. Group counts are the same as in
         test_horizontal_subgroup(), but the `extent` argument differs.
         """
-        M = pd.np.array(pd.np.zeros((2, 10)))
+        M = np.array(np.zeros((2, 10)))
 
         for ix in self.df.index:
             row = 0 if self.df.iloc[ix]["X"] == "A" else 1
