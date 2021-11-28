@@ -2,7 +2,7 @@
 """
 general.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -20,12 +20,14 @@ import os
 import tempfile
 import itertools
 import pandas as pd
+import numpy as np
 import io
 import ctypes
-import platform
+import logging
 
 from .unicode import utf8
 from .defines import LANGUAGES
+
 
 CONTRACTION = ["n't", "'s", "'ve", "'m", "'d", "'ll", "'em", "'t"]
 PUNCT = '!\'),-./:;?^_`}’”]'
@@ -46,76 +48,267 @@ def html_escape(text):
     return text
 
 
-def collapse_words(word_list):
+def has_module(name):
+    """
+    Check if the Python module 'name' is available.
+
+    Parameters
+    ----------
+    name : str
+        The name of the Python module, as used in an import instruction.
+
+    This function uses ideas from this Stack Overflow question:
+    http://stackoverflow.com/questions/14050281/
+
+    Returns
+    -------
+    b : bool
+        True if the module exists, or False otherwise.
+    """
+
+    if sys.version_info > (3, 3):
+        import importlib.util
+        return importlib.util.find_spec(name) is not None
+    elif sys.version_info > (2, 7, 99):
+        import importlib
+        return importlib.find_loader(name) is not None
+    else:
+        import pkgutil
+        return pkgutil.find_loader(name) is not None
+
+
+class Collapser(object):
+    """
+    Provides a language-specific way to collapse a list of word tokens into a
+    single string.
+    """
+
+    whitespace = " "
+
+    @classmethod
+    def tag_spacing(cls, s):
+        """
+        Return a string that contains appropriate whitespaces around certain
+        XML tags.
+
+        Some tags are typically used for typesetting, such as <b> or <i>. These
+        tags should be preceded by a whitespace. In the case of the
+        corresponding closing tag, the tag should be followed by a whitespace.
+
+        If the string does not contain a tag that is recognized, the return
+        value is identical to the input value.
+        """
+        if s in {"<b>", "<u>", "<s>", "<em>"} or s.startswith("<span"):
+            return f"{cls.whitespace}{s}"
+        elif s in {"</b>", "</u>", "</s>", "</em>"} or s.startswith("</span"):
+            return f"{s}{cls.whitespace}"
+        return s
+
+    @classmethod
+    def _collapse_list(cls, word_list):
+        lst = []
+        for s in word_list:
+            lst += [cls.whitespace, cls.tag_spacing(s)]
+        return lst
+
+    @classmethod
+    def collapse(cls, word_list):
+        if not isinstance(word_list, pd.Series):
+            word_list = pd.Series(word_list)
+        # return None if the word list contains only None:
+        if word_list.isnull().sum() == len(word_list):
+            val = None
+        else:
+            lst = cls._collapse_list(word_list)
+            val = utf8("").join(lst).strip()
+        return val
+
+
+class EnglishCollapser(Collapser):
+    CLITICS = {"#s", "#re", "#m", "#ve", "#d", "#ll", "#t", "n#t"}
+    CONTRACTION_PUNCTUATION = ("'", "\N{RIGHT SINGLE QUOTATION MARK}",
+                               "\N{MODIFIER LETTER APOSTROPHE}")
+    CONTRACTIONS = []
+    for p in CONTRACTION_PUNCTUATION:
+        for c in CLITICS:
+            CONTRACTIONS.append(c.replace("#", p))
+
+    NONSPACING_PUNCTUATION = (".", ",", ":", ";", "?", "!",
+                              ")", "}", "]",
+                              "%")
+    NONTRAILING_PUNCTUATION = ("(", "{", "[")
+    CONJOINING_PUNCTUATION = ("\N{EM DASH}")
+
+    QUOTE_PAIRS = (("\N{LEFT SINGLE QUOTATION MARK}",
+                    "\N{RIGHT SINGLE QUOTATION MARK}"),
+                   ("\N{LEFT DOUBLE QUOTATION MARK}",
+                    "\N{RIGHT DOUBLE QUOTATION MARK}"),
+                   ("'", "'"),
+                   ('"', '"'),
+                   ("\N{GRAVE ACCENT}\N{GRAVE ACCENT}",
+                    "\N{ACUTE ACCENT}\N{ACUTE ACCENT}"),
+                   ("\N{GRAVE ACCENT}\N{GRAVE ACCENT}", "''"),
+                   ("\N{GRAVE ACCENT}", "\N{ACUTE ACCENT}"))
+
+    @classmethod
+    def _corresponding_openers(cls, closer):
+        lst = []
+        for o, c in cls.QUOTE_PAIRS:
+            if c == closer:
+                lst.append(o)
+        return lst
+
+    @classmethod
+    def _corresponding_closers(cls, opener):
+        lst = []
+        for o, c in cls.QUOTE_PAIRS:
+            if o == opener:
+                lst.append(c)
+        return lst
+
+    @classmethod
+    def _collapse_list(cls, word_list):
+        """
+        Take the element from the word list and concatenate them into a string
+        with whitespaces corresponding to English spelling conventions.
+
+        This is not a function that I'm proud of, especially when it comes to
+        quotation marks. The general idea is that the algorithm goes through
+        the list element by element. For each element, it adds a separator
+        and the element itself to a list. The value of the separator depends on
+        the element itself, but can also be affected by the previous element in
+        the list.
+
+        For elements like contracted forms like 've or 's, the separator is
+        empty because here, the element is expected to be attached to the
+        previous element.
+
+        For elements like opening brackets, the separator for the NEXT
+        separator is set to be empty, because here, the current element (i.e.
+        the opening bracket) and the next element are expected to be attached
+        to each other.
+
+        For elements that may be quote-closing sequences, the algorithm tries
+        to determine whether a matching quote-opening sequence has already been
+        encountered. In this case, the value of the separator is set to empty,
+        because the closing sequence is expected to be attached to the previous
+        element.
+
+        If the element is not a quote-closing sequence, the algorithm checks if
+        if may be a quote-opening sequence. In this case, the NEXT separator is
+        set to be empty because quote-opening sequences are expected to be
+        attached to the following element.
+
+        The algorithm corrects some cases of broken quotation sequences. A
+        broken quotation sequence is one where the quotation punctuation is not
+        correctly tokenized, i.e. where the punctation is still attached to the
+        token, as in <word'>, <"happy>, etc. These tokens will be treated as if
+        they consisted of a sequence of the token and the punctuation mark.
+
+        This correction was, I hate to say it, developed in a trial-and-error
+        fashion. As a result, the code may not be as clear as you'd hope. Any
+        change to this function therefore needs to be tested very thoroughly by
+        running the tests from the test suite!
+        """
+        lst = []
+        next_sep = cls.whitespace
+
+        opening, closing = zip(*cls.QUOTE_PAIRS)
+        quote_stack = []
+
+        for word in word_list:
+            # per default, words will be joined using the language's
+            # whitespace:
+            sep = next_sep
+            next_sep = cls.whitespace
+            lw = word.lower()
+
+            closer_found = False
+            ignore_openers = False
+
+            # handle punctuation, contractions and clitics:
+            if (lw in cls.CONTRACTIONS):
+                sep = ""
+                ignore_openers = True
+            elif lw in cls.NONSPACING_PUNCTUATION:
+                sep = ""
+            elif lw in cls.NONTRAILING_PUNCTUATION:
+                next_sep = ""
+            elif lw.startswith(cls.CONJOINING_PUNCTUATION):
+                sep = ""
+                next_sep = ""
+                if lst[-1] == cls.whitespace:
+                    lst[-1] = ""
+
+            # check if the current element ends in an element which may be a
+            # quote-closing sequence:
+            elif lw.endswith(tuple(closing)):
+                if not quote_stack:
+                    closer_found = lw in closing
+                for closer in closing:
+                    if lw.endswith(closer):
+                        # check if no corresponding quote-opening sequence was
+                        # previously encountered:
+                        if not quote_stack:
+                            # don't treat this element as a quote-closing
+                            # sequence if there is a regular token attached to
+                            # it:
+                            closer_found = closer != lw
+                            break
+
+                        # check if there are quote-opening sequences that may
+                        # be a match for the current quote-closing sequence:
+                        matching_openers = cls._corresponding_openers(closer)
+                        for i, stack_element in enumerate(quote_stack):
+                            if stack_element in matching_openers:
+                                # if a match is found, remove the quote-opening
+                                # sequence from the stack, and treat this
+                                # element as a quote-closing sequence.
+                                quote_stack = quote_stack[i:]
+                                sep = ""
+                                closer_found = True
+                                break
+
+            # check if the current element is not treated as a quote-closing
+            # sequence or a clitic element (or similar):
+            if not closer_found and not ignore_openers:
+                # check if the current element may be a quote-opening sequence:
+                if lw.startswith(tuple(opening)):
+                    if lw in opening:
+                        next_sep = ""
+                    # add the quote-opening sequence to the stack:
+                    for opener in opening:
+                        if lw.startswith(opener):
+                            quote_stack.insert(0, opener)
+                            break
+
+            # add the current separator value and the current element to the
+            # final list:
+            lst += [sep, cls.tag_spacing(word)]
+
+        return lst
+
+
+def collapser_factory(language):
+    mapping = {"en": EnglishCollapser}
+    return mapping.get(language, Collapser)
+
+
+def collapse_words(word_list, language=None):
     """ Concatenate the words in the word list, taking clitics, punctuation
     and some other stop words into account."""
-    def is_tag(s):
-        # there are some tags that should still be preceded by spaces. In
-        # paricular those that are normally used for typesetting, including
-        # <span>, but excluding <sup> and <sub>, because these are frequently
-        # used in formula:
-
-        if s.startswith("<span") or s.startswith("</span"):
-            return False
-        if s in set(["</b>", "<b>", "</i>", "<i>", "</u>", "<u>",
-                     "</s>", "<s>", "<em>", "</em>"]):
-            return False
-        return s.startswith("<") and s.endswith(">") and len(s) > 2
-
-    token_list = []
-    context_list = [x.strip() if hasattr(x, "strip") else x
-                    for x in word_list]
-    open_quote = {}
-    open_quote['"'] = False
-    open_quote["'"] = False
-    open_quote["``"] = False
-    last_token = ""
-    for current_token in context_list:
-        if (current_token and
-                not (isinstance(current_token, float) and
-                     pd.np.isnan(current_token))):
-            if '""""' in current_token:
-                current_token = '"'
-
-            # stupid list of exceptions in which the current_token should NOT
-            # be preceded by a space:
-            no_space = False
-            if all([x in PUNCT for x in current_token]):
-                no_space = True
-            if current_token in CONTRACTION:
-                no_space = True
-            if last_token in '({[‘“':
-                no_space = True
-            if is_tag(last_token):
-                no_space = True
-            if is_tag(current_token):
-                no_space = True
-            if last_token.endswith("/"):
-                no_space = True
-
-            if current_token == "``":
-                no_space = False
-                open_quote["``"] = True
-            if current_token == "''":
-                open_quote["``"] = False
-                no_space = True
-            if last_token == "``":
-                no_space = True
-
-            if not no_space:
-                token_list.append(" ")
-
-            token_list.append(current_token)
-            last_token = current_token
-    return utf8("").join(token_list)
+    return collapser_factory(language).collapse(word_list)
 
 
 def check_fs_case_sensitive(path):
     """
     Check if the file system is case-sensitive.
     """
-    with tempfile.NamedTemporaryFile(prefix="tMp", dir=path) as temp_path:
-        return not os.path.exists(temp_path.name.lower())
+    try:
+        with tempfile.NamedTemporaryFile(prefix="tMp", dir=path) as temp_path:
+            return not os.path.exists(temp_path.name.lower())
+    except PermissionError:
+        return sys.platform.startswith("linux")
 
 
 def get_home_dir(create=True):
@@ -149,7 +342,7 @@ def get_home_dir(create=True):
             basepath = os.environ["XDG_CONFIG_HOME"]
         except KeyError:
             basepath = os.path.expanduser("~/.config")
-    elif sys.platform in set(("win32", "cygwin")):
+    elif sys.platform in {"win32", "cygwin"}:
         try:
             basepath = os.environ["APPDATA"]
         except KeyError:
@@ -157,8 +350,7 @@ def get_home_dir(create=True):
     elif sys.platform == "darwin":
         basepath = os.path.expanduser("~/Library/Application Support")
     else:
-        raise RuntimeError("Unsupported operating system: {}".format(
-            sys.platform))
+        raise RuntimeError(f"Unsupported operating system: {sys.platform}")
 
     coquery_home = os.path.join(basepath, "Coquery")
     connections_path = os.path.join(coquery_home, "connections")
@@ -182,9 +374,15 @@ class CoqObject(object):
     instance attributes.
     """
     def get_hash(self):
-        l = [self.__class__.__name__]
+        lst = [self.__class__.__name__]
         dir_super = dir(super(CoqObject, self))
         for x in sorted([x for x in dir(self) if x not in dir_super]):
+            _session_removed = False
+            if x == "kwargs":
+                if "session" in getattr(self, "kwargs"):
+                    session = getattr(self, "kwargs")["session"]
+                    _session_removed = True
+                    getattr(self, "kwargs").pop("session")
             if (not x.startswith("_") and
                     not hasattr(getattr(self, x), "__call__")):
                 attr = getattr(self, x)
@@ -193,66 +391,20 @@ class CoqObject(object):
                     s = str([x.get_hash()
                              if isinstance(x, CoqObject) else str(x)
                              for x in attr])
-                    l.append(s)
+                    lst.append(s)
                 elif isinstance(attr, dict):
                     for key in sorted(attr.keys()):
                         val = attr[key]
                         if isinstance(val, CoqObject):
-                            l.append("{}{}".format(x, val.get_hash()))
+                            lst.append(f"{x}{val.get_hash()}")
                         else:
-                            l.append("{}{}".format(x, str(val)))
+                            lst.append(f"{x}{str(val)}")
                 else:
-                    l.append(str(attr))
-        return hashlib.md5(u"".join(l).encode()).hexdigest()
+                    lst.append(str(attr))
+            if _session_removed:
+                getattr(self, "kwargs")["session"] = session
 
-
-def get_visible_columns(df, manager, session, hidden=False):
-    """
-    Return a list with column names from the data frame.
-
-    Internal columns, i.e. those whose name starts with the string
-    'coquery_invisible', are never returned. The parameter 'hidden' controls
-    if columns hidden by the data manager are included.
-
-    Parameters
-    ----------
-    manager : Manager object
-        The currently active manager.
-
-    session : Session object
-        The currently active session.
-
-    hidden : bool
-        True if columns hidden by the manager are included. False if columns
-        hidden by the manager are excluded.
-    """
-    if hidden:
-        l = [x for x in list(df.columns.values)
-             if not x.startswith("coquery_invisible_")]
-    else:
-        l = [x for x in list(df.columns.values)
-             if (not x.startswith("coquery_invisible_") and
-                 x not in manager.hidden_columns)]
-
-    #l = set_preferred_order(l)
-    return l
-
-
-def set_preferred_order(l, session):
-    """
-    Arrange the column names in l so that they occur in the preferred order.
-
-    Columns not in the preferred order follow in an unspecified order.
-    """
-
-    resource_order = session.Resource.get_preferred_output_order()
-    for x in resource_order[::-1]:
-        lex_list = [y for y in l if x in y]
-        lex_list = sorted(lex_list)[::-1]
-        for lex in lex_list:
-            l.remove(lex)
-            l.insert(0, lex)
-    return l
+        return hashlib.md5(u"".join(lst).encode()).hexdigest()
 
 
 def is_language_name(code):
@@ -293,7 +445,6 @@ def sha1sum(path, chunk_size=io.DEFAULT_BUFFER_SIZE):
         for chunk in iter(lambda: input_file.read(chunk_size), b''):
             sha1.update(chunk)
     return sha1
-
 
 
 def get_chunk(iterable, chunk_size=250000):
@@ -346,14 +497,83 @@ def format_file_size(size):
         power = 0
     else:
         power = math.floor(math.log2(abs(size)) / 10)
-    unit = ['B','KiB','MiB','GiB','TiB','PiB'][power]
+    unit = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'][power]
     return "{:0.1f} {}".format(size / 1024 ** power, unit)
 
 
-# Memory status functions:
+def pretty(vrange, n, endpoint=False):
+    """
+    Return a range of prettified values.
+
+    Parameters
+    ----------
+    vrange : tuple
+        A tuple (x, y) with x being the lower and y the upper end of the
+        range
+
+    n : int
+        The number of values to be generated
+
+    endpoint : bool
+        If True, the list includes the prettified upper end of the range. If
+        False (the default), the upper end is not included.
+
+    Returns
+    -------
+    l : list
+        A list with n equidistant values ranging from a prettified floor to a
+        prettified ceiling
+    """
+    vmin, vmax = vrange
+
+    if vmin > vmax:
+        return pretty((vmax, vmin), n)
+
+    exp = None
+    exp_max = None
+    exp_min = None
+
+    if vmin >= 0 and vmax <= 1:
+        exp = abs(np.ceil(np.log10(abs(vmax))) + 2)
+
+        niced_min = np.floor(vmin * 10 ** exp) / 10 ** exp
+        niced_max = np.ceil(vmax * 10 ** exp) / 10 ** exp
+    elif vmin != 0:
+        # limit the exponent of the lower boundary so that it does not exceed
+        # three, i.e. only the lowest three digits will be cleared (this may
+        # need revision):
+        exp_min = min(np.floor(np.log10(abs(vmin))), 3)
+
+        pretty_min = np.floor(vmin / 10 ** exp_min) * 10 ** exp_min
+        exp_max = np.ceil(np.log10(abs(vmax - pretty_min)))
+        exp = exp_max - exp_min
+
+        pretty_min = np.floor(vmin / 10 ** exp) * 10 ** exp
+        return pretty((0, vmax - pretty_min), n) + pretty_min
+
+    else:
+        exp = np.floor(np.log10(abs(vmax)))
+
+        if np.floor(10 ** exp) < vmax < np.floor(1.5 * 10 ** exp):
+            # Special case for ranges such as (0, 125) or any multiple by
+            # ten: use   (0, 150) as boundary
+            # instead of (0, 200)
+            fiver_offset = 5 * 10 ** (exp - 1)
+
+            niced_min = fiver_offset if vmin > fiver_offset else 0
+            niced_max = 1.5 * 10 ** exp
+        else:
+            niced_min = np.floor(vmin / 10 ** exp) * 10 ** exp
+            niced_max = np.ceil(vmax / 10 ** exp) * 10 ** exp
+
+    val = np.linspace(niced_min, niced_max, n, endpoint=endpoint)
+    return val
 
 
 def memory_dump():
+    """
+    Dump a list of 'large' objects (i.e. larger than 50Kbyte) to stdout.
+    """
     import gc
     x = 0
     for obj in gc.get_objects():
@@ -362,17 +582,31 @@ def memory_dump():
         # referrers = [id(o) for o in gc.get_referrers(obj)]
         try:
             cls = str(obj.__class__)
-        except:
+        except Exception:
             cls = "<no class>"
-        if size > 1024 * 50:
+        if size > 1024 * 25:
             referents = set([id(o) for o in gc.get_referents(obj)])
             x += 1
-            print(x, {'id': i,
-                      'class': cls,
-                      'size': size,
-                      "ref": len(referents)})
-            if len(referents) < 2000:
-                print(obj)
+            print(x, "{id:5} {id} {class} {ref}".format(
+                **{'id': i, 'class': cls, 'size': size,
+                   'len': len(obj), "ref": len(referents)}))
+            if len(obj) > 1:
+                if hasattr(obj, "items"):
+                    if "__module__" in obj:
+                        print("\tMODULE", obj["__module__"])
+                    else:
+                        print(list(obj.items())[:5])
+                else:
+                    try:
+                        print(list(obj)[:5])
+                    except Exception:
+                        pass
+
+
+def Print(*args, **kwargs):
+    from .options import cfg
+    if cfg.verbose:
+        logging.debug(*args, **kwargs)
 
 
 try:
@@ -384,5 +618,5 @@ try:
             psutil.Process().memory_info_ex().vms / (1024 * 1024)))
         summary.print_(summary.summarize(muppy.get_objects()), limit=1)
 except Exception as e:
-    def summarize_memory():
-        print("summarize_memory: {}".format(lambda: str(e)))
+    def summarize_memory(msg=str(e)):
+        print("summarize_memory: {}".format(msg))

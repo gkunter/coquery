@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -169,7 +169,7 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in PDF file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
+                logging.warning("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
                     file_name))
                 return ""
 
@@ -181,7 +181,7 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in MS Word file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
+                logging.warning("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
                     file_name))
                 return ""
 
@@ -193,7 +193,7 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
+                logging.warning("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
                     file_name))
                 return ""
 
@@ -205,18 +205,18 @@ class BuilderClass(BaseCorpusBuilder):
                     logging.error("Error in HTML file {}: {}".format(file_name, e))
                     return ""
             else:
-                logging.warn("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
+                logging.warning("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
                     file_name))
                 return ""
         elif file_type == FT_PLAIN:
             raw_text = plain_to_str(file_name)
         else:
             # Unsupported format, e.g. BINARY.
-            logging.warn("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
+            logging.warning("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
             return ""
 
         if raw_text == "":
-            logging.warn("No text could be retrieved from {} file {}".format(file_type, file_name))
+            logging.warning("No text could be retrieved from {} file {}".format(file_type, file_name))
         else:
             logging.info("Read {} file {}, {} characters".format(
                 file_type, file_name, len(raw_text)))
@@ -231,12 +231,14 @@ class BuilderClass(BaseCorpusBuilder):
         else:
             try:
                 # use the current lemmatizer to assign the token to a lemma:
-                lemma = self._lemmatize(token_string, self._pos_translate(token_pos)).lower()
+                lemma = self._lemmatize(token_string,
+                                        self._pos_translate(token_pos))
             except Exception:
-                lemma = token_string.lower()
+                lemma = token_string
 
         # get word id, and create new word if necessary:
-        word_dict = {self.word_lemma: lemma, self.word_label: token_string}
+        word_dict = {self.word_lemma: lemma.lower(),
+                     self.word_label: token_string}
         if token_pos and self.arguments.use_nltk:
             word_dict[self.word_pos] = token_pos
         word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
@@ -253,7 +255,7 @@ class BuilderClass(BaseCorpusBuilder):
             df = self.arguments.metaoptions.read_file(self.arguments.metadata)
         for x in capt:
             s = "File {} – {}".format(self.arguments.path, x)
-            logging.warn(s)
+            logging.warning(s)
             print(s)
         meta_columns = []
         for i, col in enumerate(df.columns):
@@ -262,33 +264,38 @@ class BuilderClass(BaseCorpusBuilder):
             else:
                 meta_columns.append(col)
 
-        df[self.file_path] = ""
-        for root, dirs, files in os.walk(os.path.split(file_name)[0]):
+
+        # prepare a dataframe that adds the correct file path to the meta data
+        path_list = []
+        file_list = []
+        for root, dirs, files in os.walk(self.arguments.path):
             for filename in files:
-                df[self.file_path].loc[
-                    df[self.file_name] == filename] = root
+                if (df[self.file_name] == filename).any():
+                    path_list.append(root)
+                    file_list.append(filename)
+        df2 = pd.DataFrame({self.file_path: path_list,
+                            self.file_name: file_list})
 
-        df = df.iloc[df[self.file_name].nonzero()[0]]
-        df = df.iloc[df[self.file_path].nonzero()[0]]
-        df.index = range(1, len(df)+1)
+        # merge the data frames:
+        df = df.merge(df2, how="inner", on=[self.file_name])
 
-        l = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
-             Column(self.file_path, "VARCHAR(4096) NOT NULL"),
-             Column(self.file_name, "VARCHAR({}) NOT NULL".format(
-                 int(max(df[self.file_name].str.len()))))]
+        lst = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
+               Column(self.file_path, "VARCHAR(4096) NOT NULL"),
+               Column(self.file_name, "VARCHAR({}) NOT NULL".format(
+                   int(max(df[self.file_name].str.len()))))]
 
         for col in meta_columns:
             rc_feature = "file_{}".format(col.lower())
             setattr(self, rc_feature, col)
             if df[col].dtype == int:
-                l.append(Column(col, "MEDIUMINT"))
+                lst.append(Column(col, "MEDIUMINT"))
             elif df[col].dtype == float:
-                l.append(Column(col, "REAL"))
+                lst.append(Column(col, "REAL"))
             else:
-                l.append(Column(col, "VARCHAR({})".format(
+                lst.append(Column(col, "VARCHAR({})".format(
                     int(max(df[col].str.len())))))
 
-        self.create_table_description(self.file_table, l)
+        self.create_table_description(self.file_table, lst)
         self.special_files.append(os.path.basename(file_name))
 
         self._meta_table = df
@@ -298,7 +305,8 @@ class BuilderClass(BaseCorpusBuilder):
         if self._meta_table is None:
             return False
         basename = os.path.basename(file_name)
-        return any(self._meta_table[self.file_name] == basename)
+        val = any(self._meta_table[self.file_name] == basename)
+        return val
 
     def store_metadata(self):
         self.DB.load_dataframe(self._meta_table,
@@ -314,7 +322,38 @@ class BuilderClass(BaseCorpusBuilder):
                     self._meta_table[
                         self.file_name] == basename].index[0]
         else:
-            return super(BuilderClass, self).store_filename(file_name)
+            super(BuilderClass, self).store_filename(file_name)
+
+    def build_initialize(self):
+        super(BuilderClass, self).build_initialize()
+        if self.arguments.use_nltk:
+            import nltk
+
+            # the WordNet lemmatizer will be used to obtain the lemma for a
+            # given word:
+            self._lemmatize = (
+                lambda x, y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(
+                    x, pos=y))
+
+            # The NLTK POS tagger produces some labels that are different from
+            # the labels used in WordNet. In order to use the WordNet
+            # lemmatizer for all words, we need a function that translates
+            # these labels:
+            self._pos_translate = lambda x: {
+                'NN': nltk.corpus.wordnet.NOUN,
+                'JJ': nltk.corpus.wordnet.ADJ,
+                'VB': nltk.corpus.wordnet.VERB,
+                'RB': nltk.corpus.wordnet.ADV}[x.upper()[:2]]
+        else:
+            # The default lemmatizer is pretty dumb and simply turns the
+            # word-form to lower case so that at least 'Dogs' and 'dogs' are
+            # assigned the same lemma -- which is a different lemma from the
+            # one assigned to 'dog' and 'Dog'.
+            #
+            # If NLTK is used, the lemmatizer will use the data from WordNet,
+            # which will result in much better results.
+            self._lemmatize = lambda x, y: x
+            self._pos_translate = lambda x: x
 
     def process_file(self, file_name):
         """
@@ -349,32 +388,21 @@ class BuilderClass(BaseCorpusBuilder):
         if not self.has_metadata(basename) and self.arguments.use_meta:
             s = "{} not in meta data.".format(basename)
             print(s)
-            logging.warn(s)
+            logging.warning(s)
 
-        raw_text = self._read_text(file_name)
+        try:
+            raw_text = self._read_text(file_name)
+        except Exception as e:
+            s = "Could not read file {}: {}".format(basename, str(e))
+            print(s)
+            logging.warning(s)
+            return
 
         tokens = []
 
         # if possible, use NLTK for lemmatization, tokenization, and tagging:
         if self.arguments.use_nltk:
             import nltk
-
-            # the WordNet lemmatizer will be used to obtain the lemma for a
-            # given word:
-            self._lemmatize = (
-                lambda x, y: nltk.stem.wordnet.WordNetLemmatizer().lemmatize(
-                    x, pos=y))
-
-            # The NLTK POS tagger produces some labels that are different from
-            # the labels used in WordNet. In order to use the WordNet
-            # lemmatizer for all words, we need a function that translates
-            # these labels:
-            self._pos_translate = lambda x: {
-                'NN': nltk.corpus.wordnet.NOUN,
-                'JJ': nltk.corpus.wordnet.ADJ,
-                'VB': nltk.corpus.wordnet.VERB,
-                'RB': nltk.corpus.wordnet.ADV}[x.upper()[:2]]
-
             # Create a list of sentences from the content of the current file
             # and process this list one by one:
             sentence_list = nltk.sent_tokenize(raw_text)
@@ -384,20 +412,19 @@ class BuilderClass(BaseCorpusBuilder):
                 tokens = nltk.word_tokenize(sentence)
                 pos_map = nltk.pos_tag(tokens)
 
+                # FIXME: the NLTK tokenizer doesn't seem to be very happy if
+                # sentences start with quotation marks. This is evidenced
+                # for instance in chapter_04.txt from the ALICE texts where
+                # <shall> in the string
+                #
+                # 'But then,' thought Alice, 'shall I NEVER get any older ...
+                #
+                # is not separated from the initial quotation mark.
+
                 for current_token, current_pos in pos_map:
                     # store each token:
                     self.add_token(current_token, current_pos)
         else:
-            # The default lemmatizer is pretty dumb and simply turns the
-            # word-form to lower case so that at least 'Dogs' and 'dogs' are
-            # assigned the same lemma -- which is a different lemma from the
-            # one assigned to 'dog' and 'Dog'.
-            #
-            # If NLTK is used, the lemmatizer will use the data from WordNet,
-            # which will result in much better results.
-            self._lemmatize = lambda x: x.lower()
-            self._pos_translate = lambda x: x
-
             # use a dumb tokenizer that simply splits the file content by
             # spaces:
 

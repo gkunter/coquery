@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 bubbleplot.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -13,15 +13,21 @@ from __future__ import unicode_literals
 from __future__ import division
 import math
 
-from coquery.visualizer import visualizer as vis
 import seaborn as sns
-import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
-from coquery import options
+from coquery.visualizer import visualizer as vis
+from coquery.visualizer.treemap import TreeMap
 
-class Visualizer(vis.BaseVisualizer):
-    dimensionality=2
+
+class BubblePlot(TreeMap):
+    name = "Bubble Chart"
+    icon = "Scatterplot"
+    axes_style = "white"
+
+    COL_COLUMN = "COQ_HUE"
+    NUM_COLUMN = "COQ_NUMERIC"
 
     sqrt_dict = {}
 
@@ -32,25 +38,9 @@ class Visualizer(vis.BaseVisualizer):
     _vector_cache = {}
     _vector_calls = 0
 
-    def __init__(self, *args, **kwargs):
-        super(Visualizer, self).__init__(*args, **kwargs)
-        self.circles = []
-
-
-    def set_defaults(self):
-        self.options["color_palette"] = "Blues"
-        self.options["color_number"] = len(self._levels[-1])
-        super(Visualizer, self).set_defaults()
-        self.options["label_y_axis"] = ""
-        self.options["label_x_axis"] = "[bubble labels]"
-
-    def setup_figure(self):
-        with sns.axes_style("white"):
-            super(Visualizer, self).setup_figure()
-
     def format_coord(self, x, y, title):
         """
-        
+
         """
         for (cx, cy), r, label in self.circles:
             if math.sqrt((cx - x) ** 2 + (cy - y) ** 2) <= r:
@@ -63,256 +53,315 @@ class Visualizer(vis.BaseVisualizer):
         self.set_tooltip("")
         return ""
 
-    def draw(self):
-        """ 
-        Draw a bubble chart. 
-        """
-        
-        def plot_facet(data, color):
-            def r(freq):
-                self._r_calls += 1
-                try:
-                    return self._r_cache[freq]
-                except KeyError:
-                    self._r_cache[freq] = math.sqrt(freq / math.pi)
-                    return self._r_cache[freq]
+    def add_text(self, label, x, y):
+        plt.gca().text(x, y, label,
+                       va="center", ha="center",
+                       rotation=90 if self.text_rotate else 0,
+                       bbox=self.box_style if self.text_boxes else None)
 
-            def rotate_vector(v, angle):
-                """
-                Rotate the vector (x, y) by the given angle.
-                
-                Returns
-                -------
-                v : tuple
-                    The rotated vector.
-                """
-                self._vector_calls += 1
-                (x, y) = v
-                _key = round(angle, 2)
-                try:
-                    cos_theta, sin_theta = self._vector_cache[_key]
-                except KeyError:
-                    cos_theta = math.cos(angle)
-                    sin_theta = math.sin(angle)
-                    self._vector_cache[_key] = (cos_theta, sin_theta)
+    def draw_circles(self, data, ax=None, **kwargs):
+        lst = []
 
-                return x*cos_theta - y*sin_theta, x*sin_theta + y*cos_theta
-
-            def get_angle(a, b, c):
-                """
-                Return the angle A by using the Law of Cosines.
-                
-                Parameters
-                ----------
-                a, b, c : float
-                    The length of sides a, b, c in a triangle.
-                
-                """
-                self._angle_calls += 1
-                _key = (round(a, 2), round(b, 2), round(c, 2))
-                try:
-                    return self._angle_cache[_key]
-                except KeyError:
-                    x = (b**2 + c**2 - a**2) / (2 * b * c)
-                    if x > 2:
-                        raise ValueError("Illegal angle")
-                    # Allow angles > 180 degrees:
-                    if x > 1:
-                        self._angle_cache[_key] = (math.acos(x-1))
-                    else:
-                        self._angle_cache[_key] = math.acos(x)
-                return self._angle_cache[_key]
-            
-            #def angle_vect((x1, y1), (x2, y2)):
-                #return math.atan2(x1*y2 - y1*x2, x1*x2 + y1*y2)  # atan2(y, x) or atan2(sin, cos)
-            
-            def get_position(i, a, n):
-                """
-                Return the position of the next bubble I.
-
-                a specifies the 'anchor' bubble A (i.e. the bubble with the 
-                circumference around which the algorithm attempts to place 
-                the next bubble) and n gives the 'neighbor' bubble N (i.e. 
-                the last bubble that has been drawn, and which should be 
-                tangent to the next bubble).
-                
-                The position of I is chosen so that I and A are tangent, as 
-                well as I and N. A and N themselves do not have to be tangent 
-                (they can be, though). 
-
-                Raises
-                ------
-                e : ValueError
-                    A ValueError exception is raised if no valid position 
-                    exists.
-
-                Parameters
-                ----------
-                i, a, n : int 
-                    The index of the next bubble (i), the anchor bubble (a),
-                    and the neighboring bubble (n).
-
-                """
-                # get radii:
-                r_a = df_freq.iloc[a]["r"]
-                r_n = df_freq.iloc[n]["r"]
-                r_i = df_freq.iloc[i]["r"]
-                
-                A = self.pos[a]
-                N = self.pos[n]
-
-                #       I
-                #      / \
-                #   b /   \ a
-                #    /     \
-                #  A ------- N
-                #       c
-
-                # get side lengths:
-                l_a = r_n + r_i
-                l_b = r_a + r_i
-                # l_c is actually the distance between the centers of the 
-                # anchor and the neighbor circles:
-                l_c = math.sqrt((A[0] - N[0]) ** 2 + (A[1] - N[1]) ** 2)
-                
-                # the starting angle is the angle between a union vector
-                # and the vector between the anchor and the neighbor:
-                #start_angle = angle_vect(
-                    #(1,  0),
-                    #(N[0] - A[0], N[1] - A[1]))
-                
-                # in this special case, the call to angle_vect() can be 
-                # replaced by this expression:
-                start_angle = math.atan2(N[1] - A[1], N[0] - A[0])
-
-                angle = get_angle(l_a, l_b, l_c) + start_angle
-                nx, ny = rotate_vector((l_b, 0), angle)
-                nx = nx + A[0]
-                ny = ny + A[1]
-
-                return (nx, ny)
-
-            def intersecting(p, q):
-                r_p = df_freq.iloc[p]["r"]
-                r_q = df_freq.iloc[q]["r"]
-                x_p, y_p = self.pos[p]
-                x_q, y_q = self.pos[q]
-
-                lower = (r_p - r_q)**2
-                upper = (r_p + r_q)**2
-                
-                return lower <= (x_p - x_q) ** 2 + (y_p - y_q) ** 2 < upper - 0.01
-
-            def draw_circle(k):
-                row = df_freq.iloc[k]
-                freq = row["Freq"]
-                rad = row["r"]
-                label = " | ".join(list(row[self._groupby]))
-                #c = self.options["color_palette_values"][k % self.options["color_number"]]
-
-                c = self._col_dict[row[self._groupby[-1]]]
-                x, y = self.pos[k]
-                
-                circ = plt.Circle((x, y), max(0, rad - 0.05), color=c)
-                ax.add_artist(circ)
-                circ.set_edgecolor("black")
-                
-                try:
-                    font = self.options.get("font_x_axis", self.options["figure_font"])
-                    ax.text(x, y, 
-                            "{}: {}".format(label.replace(" | ", "\n"), freq), 
-                            ha="center", 
-                            va="center",
-                            family=font.family(),
-                            fontsize=font.pointSize())
-                except Exception as e:
-                    print(e)
-                    raise 
-                self.max_x = max(self.max_x, x + rad)
-                self.max_y = max(self.max_y, y + rad)
-                self.min_x = min(self.min_x, x - rad)
-                self.min_y = min(self.min_y, y - rad)
-                self.circles.append((self.pos[k], rad,  "{}: {}".format(label, freq)))
-
-            def get_intersections(i, lower, upper):
-                for x in range(lower, upper):
-                    if intersecting(i, x):
-                        return True
-                return False
-
-            group_columns = [x for x in data.columns if not x.startswith("coquery_invisible")]
-            gp = data.fillna("").groupby(group_columns)
-            df_freq = gp.agg(len).reset_index()
-            columns = list(df_freq.columns)
-            columns[-1] = "Freq"
-            df_freq.columns = columns
-            self.set_palette_values(len(set(df_freq[self._groupby[-1]])))
-            if len(self._groupby) == 2:
-                df_freq.sort([self._groupby[-1], "Freq"], ascending=[False, False], inplace=True)
-                self._col_dict = dict(zip(self._levels[-1], self.options["color_palette_values"]))
-            else:
-                df_freq.sort("Freq", ascending=False, inplace=True)
-                self._col_dict = dict(zip(df_freq[self._groupby[-1]], self.options["color_palette_values"]))
-            df_freq["r"] = df_freq["Freq"].map(r)
+        if ax is None:
             ax = plt.gca()
-            
 
-            self.max_x = 0
-            self.max_y = 0
-            self.min_x = 0
-            self.min_y = 0
-            ax.set_aspect(1)
-            
-            a = 0
+        for ((x, y), rad, label) in data:
+            rad = rad - self._padding
+            circ = plt.Circle((x, y), rad)
+            ax.add_patch(circ)
+            self.add_text(label, x, y)
+            lst.append(circ)
 
-            self.pos = [(None, None)] * len(df_freq.index)
-            
-            completed = 0
-            for i in range(len(df_freq.index)):
-                if i == 0:
-                    self.pos[i] = 0, 0
-                elif i == 1:
-                    self.pos[1] = self.pos[0][0] + df_freq.iloc[0]["r"] + df_freq.iloc[1]["r"], self.pos[0][1]
-                else:
-                    self.pos[i] = get_position(i, a, n)
-                    while get_intersections(i, completed, n) and a < i:
-                        a = a + 1
-                        # Intersections not only trigger an anchor bubble change,
-                        # they also indicate that a closed ring of bubbles has 
-                        # been completed. All bubbles within the closed ring do
-                        # not have to be considered for collision detections, so
-                        # keeping track of the completed bubbles speeds up the 
-                        # algorithm:
-                        # (at least, that's the idea, but it doesn't seem to
-                        # work like this -- therefore, this speed-up is 
-                        # currently disabled)
-                        # completed = a
-                        # If there is no position at which the next bubble can be 
-                        # placed so that it is tangent to both the neighbor and 
-                        # the anchor, get_position() raises a ValueError 
-                        # exception.
-                        try:
-                            self.pos[i] = get_position(i, a, n)
-                        except ValueError:
-                            continue
+        return lst
 
-                draw_circle(i)
-                # The current bubble becomes the new neighbor bubble:
-                n = i
-                    
-            ax.set_ylim(self.min_y * 1.05, self.max_y * 1.05)
-            ax.set_xlim(self.min_x * 1.05, self.max_x * 1.05)
-            ax.get_xaxis().set_visible(False)
-            ax.get_yaxis().set_visible(False)
-            
-        sns.despine(self.g.fig, 
-                    left=True, right=True, top=True, bottom=True)
+    def colorize_artists(self):
+        for circ, col in zip(self.artists, self.colors):
+            circ.set_color(col)
+            if self.box_border:
+                circ.set_edgecolor("black")
 
+    @classmethod
+    def rotate_vector(cls, x, theta):
+        """
+        Rotate the vector (x, 0) by the given angle.
+
+        Returns
+        -------
+        v : tuple
+            The rotated vector.
+        """
+        return x * math.cos(theta), x * math.sin(theta)
+        cls._vector_calls += 1
+        _key = round(theta, 2)
         try:
-            self.map_data(plot_facet)
-        except Exception as e:
-            print(e)
-            raise e
-        
-        if len(self._groupby) == 2:
-            self.add_legend(levels=self._levels[-1])
+            cos_theta, sin_theta = cls._vector_cache[_key]
+        except KeyError:
+            cos_theta = math.cos(theta)
+            sin_theta = math.sin(theta)
+            cls._vector_cache[_key] = (cos_theta, sin_theta)
+
+        return (x * cos_theta, x * sin_theta)
+
+    @classmethod
+    def get_angle(cls, a, b, c):
+        """
+        Return the angle A given lengths a, b, and c by using the
+        Law of Cosines.
+
+              C
+             / \
+          b /   \ a
+           /     \
+          A-------B
+              c
+
+        Parameters
+        ----------
+        a, b, c : float
+            The length of sides a, b, c in a triangle.
+
+        """
+        x = (b ** 2 + c ** 2 - a ** 2) / (2 * b * c)
+        if abs(x) > 1:
+            raise ValueError("Illegal angle")
+        # Allow angles > 180 degrees:
+        if x > 1:
+            val = math.acos(x - 1)
+        else:
+            val = math.acos(x)
+        return val
+
+    @staticmethod
+    def intersecting(tup1, tup2):
+        ((x1, y1), r1) = tup1
+        ((x2, y2), r2) = tup2
+
+        lower = (r1 - r2) ** 2
+        upper = (r1 + r2) ** 2
+
+        val = (x1 - x2) ** 2 + (y1 - y2) ** 2
+
+        return lower <= val < upper - 0.01
+
+    def get_label(self, row, grouping, numerical):
+        cat_label = " | ".join(row[grouping].values)
+        val = row[numerical]
+        if numerical != self.NUM_COLUMN:
+            frm_str = ": M={}".format(self.frm_str)
+        else:
+            frm_str = " ({})"
+        label = "{}{}".format(cat_label,
+                              frm_str.format(self.frm_str.format(val)))
+
+        return label
+
+    def get_position(self, r, a, n):
+        """
+        Return the position of the next bubble I.
+
+        a specifies the 'anchor' bubble A (i.e. the bubble with the
+        circumference around which the algorithm attempts to place
+        the next bubble) and n gives the 'neighbor' bubble N (i.e.
+        the last bubble that has been drawn, and which should be
+        tangent to the next bubble).
+
+        The position of I is chosen so that I and A are tangent, as
+        well as I and N. A and N themselves do not have to be tangent
+        (they can be, though).
+
+        Raises
+        ------
+        e : ValueError
+            A ValueError exception is raised if no valid position
+            exists.
+
+        Parameters
+        ----------
+        r : int
+            The radius of the next bubble (i)
+
+        a, n : int
+            The index of the anchor bubble (a) and the
+            neighboring bubble (n).
+
+        """
+        (x_a, y_a), r_a, _ = a
+        (x_n, y_n), r_n, _ = n
+
+        #       I
+        #      / \
+        #   b /   \ a
+        #    /     \
+        #  A ------- N
+        #       c
+
+        # get side lengths:
+        l_a = r_n + r
+        l_b = r_a + r
+
+        # l_c is actually the distance between the centers of the
+        # anchor and the neighbor circles:
+        l_c = math.sqrt((x_a - x_n) ** 2 + (y_a - y_n) ** 2)
+
+        # the starting angle is the angle between a union vector
+        # and the vector between the anchor and the neighbor:
+        # start_angle = get_angle((1,  0), (x_n - x_a, y_n - y_a))
+
+        # in this special case, the call to get_angle() can be
+        # replaced by this expression:
+        start_angle = math.atan2(y_n - y_a, x_n - x_a)
+
+        theta = -self.get_angle(l_a, l_b, l_c) + start_angle
+        val = (x_a + l_b * math.cos(theta), y_a + l_b * math.sin(theta))
+        return val
+
+    def get_intersections(self, circ, trials):
+        for pos, r, _ in trials[::-1]:
+            if self.intersecting(circ, (pos, r)):
+                raise ValueError("Intersection detected")
+
+    def get_dataframe(self, data, x, y, z):
+        grouping = []
+        numerical = None
+
+        for feature in [x, y]:
+            if self.dtype(feature, data) != object:
+                numerical = feature
+            else:
+                grouping.append(feature)
+
+        aggregator = vis.Aggregator()
+
+        if z:
+            z_statistic = ("mode" if data[z].dtype == object else
+                           "mean")
+            aggregator.add(z, z_statistic, name=self.COL_COLUMN)
+
+        if numerical:
+            aggregator.add(numerical, "mean", self.NUM_COLUMN)
+        else:
+            aggregator.add(self.get_default_index(), "count", self.NUM_COLUMN)
+
+        df = aggregator.process(data, grouping)
+
+        by = [self.NUM_COLUMN]
+        ascending = [False]
+
+        if (x and y):
+            if numerical:
+                by = by + grouping
+                ascending = ascending + [True] * len(grouping)
+            else:
+                by = grouping + by
+                ascending = [True] * len(grouping) + ascending
+        df = df.sort_values(by=by, ascending=ascending)
+        return df
+
+    def place_circles(self, df):
+        radii = np.sqrt(df[self.NUM_COLUMN].values / np.pi)
+        if self.box_padding:
+            self._padding = radii.min() * 0.05
+        else:
+            self._padding = 0
+
+        radii = radii + self._padding
+
+        a = 0
+
+        numerical = self.NUM_COLUMN
+        grouping = [col for col in [self.x, self.y]
+                    if col in df.columns and df[col].dtype == object]
+        circles = [((0, 0),
+                    radii[0],
+                    self.get_label(df.iloc[0], grouping, numerical))]
+        if len(df) > 1:
+            n = 1
+            pos = (0 + radii[0] + radii[n], 0)
+
+            for i in range(2, len(df)):
+                last_anchor = a
+                label = self.get_label(df.iloc[n], grouping, numerical)
+                circles.append((pos, radii[n], label))
+
+                r = radii[i]
+
+                while True:
+                    try:
+                        pos = self.get_position(r, circles[a], circles[n])
+                        self.get_intersections((pos, r), circles)
+                    except ValueError:
+                        # Either no angle could be detected between the
+                        # last bubble and the anchor bubble, or the current
+                        # bubble intersects with any other bubble.
+                        if a + 1 < n:
+                            a = a + 1
+                        else:
+                            a = last_anchor + 1
+                            while True:
+                                try:
+                                    new_pos = self.get_position(
+                                        r, circles[a], circles[n])
+                                    self.get_intersections(
+                                        (new_pos, r), circles)
+                                except ValueError:
+                                    if a + 1 == n:
+                                        a = last_anchor
+                                        n = n - 1
+                                    else:
+                                        a = a + 1
+                                else:
+                                    break
+                    else:
+                        break
+                n = i
+            label = self.get_label(df.iloc[n], grouping, numerical)
+            circles.append((pos, radii[n], label))
+
+        return circles
+
+    def prepare_arguments(self, data, x, y, z, levels_x, levels_y):
+        """
+        Bubble placement algorithm:
+
+        * place anchor bubble A at origin (0, 0)
+        * add neighbor bubble N to the right of A so that they touch
+        * For each additional bubble:
+          * Repeat until a position P is found:
+            * calculate the position P where I touches A and N
+            * check if I at P intersects with any preceding bubble
+              (ignoring any bubble earlier than A)
+              * YES: set A to the next bubble after current A
+              * NO: draw bubble at P
+        """
+        self.x = x
+        self.y = y
+        self.z = z
+
+        df_freq = self.get_dataframe(data, x, y, z)
+        circles = self.place_circles(df_freq)
+        if z:
+            _color_column = df_freq[self.COL_COLUMN]
+        else:
+            _color_column = df_freq.index
+        return {"data": circles, "cix": _color_column}
+
+    def plot_facet(self, data, color, **kwargs):
+        self.args = self.prepare_arguments(data, self.x, self.y, self.z,
+                                           self.levels_x, self.levels_y)
+        cix = self.args.pop("cix")
+        if self.z:
+            self.colors = self.colorizer.get_hues(cix)
+        else:
+            self.colors = self.colorizer.get_palette(n=len(cix))
+
+        self.artists = self.draw_circles(**self.args)
+
+        ax = plt.gca()
+        ax.set_aspect(1)
+        ax.autoscale(True, "both", True)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        sns.despine(ax=ax, top=True, bottom=True, left=True, right=True)
+
+
+provided_visualizations = [BubblePlot]

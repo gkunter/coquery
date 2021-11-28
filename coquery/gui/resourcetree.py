@@ -15,7 +15,7 @@ import warnings
 
 
 from coquery import options
-from coquery.defines import *
+from coquery.defines import VIEW_MODE_GROUPED, VIEW_MODE_TABLES
 from coquery.unicode import utf8
 
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
@@ -102,8 +102,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
             root.setText(0, label)
             if checkable:
                 root.setFlags(root.flags() |
-                            QtCore.Qt.ItemIsUserCheckable |
-                            QtCore.Qt.ItemIsSelectable)
+                              QtCore.Qt.ItemIsUserCheckable |
+                              QtCore.Qt.ItemIsSelectable)
                 root.setCheckState(0, QtCore.Qt.Unchecked)
             return root
 
@@ -136,10 +136,11 @@ class CoqResourceTree(classes.CoqTreeWidget):
                 label = "{} [Gloss]".format(label)
 
             leaf.setText(0, label)
+            tag = get_toplevel_window().get_icon("Price Tag")
             if label != getattr(resource, rc_feature):
-                leaf.setIcon(0, get_toplevel_window().get_icon("Price Tag"))
+                leaf.setIcon(0, tag)
                 if root:
-                    root.setIcon(0, get_toplevel_window().get_icon("Price Tag"))
+                    root.setIcon(0, tag)
             return leaf
 
         def fill_grouped():
@@ -171,7 +172,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
                     if rc_feature in segment_features:
                         target_root = segment_root
                     elif (rc_feature in lexicon_features or
-                        resource.is_tokenized(rc_feature)):
+                            resource.is_tokenized(rc_feature)):
                         target_root = lexicon_root
                     elif rc_feature in file_features:
                         target_root = file_root
@@ -182,7 +183,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
                     if rc_feature.startswith("speaker_"):
                         target_root = speaker_root
                     if (hasattr(resource, "speaker_features") and
-                        rc_feature in resource.speaker_features):
+                            rc_feature in resource.speaker_features):
                         target_root = speaker_root
                 except Exception as e:
                     warnings.warn(str(e))
@@ -262,7 +263,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
         if view_tables:
             fill_tables()
         else:
-            view_mode = getattr(resource, "default_view_mode", VIEW_MODE_GROUPED)
+            view_mode = getattr(resource,
+                                "default_view_mode", VIEW_MODE_GROUPED)
             if view_mode == VIEW_MODE_GROUPED:
                 fill_grouped()
             elif view_mode == VIEW_MODE_TABLES:
@@ -270,7 +272,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
 
         if links:
             # restore external links:
-            for link in options.cfg.table_links[options.cfg.current_server]:
+            for link in options.cfg.table_links[
+                    options.cfg.current_connection.name]:
                 if link.res_from == resource.name:
                     self.add_external_link(link)
 
@@ -281,7 +284,8 @@ class CoqResourceTree(classes.CoqTreeWidget):
         Adds an external link to the given item.
         """
         try:
-            ext_res, _, _ = options.cfg.current_resources[link.res_to]
+            resources = options.cfg.current_connection.resources()
+            ext_res, _, _ = resources[link.res_to]
         except KeyError:
             # external resource does not exist (anymore), return
             return

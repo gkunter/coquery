@@ -10,10 +10,9 @@ coquery$ python -m test.test_tables
 
 from __future__ import print_function
 
-import unittest
-
 from coquery import tables
 from coquery.defines import SQL_MYSQL, SQL_SQLITE
+from test.testcase import CoqTestCase, run_tests
 
 
 def simple(s):
@@ -24,7 +23,7 @@ def simple(s):
     return s.strip()
 
 
-class TestColumns(unittest.TestCase):
+class TestColumns(CoqTestCase):
     def test_init(self):
         name = "Label"
         dtype = "VARCHAR(30)"
@@ -94,7 +93,7 @@ class TestLinks(TestColumns):
         self.assertEqual(dtype, "MEDIUMINT")
 
 
-class TestTables(unittest.TestCase):
+class TestTables(CoqTestCase):
     def setUp(self):
         self.name = "Table"
         self.table = tables.Table(self.name)
@@ -108,7 +107,8 @@ class TestTables(unittest.TestCase):
         self.identifier = tables.Identifier("ID", "INT UNSIGNED NOT NULL")
         self.col1 = tables.Column("Label", "VARCHAR(30)")
         self.col2 = tables.Column("Value", "INT UNSIGNED NOT NULL")
-        self.col3 = tables.Column("Category", "ENUM('val1','val2','val3') NOT NULL")
+        self.col3 = tables.Column("Category",
+                                  "ENUM('val1','val2','val3') NOT NULL")
         self.link = tables.Link("LinkId", self.linked_tab.name)
 
         # default values:
@@ -273,9 +273,6 @@ class TestTables(unittest.TestCase):
                          (11, "test2", 2, "val2", 101))
         self.assertEqual(self.table._add_cache[2],
                          (12, "test3", 3, "val3", 102))
-        #self.assertEqual(self.table._add_lookup[("test1", 1, "val1", 100)], 1)
-        #self.assertEqual(self.table._add_lookup[("test2", 2, "val2", 101)], 2)
-        #self.assertEqual(self.table._add_lookup[("test3", 3, "val3", 102)], 3)
 
     def test_get_or_insert(self):
         self._add_all_test_columns()
@@ -310,20 +307,18 @@ class TestTables(unittest.TestCase):
         self.assertEqual(len(self.table._add_lookup), 6)
 
     def test_suggest_data_type(self):
-        raise NotImplementedError
+        self.skipTest("Test not implemeneted.")
 
     def test_find(self):
-        raise NotImplementedError
+        self.skipTest("Test not implemeneted.")
 
 
-provided_tests = TestColumns, TestIdentifier, TestLinks, TestTables
+provided_tests = [TestColumns, TestIdentifier, TestLinks, TestTables]
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(case)
-         for case in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

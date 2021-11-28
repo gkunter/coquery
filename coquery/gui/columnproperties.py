@@ -15,13 +15,12 @@ import collections
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
+from .pyqt_compat import (QtCore, QtWidgets, QtGui, get_toplevel_window,
+                          COLOR_NAMES)
 from .ui.columnPropertiesUi import Ui_ColumnProperties
 
 
 class ColumnPropertiesDialog(QtWidgets.QDialog):
-    _color_map = {QtGui.QColor(name).name().lower(): name for name
-                  in QtGui.QColor.colorNames()}
     def __init__(self, df, pre_subst, preset, columns=None, parent=None):
         super(ColumnPropertiesDialog, self).__init__(parent)
 
@@ -197,8 +196,8 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
             S = "QLabel {{background-color: {}; color: {}; }}".format(
                 color.name(), fg)
             label = color.name()
-            if label.lower() in self._color_map:
-                label = "{} ({})".format(label, self._color_map[label])
+            if label.lower() in COLOR_NAMES:
+                label = "{} ({})".format(label, COLOR_NAMES[label])
         else:
             S = ""
             label = "(default color)"
@@ -281,8 +280,8 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         return val
 
     @staticmethod
-    def manage(df, raw, preset, columns=[], parent=None):
-        dialog = ColumnPropertiesDialog(df, raw, preset, columns,
-                                        parent=parent)
+    def manage(df, raw, preset, columns=None, parent=None):
+        dialog = ColumnPropertiesDialog(
+            df, raw, preset, columns or [], parent=parent)
         dialog.setVisible(True)
         return dialog.exec_()

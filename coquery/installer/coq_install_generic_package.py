@@ -54,9 +54,6 @@ class BuilderClass(BaseCorpusBuilder):
         self._chunk_signal = None
         self._file_signal = None
 
-        db_type = (options.cfg.server_configuration[
-                    options.cfg.current_server]["type"])
-
         # reconstruct the resource features from the tables.json file.
         zf = zipfile.ZipFile(package)
         tables = json.loads(utf8(zf.read("tables.json")))
@@ -69,6 +66,8 @@ class BuilderClass(BaseCorpusBuilder):
             setattr(self, "{}_table".format(tab), name)
             for rc_feature in features:
                 setattr(self, rc_feature, features[rc_feature]["Name"])
+
+        db_type = options.cfg.current_connection.db_type()
 
         # second pass: create all columns:
         for tab in tables:
@@ -127,13 +126,13 @@ class BuilderClass(BaseCorpusBuilder):
                          r"\1\nfrom coquery.corpusbuilder import *",
                          content)
         content = re.sub(
-            "(    name = )'.*'",
+            "(\s+name = )'.*'",
             r"\1'{}'".format(self.arguments.name), content)
         content = re.sub(
-            "(    display_name = )'.*'",
+            "(\s+display_name = )'.*'",
             r"\1'{}'".format(self.arguments.name), content)
         content = re.sub(
-            "(    db_name = )'.*'",
+            "(\s+db_name = )'.*'",
             r"\1'{}'".format(self.arguments.db_name.lower()),
             content)
         self.module_content = content

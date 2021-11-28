@@ -15,10 +15,11 @@ import re
 import sys
 
 from coquery import options
-from coquery.defines import *
-from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
+from coquery.defines import MODULE_INFORMATION
+from .pyqt_compat import QtWidgets
 from .ui.availableModulesUi import Ui_AvailableModules
+from .app import get_icon
+
 
 class AvailableModulesDialog(QtWidgets.QDialog):
     @staticmethod
@@ -31,21 +32,26 @@ class AvailableModulesDialog(QtWidgets.QDialog):
 
         self.ui = Ui_AvailableModules()
         self.ui.setupUi(self)
-        self.ui.table_modules.setHorizontalHeaderLabels(["Module", "Available", "Description"])
+        self.ui.table_modules.setHorizontalHeaderLabels(
+            ["Module", "Available", "Description"])
 
         modules = [
                 ("cachetools", options.use_cachetools),
                 ("PyMySQL", options.use_mysql),
                 ("Seaborn", options.use_seaborn),
+                ("squarify", options.use_squarify),
                 ("statsmodels", options.use_statsmodels),
                 ("NLTK", options.use_nltk),
                 ("tgt", options.use_tgt),
                 ("chardet", options.use_chardet),
-                ("PDFMiner" if sys.version_info < (3, 0) else "pdfminer3k", options.use_pdfminer),
+                ("PDFMiner" if sys.version_info < (3, 0) else
+                 "pdfminer3k", options.use_pdfminer),
                 ("python-docx", options.use_docx),
                 ("odfpy", options.use_odfpy),
                 ("BeautifulSoup", options.use_bs4),
                 ("xlrd", options.use_xlrd),
+                ("sphfile", options.use_sphfile),
+                ("sqlparse", options.use_sqlparse),
                 ]
         if sys.platform.startswith("linux"):
             modules.insert(0, ("alsaaudio", options.use_alsaaudio))
@@ -57,14 +63,14 @@ class AvailableModulesDialog(QtWidgets.QDialog):
 
             name_item = QtWidgets.QTableWidgetItem(name)
             status_item = QtWidgets.QTableWidgetItem(self.has(flag))
-            desc_item = QtWidgets.QTableWidgetItem(re.sub("<[^<]+?>", "", description))
+            desc_item = QtWidgets.QTableWidgetItem(
+                re.sub("<[^<]+?>", "", description))
             self._links[id(name_item)] = url
 
             if flag:
-                status_item.setIcon(get_toplevel_window().get_icon("Checked Checkbox"))
+                status_item.setIcon(get_icon("Checkmark"))
             else:
-                status_item.setIcon(get_toplevel_window().get_icon("Unchecked Checkbox"))
-
+                status_item.setIcon(get_icon("Delete"))
 
             self.ui.table_modules.setItem(i, 0, name_item)
             self.ui.table_modules.setItem(i, 1, status_item)

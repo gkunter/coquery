@@ -2,7 +2,7 @@
 """
 errorbox.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -108,11 +108,11 @@ class ExceptionBox(QtWidgets.QDialog):
         self.ui.icon_label.setPixmap(
             QtGui.QIcon.fromTheme("dialog-error").pixmap(32, 32))
 
-        errort = ("<table><tr><td><b>{}&nbsp;</b></td><td>{}<br></td></tr>"
-                  "<tr><td><b>Trace&nbsp;</b></td><td>{}</td></tr></table>"
-                  .format(type(exception).__name__,
-                          exception,
-                          get_error_repr(tb)))
+        error = ("<table><tr><td><b>{}&nbsp;</b></td><td>{}<br></td></tr>"
+                 "<tr><td><b>Trace&nbsp;</b></td><td>{}</td></tr></table>"
+                 .format(type(exception).__name__,
+                         exception,
+                         get_error_repr(tb)))
         self.ui.trace_area.setText(error)
 
         try:
@@ -134,13 +134,5 @@ class ExceptionBox(QtWidgets.QDialog):
 def catch_exceptions(cls, exception, tb):
     ExceptionBox(cls, exception, tb).exec_()
 
+
 sys.excepthook = catch_exceptions
-
-
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    viewer = ErrorBox(Exception())
-    viewer.exec_()
-
-if __name__ == "__main__":
-    main()

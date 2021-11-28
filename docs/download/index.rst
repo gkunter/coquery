@@ -113,3 +113,51 @@ The following command installs these modules using ``pip`` (for Python 2.7)::
 The following command installs these modules using ``pip`` (for Python 3.x)::
 
     pip install nltk pdfminer3k python-docx odfpy bs4 chardet
+
+
+Development version
+===================
+
+In addition to the released version of Coquery, there is also a development
+version that contains all changes, extensions, and additions that have been
+made since the last release version.
+
+.. note::
+    The development version is not a stable version -- it may contain bugs and
+    errors, it may crash, and it may mess with the installed corpora.
+    Use the development version with extreme caution!
+
+The following commands will allow you to run the development version of
+Coquery. It is assumed that Anaconda 4.6 or later is installed on your
+computer. It is also assumed that you are running a command line terminal under
+Linux or MacOS. Windows users will need to adapt the commands to the needs of
+their operating system (support may be very limited if you run the development
+version under Windows).
+
+The development version will be located in the directory ``sandbox/coquery``
+in your home directory.
+
+.. code-block:: console
+
+    # Create an Anaconda environment with all required packages:
+    conda create -n coquery python=3.6 pandas sqlalchemy scipy pyqt lxml
+
+    # Install additional packages required for visualizations (optional):
+    conda install -n coquery seaborn statsmodels
+
+    # Install packages required for full-featured text imports (optional):
+    conda install -n coquery nltk chardet beautifulsoup4 xlrd
+    conda install -n coquery -c conda-forge pdfminer3k python-docx odfpy
+
+    # Install package that provide MySQL support (optional):
+    conda install -n coquery pymysql sqlparse pygments
+
+    # Retrieve development version of Coquery (target: ~/sandbox/coquery)
+    git clone https://github.com/gkunter/coquery.git ~/sandbox/coquery
+
+    # Run the development version of Coquery:
+    conda activate coquery
+    cd ~/sandbox/coquery
+    git checkout develop
+    python Coquery.py --verbose
+

@@ -187,6 +187,7 @@ class NamedTableOptionsDialog(CSVOptionDialog):
             return None
 
     @staticmethod
-    def getOptions(path, fields=[], default=None, parent=None, icon=None):
-        dialog = NamedTableOptionsDialog(path, fields, default, parent, icon)
+    def getOptions(path, fields=None, default=None, parent=None, icon=None):
+        dialog = NamedTableOptionsDialog(
+            path, fields or [], default, parent, icon)
         return dialog.exec_()

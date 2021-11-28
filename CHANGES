@@ -3,36 +3,55 @@ Interface
 * Provide POS tag helper dialog via the 'Help' menu
 * Regular expressions can be inserted from the regexp tester into input fields
 * User data columns are now available again (and can also be removed)
-* The database paths of custom connections can now be changed
 * Provide more visual feedback on actions that don't have a visible effect
 * Column selection dialogs: Switch order of available and selected
+* Revised connection dialog
+* Use new class model for database connections
+* The database paths of non-MySQL connections can now be changed
+* You can now browse through the contexts of the matches in the context viewer
+
+Syntax
+* Add syntax to search for IDs, example: =123
 
 Queries
 * Can restrict query files to a number of rows
+* Add an SQL query viewer
 
 Corpora
 * Use new file option dialog for more flexible metadata files
 * Allow Excel files as input format for metadata files and as corpus input
   files
 * Packaging: corpora can be packaged, and packaged corpora can be installed
-* New corpora: Old Bailey Corpus 2.0, Korpus Malti
+* New corpora: Old Bailey Corpus 2.0, Korpus Malti, GloWbE
+* Initial support for NIST SPH audio
 
 Visualizations
+* Add Line Charts
 * Move Visualization Designer action to Results menu
-* Hide Visualizations menu
+* Remove Visualizations menu
 * Bring time series visualization to the visualization designer
 * Add button to refresh the data frame used by the visualization designer
+* Optionally hide figure types that are not available for current variables
+* Make several figure types more customizable
+* Rename the 'Z' data field as 'Colors', and interpret it accordingly
 
 Data management
 * Allow sampling: show only a random number of matches from the results table
 * Data groups now provide an option to drop duplicate rows
+* Data groups can now be moved up and down
+* Filters can be added to each data group
 * New dialogs for Column, Group and Summary functions
 * Contexts are now retrieved faster
+
+Context viewer
+* Add Next and Prev buttons
+* Much better handling of context span changes
 
 Functions
 * Errors in functions don't cause the whole function list to fail anymore
 * More flexible handling of function arguments
-* New functions: NOT, IF, IFANY, EMPTY, MISSING, Percentile, Log, Replace
+* New functions: NOT, IF, IFANY, TRUE, FALSE, EMPTY, MISSING, MOD, Percentile,
+  Log, Replace, STTR
 * Mathematical functions can now be applied column-wise
 
 EXPERIMENTAL features
@@ -42,6 +61,47 @@ EXPERIMENTAL features
 API changes
 * Disposed of obsolete LexiconClass
 * Table.get_create_string() expects list of existing tables as second argument
+* Visualization modules now use 'provides_visualization' list to inform the
+  visualization designer of the classes they provide
+* Visualization classes provide a 'name' and 'icon' property
+
+TEST COVERAGE
+Name                                           Stmts   Miss  Cover
+------------------------------------------------------------------
+coquery/bibliography.py                          301     17    94%
+coquery/capturer.py                               44     29    34%
+coquery/connections.py                           227    121    47%
+coquery/coquery.py                               150    125    17%
+coquery/corpus.py                               1255    617    51%
+coquery/corpusbuilder.py                         915    618    32%
+coquery/defines.py                               131      0   100%
+coquery/errors.py                                146     65    55%
+coquery/filters.py                               125     22    82%
+coquery/functionlist.py                           86     10    88%
+coquery/functions.py                             840    306    64%
+coquery/general.py                               260     91    65%
+coquery/installer/coq_install_celex.py           258     74    71%
+coquery/installer/coq_install_switchboard.py     221     70    68%
+coquery/links.py                                  41     13    68%
+coquery/managers.py                              698    413    41%
+coquery/options.py                               946    826    13%
+coquery/queries.py                               168    132    21%
+coquery/session.py                               402    248    38%
+coquery/sqlwrap.py                               255    215    16%
+coquery/tables.py                                261     90    66%
+coquery/tokens.py                                306     24    92%
+coquery/unicode.py                                19     10    47%
+coquery/visualizer/barcodeplot.py                123     35    72%
+coquery/visualizer/barplot.py                    227    107    53%
+coquery/visualizer/beeswarmplot.py                18      1    94%
+coquery/visualizer/boxplot.py                     73     16    78%
+coquery/visualizer/bubbleplot.py                 187     48    74%
+coquery/visualizer/colorizer.py                   95      9    91%
+coquery/visualizer/heatbarplot.py                118     94    20%
+coquery/visualizer/treemap.py                    188    155    18%
+coquery/visualizer/visualizer.py                 234    130    44%
+------------------------------------------------------------------
+
 
 0.10.0 May 23, 2017
 

@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -18,30 +18,30 @@ from collections import defaultdict
 import re
 import logging
 import math
-import sqlalchemy
 import pandas as pd
+import numpy as np
 import os
 import tempfile
 import zipfile
 import json
 from csv import QUOTE_NONNUMERIC
+from datetime import datetime
 
 from .errors import UnsupportedQueryItemError
 from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
-    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
+    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS, QUERY_ITEM_ID,
     SQL_MYSQL, SQL_SQLITE,
-    CONTEXT_STRING,
+    CONTEXT_NONE,
     PREFERRED_ORDER)
 
-from .general import collapse_words, CoqObject, html_escape
-from . import tokens, NAME
+from .general import collapse_words, CoqObject, html_escape, Print
+from . import tokens
 from . import options
-from . import sqlhelper
 from .links import get_by_hash
 
 
-class LexiconClass(object):
+class LexiconClass():
     pass
 
 
@@ -64,6 +64,15 @@ class BaseResource(CoqObject):
         super(BaseResource, self).__init__()
         self._joined_tables = []
         self._table_list = []
+
+    @staticmethod
+    def get_language():
+        """
+        Return the corpus language as a string.
+
+        Defaults to "en" (English).
+        """
+        return "en"
 
     @classmethod
     def format_resource_feature(cls, rc_feature, N):
@@ -104,16 +113,16 @@ class BaseResource(CoqObject):
         hashed, table, feature = cls.split_resource_feature(rc_feature)
         if hashed is not None:
             link, res = get_by_hash(hashed)
-            l = res.format_resource_feature("{}_{}".format(table, feature), N)
-            return ["db_{}_{}".format(res.db_name, x) for x in l]
+            lst = res.format_resource_feature(f"{table}_{feature}", N)
+            return [f"db_{res.db_name}_{x}" for x in lst]
 
         # handle lexicon features:
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
-            return ["coq_{}_{}".format(rc_feature, x+1) for x in range(N)]
+            return [f"coq_{rc_feature}_{x+1}" for x in range(N)]
         # handle remaining features
         else:
-            return ["coq_{}_1".format(rc_feature)]
+            return [f"coq_{rc_feature}_1"]
 
     @classmethod
     def split_resource_feature(cls, rc_feature):
@@ -139,7 +148,8 @@ class BaseResource(CoqObject):
             hashed = None
         table, _, feature = s.partition("_")
         if not table or not feature:
-            raise ValueError("either no table or no feature: '{}'".format(rc_feature))
+            raise ValueError(
+                "either no table or no feature: '{}'".format(rc_feature))
 
         return (hashed, table, feature)
 
@@ -150,7 +160,9 @@ class BaseResource(CoqObject):
         for rc_feature in list(all_features):
             if rc_feature in PREFERRED_ORDER:
                 for i, ordered_feature in enumerate(order):
-                    if PREFERRED_ORDER.index(ordered_feature) > PREFERRED_ORDER.index(rc_feature):
+                    of_index = PREFERRED_ORDER.index(ordered_feature)
+                    rc_index = PREFERRED_ORDER.index(rc_feature)
+                    if of_index > rc_index:
                         order.insert(i, rc_feature)
                         break
                 else:
@@ -162,18 +174,18 @@ class BaseResource(CoqObject):
         for i, rc_feature in enumerate(order):
             _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
-                j = order.index("{}_starttime".format(tab))
+                j = order.index(f"{tab}_starttime")
                 if j < i:
-                    order[j] = "{}_starttime".format(tab)
-                    order[i] = "{}_endtime".format(tab)
+                    order[j] = f"{tab}_starttime"
+                    order[i] = f"{tab}_endtime"
 
         for i, rc_feature in enumerate(all_features):
             _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
-                j = all_features.index("{}_endtime".format(tab))
+                j = all_features.index(f"{tab}_endtime")
                 if j < i:
-                    all_features[j] = "{}_starttime".format(tab)
-                    all_features[i] = "{}_endtime".format(tab)
+                    all_features[j] = f"{tab}_starttime"
+                    all_features[i] = f"{tab}_endtime"
 
         return order + all_features
 
@@ -206,7 +218,8 @@ class BaseResource(CoqObject):
 
         # return the features that can be constructed from the feature name
         # and the table:
-        return ["{}_{}".format(table, feature) for _, table, feature in split_features if table in tables]
+        return ["{}_{}".format(table, feature)
+                for _, table, feature in split_features if table in tables]
 
     @classmethod
     def get_queryable_features(cls):
@@ -217,10 +230,10 @@ class BaseResource(CoqObject):
         Features that represent binary data (audio, video, images) cannot be
         selected because the result table stores only numeric or string data.
         """
-        l = cls.get_resource_features()
+        lst = cls.get_resource_features()
         # FIXME: this function might be usable to make some table IDs
         # exposable (see issue #174)
-        return [x for x in l if
+        return [x for x in lst if
                 x not in cls.audio_features and
                 x not in cls.video_features and
                 x not in cls.image_features]
@@ -313,7 +326,7 @@ class BaseResource(CoqObject):
         return None
 
     @classmethod
-    def get_table_structure(cls, rc_table, rc_feature_list=[]):
+    def get_table_structure(cls, rc_table, rc_feature_list=None):
         """
         Return a table structure for the table 'rc_table'.
 
@@ -328,15 +341,17 @@ class BaseResource(CoqObject):
                             resource features from argument 'rc_feature_list'
                             that are contained in this table
         """
-        D = {}
-        D["parent"] = None
+        rc_feature_list = rc_feature_list or []
+
+        D = {"parent": None}
         rc_tab = rc_table.split("_")[0]
 
         available_features = []
         requested_features = []
         children = []
         for rc_feature in cls.get_resource_features():
-            if rc_feature.endswith("_{}_id".format(rc_tab)) and not rc_feature.startswith(rc_tab):
+            if (rc_feature.endswith("_{}_id".format(rc_tab)) and
+                    not rc_feature.startswith(rc_tab)):
                 D["parent"] = "{}_table".format(rc_feature.split("_")[0])
             if rc_feature.startswith("{}_".format(rc_tab)):
                 if not rc_feature.endswith("_table"):
@@ -374,7 +389,8 @@ class BaseResource(CoqObject):
             A list of strings, each representing a resource feature that has
             the same display name as 'name'.
         """
-        return [x for x in cls.get_resource_features() if getattr(cls, x) == name]
+        return [x for x in cls.get_resource_features()
+                if getattr(cls, x) == name]
 
     @classmethod
     def get_corpus_features(cls):
@@ -385,7 +401,9 @@ class BaseResource(CoqObject):
         table_dict = cls.get_table_dict()
         if "corpus" not in table_dict:
             return []
-        lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
+        lexicon_tables = cls.get_table_tree(getattr(cls,
+                                                    "lexicon_root_table",
+                                                    "word"))
 
         corpus_variables = []
         cls_lexical_features = getattr(cls, "lexical_features", [])
@@ -395,7 +413,8 @@ class BaseResource(CoqObject):
                     if y not in cls_lexical_features:
                         if y == "corpus_id":
                             corpus_variables.append((y, cls.corpus_id))
-                        elif not y.endswith("_id") and not y.startswith("{}_table".format(x)):
+                        elif (not y.endswith("_id") and
+                                not y.startswith("{}_table".format(x))):
                             corpus_variables.append((y, getattr(cls, y)))
         return corpus_variables
 
@@ -423,17 +442,17 @@ class BaseResource(CoqObject):
         lexicon_tables = cls.get_table_tree(
             getattr(cls, "lexicon_root_table", "word"))
         lexicon_variables = []
-        l = []
+        lst = []
         for x in table_dict:
             if x in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
                     if (not y.endswith("_id") and
-                            not y.startswith("{}_table".format(x))):
+                            not y.startswith(f"{x}_table")):
                         lexicon_variables.append((y, getattr(cls, y)))
-                        l.append(y)
+                        lst.append(y)
 
         for x in getattr(cls, "lexical_features", []):
-            if x not in l:
+            if x not in lst:
                 lexicon_variables.append((x, getattr(cls, x)))
 
         # make sure that all query items are treated as lexicon features:
@@ -569,11 +588,96 @@ class BaseResource(CoqObject):
                 (rc_feature.startswith("corpus_") and
                  not rc_feature.endswith("_id")))
 
+    def audio_to_source(self, audio_name, strip_path=True):
+        """
+        Return the name of the source file that belongs to an audio file.
+
+        Parameters
+        ----------
+
+        audio_name : str
+            The name of the audio file.
+
+        strip_path : bool
+            Currently ignored.
+
+        Returns
+        -------
+
+        grid_name : list
+            A list of file names that are associated with the given audio file
+            name. The default behavior is to return a list with the base name
+            of the audio file name as the only element, but corpus installers
+            may override this behavior.
+
+            For example, the audio files in the Switchboard corpus are named
+            sw0XXXX, where XXXX is an integer digit. The corresponding source
+            files which are used to construct the corpus in Coquery are named
+            swXXXXY-ms98-a-word, where XXXX is the same integer digit as in
+            the audio file, and Y is either 'A' or 'B' depending on which
+            speaker is transcribed. Hence, for Switchboard, the call
+
+            audio_to_source("sw02317")
+
+            returns the list ["sw2317A-ms98-a-word", "sw2317B-ms98-a-word"].
+
+            If the resource does not support audio, None is returned.
+        """
+        path, file_name = os.path.split(audio_name)
+        base, ext = os.path.splitext(file_name)
+
+        if not self.audio_features:
+            return None
+        else:
+            return [base]
+
+    def convert_source_to_audio(self, source_name, strip_path=True):
+        """
+        Return the name of the audio file that belongs to a source file.
+
+        Parameters
+        ----------
+
+        source_name : str
+            The name of the source file.
+
+        strip_path : bool
+            Currently ignored.
+
+        Returns
+        -------
+
+        audio_file : str
+            The file name of the associated audio file.
+
+            The default behavior is to return the same base name as the
+            source file.
+        """
+        path, file_name = os.path.split(source_name)
+        base, ext = os.path.splitext(file_name)
+        if not self.audio_features:
+            return None
+        else:
+            return base
+
 
 class SQLResource(BaseResource):
     _get_orth_str = None
 
-    def get_operator(self, Token):
+    def __init__(self, _, corpus):
+        super(SQLResource, self).__init__()
+        self._word_cache = {}
+        self.corpus = corpus
+        self.attach_list = []
+        self._context_string_template = self.get_context_string_template()
+        self._sentence_feature = (
+            getattr(self, "corpus_sentence", None) or
+            getattr(self, "corpus_sentence_id", None) or
+            getattr(self, "corpus_utterance", None) or
+            getattr(self, "corpus_utterance_id", None))
+
+    @staticmethod
+    def get_operator(Token):
         """ returns a string containing the appropriate operator for an
         SQL query using the Token (considering wildcards and negation) """
         if options.cfg.regexp:
@@ -584,18 +688,12 @@ class SQLResource(BaseResource):
             Operators = {True: "!=", False: "="}
         return Operators[False]
 
-    def __init__(self, _, corpus):
-        super(SQLResource, self).__init__()
-        self._word_cache = {}
-        self.corpus = corpus
-        self.db_type = options.get_configuration_type()
-        self.attach_list = []
-        self._context_string_template = self.get_context_string_template()
-        self._sentence_feature = (
-                getattr(self, "corpus_sentence", None) or
-                getattr(self, "corpus_sentence_id", None) or
-                getattr(self, "corpus_utterance", None) or
-                getattr(self, "corpus_utterance_id", None))
+    @classmethod
+    def get_sentence_feature(cls):
+        return (getattr(cls, "corpus_sentence", None) or
+                getattr(cls, "corpus_sentence_id", None) or
+                getattr(cls, "corpus_utterance", None) or
+                getattr(cls, "corpus_utterance_id", None))
 
     @classmethod
     def get_origin_rc(cls):
@@ -616,25 +714,86 @@ class SQLResource(BaseResource):
                 return x
         return None
 
-    @classmethod
-    def get_engine(cls, *args, **kwargs):
-        return sqlalchemy.create_engine(
-            sqlhelper.sql_url(options.cfg.current_server, cls.db_name),
-            *args, **kwargs)
+    def get_table_size(self, rc_table):
+        engine = options.cfg.current_connection.get_engine(self.db_name)
+        table = getattr(self, "{}_table".format(rc_table))
+        S = "SELECT COUNT(*) FROM {}".format(table)
+        size = pd.read_sql(S, con=engine).iloc[0][0]
+        engine.dispose()
+        return size
 
-    @classmethod
-    def _str_table_desc_mysql(cls, table):
-        S = "SHOW CREATE TABLE {}.{}".format(
-            cls.db_name, getattr(cls, "{}_table".format(table)))
-        return S
+    def get_table_names(self, rc_table):
+        """
+        Return a list containing the SQL table field information.
+        """
 
-    @classmethod
-    def _str_table_desc_sqlite(cls, table):
-        S = "SELECT `sql` FROM sqlite_master WHERE tbl_name = '{}'".format(
-            getattr(cls, "{}_table".format(table)))
-        return S
+        # FIXME: This is probably a method that should be provided by the
+        # connection and not by the resource
+        engine = options.cfg.current_connection.get_engine(self.db_name)
+        table_name = getattr(self, "{}_table".format(rc_table))
+        db_type = options.cfg.current_connection.db_type()
+        if db_type == SQL_MYSQL:
+            S = "SHOW FIELDS FROM {}"
+            columns = "name", "type", "null", "key", "default", "ex"
+        else:
+            S = "PRAGMA table_info({})"
+            columns = "cid", "name", "type", "null", "default", "key"
+
+        with engine.connect() as connection:
+            rows = [dict(zip(columns, x)) for
+                    x in connection.execute(S.format(table_name))]
+        return rows
+
+    def get_primary_key(self, rc_table):
+        """
+        Return the name of the primary key in the SQL table, or None.
+        """
+        # FIXME: This is probably a method that should be provided by the
+        # connection and not by the resource
+        for row in self.get_table_names(rc_table):
+            if row["key"] in ("PRI", 1):
+                return row["name"]
+        return None
+
+    def dump_table(self, path, rc_table, table_size, chunk_signal,
+                   chunksize=250000):
+        engine = options.cfg.current_connection.get_engine(self.db_name)
+        table = getattr(self, "{}_table".format(rc_table))
+        primary = self.get_primary_key(rc_table)
+        S = "SELECT * FROM {} WHERE {} BETWEEN {{}} AND {{}}".format(
+            table, primary)
+        first = True
+
+        chunks = table_size // chunksize
+        for i in range(chunks + 1):
+            if chunk_signal:
+                chunk_signal.emit((i, chunks + 1))
+            sql_query = S.format(i * chunksize, (i + 1) * chunksize - 1)
+            chunk = pd.read_sql(sql_query, engine)
+            chunk.to_csv(path, header=first, index=False, mode="a",
+                         encoding="utf-8",
+                         quoting=QUOTE_NONNUMERIC)
+            first = False
+        if chunk_signal:
+            chunk_signal.emit((chunks + 1, chunks + 1))
+        engine.dispose()
+
+    def get_module_path(self):
+        path = options.cfg.current_connection.resources()[self.name][-1]
+        return path
 
     def get_table_descriptor(self):
+        """
+        Return a description of all SQL tables provided by the resource.
+
+        This method is used by pack_corpus().
+
+        Returns
+        -------
+        d : dict
+            A dictionary with table short names as keys, and table
+            dictionaries as values.
+        """
         d = {}
         feature_map = [(x, getattr(self, x))
                        for x in self.get_resource_features()]
@@ -661,68 +820,17 @@ class SQLResource(BaseResource):
                     "Name": field_name}
         return d
 
-    def get_table_size(self, rc_table):
-        engine = self.get_engine()
-        table = getattr(self, "{}_table".format(rc_table))
-        S = "SELECT COUNT(*) FROM {}".format(table)
-        size = pd.read_sql(S, con=engine).iloc[0][0]
-        engine.dispose()
-        return size
-
-    def get_primary_key(self, rc_table):
-        for row in self.get_table_names(rc_table):
-            if row["key"] in ("PRI", 1):
-                return row["name"]
-        return None
-
-    def get_table_names(self, rc_table):
-        engine = self.get_engine()
-        table_name = getattr(self, "{}_table".format(rc_table))
-        if self.db_type == SQL_MYSQL:
-            S = "SHOW FIELDS FROM {}"
-            columns = "name", "type", "null", "key", "default", "ex"
-        else:
-            S = "PRAGMA table_info({})"
-            columns = "cid", "name", "type", "null", "default", "key"
-
-        with engine.connect() as connection:
-            rows = [dict(zip(columns, x)) for
-                    x in connection.execute(S.format(table_name))]
-        return rows
-
-    def dump_table(self, path, rc_table, table_size, chunk_signal,
-                   chunksize=250000):
-        engine = self.get_engine()
-        table = getattr(self, "{}_table".format(rc_table))
-        primary = self.get_primary_key(rc_table)
-        S = "SELECT * FROM {} WHERE {} BETWEEN {{}} AND {{}}".format(
-            table, primary)
-        first = True
-
-        chunks = table_size // chunksize
-        for i in range(chunks + 1):
-            if chunk_signal:
-                chunk_signal.emit((i, chunks + 1))
-            sql_query = S.format(i * chunksize, (i + 1) * chunksize - 1)
-            chunk = pd.read_sql(sql_query, engine)
-            chunk.to_csv(path, header=first, index=False, mode="a",
-                         encoding="utf-8",
-                         quoting=QUOTE_NONNUMERIC)
-            first = False
-        if chunk_signal:
-            chunk_signal.emit((chunks + 1, chunks + 1))
-        engine.dispose()
-
-    def get_module_path(self):
-        d = options.get_available_resources(options.cfg.current_server)
-        return d[self.name][-1]
-
     @classmethod
     def get_pack_steps(cls):
+        """
+        Return an estimation of the number of steps that are required to
+        pack this resource.
+
+        Used to advance the progress bar in the corpus builder GUI.
+        """
         return 3 + len(cls.get_table_tree("corpus")) * 3
 
-    def pack_corpus(self, name, license,
-                    file_signal=None, chunk_signal=None):
+    def pack_corpus(self, name, license, file_signal=None, chunk_signal=None):
         """
         Creates a self-contained corpus package.
 
@@ -922,16 +1030,16 @@ class SQLResource(BaseResource):
         wildcard_a = -0.75
 
         if s.startswith("~"):
-            l = []
+            lst = []
             s = s.strip("~")
             for ch in s:
                 if ch == "?":
-                    l.append("#")
+                    lst.append("#")
                 elif ch == "*":
-                    l.append("*")
+                    lst.append("*")
                 else:
-                    l.append("?")
-            s = "".join(l)
+                    lst.append("?")
+            s = "".join(lst)
 
         s = s.replace("\\?", "#")
         s = s.replace("\\*", "#")
@@ -976,17 +1084,10 @@ class SQLResource(BaseResource):
             S = (3 / math.sqrt(N)) * S
         return S
 
-    @staticmethod
-    def penalize_query_item(x, i):
-        if x[1] == "*":
-            return 9999
-        else:
-            return (len(x[1]) - 2 * x[1].count("["))
-
     @classmethod
     def get_token_order(cls, token_list):
-        l = sorted(token_list, key=lambda x: cls.string_entropy(x[1][1]))
-        return l
+        lst = sorted(token_list, key=lambda x: cls.string_entropy(x[1][1]))
+        return lst
 
     @classmethod
     def get_corpus_joins(cls, query_items, ignore_ngram=False):
@@ -1054,10 +1155,10 @@ class SQLResource(BaseResource):
                          "ON {{id}}{{N}} = {comp}").format(
                              comp=comp.format(offs=offs))
                 s = s.format(
-                        corpus=cls.get_subselect_corpus(N, ref_N),
-                        id=cls.corpus_id,
-                        N=N, ref_N=ref_N,
-                        comp=comp)
+                    corpus=cls.get_subselect_corpus(N, ref_N),
+                    id=cls.corpus_id,
+                    N=N, ref_N=ref_N,
+                    comp=comp)
 
                 joins.append(s)
         return joins
@@ -1110,8 +1211,8 @@ class SQLResource(BaseResource):
 
         # second, create a list of dummy features for each table. This list
         # is then used to pull in all required tables in order:
-        selected = ["{}_dummy".format(x) for x in tables]
-        l = []
+        selected = [f"{x}_dummy" for x in tables]
+        lst = []
         for dummy in sorted(selected):
             _, target, _ = cls.split_resource_feature(dummy)
             # check if the current table is a neighbor of the current root
@@ -1124,8 +1225,8 @@ class SQLResource(BaseResource):
                 sub_select.remove(dummy)
                 tup = cls.get_required_tables(target, sub_select, conditions)
                 # insert tuple for current table into list:
-                l.append(tup)
-        return root, l
+                lst.append(tup)
+        return root, lst
 
     def add_table_path(self, start_feature, end_feature):
         """
@@ -1167,8 +1268,8 @@ class SQLResource(BaseResource):
         _, table, _ = res.split_resource_feature(link.rc_to)
         ext_table = getattr(res, "{}_table".format(table))
         return "{db_name}_{table}_{N}".format(
-                  db_name=res.db_name.upper(),
-                  table=ext_table, N=n+1).upper()
+            db_name=res.db_name.upper(),
+            table=ext_table, N=n+1).upper()
 
     @classmethod
     def get_external_join(cls, n, rc_feature):
@@ -1195,16 +1296,16 @@ class SQLResource(BaseResource):
         else:
             s = "{ext_alias}.{ext_column} = {int_alias}.{int_column}"
         where_string = s.format(
-                    ext_alias=ext_alias, ext_column=ext_column,
-                    int_alias=int_alias, int_column=int_column,
-                    N=n+1)
+            ext_alias=ext_alias, ext_column=ext_column,
+            int_alias=int_alias, int_column=int_column,
+            N=n+1)
 
         table_string = "{} {} ON {}".format(
             link.join_type, table_string, where_string)
         return table_string
 
     @classmethod
-    def get_feature_joins(cls, n, selected, conditions={}, first_item=1):
+    def get_feature_joins(cls, n, selected, conditions=None, first_item=1):
         """
         Returns a list of table joins that are needed to satisfy the given
         list of selected features.
@@ -1250,6 +1351,7 @@ class SQLResource(BaseResource):
                 where_list += l2
             return table_list, where_list
 
+        conditions = conditions or {}
         table_list = []
         where_list = []
 
@@ -1344,7 +1446,7 @@ class SQLResource(BaseResource):
         # using the path, get a list of all lemma labels that belong to
         # the word ids from the list:
         inner_select = "SELECT DISTINCT {} FROM {} WHERE {{where}}".format(
-                lemma_column, " ".join(table_list))
+            lemma_column, " ".join(table_list))
 
         kwargs = {
             "lemma_alias": lemma_alias,
@@ -1363,16 +1465,18 @@ class SQLResource(BaseResource):
         """
 
         def handle_case(s):
+            db_type = options.cfg.current_connection.db_type()
+
             # take care of case options:
             if (options.cfg.query_case_sensitive):
-                if (options.get_configuration_type() == SQL_MYSQL):
+                if (db_type == SQL_MYSQL):
                     return "BINARY {}".format(s)
-                elif options.get_configuration_type() == SQL_SQLITE:
+                elif db_type == SQL_SQLITE:
                     return "{} COLLATE BINARY".format(s)
             else:
-                if (options.get_configuration_type() == SQL_MYSQL):
+                if (db_type == SQL_MYSQL):
                     return s
-                elif options.get_configuration_type() == SQL_SQLITE:
+                elif db_type == SQL_SQLITE:
                     return "{} COLLATE NOCASE".format(s)
 
         def get_operator(S):
@@ -1393,19 +1497,25 @@ class SQLResource(BaseResource):
                 (token.word_specifiers, QUERY_ITEM_WORD, "Word"),
                 (token.lemma_specifiers, QUERY_ITEM_LEMMA, "Lemma"),
                 (token.class_specifiers, QUERY_ITEM_POS, "Part-of-speech"),
-                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT, "Transcription"),
-                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss")]:
+                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT,
+                 "Transcription"),
+                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss"),
+                (token.id_specifiers, QUERY_ITEM_ID, "ID")]:
             if not spec_list:
                 continue
 
             if spec_list == ["*"]:
                 continue
 
-            try:
-                col = getattr(cls, getattr(cls, label))
-            except AttributeError:
-                raise UnsupportedQueryItemError(item_type)
-            _, tab, _ = cls.split_resource_feature(getattr(cls, label))
+            if item_type == "ID":
+                col = getattr(cls, "corpus_id")
+                tab = "corpus"
+            else:
+                try:
+                    col = getattr(cls, getattr(cls, label))
+                except AttributeError:
+                    raise UnsupportedQueryItemError(item_type)
+                _, tab, _ = cls.split_resource_feature(getattr(cls, label))
 
             if tab == "corpus":
                 template = "{name}{N}"
@@ -1453,6 +1563,8 @@ class SQLResource(BaseResource):
             d[tab].append(s)
             if token.lemmatize and label == QUERY_ITEM_POS:
                 pos_spec = s
+            else:
+                pos_spec = None
 
         if token.lemmatize:
             # rewrite token conditions so that the specifications are used to
@@ -1461,11 +1573,9 @@ class SQLResource(BaseResource):
             condition_template = cls.get_lemmatized_conditions(i, token)
             d = {"word": [
                 condition_template.format(where=" AND ".join(conditions))]}
-            try:
+            if pos_spec:
                 # add POS specification if provided:
                 d["word"].append(pos_spec)
-            except UnboundLocalError:
-                pass
 
         return d
 
@@ -1624,23 +1734,28 @@ class SQLResource(BaseResource):
                 if s not in columns:
                     columns.append(s)
 
-        if to_file:
-            if not columns:
-                s = "{name}{N} AS coquery_invisible_corpus_id".format(
+        id_str = "{name}{N} AS coquery_invisible_corpus_id".format(
                     N=_first_item, name=cls.corpus_id)
-                columns.append(s)
-        else:
-            s = "{name}{N} AS coquery_invisible_corpus_id".format(
-                N=_first_item, name=cls.corpus_id)
-            if s not in columns:
-                columns.append(s)
 
-            origin_id = (getattr(cls, "corpus_source_id", "") or
-                         getattr(cls, "corpus_file_id", ""))
-            if origin_id:
-                s = "{name}{N} AS coquery_invisible_origin_id".format(
+        origin_id = (getattr(cls, "corpus_source_id", "") or
+                     getattr(cls, "corpus_file_id", ""))
+        if origin_id:
+            origin_str = "{name}{N} AS coquery_invisible_origin_id".format(
                     N=_first_item, name=origin_id)
-                columns.append(s)
+        else:
+            origin_str = None
+
+        if to_file:
+            if not columns or (options.cfg.context_mode != CONTEXT_NONE):
+                columns.append(id_str)
+            if options.cfg.context_mode != CONTEXT_NONE and origin_str:
+                columns.append(origin_str)
+        else:
+            if id_str not in columns:
+                columns.append(id_str)
+            if origin_str:
+                columns.append(origin_str)
+
         return columns
 
     @classmethod
@@ -1677,11 +1792,11 @@ class SQLResource(BaseResource):
                 join_list += table_list
                 condition_list += ["({})".format(x) for x in where_list]
                 current_pos += 1
-
         return condition_list
 
     @classmethod
-    def get_query_string(cls, query_items, selected, columns=None, to_file=False):
+    def get_query_string(cls,
+                         query_items, selected, columns=None, to_file=False):
         """
         Return an SQL string for the specified query.
         """
@@ -1722,11 +1837,8 @@ class SQLResource(BaseResource):
         if options.cfg.limit_matches and options.cfg.number_of_tokens:
             S = """{}
             LIMIT  {}
-            """.format(S, options.cfg.number_of_tokens)
+            """.format(S, int(options.cfg.number_of_tokens))
         return S
-
-    def pos_check_function(self, l):
-        return [self.is_part_of_speech(s) for s in l]
 
     def is_part_of_speech(self, pos):
         pos_feature = getattr(self, QUERY_ITEM_POS, None)
@@ -1734,17 +1846,20 @@ class SQLResource(BaseResource):
             current_token = tokens.COCAToken(pos)
             _, table, _ = self.split_resource_feature(pos_feature)
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                getattr(self, "{}_id".format(table)),
-                getattr(self, "{}_table".format(table)),
+                getattr(self, f"{table}_id"),
+                getattr(self, f"{table}_table"),
                 getattr(self, pos_feature),
                 self.get_operator(current_token),
                 pos)
-            engine = self.get_engine()
+            engine = options.cfg.current_connection.get_engine(self.db_name)
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
             return len(df.index) > 0
         else:
             return False
+
+    def pos_check_function(self, lst):
+        return [self.is_part_of_speech(s) for s in lst]
 
     def get_sentence_ids(self, id_list):
         """
@@ -1772,7 +1887,7 @@ class SQLResource(BaseResource):
             sentence=sentence,
             id_list=", ".join([str(x) for x in id_list]))
 
-        engine = self.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         df = pd.read_sql(S, engine)
         engine.dispose()
 
@@ -1781,17 +1896,24 @@ class SQLResource(BaseResource):
     def get_context(self, token_id, origin_id, number_of_tokens,
                     db_connection, sentence_id=None, left=None, right=None):
 
-        left_span = left or options.cfg.context_left
-        right_span = right or options.cfg.context_right
+        left_span = left if not pd.isna(left) else options.cfg.context_left
+        right_span = right if not pd.isna(right) else options.cfg.context_right
+        n_tokens = int(number_of_tokens if not pd.isna(number_of_tokens)
+                       else 0)
 
-        S = self.get_context_string(token_id, number_of_tokens,
-                                    left_span, right_span,
-                                    origin_id, sentence_id)
-        results = db_connection.execute(S)
+        if np.isnan(origin_id):
+            results = ([(None, 0)] * left_span +
+                       [(None, 1)] * n_tokens +
+                       [(None, 2)] * right_span)
+        else:
+            S = self.get_context_string(token_id, number_of_tokens,
+                                        left_span, right_span,
+                                        origin_id, sentence_id)
+            results = db_connection.execute(S)
         word_lists = [[], [], []]
 
-        for x in results:
-            word_lists[x[-1]].append(x[0])
+        for word, pos in results:
+            word_lists[pos].append(word)
 
         return ([''] * (left_span - len(word_lists[0])) + word_lists[0],
                 word_lists[1],
@@ -1819,7 +1941,6 @@ class SQLResource(BaseResource):
                         word_table=word_table,
                         word=getattr(cls, word_feature)),
                    "{position}"]
-
         return template.format(
             columns=", ".join(columns),
             corpus=cls.get_subselect_corpus(1, 1),
@@ -1841,10 +1962,11 @@ class SQLResource(BaseResource):
                        corpus_origin=getattr(self, self.get_origin_rc()),
                        origin_id=origin_id)
 
-        if sentence_id and self._sentence_feature:
-            S = "{S} AND (COQ_CORPUS_1.{sentence}1 = {sentence_id})".format(
+        _sentence_feature = self.get_sentence_feature()
+        if sentence_id and _sentence_feature:
+            S = "{S} AND (COQ_CORPUS_1.{sentence}1 = '{sentence_id}')".format(
                 S=S,
-                sentence=self._sentence_feature, sentence_id=sentence_id)
+                sentence=_sentence_feature, sentence_id=sentence_id)
 
         position = """
             (CASE
@@ -1854,9 +1976,9 @@ class SQLResource(BaseResource):
             END) AS Position
             """.format(token_id=token_id, width=width)
 
-        return self._context_string_template.format(
+        return self.get_context_string_template().format(
             where=S,
-            length=end - start + 1,
+            length=int(end - start + 1),
             position=position)
 
     def get_origin_id(self, token_id):
@@ -1869,62 +1991,11 @@ class SQLResource(BaseResource):
                      corpus=self.corpus_table,
                      id=self.corpus_id,
                      token_id=token_id)
-        engine = self.get_engine()
+        engine = options.cfg.current_connection.get_engine(self.db_name)
         df = pd.read_sql(S, engine)
         engine.dispose()
 
         return df.values.ravel()[0]
-
-
-class CorpusClass(object):
-    """
-    """
-    _frequency_cache = {}
-    _corpus_size_cache = {}
-    _subcorpus_size_cache = {}
-    _corpus_range_cache = {}
-    _context_cache = {}
-
-    def __init__(self):
-        super(CorpusClass, self).__init__()
-        self.resource = None
-
-    def get_file_data(self, token_id, features):
-        """
-        Return a data frame containing the requested features for the token
-        id.
-        """
-        if isinstance(token_id, list):
-            tokens = token_id
-        elif isinstance(token_id, pd.Series):
-            tokens = list(token_id.values)
-        else:
-            tokens = list(token_id)
-
-        self.resource.joined_tables = ["corpus"]
-        self.resource.table_list = [self.resource.corpus_table]
-
-        self.resource.add_table_path("corpus_id", "file_id")
-
-        feature_list = ["{}.{}".format(
-                                    self.resource.file_table,
-                                    getattr(self.resource, x))
-                        for x in features]
-        feature_list.append("{}.{}".format(
-                                    self.resource.corpus_table,
-                                    self.resource.corpus_id))
-        token_ids = [str(x) for x in tokens]
-        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
-                features=", ".join(feature_list),
-                path=" ".join(self.resource.table_list),
-                corpus=self.resource.corpus_table,
-                corpus_id=self.resource.corpus_id,
-                token_ids=", ".join(token_ids))
-
-        engine = self.resource.get_engine()
-        df = pd.read_sql(S, engine)
-        engine.dispose()
-        return df
 
     def get_origin_data(self, token_id):
         """
@@ -1947,30 +2018,30 @@ class CorpusClass(object):
             source table, and a dictionary with resource features as keys and
             the matching field content as values.
         """
-        l = []
 
         # get the complete row from the corpus table for the current token:
         S = "SELECT * FROM {} WHERE {} = {}".format(
-            self.resource.corpus_table,
-            self.resource.corpus_id,
+            self.corpus_table,
+            self.corpus_id,
             token_id)
 
-        engine = sqlalchemy.create_engine(
-            sqlhelper.sql_url(
-                options.cfg.current_server, self.resource.db_name))
+        engine = options.cfg.current_connection.get_engine(
+            self.db_name)
         df = pd.read_sql(S, engine)
+        engine.dispose()
 
+        lst = []
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
         for column in df.columns:
             # exclude the Token ID:
-            if column == self.resource.corpus_id:
+            if column == self.corpus_id:
                 continue
             # do not look into the word column of the corpus:
             try:
-                if column == self.resource.corpus_word_id:
+                if column == self.corpus_word_id:
                     continue
-                if column == self.resource.corpus_word:
+                if column == self.corpus_word:
                     continue
             except AttributeError:
                 pass
@@ -1987,29 +2058,30 @@ class CorpusClass(object):
             # to the current column display name:
             try:
                 rc_feature = [x for x
-                              in self.resource.get_feature_from_name(column)
+                              in self.get_feature_from_name(column)
                               if x.startswith("corpus_")][0]
             except IndexError:
                 continue
 
             # obtain the field name from the resource name:
-            _, _, feature = self.resource.split_resource_feature(rc_feature)
+            _, _, feature = self.split_resource_feature(rc_feature)
             # determine whether the field name is a linking field:
             try:
-                _, tab, feat = self.resource.split_resource_feature(feature)
+                _, tab, feat = self.split_resource_feature(feature)
             except ValueError:
                 # split_resource_feature() raises a ValueError exception if
                 # the passed string does not appear to be a resource feature.
                 # In that case, the resource is not considered for origin data.
                 continue
             if feat == "id":
-                id_column = getattr(self.resource, "{}_id".format(tab))
-                table_name = getattr(self.resource, "{}_table".format(tab))
+                id_column = getattr(self, "{}_id".format(tab))
+                table_name = getattr(self, "{}_table".format(tab))
                 S = "SELECT * FROM {} WHERE {} = {}".format(
                     table_name, id_column, df[column].values[0])
                 # Fetch all fields from the linked table for the current
                 # token:
-                engine = self.resource.get_engine()
+                engine = options.cfg.current_connection.get_engine(
+                    self.db_name)
                 row = pd.read_sql(S, engine)
                 engine.dispose()
 
@@ -2017,10 +2089,131 @@ class CorpusClass(object):
                     D = dict([(x, row.at[0, x]) for x in row.columns
                               if x != id_column])
                     # append the row data to the list:
-                    l.append((table_name, D))
-        return l
+                    lst.append((table_name, D))
+        return lst
 
-    def get_corpus_size(self, filters=[]):
+    def get_file_data(self, token_id, features):
+        """
+        Return a data frame containing the requested features for the token
+        id.
+        """
+        if isinstance(token_id, list):
+            tokens = token_id
+        elif isinstance(token_id, pd.Series):
+            tokens = list(token_id.values)
+        else:
+            tokens = list(token_id)
+
+        self.joined_tables = ["corpus"]
+        self.table_list = [self.corpus_table]
+
+        self.add_table_path("corpus_id", "file_id")
+
+        feature_list = ["{}.{}".format(self.file_table, getattr(self, x))
+                        for x in features]
+        feature_list.append("{}.{}".format(self.corpus_table, self.corpus_id))
+        token_ids = [str(x) for x in tokens]
+        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
+                features=", ".join(feature_list),
+                path=" ".join(self.table_list),
+                corpus=self.corpus_table,
+                corpus_id=self.corpus_id,
+                token_ids=", ".join(token_ids))
+
+        engine = options.cfg.current_connection.get_engine(self.db_name)
+        df = pd.read_sql(S, engine)
+        engine.dispose()
+        return df
+
+
+class CorpusClass(object):
+    """
+    """
+    _frequency_cache = {}
+    _corpus_size_cache = {}
+    _subcorpus_size_cache = {}
+    _corpus_range_cache = {}
+    _context_cache = {}
+    _corpus_statistcs_cache = {}
+
+    def __init__(self):
+        super(CorpusClass, self).__init__()
+        self.resource = None
+
+    def get_corpus_statistic(self, statistic, filters=None):
+        """
+        Return a specific statistic from the corpus.
+
+        The corpus can be filtered by providing a filter list.
+
+        Parameters
+        ----------
+        statistic : str
+            A string that is inserted into the SQL query such as COUNT(*) or
+            MIN(...)
+
+        filters : list
+            A list of tuples. The first element is a corpus feature, and
+            the second is a list of possible values.
+
+        Returns
+        -------
+        value : int
+            The value of the query.
+        """
+        filters = filters or []
+
+        if not filters and getattr(self.resource, "number_of_tokens", None):
+            return self.resource.number_of_tokens
+
+        self.resource.table_list = []
+        self.resource.joined_tables = []
+        filter_strings = []
+        for rc_feature, values in filters:
+            _, tab, feat = self.resource.split_resource_feature(rc_feature)
+            self.resource.add_table_path("corpus_id", rc_feature)
+
+            # FIXME: remove code replication with get_subcorpus_range()
+            if len(values) == 1:
+                if type(values[0]) is str:
+                    val = f"'{values[0]}'"
+                else:
+                    val = values[0]
+                s = "{}.{} = {}".format(
+                    getattr(self.resource, f"{tab}_table"),
+                    getattr(self.resource, rc_feature),
+                    val)
+            else:
+                if any([type(x) is str for x in values]):
+                    lst = [f"'{x}'" for x in values]
+                else:
+                    lst = values
+                s = "{}.{} IN ({})".format(
+                    getattr(self.resource, f"{tab}_table"),
+                    getattr(self.resource, rc_feature),
+                    ",".join(lst))
+            filter_strings.append(s)
+
+        if filter_strings:
+            from_str = "{} WHERE {}".format(
+                " ".join(
+                    [self.resource.corpus_table] + self.resource.table_list),
+                " AND ".join(filter_strings))
+        else:
+            from_str = self.resource.corpus_table
+
+        S = "SELECT {} FROM {}".format(statistic, from_str)
+
+        if S not in self._corpus_statistcs_cache:
+            engine = options.cfg.current_connection.get_engine(
+                self.resource.db_name)
+            df = pd.read_sql(S.replace("%", "%%"), engine)
+            engine.dispose()
+            self._corpus_statistcs_cache[S] = df.values.ravel()[0]
+
+        return self._corpus_statistcs_cache[S]
+
+    def get_corpus_size(self, filters=None):
         """
         Return the number of tokens in the corpus.
 
@@ -2037,53 +2230,17 @@ class CorpusClass(object):
         size : int
             The number of tokens in the corpus, or in the filtered corpus.
         """
-        if not filters and getattr(self.resource, "number_of_tokens", None):
-            return self.resource.number_of_tokens
-
-        self.resource.table_list = []
-        self.resource.joined_tables = []
-        filter_strings = []
-        for rc_feature, values in filters:
-            _, tab, feat = self.resource.split_resource_feature(rc_feature)
-            self.resource.add_table_path("corpus_id", rc_feature)
-
-            # FIXME: remove code replication with get_subcorpus_range()
-            if len(values) == 1:
-                if type(values[0]) is str:
-                    val = "'{}'".format(values[0])
-                else:
-                    val = values[0]
-                s = "{}.{} = {}".format(
-                    getattr(self.resource, "{}_table".format(tab)),
-                    getattr(self.resource, rc_feature),
-                    val)
-            else:
-                if any([type(x) is str for x in values]):
-                    l = ["'{}'".format(x) for x in values]
-                else:
-                    l = values
-                s = "{}.{} IN ({})".format(
-                    getattr(self.resource, "{}_table".format(tab)),
-                    getattr(self.resource, rc_feature),
-                    ",".join(l))
-            filter_strings.append(s)
-
-        if filter_strings:
-            from_str = "{} WHERE {}".format(
-                " ".join([self.resource.corpus_table] + self.resource.table_list),
-                " AND ".join(filter_strings))
+        if filters:
+            _key = tuple(sorted(filters))
         else:
-            from_str = self.resource.corpus_table
+            _key = tuple()
 
-        S = "SELECT COUNT(*) FROM {}".format(from_str)
-        if S not in self._corpus_size_cache:
-            engine = self.resource.get_engine()
-            df = pd.read_sql(S.replace("%", "%%"), engine)
-            engine.dispose()
-            self._corpus_size_cache[S] = df.values.ravel()[0]
-        if not filters:
-            self.resource.number_of_tokens = self._corpus_size_cache[S]
-        return self._corpus_size_cache[S]
+        try:
+            size = self._corpus_size_cache[_key]
+        except KeyError:
+            size = self.get_corpus_statistic("COUNT(*)", filters)
+            self._corpus_size_cache[_key] = size
+        return self._corpus_size_cache[_key]
 
     def get_subcorpus_size(self, row, columns=None, subst=None):
         """
@@ -2099,7 +2256,9 @@ class CorpusClass(object):
         filter_list = []
         if columns is None:
             columns = row.index
-            corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+            corpus_features = [x
+                               for x, _ in self.resource.get_corpus_features()
+                               if x in options.cfg.selected_features]
             for column in columns:
                 match = re.match("coq_(.*)_1", column)
                 if match:
@@ -2108,7 +2267,8 @@ class CorpusClass(object):
                     col = None
                 if col in corpus_features:
                     value = row[column]
-                    raw_values = self.reverse_substitution(column, value, subst)
+                    raw_values = self.reverse_substitution(column,
+                                                           value, subst)
                     filter_list.append((col, raw_values))
         else:
             for column in columns:
@@ -2124,7 +2284,7 @@ class CorpusClass(object):
         return self._subcorpus_size_cache[tup]
 
     @staticmethod
-    def reverse_substitution(column, value, subst={}):
+    def reverse_substitution(column, value, subst=None):
         """
         Return a list of values that could have been the raw value before
         substitution.
@@ -2133,12 +2293,13 @@ class CorpusClass(object):
         column. It returns a list of all values that could have been mapped
         onto the given value.
         """
-        l = [key for key, val in subst.get(column, {}).items()
-             if value == val]
-        l.append(value)
-        return l
+        subst = subst or {}
+        lst = [key for key, val in subst.get(column, {}).items()
+               if value == val]
+        lst.append(value)
+        return lst
 
-    def get_subcorpus_range(self, row=[]):
+    def get_subcorpus_range(self, row=None):
         """
         Return the lowest and the highest corpus id in the subcorpus specified
         by the values in `row`.
@@ -2154,6 +2315,7 @@ class CorpusClass(object):
             The lowest and the highest corpus id that share the values in
             `row'.
         """
+        row = row or pd.Series()
         cache_key = (tuple(row.index), tuple(row.values))
         if cache_key in self._corpus_range_cache:
             return self._corpus_range_cache[cache_key]
@@ -2193,7 +2355,8 @@ class CorpusClass(object):
 
             S = "SELECT MIN({id}), MAX({id}) FROM {tables}".format(
                 id=self.resource.corpus_id, tables=from_str)
-            engine = self.resource.get_engine()
+            engine = options.cfg.current_connection.get_engine(
+                self.resource.db_name)
             df = pd.read_sql(S.replace("%", "%%"), engine)
             engine.dispose()
             val = df.values.ravel()[0:2]
@@ -2250,7 +2413,7 @@ class CorpusClass(object):
             try:
                 df = pd.read_sql(S, engine)
             except Exception as e:
-                logging.warn(str(e))
+                logging.warning(str(e))
                 print(str(e))
             else:
                 if freq is None:
@@ -2278,9 +2441,10 @@ class CorpusClass(object):
         except KeyError:
             return s
 
-    def tag_to_html(self, tag, attributes={}):
+    def tag_to_html(self, tag, attributes=None):
         """ Translate a tag to a corresponding HTML/QHTML tag by checking
         the tag_translate dictionary."""
+        attributes = attributes or {}
         try:
             if tag == "hi":
                 if attributes.get("rend") == "it":
@@ -2433,10 +2597,9 @@ class CorpusClass(object):
                 "    AND {corpus}.{source_id} = '{current_source_id}'")
         S = format_string.format(**kwargs)
 
-        if options.cfg.verbose:
-            logger.info(S)
-            print(S)
-        engine = self.resource.get_engine()
+        Print(S)
+        engine = options.cfg.current_connection.get_engine(
+            self.resource.db_name)
         df = pd.read_sql(S, engine)
         if hasattr(self.resource, "tag_table"):
             S = """
@@ -2451,10 +2614,8 @@ class CorpusClass(object):
                        tag=self.resource.tag_label,
                        tag_id=self.resource.tag_id,
                        corpus_id=self.resource.tag_corpus_id,
-                       tag_corpus_id=self.resource.tag_corpus_id,
                        tag_type=self.resource.tag_type,
                        attribute=self.resource.tag_attribute,
-                       current_source_id=source_id,
                        start=max(0, token_id - 1000),
                        end=token_id + token_width + 999)
             tags = pd.read_sql(S, engine)
@@ -2469,7 +2630,92 @@ class CorpusClass(object):
             df = df.sort(columns=headers)
         self._context_cache[(token_id, source_id, token_width)] = (df, tags)
 
-    def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
+    def parse_tags(self, row, open=True):
+        if open:
+            s1 = "<{} {}>"
+            s2 = "<{}>"
+        else:
+            s1 = "</{} {}>"
+            s2 = "</{}>"
+        attr = row.COQ_ATTRIBUTE
+        tag = self.tag_to_html(row.COQ_TAG_TAG)
+        if attr:
+            attr = re.sub("=([^,]*)", r"='\g<1>'", attr)
+            return s1.format(tag, attr)
+        else:
+            return s2.format(tag)
+
+    def parse_row(self, row, tags, token_id, token_width):
+        Print("parse_row", len(tags))
+        word = row.coq_word_label_1
+        word_id = row.coquery_invisible_corpus_id
+        if len(tags):
+            opening = tags[(tags.COQ_ID == word_id) &
+                           ((tags.COQ_TAG_TYPE == "open") |
+                            (tags.COQ_TAG_TYPE == "empty"))]
+            closing = tags[(tags.COQ_ID == word_id) &
+                           ((tags.COQ_TAG_TYPE == "close") |
+                            (tags.COQ_TAG_TYPE == "empty"))]
+        else:
+            opening = pd.DataFrame(columns=tags.columns)
+            closing = pd.DataFrame(columns=tags.columns)
+        lst = []
+        if len(opening):
+            lst.extend(list(opening.apply(lambda x: self.parse_tags(x, True),
+                                          axis="columns")))
+        token_style = "<span style='{};'>".format(
+            self.resource.render_token_style)
+        if word:
+            # highlight words that are in the results table:
+            if word_id in self.id_list:
+                lst.append(token_style)
+            # additional highlight if the word is the target word:
+            if token_id <= word_id < token_id + token_width:
+                lst.append("<b>")
+                lst.append(html_escape(word))
+                lst.append("</b>")
+            else:
+                lst.append(html_escape(word))
+            if word_id in self.id_list:
+                lst.append("</span>")
+        if len(closing):
+            lst.extend(list(closing.apply(lambda x: self.parse_tags(x, False),
+                                          axis="columns")))
+        return lst
+
+    def expand_row(self, x):
+        return list(range(int(x.coquery_invisible_corpus_id), int(x.end)))
+
+    #def parse_df(self, df, tags, token_id, token_width):
+        #df = df.apply(
+            #lambda x: self.parse_row(x, tags, token_id, token_width),
+            #axis="columns")
+        #return df
+
+    def parse_df(self, df, tags, token_id, token_width):
+        df["COQ_FORMATTED"] = df["coq_word_label_1"].apply(lambda x: [x])
+
+        token_style = "<span style='{};'>".format(
+            self.resource.render_token_style)
+
+        mask = df["coquery_invisible_corpus_id"] == token_id
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: ["<b>"] + x)
+        mask = df["coquery_invisible_corpus_id"] == token_id + token_width - 1
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: x + ["</b>"])
+
+        mask = df["coquery_invisible_corpus_id"].isin(self.id_start_list)
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: [token_style] + x)
+        mask = df["coquery_invisible_corpus_id"].isin(self.id_end_list)
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: x + ["</span>"])
+
+        return [item for sublist in df["COQ_FORMATTED"] for item in sublist]
+
+    def get_rendered_context(self, token_id, source_id, token_width,
+                             context_width, widget):
         """
         Return a dictionary with the context data.
 
@@ -2494,62 +2740,14 @@ class CorpusClass(object):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
-        def expand_row(x):
-            return list(range(int(x.coquery_invisible_corpus_id),
-                              int(x.end)))
-
-        def parse_row(row, tags):
-            word = row.coq_word_label_1
-            word_id = row.coquery_invisible_corpus_id
-            opening = tags[(tags.COQ_ID == word_id) &
-                           ((tags.COQ_TAG_TYPE == "open") |
-                            (tags.COQ_TAG_TYPE == "empty"))]
-            closing = tags[(tags.COQ_ID == word_id) &
-                           ((tags.COQ_TAG_TYPE == "close") |
-                            (tags.COQ_TAG_TYPE == "empty"))]
-            l = []
-            if len(opening):
-                l.extend(list(opening.apply(lambda x: parse_tags(x, True),
-                                            axis="columns")))
-            if word:
-                # highlight words that are in the results table:
-                if word_id in self.id_list:
-                    l.append("<span style='{};'>".format(
-                        self.resource.render_token_style))
-                # additional highlight if the word is the target word:
-                if token_id <= word_id < token_id + token_width:
-                    l.append("<b>")
-                    l.append(html_escape(word))
-                    l.append("</b>")
-                else:
-                    l.append(html_escape(word))
-                if word_id in self.id_list:
-                    l.append("</span>")
-            if len(closing):
-                l.extend(list(closing.apply(lambda x: parse_tags(x, False),
-                                            axis="columns")))
-            return l
-
-        def parse_tags(row, open=True):
-            if open:
-                s1 = "<{} {}>"
-                s2 = "<{}>"
-            else:
-                s1 = "</{} {}>"
-                s2 = "</{}>"
-            attr = row.COQ_ATTRIBUTE
-            tag = self.tag_to_html(row.COQ_TAG_TAG)
-            if attr:
-                attr = re.sub("=([^,]*)", r"='\g<1>'", attr)
-                return s1.format(tag, attr)
-            else:
-                return s2.format(tag)
-
         if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
+        time_lst = [(datetime.now().timestamp(), "start")]
+
         if not (token_id, source_id, token_width) in self._context_cache:
             self._read_context_for_renderer(token_id, source_id, token_width)
+        time_lst.append((datetime.now().timestamp(), "reading context"))
         df, tags = self._context_cache[(token_id, source_id, token_width)]
         df = df.reset_index(drop=True)
 
@@ -2558,6 +2756,7 @@ class CorpusClass(object):
         context_end = ix + token_width + context_width
 
         df = df[(df.index >= context_start) & (df.index < context_end)]
+        time_lst.append((datetime.now().timestamp(), "limiting rows"))
 
         # create a list of all token ids that are also listed in the results
         # table:
@@ -2566,23 +2765,37 @@ class CorpusClass(object):
                 template.format(lower=token_id - 1000,
                                 upper=token_id + 1000 + token_width))
 
-        tab["end"] = (tab[["coquery_invisible_corpus_id",
-                           "coquery_invisible_number_of_tokens"]].sum(axis=1))
+        time_lst.append((datetime.now().timestamp(), "retrieving ids"))
+        self.id_start_list = tab["coquery_invisible_corpus_id"]
+        self.id_end_list = (self.id_start_list +
+                            tab["coquery_invisible_number_of_tokens"] - 1)
 
-        # the method expand_row() has the side effect that it adds the
-        # token id range for each row to the list self.id_list
-        self.id_list = list(pd.np.hstack(tab.apply(expand_row, axis=1)))
+        time_lst.append((datetime.now().timestamp(), "creating id lists"))
+        context = self.parse_df(df, tags, token_id, token_width)
 
-        context = pd.np.hstack(df.apply(lambda x: parse_row(x, tags),
-                                        axis="columns"))
-        s = collapse_words(context)
-        s = s.replace("</p>", "</p>\n")
-        s = s.replace("<br/>", "<br/>\n")
+        time_lst.append((datetime.now().timestamp(), "parsing dataframe"))
+        s = collapse_words(context, self.resource.get_language())
+        time_lst.append((datetime.now().timestamp(), "collapsing words"))
+        if s is None:
+            s = ""
+        else:
+            s = s.replace("</p>", "</p>\n")
+            s = s.replace("<br/>", "<br/>\n")
+        time_lst.append((datetime.now().timestamp(), "fixing breaks"))
+
+        lst = [(t1 - t2, stage) for ((t1, stage), (t2, _)) in
+               list(zip(time_lst[1:], time_lst[:-1]))]
+
+        Print("\n".join(
+            ["{}: {:6.1f} ms ({})".format(i, 1000 * x, stage)
+             for i, (x, stage) in enumerate(lst)]))
+        Print("Total: {:6.1f} ms".format(
+            1000 * (time_lst[-1][0] - time_lst[0][0])))
+
         audio = self.resource.audio_features != []
         start_time = None
         end_time = None
-        #df = df[(df.coquery_invisible_corpus_id >= context_start) &
-                #(df.coquery_invisible_corpus_id <= context_end)]
+
         if audio:
             try:
                 start_time = df.coq_word_starttime_1.min()
@@ -2594,5 +2807,3 @@ class CorpusClass(object):
         return {"text": s, "df": df,
                 "audio": audio,
                 "start_time": start_time, "end_time": end_time}
-
-logger = logging.getLogger(NAME)

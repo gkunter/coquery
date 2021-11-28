@@ -2,7 +2,7 @@
 """
 corpusbuilder_interface.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,60 +15,314 @@ from __future__ import print_function
 import argparse
 import codecs
 import re
-import logging
 import os
 import sys
 import zipfile
 
 from coquery import options
-from coquery import sqlhelper
-from coquery import NAME
+from coquery.options import CSVOptions
 from coquery.defines import (msg_install_abort,
+                             msg_nltk_message_error,
                              msg_corpus_path_not_valid)
-from coquery.errors import SQLNoConfigurationError, DependencyError
+from coquery.errors import DependencyError
 from coquery.unicode import utf8
 
 from . import classes
 from . import errorbox
 from . import csvoptions
+from .threads import CoqThread
 from .pyqt_compat import QtCore, QtWidgets, QtGui, STYLE_WARN
 from .ui.corpusInstallerUi import Ui_CorpusInstaller
+from .ui.corpusTableUi import Ui_CorpusTable
 from .ui.readPackageUi import Ui_PackageInstaller
 from .namedtableoptions import NamedTableOptionsDialog
 
 
-class InstallerGui(QtWidgets.QDialog):
+class MetaGui(QtWidgets.QDialog):
     button_label = "&Install"
-    window_title = "Corpus installer – Coquery"
-
-    installStarted = QtCore.Signal()
-    showNLTKDownloader = QtCore.Signal(str)
 
     progressSet = QtCore.Signal(int, str)
     labelSet = QtCore.Signal(str)
     progressUpdate = QtCore.Signal(int)
     generalUpdate = QtCore.Signal(int)
+    installStarted = QtCore.Signal()
 
-    def __init__(self, builder_class, parent=None):
-        super(InstallerGui, self).__init__(parent)
-
-        self.logger = logging.getLogger(NAME)
-
+    def __init__(self, builder_class, gui=None, parent=None):
+        super(MetaGui, self).__init__(parent)
         self.state = None
         self._testing = False
         self._onefile = False
         self._meta_options = None
         self.builder_class = builder_class
 
-        self.ui = Ui_CorpusInstaller()
+        self.ui = gui()
         self.ui.setupUi(self)
+
+        if hasattr(self.ui, "progress_box"):
+            self.ui.progress_box.hide()
+
+        if hasattr(self.ui, "buttonBox"):
+            self.ui.yes_button = self.ui.buttonBox.button(
+                self.ui.buttonBox.Yes)
+            self.ui.yes_button.setText(self.button_label)
+            self.ui.yes_button.clicked.connect(self.start_install)
+
+        if hasattr(self.ui, "issue_label"):
+            self.ui.issue_label.setText("")
+            self.ui.corpus_name.setStyleSheet("")
+
+        self.restore_settings()
+
+        self.installStarted.connect(self.show_progress)
+        self.progressSet.connect(self.set_progress)
+        self.progressUpdate.connect(self.update_progress)
+        self.generalUpdate.connect(self.general_update)
+        self.labelSet.connect(self.set_label)
+
+    def show_progress(self):
+        if hasattr(self.ui, "progress_box"):
+            self.ui.progress_box.show()
+            self.ui.progress_box.update()
+
+    def set_progress(self, vmax, s):
+        if hasattr(self.ui, "progress_bar"):
+            self.ui.progress_bar.setFormat(s)
+            self.ui.progress_bar.setMaximum(vmax)
+            self.ui.progress_bar.setValue(0)
+
+    def update_progress(self, i):
+        if hasattr(self.ui, "progress_bar"):
+            self.ui.progress_bar.setValue(i)
+
+    def general_update(self, i):
+        if hasattr(self.ui, "progress_general"):
+            self.ui.progress_general.setValue(i)
+
+    def set_label(self, s):
+        if hasattr(self.ui, "progress_bar"):
+            self.ui.progress_bar.setFormat(s)
+
+    def progress(self, pb, tup):
+        if hasattr(self.ui, "progress_bar") and (pb == self.ui.progress_bar):
+            i, n = tup
+            if n is None:
+                pb.setMaximum(i)
+                pb.setValue(i)
+                pb.setFormat("Chunk %v")
+            else:
+                pb.setMaximum(n)
+                pb.setValue(i)
+                pb.setFormat("%p%")
+        elif hasattr(self.ui, "progress_general"):
+            self.ui.progress_general.setFormat("")
+            file_name, stage = tup
+            val = pb.value()
+            pb.setValue(val + 1)
+            pb.setFormat("{} {}...".format(stage, file_name))
+
+    def start_install(self):
+        pass
+
+    def restore_settings(self):
+        try:
+            self.resize(options.settings.value("corpusinstaller_size"))
+        except TypeError:
+            pass
+
+        if isinstance(self, BuilderGui):
+            target = "corpusinstaller_data_path"
+        else:
+            target = "corpusinstaller_corpus_source"
+
+        if hasattr(self.ui, "input_path"):
+            val = options.settings.value(target, "")
+            self.ui.input_path.setText(utf8(val))
+
+    def display(self):
+        self.exec_()
+        return self.state
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.reject()
+
+    def accept(self):
+        options.settings.setValue("corpusinstaller_size", self.size())
+        if isinstance(self, BuilderGui):
+            target = "corpusinstaller_data_path"
+        else:
+            target = "corpusinstaller_corpus_source"
+
+        if hasattr(self.ui, "input_path"):
+            options.settings.setValue(target, utf8(self.ui.input_path.text()))
+
+        if hasattr(self.ui, "radio_read_files"):
+            options.settings.setValue(
+                "corpusinstaller_read_files",
+                self.ui.radio_read_files.isChecked())
+
+        return super(MetaGui, self).accept()
+
+    def validate_name_not_empty(self, button):
+        if hasattr(self.ui, "corpus_name"):
+            if not utf8(self.ui.corpus_name.text()):
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
+                if hasattr(self.ui, "issue_label"):
+                    self.ui.issue_label.setText(
+                        "The corpus name cannot be empty.")
+                button.setEnabled(False)
+
+    def validate_name_is_unique(self, button):
+        if hasattr(self.ui, "corpus_name"):
+            if (utf8(self.ui.corpus_name.text())
+                    in options.cfg.current_connection.resources()):
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
+                if hasattr(self.ui, "issue_label"):
+                    self.ui.issue_label.setText(
+                        "There is already another corpus with this name.")
+                button.setEnabled(False)
+
+    def validate_db_does_not_exist(self, button):
+        if hasattr(self.ui, "corpus_name"):
+            name = "coq_{}".format(utf8(self.ui.corpus_name.text()).lower())
+            db_exists = options.cfg.current_connection.has_database(name)
+            if db_exists:
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
+                if hasattr(self.ui, "issue_label"):
+                    self.ui.issue_label.setText(
+                        "There is already another corpus that uses a database "
+                        "with this name.")
+                button.setEnabled(False)
+
+    def validate_db_does_exist(self, button):
+        if hasattr(self.ui, "corpus_name"):
+            name = "coq_{}".format(utf8(self.ui.corpus_name.text()).lower())
+            db_exists = options.cfg.current_connection.has_database(name)
+            if not db_exists:
+                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
+                if hasattr(self.ui, "issue_label"):
+                    self.ui.issue_label.setText(
+                        "There is no database that uses this name.")
+                button.setEnabled(False)
+
+    def validate_path_exists(self, button):
+        if hasattr(self.ui, "input_path"):
+            path = utf8(self.ui.input_path.text())
+            if not path:
+                button.setEnabled(False)
+
+            if (not os.path.isdir(path)):
+                self.ui.input_path.setStyleSheet(STYLE_WARN)
+                if hasattr(self.ui, "issue_label"):
+                    self.ui.issue_label.setText("Illegal data source path.")
+                button.setEnabled(False)
+
+    def validate_file_exists(self, button):
+        if hasattr(self.ui, "input_path"):
+            path = utf8(self.ui.input_path.text())
+            if not path:
+                button.setEnabled(False)
+
+            if (not os.path.isfile(path)):
+                self.ui.input_path.setStyleSheet(STYLE_WARN)
+                if hasattr(self.ui, "issue_label"):
+                    self.ui.issue_label.setText("Invalid data file.")
+                button.setEnabled(False)
+
+    def do_install(self):
+        self.builder.build()
+
+    def finish_install(self):
+        yes = QtWidgets.QDialogButtonBox.Yes
+        cancel = QtWidgets.QDialogButtonBox.Cancel
+        ok = QtWidgets.QDialogButtonBox.Ok
+
+        if self.state == "failed":
+            S = "Installation of {} failed.".format(self.builder.name)
+            if hasattr(self.ui, "progress_box"):
+                self.ui.progress_box.hide()
+            self.ui.buttonBox.button(yes).setEnabled(True)
+            self.ui.widget_options.setEnabled(True)
+        else:
+            self.state = "finished"
+            S = "Finished installing {}.".format(self.builder.name)
+
+            if hasattr(self.ui, "label"):
+                self.ui.label.setText("Installation complete.")
+
+            if hasattr(self.ui, "progress_bar"):
+                self.ui.progress_bar.hide()
+            if hasattr(self.ui, "progress_general"):
+                self.ui.progress_general.hide()
+
+            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(yes))
+            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(cancel))
+            self.ui.buttonBox.addButton(ok)
+            self.ui.buttonBox.button(ok).clicked.connect(self.accept)
+
+            self.parent().showMessage(S)
+            self.accept()
+
+        self.parent().showMessage(S)
+
+    def install_exception(self):
+        self.state = "failed"
+        if isinstance(self.exception, RuntimeError):
+            QtWidgets.QMessageBox.critical(
+                self, "Installation error – Coquery", str(self.exception))
+        elif isinstance(self.exception, DependencyError):
+            QtWidgets.QMessageBox.critical(
+                self, "Missing Python module – Coquery", str(self.exception))
+        else:
+            errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
+
+    def get_arguments_from_gui(self):
+        namespace = argparse.Namespace()
+        namespace.verbose = False
+        namespace.use_nltk = False
+        namespace.use_meta = False
+        namespace.lookup_ngram = False
+        namespace.metadata = False
+
+        # FIXME: check if the following one-letter variables are still used
+        # in CorpusBuilder.build().
+        if (hasattr(self.ui, "radio_only_module") and
+                self.ui.radio_only_module.isChecked()):
+            namespace.o = False
+            namespace.i = False
+            namespace.l = False
+            namespace.c = False
+            namespace.w = True
+            namespace.only_module = True
+        else:
+            namespace.w = True
+            namespace.o = True
+            namespace.i = True
+            namespace.l = True
+            namespace.c = True
+            namespace.only_module = False
+
+        if hasattr(self.ui, "input_path"):
+            namespace.path = utf8(self.ui.input_path.text())
+
+        namespace.db_name = self.builder_class.get_db_name()
+        namespace.name = self.builder_class.get_name()
+        namespace.encoding = self.builder_class.encoding
+
+        return namespace
+
+
+class InstallerGui(MetaGui):
+    window_title = "Corpus installer – Coquery"
+
+    showNLTKDownloader = QtCore.Signal(str)
+
+    def __init__(self, builder_class, parent=None):
+        super(InstallerGui, self).__init__(
+            builder_class, gui=Ui_CorpusInstaller, parent=parent)
+
         self.ui.label_pos_tagging.hide()
         self.ui.use_pos_tagging.hide()
-        self.ui.progress_box.hide()
-
-        self.ui.yes_button = self.ui.buttonBox.button(self.ui.buttonBox.Yes)
-        self.ui.yes_button.setText(self.button_label)
-        self.ui.yes_button.clicked.connect(self.start_install)
 
         self.ui.corpus_name.setText(builder_class.get_name())
         self.ui.corpus_name.setReadOnly(True)
@@ -87,9 +341,13 @@ class InstallerGui(QtWidgets.QDialog):
             try:
                 self.ui.notes_label.setBackgroundRole(
                     QtGui.QPalette.ColorRole.Base)
-            except:
-                print("corpusbuilder_interface.InstallerGui.__init__(): Could not set background color of installation note box")
-            self.ui.notes_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+            except Exception as e:
+                s = ("corpusbuilder_interface.InstallerGui.__init__(): Could "
+                     "not set background color of installation note box")
+                print(s)
+                print(str(e))
+            self.ui.notes_label.setTextInteractionFlags(
+                QtCore.Qt.TextBrowserInteraction)
 
             self.ui.notes_scroll = QtWidgets.QScrollArea()
             self.ui.notes_scroll.setWidgetResizable(True)
@@ -97,56 +355,21 @@ class InstallerGui(QtWidgets.QDialog):
 
             self.ui.notes_box.replaceBox(self.ui.notes_scroll)
 
-        self.restore_settings()
-        self.ui.issue_label.setText("")
-        self.ui.corpus_name.setStyleSheet("")
-
         self.ui.button_input_path.clicked.connect(self.select_path)
         self.ui.button_metafile.clicked.connect(self.select_metafile)
         self.ui.label_metafile.clicked.connect(self.select_metafile)
 
-        self.ui.radio_read_files.toggled.connect(lambda x: self.activate_read(True))
-        self.ui.radio_only_module.toggled.connect(lambda x: self.activate_read(False))
+        self.ui.radio_read_files.toggled.connect(
+            lambda x: self.activate_read(True))
+        self.ui.radio_only_module.toggled.connect(
+            lambda x: self.activate_read(False))
         self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
 
-        self.installStarted.connect(self.show_progress)
-        self.progressSet.connect(self.set_progress)
-        self.labelSet.connect(self.set_label)
-        self.progressUpdate.connect(self.update_progress)
-
-        self.generalUpdate.connect(self.general_update)
-
-    def progress(self, pb, tup):
-        if pb == self.ui.progress_bar:
-            i, n = tup
-            if n is None:
-                pb.setMaximum(i)
-                pb.setValue(i)
-                pb.setFormat("Chunk %v")
-            else:
-                pb.setMaximum(n)
-                pb.setValue(i)
-                pb.setFormat("%p%")
-        else:
-            self.ui.progress_general.setFormat("")
-            file_name, stage = tup
-            val = pb.value()
-            pb.setValue(val + 1)
-            pb.setFormat("{} {}...".format(stage, file_name))
-
     def restore_settings(self):
+        super(InstallerGui, self).restore_settings()
+
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
-        try:
-            self.resize(options.settings.value("corpusinstaller_size"))
-        except TypeError:
-            pass
-
-        if isinstance(self, BuilderGui):
-            target = "corpusinstaller_data_path"
-        else:
-            target = "corpusinstaller_corpus_source"
-        self.ui.input_path.setText(utf8(options.settings.value(target, "")))
 
         val = options.settings.value("corpusinstaller_read_files", "true")
         self.activate_read(val == "true" or val is True)
@@ -182,15 +405,6 @@ class InstallerGui(QtWidgets.QDialog):
         self.ui.radio_only_module.blockSignals(False)
 
     def accept(self):
-        super(InstallerGui, self).accept()
-        options.settings.setValue("corpusinstaller_size", self.size())
-        if isinstance(self, BuilderGui):
-            target = "corpusinstaller_data_path"
-        else:
-            target = "corpusinstaller_corpus_source"
-        options.settings.setValue(target, utf8(self.ui.input_path.text()))
-        options.settings.setValue("corpusinstaller_read_files",
-                                  self.ui.radio_read_files.isChecked())
         options.settings.setValue("corpusinstaller_use_metafile",
                                   self.ui.check_use_metafile.isChecked())
         options.settings.setValue("corpusinstaller_use_nltk",
@@ -199,6 +413,7 @@ class InstallerGui(QtWidgets.QDialog):
                                   self.ui.check_n_gram.isChecked())
         options.settings.setValue("corpusinstaller_ngram_width",
                                   self.ui.spin_n.value())
+        return super(InstallerGui, self).accept()
 
     def validate_dialog(self, check_path=True):
         self.ui.input_path.setStyleSheet("")
@@ -210,30 +425,11 @@ class InstallerGui(QtWidgets.QDialog):
             if not path:
                 self.ui.yes_button.setEnabled(False)
                 return
-            if ((self._onefile and not os.path.isfile(path)) or
-                    (not self._onefile and not os.path.isdir(path))):
+            if (not os.path.isdir(path)):
                 self.ui.issue_label.setText("Illegal data source path.")
                 self.ui.input_path.setStyleSheet(STYLE_WARN)
                 self.ui.yes_button.setEnabled(False)
                 return
-
-    def display(self):
-        self.exec_()
-        return self.state
-
-    def general_update(self, i):
-        self.ui.progress_general.setValue(i)
-
-    def set_label(self, s):
-        self.ui.progress_bar.setFormat(s)
-
-    def set_progress(self, vmax, s):
-        self.ui.progress_bar.setFormat(s)
-        self.ui.progress_bar.setMaximum(vmax)
-        self.ui.progress_bar.setValue(0)
-
-    def update_progress(self, i):
-        self.ui.progress_bar.setValue(i)
 
     def select_path(self):
         path = utf8(self.ui.input_path.text())
@@ -278,10 +474,6 @@ class InstallerGui(QtWidgets.QDialog):
                 self.ui.check_use_metafile.setChecked(False)
         self.ui.check_use_metafile.blockSignals(False)
 
-    def keyPressEvent(self, e):
-        if e.key() == QtCore.Qt.Key_Escape:
-            self.reject()
-
     def activate_read(self, activate):
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
@@ -291,50 +483,6 @@ class InstallerGui(QtWidgets.QDialog):
         self.validate_dialog()
         self.ui.radio_read_files.blockSignals(False)
         self.ui.radio_only_module.blockSignals(False)
-
-    def show_progress(self):
-        self.ui.progress_box.show()
-        self.ui.progress_box.update()
-
-    def do_install(self):
-        self.builder.build()
-
-    def finish_install(self):
-        yes = QtWidgets.QDialogButtonBox.Yes
-        cancel = QtWidgets.QDialogButtonBox.Cancel
-        ok = QtWidgets.QDialogButtonBox.Ok
-
-        if self.state == "failed":
-            S = "Installation of {} failed.".format(self.builder.name)
-            self.ui.progress_box.hide()
-            self.ui.buttonBox.button(yes).setEnabled(True)
-            self.ui.widget_options.setEnabled(True)
-        else:
-            self.state = "finished"
-            S = "Finished installing {}.".format(self.builder.name)
-            self.ui.label.setText("Installation complete.")
-            self.ui.progress_bar.hide()
-            self.ui.progress_general.hide()
-
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(yes))
-            self.ui.buttonBox.removeButton(self.ui.buttonBox.button(cancel))
-            self.ui.buttonBox.addButton(ok)
-            self.ui.buttonBox.button(ok).clicked.connect(self.accept)
-
-            self.parent().showMessage(S)
-            self.accept()
-        self.parent().showMessage(S)
-
-    def install_exception(self):
-        self.state = "failed"
-        if isinstance(self.exception, RuntimeError):
-            QtWidgets.QMessageBox.critical(
-                self, "Installation error – Coquery", str(self.exception))
-        elif isinstance(self.exception, DependencyError):
-            QtWidgets.QMessageBox.critical(
-                self, "Missing Python module – Coquery", str(self.exception))
-        else:
-            errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
 
     def reject(self):
         try:
@@ -380,87 +528,54 @@ class InstallerGui(QtWidgets.QDialog):
         """
 
         if self.ui.radio_read_files.isChecked():
-            l = self.builder_class.get_file_list(
-                    str(self.ui.input_path.text()), self.builder_class.file_filter)
+            lst = self.builder_class.get_file_list(
+                str(self.ui.input_path.text()),
+                self.builder_class.file_filter)
             try:
-                self.builder_class.validate_files(l)
+                self.builder_class.validate_files(lst)
             except RuntimeError as e:
                 reply = QtWidgets.QMessageBox.question(
                     None, "Corpus path not valid – Coquery",
                     msg_corpus_path_not_valid.format(e),
-                    QtWidgets.QMessageBox.Ignore | QtWidgets.QMessageBox.Discard)
+                    (QtWidgets.QMessageBox.Ignore |
+                     QtWidgets.QMessageBox.Discard))
                 if reply == QtWidgets.QMessageBox.Discard:
                     return
 
         self.installStarted.emit()
 
-        if self._onefile:
-            self.builder = self.builder_class(
-                gui=self,
-                mapping=self._table_options.mapping,
-                dtypes=self._table_options.dtypes,
-                table_options=self._table_options)
-        elif hasattr(self, "_nltk_tagging"):
+        if hasattr(self, "_nltk_tagging"):
             pos = self.ui.use_pos_tagging.isChecked()
             self.builder = self.builder_class(pos=pos, gui=self)
         else:
             self.builder = self.builder_class(gui=self)
 
-        self.builder.logger = self.logger
         self.builder.arguments = self.get_arguments_from_gui()
         self.builder.name = self.builder.arguments.name
 
         self.ui.yes_button.setEnabled(False)
         self.ui.widget_options.setEnabled(False)
 
-        self.install_thread = classes.CoqThread(self.do_install, self)
+        self.install_thread = CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
         self.install_thread.taskFinished.connect(self.finish_install)
         self.install_thread.taskException.connect(self.install_exception)
         self.install_thread.start()
 
     def get_arguments_from_gui(self):
-        namespace = argparse.Namespace()
-        namespace.verbose = False
-        namespace.use_nltk = False
-        namespace.use_meta = False
+        namespace = super(InstallerGui, self).get_arguments_from_gui()
+
         namespace.metadata = utf8(self.ui.label_metafile.text())
-        namespace.metadata_column = self._metafile_column
-        namespace.metaoptions = self._meta_options
-        print(self._meta_options)
-        if self.ui.radio_only_module.isChecked():
-            namespace.o = False
-            namespace.i = False
-            namespace.l = False
-            namespace.c = False
-            namespace.w = True
-            namespace.lookup_ngram = False
-            namespace.only_module = True
-        else:
-            namespace.w = True
-            namespace.o = True
-            namespace.i = True
-            namespace.l = True
-            namespace.c = True
-            namespace.only_module = False
+        if hasattr(self, "_metafile_column"):
+            namespace.metadata_column = self._metafile_column
+        if hasattr(self, "_meta_options"):
+            namespace.metaoptions = self._meta_options
+
+        if self.ui.radio_read_files.isChecked():
             if (self.ui.check_n_gram.checkState() and
                     options.cfg.experimental):
                 namespace.lookup_ngram = True
                 namespace.ngram_width = int(self.ui.spin_n.value())
-            else:
-                namespace.lookup_ngram = False
-
-        namespace.encoding = self.builder_class.encoding
-
-        namespace.name = self.builder_class.get_name()
-        namespace.path = utf8(self.ui.input_path.text())
-
-        namespace.db_name = self.builder_class.get_db_name()
-        try:
-            namespace.db_host, namespace.db_port, namespace.db_type, namespace.db_user, namespace.db_password = options.get_con_configuration()
-        except ValueError:
-            raise SQLNoConfigurationError
-        namespace.current_server = options.cfg.current_server
 
         return namespace
 
@@ -473,22 +588,13 @@ class BuilderGui(InstallerGui):
     def __init__(self, builder_class, onefile=False, parent=None):
         super(BuilderGui, self).__init__(builder_class, parent)
 
-        self.logger = logging.getLogger(NAME)
-
         self._nltk_lemmatize = False
         self._nltk_tokenize = False
         self._nltk_tagging = False
         self._testing = False
         self._onefile = onefile
-        self._table_options = csvoptions.CSVOptions(
-            sep=options.cfg.input_separator,
-            header=options.cfg.file_has_headers,
-            quote_char=options.cfg.quote_char,
-            skip_lines=options.cfg.skip_lines,
-            encoding=options.cfg.input_encoding,
-            selected_column=None)
 
-        self._meta_options = csvoptions.CSVOptions(
+        self._meta_options = CSVOptions(
             sep=options.cfg.input_separator,
             header=options.cfg.file_has_headers,
             quote_char=options.cfg.quote_char,
@@ -498,7 +604,8 @@ class BuilderGui(InstallerGui):
         self._metafile_column = None
 
         if self._onefile:
-            self.ui.label_read_files.setText("Build new corpus from data table")
+            self.ui.label_read_files.setText(
+                "Build new corpus from data table")
             self.ui.label_input_path.setText("Use table file:")
             self.ui.button_input_path.setIcon(self.ui.button_metafile.icon())
             self.ui.button_input_path.setText("Change")
@@ -512,7 +619,8 @@ class BuilderGui(InstallerGui):
             self.ui.groupBox.hide()
 
         else:
-            self.ui.label_read_files.setText("Build new corpus from text files")
+            self.ui.label_read_files.setText(
+                "Build new corpus from text files")
             self.ui.label_input_path.setText("Path to text files:")
             self.ui.input_path.clicked.connect(self.select_path)
             self.ui.label_pos_tagging.show()
@@ -596,8 +704,7 @@ class BuilderGui(InstallerGui):
 
         if options.use_nltk:
             self._testing = True
-            self.test_thread = classes.CoqThread(self.test_nltk_core,
-                                                 parent=self)
+            self.test_thread = CoqThread(self.test_nltk_core, parent=self)
             self.test_thread.taskFinished.connect(self.test_nltk_results)
             self.test_thread.taskException.connect(self.test_nltk_exception)
             self._label_text = str(self.ui.label_pos_tagging.text())
@@ -617,44 +724,81 @@ class BuilderGui(InstallerGui):
     def test_nltk_core(self):
         import nltk
         # test lemmatizer:
+
+        # This regular expression matches the error output of nltk.LookupError
+        # of the form
+        #
+        # Resource [ANSI|']resource_name[ANSI|'] not found
+        #
+        # where ANSI can be any ANSI sequence, e.g. one used to change the
+        # color of the output. The ANSI part is based on
+        # https://stackoverflow.com/a/33925425
+
+        regstr = (r".*Resource\s*"
+                  "(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
+                  "\s*'?"
+                  "(\w+)"
+                  "'?\s*"
+                  "(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
+                  "\s*not found")
+
+        regexp = re.compile(regstr)
+
         try:
             nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
         except LookupError as e:
             s = str(e).replace("\n", "").strip("*")
-            match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+            match = regexp.match(s)
             if match:
-                self.nltk_exceptions.append(match.group(1))
+                self.nltk_exceptions.append(match.group(1).strip("'"))
+            else:
+                error_msg = str(e).replace("\n", "<br>")
+                raise RuntimeError(msg_nltk_message_error.format(error_msg))
             self._nltk_lemmatize = False
         except Exception as e:
-            self.nltk_exceptions.append("An unexpected error occurred when testing the lemmatizer:\n{}".format(sys.exc_info()))
+            self.nltk_exceptions.append(
+                ("An unexpected error occurred when testing the "
+                 "lemmatizer:\n{}".format(sys.exc_info())))
             raise e
         else:
             self._nltk_lemmatize = True
+
         # test tokenzie:
         try:
             nltk.sent_tokenize("test")
         except LookupError as e:
             s = str(e).replace("\n", "")
-            match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+            match = regexp.match(s)
             if match:
-                self.nltk_exceptions.append(match.group(1))
+                self.nltk_exceptions.append(match.group(1).strip("'"))
+            else:
+                error_msg = str(e).replace("\n", "<br>")
+                raise RuntimeError(msg_nltk_message_error.format(error_msg))
             self._nltk_tokenize = False
         except Exception as e:
-            self.nltk_exceptions.append("An unexpected error occurred when testing the tokenizer:\n{}".format(sys.exc_info()))
+            self.nltk_exceptions.append(
+                ("An unexpected error occurred when testing the "
+                 "tokenizer:\n{}".format(sys.exc_info())))
             raise e
         else:
             self._nltk_tokenize = True
+
         # test tagging:
         try:
             nltk.pos_tag("test")
         except LookupError as e:
             s = str(e).replace("\n", "")
-            match = re.match(r'.*Resource.*\'(.*)\'.*not found', s)
+            match = regexp.match(s)
             if match:
-                self.nltk_exceptions.append(match.group(1))
+                self.nltk_exceptions.append(match.group(1).strip("'"))
+            else:
+                error_msg = str(e).replace("\n", "<br>")
+                raise RuntimeError(msg_nltk_message_error.format(error_msg))
             self._nltk_tagging = False
         except Exception as e:
-            self.nltk_exceptions.append("An unexpected error occurred when testing the POS tagger:\n{}".format(sys.exc_info()))
+            self.nltk_exceptions.append(
+                ("An unexpected error occurred when testing the POS "
+                 "tagger:\n{}".format(sys.exc_info())))
             raise e
         else:
             self._nltk_tagging = True
@@ -670,7 +814,13 @@ class BuilderGui(InstallerGui):
         if self.ui.use_pos_tagging.isChecked() and not pass_check():
             self.ui.use_pos_tagging.setChecked(False)
             from . import nltkdatafiles
-            nltkdatafiles.NLTKDatafiles.ask(self.nltk_exceptions, parent=self)
+            self._nltk_data_files = nltkdatafiles.NLTKDatafiles(
+                self.nltk_exceptions, parent=self)
+
+            self._nltk_data_files.packagesInstalled.connect(
+                lambda: self.ui.use_pos_tagging.setChecked(True))
+
+            self._nltk_data_files.exec_()
 
         self._testing = False
         self.ui.label_pos_tagging.setDisabled(False)
@@ -695,68 +845,32 @@ class BuilderGui(InstallerGui):
 
         self.validate_dialog()
 
+    def validate_metadata(self, button):
+        if (self.ui.check_use_metafile.isChecked() and
+                self._metafile_column is None):
+            self.ui.label_metafile.setStyleSheet(
+                STYLE_WARN.replace("QLineEdit", "CoqClickableLabel"))
+            self.ui.issue_label.setText(
+                "No file name colum is set for the metadata file.")
+            button.setEnabled(False)
+        else:
+            self.ui.label_metafile.setStyleSheet("")
+
     def validate_dialog(self, check_path=False):
-        def validate_name_not_empty(button):
-            if not utf8(self.ui.corpus_name.text()):
-                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
-                self.ui.issue_label.setText(
-                    "The corpus name cannot be empty.")
-                button.setEnabled(False)
-
-        def validate_name_is_unique(button):
-            if (utf8(self.ui.corpus_name.text())
-                    in options.cfg.current_resources):
-                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
-                self.ui.issue_label.setText(
-                    "There is already another corpus with this name.")
-                button.setEnabled(False)
-
-        def validate_db_does_not_exist(button):
-            db_exists = sqlhelper.has_database(
-                options.cfg.current_server,
-                "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
-            if db_exists:
-                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
-                self.ui.issue_label.setText(
-                    "There is already another corpus that uses a database "
-                    "with this name.")
-                button.setEnabled(False)
-
-        def validate_db_does_exist(button):
-            db_exists = sqlhelper.has_database(
-                options.cfg.current_server,
-                "coq_{}".format(utf8(self.ui.corpus_name.text()).lower()))
-            if not db_exists:
-                self.ui.corpus_name.setStyleSheet(STYLE_WARN)
-                self.ui.issue_label.setText(
-                    "There is no database that uses this name.")
-                button.setEnabled(False)
-
-        def validate_metadata(button):
-            if (self.ui.check_use_metafile.isChecked() and
-                    self._metafile_column is None):
-                self.ui.label_metafile.setStyleSheet(
-                    STYLE_WARN.replace("QLineEdit", "CoqClickableLabel"))
-                self.ui.issue_label.setText(
-                    "No file name colum is set for the metadata file.")
-                button.setEnabled(False)
-            else:
-                self.ui.label_metafile.setStyleSheet("")
-
         super(BuilderGui, self).validate_dialog(check_path)
 
         self.ui.yes_button.setEnabled(True)
         self.ui.issue_label.setText("")
         if hasattr(self.ui, "corpus_name"):
             self.ui.corpus_name.setStyleSheet("")
-            validate_name_not_empty(self.ui.yes_button)
+            self.validate_name_not_empty(self.ui.yes_button)
             if self.ui.radio_only_module.isChecked():
-                validate_db_does_exist(self.ui.yes_button)
+                self.validate_db_does_exist(self.ui.yes_button)
             else:
-                validate_name_is_unique(self.ui.yes_button)
-                validate_db_does_not_exist(self.ui.yes_button)
+                self.validate_name_is_unique(self.ui.yes_button)
+                self.validate_db_does_not_exist(self.ui.yes_button)
                 if not self._onefile:
-                    validate_metadata(self.ui.yes_button)
+                    self.validate_metadata(self.ui.yes_button)
 
     def select_path(self):
         if self._onefile:
@@ -814,14 +928,19 @@ class BuilderGui(InstallerGui):
     def get_arguments_from_gui(self):
         namespace = super(BuilderGui, self).get_arguments_from_gui()
 
-        namespace.name = utf8(self.ui.corpus_name.text())
         namespace.use_nltk = self.ui.use_pos_tagging.checkState()
         namespace.use_meta = self.ui.check_use_metafile.checkState()
-        namespace.metadata = utf8(self.ui.label_metafile.text())
+
+        if self.ui.check_use_metafile.isChecked():
+            namespace.metadata = utf8(self.ui.label_metafile.text())
+        else:
+            namespace.metadata = None
+
         namespace.metadata_column = self._metafile_column
         namespace.metaoptions = self._meta_options
-        namespace.db_name = "coq_{}".format(namespace.name).lower()
         namespace.one_file = self._onefile
+        namespace.name = utf8(self.ui.corpus_name.text())
+        namespace.db_name = "coq_{}".format(namespace.name).lower()
         return namespace
 
 
@@ -840,12 +959,12 @@ class PackageGui(BuilderGui):
 
         self.ui = Ui_PackageInstaller()
         self.ui.setupUi(self)
+
         self.ui.yes_button = self.ui.buttonBox.button(
             QtWidgets.QDialogButtonBox.Yes)
-
         self.ui.yes_button.setText(self.button_label)
-
         self.ui.yes_button.clicked.connect(self.start_install)
+
         self.ui.button_input_path.clicked.connect(self.select_file)
         self.ui.input_path.clicked.connect(self.select_file)
         self.ui.corpus_name.textChanged.connect(self.validate_dialog)
@@ -974,7 +1093,7 @@ class PackageGui(BuilderGui):
 
         self.ui.yes_button.setDisabled(True)
 
-        self.install_thread = classes.CoqThread(self.do_install, self)
+        self.install_thread = CoqThread(self.do_install, self)
         self.install_thread.setInterrupt(self.builder.interrupt)
         self.install_thread.taskFinished.connect(self.finish_install)
         self.install_thread.taskException.connect(self.install_exception)
@@ -1009,23 +1128,178 @@ class PackageGui(BuilderGui):
     def get_arguments_from_gui(self):
         namespace = argparse.Namespace()
         namespace.only_module = self.ui.radio_only_module.isChecked()
+        namespace.lookup_ngram = False
+        namespace.ngram_width = None
+        namespace.metadata = None
         if self.ngram_width is not None:
             namespace.lookup_ngram = True
             namespace.ngram_width = self.ngram_width
-        else:
-            namespace.lookup_ngram = False
 
         namespace.name = self.builder.name
         namespace.encoding = "utf-8"
         namespace.db_name = "coq_{}".format(self.builder.name.lower())
-        namespace.metadata = False
-        try:
-            (namespace.db_host,
-             namespace.db_port,
-             namespace.db_type,
-             namespace.db_user,
-             namespace.db_password) = options.get_con_configuration()
-        except ValueError:
-            raise SQLNoConfigurationError
-        namespace.current_server = options.cfg.current_server
+
         return namespace
+
+
+class TableGui(MetaGui):
+    button_label = "&Build"
+    window_title = "Corpus builder – Coquery"
+
+    def __init__(self, builder_class, onefile=True, parent=None):
+        super(TableGui, self).__init__(builder_class,
+                                       gui=Ui_CorpusTable,
+                                       parent=parent)
+
+        self._table_options = CSVOptions(
+            sep=options.cfg.input_separator,
+            header=options.cfg.file_has_headers,
+            quote_char=options.cfg.quote_char,
+            skip_lines=options.cfg.skip_lines,
+            encoding=options.cfg.input_encoding,
+            selected_column=None)
+
+        self.ui.issue_layout = QtWidgets.QVBoxLayout()
+        self.ui.name_layout = QtWidgets.QHBoxLayout()
+        self.ui.issue_label.setStyleSheet("QLabel { color: red; }")
+
+        self.ui.corpus_name.setReadOnly(False)
+        self.ui.corpus_name.setText("")
+        self.ui.corpus_name.setValidator(
+            QtGui.QRegExpValidator(QtCore.QRegExp("[A-Za-z0-9_]*")))
+        self.ui.name_label.setBuddy(self.ui.corpus_name)
+
+        self.ui.verticalLayout.insertLayout(0, self.ui.issue_layout)
+
+        self.ui.input_path.setText(options.cfg.corpus_table_source_path)
+
+        self.ui.yes_button.setEnabled(False)
+        self.ui.corpus_name.textChanged.connect(
+            lambda: self.validate_dialog(check_path=False))
+
+        self.ui.button_input_path.clicked.connect(self.select_file)
+        self.ui.input_path.clicked.connect(self.select_file)
+
+        self.ui.radio_only_module.toggled.connect(
+            lambda: self.validate_dialog())
+        self.ui.radio_only_module.toggled.connect(
+            lambda: self.validate_dialog())
+
+        self.ui.corpus_name.setFocus()
+
+        try:
+            self.resize(options.settings.value("corpusbuilder_size"))
+        except TypeError:
+            pass
+
+    def validate_dialog(self, check_path=False):
+        self.ui.yes_button.setEnabled(True)
+        self.ui.issue_label.setText("")
+        self.ui.corpus_name.setStyleSheet("")
+
+        self.validate_name_not_empty(self.ui.yes_button)
+        self.validate_file_exists(self.ui.yes_button)
+
+        if self.ui.radio_only_module.isChecked():
+            self.validate_db_does_exist(self.ui.yes_button)
+        else:
+            self.validate_name_is_unique(self.ui.yes_button)
+            self.validate_db_does_not_exist(self.ui.yes_button)
+
+    def select_path(self):
+        if not options.cfg.corpus_table_source_path:
+            path = os.path.expanduser("~")
+        else:
+            path = os.path.split(options.cfg.corpus_table_source_path)[0]
+        name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
+
+        if type(name) == tuple:
+            name = name[0]
+        if name:
+            options.cfg.corpus_table_source_path = name
+            self.ui.input_path.setText(name)
+
+    def install_exception(self):
+        self.state = "failed"
+        if type(self.exception) == RuntimeError:
+            QtWidgets.QMessageBox.critical(
+                self, "Corpus building error – Coquery", str(self.exception))
+        else:
+            errorbox.ErrorBox.show(self.exc_info, self, no_trace=False)
+
+    def write_adhoc(self):
+        # Create an installer in the adhoc directory:
+        path = os.path.join(
+            options.cfg.adhoc_path, "coq_install_{}.py".format(
+                self.builder.arguments.db_name))
+        with codecs.open(path, "w", encoding="utf-8") as output_file:
+            for line in self.builder.create_installer_module():
+                output_file.write(utf8(line))
+
+    def finish_install(self, *args, **kwargs):
+        super(TableGui, self).finish_install(*args, **kwargs)
+
+        options.settings.setValue("corpusbuilder_size", self.size())
+        if self.state == "finished":
+            self.write_adhoc()
+
+    def get_arguments_from_gui(self):
+        namespace = super(TableGui, self).get_arguments_from_gui()
+        namespace.name = utf8(self.ui.corpus_name.text())
+
+        namespace.db_name = "coq_{}".format(namespace.name).lower()
+        namespace.one_file = True
+        return namespace
+
+    def select_file(self):
+        """ Get CSV file options for current query input file. """
+        from .namedtableoptions import NamedTableOptionsDialog
+        dialog = NamedTableOptionsDialog(
+            filename=utf8(self.ui.input_path.text()),
+            default=self._table_options,
+            parent=self,
+            icon=options.cfg.icon)
+        dialog.add_required_mapping("word")
+
+        result = dialog.exec_()
+        if result:
+            self._table_options = result
+            self.ui.input_path.setText(result.file_name)
+
+        self.validate_dialog()
+
+    def start_install(self):
+        if self.ui.radio_read_files.isChecked():
+            lst = self.builder_class.get_file_list(
+                str(self.ui.input_path.text()),
+                self.builder_class.file_filter)
+            try:
+                self.builder_class.validate_files(lst)
+            except RuntimeError as e:
+                reply = QtWidgets.QMessageBox.question(
+                    None, "Corpus path not valid – Coquery",
+                    msg_corpus_path_not_valid.format(e),
+                    (QtWidgets.QMessageBox.Ignore |
+                     QtWidgets.QMessageBox.Discard))
+                if reply == QtWidgets.QMessageBox.Discard:
+                    return
+
+        self.installStarted.emit()
+
+        self.builder = self.builder_class(
+            gui=self,
+            mapping=self._table_options.mapping,
+            dtypes=self._table_options.dtypes,
+            table_options=self._table_options)
+
+        self.builder.arguments = self.get_arguments_from_gui()
+        self.builder.name = self.builder.arguments.name
+
+        self.ui.yes_button.setEnabled(False)
+        self.ui.widget_options.setEnabled(False)
+
+        self.install_thread = CoqThread(self.do_install, self)
+        self.install_thread.setInterrupt(self.builder.interrupt)
+        self.install_thread.taskFinished.connect(self.finish_install)
+        self.install_thread.taskException.connect(self.install_exception)
+        self.install_thread.start()

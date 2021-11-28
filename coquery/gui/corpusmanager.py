@@ -2,7 +2,7 @@
 """
 corpusmanager.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -42,6 +42,10 @@ from . import classes
 from .pyqt_compat import (QtCore, QtWidgets, QtGui, frameShadow, frameShape,
                           get_toplevel_window)
 from .ui.corpusManagerUi import Ui_corpusManager
+from .app import get_icon
+
+
+translate = options.cfg.app.translate
 
 
 class CoqAccordionEntry(QtWidgets.QWidget):
@@ -100,7 +104,9 @@ class CoqAccordionEntry(QtWidgets.QWidget):
 
         self.validation_label = QtWidgets.QLabel("")
         self.button_layout.addWidget(self.validation_label)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(40, 20,
+                                           QtWidgets.QSizePolicy.Expanding,
+                                           QtWidgets.QSizePolicy.Minimum)
         self.button_layout.addItem(spacerItem)
         self.verticalLayout_3.addLayout(self.button_layout)
 
@@ -127,9 +133,10 @@ class CoqAccordionEntry(QtWidgets.QWidget):
         '_to_clipboard', which copies the references to the clipboard.
         """
         if utf8(link) == "_to_clipboard":
-            QtWidgets.QApplication.clipboard().setText("\n".join([utf8(x) for x in self._reference_list]))
+            QtWidgets.QApplication.clipboard().setText("\n".join(
+                [utf8(x) for x in self._reference_list]))
         else:
-            QtWidgets.QDesktopServices.openUrl(QtCore.QUrl(link))
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(link))
 
     def setup_buttons(self, installed, entry_widget):
         """
@@ -146,24 +153,24 @@ class CoqAccordionEntry(QtWidgets.QWidget):
         entry_widget.header_layout.addLayout(self.widget_layout)
 
         button_build = QtWidgets.QPushButton()
-        button_build.setIcon(self._stack.parent().get_icon("View File"))
+        button_build.setIcon(get_icon("View File"))
         button_build.setText("Build")
         button_build.setToolTip("Build new corpus")
         button_remove = QtWidgets.QPushButton()
-        button_remove.setIcon(self._stack.parent().get_icon("Minus"))
+        button_remove.setIcon(get_icon("Minus"))
         button_remove.setText("Remove")
         button_remove.setToolTip("Remove corpus")
         button_install = QtWidgets.QPushButton()
-        button_install.setIcon(self._stack.parent().get_icon("Plus"))
+        button_install.setIcon(get_icon("Plus"))
         button_install.setText("Install")
         button_install.setToolTip("Install corpus")
         button_reinstall = QtWidgets.QPushButton()
-        button_reinstall.setIcon(self._stack.parent().get_icon("Connection Sync"))
+        button_reinstall.setIcon(get_icon("Connection Sync"))
         button_reinstall.setText("Reinstall")
         button_reinstall.setToolTip("Reinstall corpus")
         button_dump = QtWidgets.QPushButton("Package")
         button_dump.setToolTip("Package corpus")
-        button_dump.setIcon(self._stack.parent().get_icon("Save"))
+        button_dump.setIcon(get_icon("Save"))
 
         # make all buttons the same width:
         max_width = 0
@@ -194,7 +201,7 @@ class CoqAccordionEntry(QtWidgets.QWidget):
                 if self._stack:
                     self.button_remove.clicked.connect(
                         lambda: self._stack.removeCorpus.emit(self))
-
+            if installed:
                 self.button_dump = button_dump
                 self.button_dump.setParent(entry_widget)
                 self.widget_layout.addWidget(self.button_dump)
@@ -239,7 +246,8 @@ class CoqAccordionEntry(QtWidgets.QWidget):
 
         #response = box(None,
             #"Unvalidated corpus installer – Coquery",
-            #msg, QtWidgets.QMessageBox.Yes| QtWidgets.QMessageBox.No, default)
+            #msg, QtWidgets.QMessageBox.Yes| QtWidgets.QMessageBox.No,
+            #default)
         #if response == QtWidgets.QMessageBox.Yes:
             #self._stack.installCorpus.emit(self._builder_class)
         self._stack.installCorpus.emit(self._builder_class)
@@ -247,8 +255,12 @@ class CoqAccordionEntry(QtWidgets.QWidget):
     def setReferences(self, ref):
         self._reference_list = ref
 
-        references = "".join(["<p><span style='padding-left: 2em; text-indent: 2em;'>{}</span></p>".format(utf8(x)) for x in ref])
-        self._references = "<p><b>References</b> <a href='_to_clipboard'>(copy to clipboard)</a>{}</p>".format(references)
+        references = "".join(
+            [("<p><span style='padding-left: 2em; text-indent: 2em;'>{}"
+              "</span></p>").format(utf8(x)) for x in ref])
+        self._references = (
+            "<p><b>References</b> <a href='_to_clipboard'>(copy to clipboard)"
+            "</a>{}</p>").format(references)
         self.change_description()
 
     def setTitle(self, title):
@@ -302,30 +314,34 @@ class CoqAccordionEntry(QtWidgets.QWidget):
         string_list = []
         if self._title:
             if self._url:
-                string_list.append("<p><b>{name}</b> (<a href='{url}'>{url}</a>)</p>".format(
-                    name=self._title, url=self._url))
+                string_list.append(
+                    "<p><b>{name}</b> (<a href='{url}'>{url}</a>)</p>".format(
+                        name=self._title, url=self._url))
             else:
                 string_list.append("<p><b>{}</b></p>".format(self._title))
         if self._text:
-            string_list.append("<p><font size='100%'>{}</font></p>".format(self._text))
+            string_list.append("<p><font size='100%'>{}</font></p>".format(
+                self._text))
         if self._language or self._code:
             string_list.append("<p><b>Language</b></p><p>{}{}</p>".format(
-                self._language, " ({})".format(self._code) if self._code else ""))
+                self._language,
+                " ({})".format(self._code) if self._code else ""))
         if self._references:
             string_list.append(self._references)
         if self._license:
             string_list.append(self._license)
         if self._modules:
-            l = []
+            lst = []
             for name, module, url in self._modules:
                 if url:
                     s = "<p>{module} (<a href='{url}'>{url}</a>)</p>".format(
                         module=utf8(module), url=utf8(url))
                 else:
                     s = "<p>{}</p>".format(module)
-                l.append(s)
-            string_list.append("<p><b>Required additional Python modules</b></p>{}".format(
-                "".join(l)))
+                lst.append(s)
+            string_list.append(
+                "<p><b>Required additional Python modules</b></p>{}".format(
+                    "".join(lst)))
         self.corpus_description.setText(
             "".join(string_list))
 
@@ -336,7 +352,9 @@ class CoqAccordionEntry(QtWidgets.QWidget):
 class PackageEntry(CoqAccordionEntry):
     def __init__(self, *args, **kwargs):
         super(PackageEntry, self).__init__(*args, **kwargs)
-        self.setTitle("Build a corpus from a package file")
+        self.setTitle(translate("CorpusManager",
+                                "Build a corpus from a package file",
+                                None))
         self.setDescription(msg_adhoc_builder_package)
         self._is_adhoc = True
         self._is_builder = True
@@ -353,6 +371,30 @@ class PackageEntry(CoqAccordionEntry):
 
         return PackageGui(coq_install_generic_package.BuilderClass,
                           parent=get_toplevel_window())
+
+
+class TableEntry(CoqAccordionEntry):
+    def __init__(self, *args, **kwargs):
+        super(TableEntry, self).__init__(*args, **kwargs)
+        self.setTitle(translate("CorpusManager",
+                                "Build a corpus from a data table file",
+                                None))
+        self.setDescription(msg_adhoc_builder_table)
+        self._is_adhoc = True
+        self._is_builder = True
+
+    def setup_buttons(self, *args, **kwargs):
+        super(TableEntry, self).setup_buttons(*args, **kwargs)
+        self.button_build.clicked.disconnect()
+        self.button_build.clicked.connect(
+            lambda: self._stack.launchBuilder.emit(self))
+
+    def get_builder_interface(self):
+        from coquery.installer import coq_install_generic_table
+        from .corpusbuilder_interface import TableGui
+
+        return TableGui(coq_install_generic_table.BuilderClass,
+                        parent=get_toplevel_window())
 
 
 class CorpusManager(QtWidgets.QDialog):
@@ -388,10 +430,10 @@ class CorpusManager(QtWidgets.QDialog):
         self.paths.append((options.cfg.adhoc_path, INSTALLER_ADHOC))
         self.paths.append((options.cfg.installer_path, INSTALLER_DEFAULT))
         if options.cfg.custom_installer_path:
-            self.paths.append((options.cfg.custom_installer_path, INSTALLER_CUSTOM))
+            self.paths.append((options.cfg.custom_installer_path,
+                               INSTALLER_CUSTOM))
 
         self.update()
-
 
     def built_in(self, path):
         """
@@ -412,37 +454,42 @@ class CorpusManager(QtWidgets.QDialog):
         return (os.path.abspath(options.cfg.installer_path) in
                 os.path.abspath(path))
 
-    def get_table_entry(self):
-        entry = CoqAccordionEntry(stack=self)
-        entry._is_builder = True
-        entry._build_from_table = True
-        entry.setTitle("Build a new user corpus from a CSV table file")
-        entry.setDescription(msg_adhoc_builder_table)
-        detail_box = classes.CoqDetailBox(
-            "Build new corpus from table file...", entry)
-        entry.setup_buttons(False, detail_box)
-        return detail_box
-
     def get_generic_entry(self):
         entry = CoqAccordionEntry(stack=self)
         entry._is_builder = True
-        entry.setTitle("Build a new corpus from a collection of text files")
+        entry.setTitle(
+            translate("CorpusManager",
+                      "Build a new corpus from a collection of text files",
+                      None))
 
-        l = ["Plain Text"]
+        lst = ["Plain Text"]
         if options.use_pdfminer:
-            l.append("PDF (Portable Document Format)")
+            lst.append("PDF (Portable Document Format)")
         if options.use_docx:
-            l.append("DOCX (MS Office)")
+            lst.append("DOCX (MS Office)")
         if options.use_odfpy:
-            l.append("ODT (Open Document Texts)")
+            lst.append("ODT (Open Document Texts)")
         if options.use_bs4:
-            l.append("HTML")
+            lst.append("HTML")
         entry.setDescription(msg_adhoc_builder_texts.format(
-                    list="".join(["<li>{}</li>".format(x) for x in l])))
+                    list="".join(["<li>{}</li>".format(x) for x in lst])))
 
         detail_box = classes.CoqDetailBox(
-            "Build new corpus from text files...", entry)
+            translate("CorpusManager",
+                      "Build new corpus from text files...", None),
+            entry)
         entry.setup_buttons(False, detail_box)
+        return detail_box
+
+    def get_table_entry(self):
+        entry = CoqAccordionEntry(stack=self)
+        entry = TableEntry(stack=self)
+        detail_box = classes.CoqDetailBox(
+            translate("CorpusManager",
+                      "Build new corpus from table file...", None),
+            entry)
+        entry.setup_buttons(False, detail_box)
+
         return detail_box
 
     def get_package_entry(self):
@@ -457,7 +504,6 @@ class CorpusManager(QtWidgets.QDialog):
         Read the installers from the path, and add a widget for each to the
         installer list.
         """
-        options.cfg.current_resources = options.get_available_resources(options.cfg.current_server)
         # clear existing installer list:
         QtWidgets.QWidget().setLayout(self.ui.list_content.layout())
 
@@ -471,14 +517,15 @@ class CorpusManager(QtWidgets.QDialog):
 
             for root, dirnames, filenames in os.walk(path):
                 installer_list = sorted(fnmatch.filter(filenames,
-                                                       'coq_install_*.py'), reverse=False)
+                                                       'coq_install_*.py'))
                 for fullpath in installer_list:
                     module_path = os.path.join(root, fullpath)
-                    basename, ext = os.path.splitext(os.path.basename(fullpath))
+                    basename, ext = os.path.splitext(
+                        os.path.basename(fullpath))
 
-                    ## Validate the file, i.e. determine whether the file contains
-                    ## only those instructions that are allowed for installer
-                    ## modules.
+                    ## Validate the file, i.e. determine whether the file
+                    ## contains only those instructions that are allowed for
+                    ## installer modules.
 
                     #try:
                         #hashsum = options.validate_module(module_path,
@@ -491,7 +538,10 @@ class CorpusManager(QtWidgets.QDialog):
                             #ModuleIncompleteError) as e:
                         #QtWidgets.QMessageBox.critical(
                             #None, "Corpus validation error – Coquery",
-                            #msg_invalid_installer.format(name=basename, code=str(e)), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                            #msg_invalid_installer.format(name=basename,
+                            #code=str(e)),
+                            #QtWidgets.QMessageBox.Ok,
+                            #QtWidgets.QMessageBox.Ok)
                         #continue
                     #except (ImportError, SyntaxError) as e:
                         #msg = msg_corpus_broken.format(
@@ -501,7 +551,8 @@ class CorpusManager(QtWidgets.QDialog):
                         #logging.error(msg)
                         #QtWidgets.QMessageBox.critical(
                             #None, "Corpus error – Coquery",
-                            #msg, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                            #msg, QtWidgets.QMessageBox.Ok,
+                            #QtWidgets.QMessageBox.Ok)
                         #continue
                     try:
                         # load the module:
@@ -526,11 +577,14 @@ class CorpusManager(QtWidgets.QDialog):
                     entry = CoqAccordionEntry(stack=self)
 
                     name = utf8(builder_class.get_name())
-                    self.detail_box = classes.CoqDetailBox(name, entry, alternative=name)
+                    self.detail_box = classes.CoqDetailBox(name,
+                                                           entry,
+                                                           alternative=name)
 
                     if basename not in ("coq_install_generic_table",
                                         "coq_install_generic",
                                         "coq_install_generic_package"):
+                        entry.setBuilderClass(builder_class)
                         entry._adhoc = hasattr(builder_class, "_is_adhoc")
                         entry._builtin = self.built_in(module_path)
                         entry.setName(name)
@@ -543,10 +597,10 @@ class CorpusManager(QtWidgets.QDialog):
                         if builder_class.get_url():
                             entry.setURL(utf8(builder_class.get_url()))
 
-                        if builder_class.get_description():
-                            entry.setDescription(
-                                "".join(["<p>{}</p>".format(utf8(x))
-                                         for x in builder_class.get_description()]))
+                        desc = builder_class.get_description()
+                        if desc:
+                            lst = ["<p>{}</p>".format(utf8(x)) for x in desc]
+                            entry.setDescription("".join(lst))
 
                         if builder_class.get_language():
                             entry.setLanguage(
@@ -554,18 +608,24 @@ class CorpusManager(QtWidgets.QDialog):
                                 utf8(builder_class.get_language_code()))
 
                         if builder_class.get_references():
-                            entry.setReferences(builder_class.get_references())
+                            entry.setReferences(
+                                builder_class.get_references())
 
-                        if builder_class.get_license():
-                            entry.setLicense("<p><b>License</b></p><p>{}</p>".format(utf8(builder_class.get_license())))
+                        license = builder_class.get_license()
+                        if license:
+                            S = "<p><b>License</b></p><p>{}</p>".format(
+                                utf8(license))
+                            entry.setLicense(S)
 
                         if builder_class.get_modules():
                             entry.setModules(builder_class.get_modules())
 
-                        entry.setup_buttons(name in options.cfg.current_resources, entry_widget=self.detail_box)
-                        entry.setBuilderClass(builder_class)
+                        resources = options.cfg.current_connection.resources()
+                        entry.setup_buttons(name in resources,
+                                            entry_widget=self.detail_box)
 
-                        self.detail_box.clicked.connect(lambda x: self.update_accordion(x))
+                        self.detail_box.clicked.connect(
+                            lambda x: self.update_accordion(x))
 
                         # add entry to installer list:
                         self.ui.list_layout.addWidget(self.detail_box)
@@ -608,4 +668,3 @@ class CorpusManager(QtWidgets.QDialog):
 
     def closeEvent(self, event):
         options.settings.setValue("corpusmanager_size", self.size())
-        options.set_current_server(options.cfg.current_server)

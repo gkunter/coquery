@@ -3,7 +3,7 @@
 """
 coq_install_obc2.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -58,7 +58,7 @@ class BuilderClass(TEICorpusBuilder):
         Column(speaker_class,
                "ENUM('?','upper (1-5)','lower (6-13)') NOT NULL")]
 
-    event_table = "Event"
+    event_table = "Events"
     event_id = "EventId"
     event_label = "Event"
     event_scribe = "Scribe"
@@ -72,7 +72,6 @@ class BuilderClass(TEICorpusBuilder):
         Column(event_publisher, "VARCHAR(128) NOT NULL"),
         Column(event_printer, "VARCHAR(128) NOT NULL"),
         Column(event_length, "SMALLINT UNSIGNED NOT NULL")]
-
 
     source_table = "Trials"
     source_id = "TrialId"
@@ -118,15 +117,7 @@ class BuilderClass(TEICorpusBuilder):
         Link(corpus_source_id, source_table),
         Link(corpus_event_id, event_table)]
 
-    auto_create = ["word", "file", "speaker", "event", "offence", "source", "corpus"]
-
-    #_source_map = {
-        #"offenceDescription": source_offence,
-        #"verdictDescription": source_verdict,
-        #"punishmentDescription": source_punishment,
-        #"defendantName": source_defendant,
-        #"placeName": source_place,
-        #"victimName": source_victim}
+    auto_create = ["word", "file", "speaker", "event", "source", "corpus"]
 
     expected_files = [
      "OBC2POS-17200427.xml", "OBC2POS-17550116.xml", "OBC2POS-18210912.xml",
@@ -405,8 +396,8 @@ class BuilderClass(TEICorpusBuilder):
 
     @classmethod
     def get_file_list(cls, *args, **kwargs):
-        l = super(BuilderClass, cls).get_file_list(*args, **kwargs)
-        return l
+        lst = super(BuilderClass, cls).get_file_list(*args, **kwargs)
+        return lst
 
     @classmethod
     def _get_text(cls, node):
@@ -451,7 +442,7 @@ class BuilderClass(TEICorpusBuilder):
         data = "\n".join(data)
         try:
             tree = ET.XML(bytes(data, encoding="utf8"))
-        except:
+        except Exception:
             tree = ET.XML(data)
         return tree
 
@@ -466,11 +457,12 @@ class BuilderClass(TEICorpusBuilder):
             label = u.attrib.get("hiscoLabel", None) or ""
             role = u.attrib.get("role", None) or "?"
 
-            hisclass = u.attrib.get("hisclass", None)
+            hisclass = u.attrib.get("hisclass", 0)
             try:
                 hisclass = int(hisclass)
             except ValueError:
-                hisclass = None
+                hisclass = 0
+
             class_cat = ("?" if hisclass is None else
                          "lower (6-13)" if hisclass > 6 else
                          "upper (1-5)")
@@ -498,7 +490,6 @@ class BuilderClass(TEICorpusBuilder):
                 self._speaker_id += 1
                 d_speaker[self.speaker_id] = self._speaker_id
                 self._new_people[speaker] = d_speaker
-
 
             printer = u.attrib.get("printer", None) or "?"
             publisher = u.attrib.get("publisher", None) or "?"
@@ -538,7 +529,7 @@ class BuilderClass(TEICorpusBuilder):
     def _process_charge(self, charge, trial, d):
         targets = charge.attrib["targets"]
         for target in targets.split():
-            rs = trial.find(".//rs[@id='{}']".format(target))
+            rs = trial.find(f".//rs[@id='{target}']")
             if rs is not None:
                 if rs.attrib["type"] == "offenceDescription":
                     for interp in rs.findall(".//interp"):
@@ -572,7 +563,7 @@ class BuilderClass(TEICorpusBuilder):
             date_node = tree.xpath(".//interp[@type='year' or @type='date']")
             if date_node:
                 year = date_node[0].attrib["value"][:4]
-                decade = "{0}0-{0}9".format(year[:-1])
+                decade = f"{year[:-1]}0-{year[:-1]}9"
             else:
                 year = "?"
                 decade = "?"
@@ -582,18 +573,14 @@ class BuilderClass(TEICorpusBuilder):
                 continue
 
             self._source_id = self._source_id + 1
-            d_trial = {}
-            d_trial[self.source_offence] = ""
-            d_trial[self.source_verdict] = ""
-            d_trial[self.source_punishment] = ""
-            d_trial[self.source_offencesubtype] = ""
-            d_trial[self.source_verdictsubtype] = ""
-            d_trial[self.source_punishmentsubtype] = ""
-            d_trial[self.source_label] = trial.attrib["id"]
-
-            d_trial[self.source_type] = trial.attrib["type"]
-            d_trial[self.source_year] = year
-            d_trial[self.source_decade] = decade
+            d_trial = {self.source_offence: "", self.source_verdict: "",
+                       self.source_punishment: "",
+                       self.source_offencesubtype: "",
+                       self.source_verdictsubtype: "",
+                       self.source_punishmentsubtype: "",
+                       self.source_label: trial.attrib["id"],
+                       self.source_type: trial.attrib["type"],
+                       self.source_year: year, self.source_decade: decade}
 
             for join in trial.findall("./join"):
                 if join.attrib["result"] == "criminalCharge":

@@ -1,44 +1,40 @@
 # -*- coding: utf-8 -*-
+"""
+This module tests the package coq_install_ice_ng module.
+
+Run it like so:
+
+coquery$ python -m test.test_ice_ng
 
 """
-test_ice_ng.py is part of Coquery.
 
-Copyright (c) 2015 Gero Kunter (gero.kunter@coquery.org)
-
-Coquery is released under the terms of the GNU General Public License.
-For details, see the file LICENSE that you should have received along 
-with Coquery. If not, see <http://www.gnu.org/licenses/>.
-"""
 
 from __future__ import unicode_literals
 
-import unittest
-import sys, os
+from coquery.installer.coq_install_ice_ng import BuilderClass
+from test.testcase import CoqTestCase, run_tests
 
-sys.path.append(os.path.join(sys.path[0], "../coquery/installer"))
-sys.path.append(os.path.join(sys.path[0], "../coquery"))
-from coq_install_ice_ng import *
 
-class TestReplace(unittest.TestCase):
+class TestIceNG(CoqTestCase):
     def test_replace(self):
         replace_func = BuilderClass._replace_encoding_errors
-        
+
         pairs = [
             ("YarâAdua", "Yar’Adua"),
             ("-âEkidâ", "-‘Ekid’"),
-            ("ĕkíd", "ÄkÃ­d"),
+            ("ÄkÃ­d", "ĕkíd"),
             ]
-        
+
         for mangled, correct in pairs:
             self.assertEqual(replace_func(mangled), correct)
 
-    def test_count_frequency(self):
-        builder = BuilderClass()
-        print(builder.get_corpus_features())
-        print(builder.get_lexicon_features())
-        
+
+provided_tests = [TestIceNG]
+
+
+def main():
+    run_tests(provided_tests)
+
+
 if __name__ == '__main__':
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestReplace),
-        ])
-    unittest.TextTestRunner().run(suite)
+    main()

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'linkselect.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -59,6 +59,7 @@ class Ui_LinkSelect(object):
         self.widget_link_info.setObjectName("widget_link_info")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.widget_link_info)
         self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_3.setSpacing(0)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
@@ -74,17 +75,21 @@ class Ui_LinkSelect(object):
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem1)
         self.verticalLayout_3.addLayout(self.horizontalLayout_2)
-        self.label_explain = QtWidgets.QLabel(self.widget_link_info)
-        self.label_explain.setWordWrap(True)
-        self.label_explain.setObjectName("label_explain")
-        self.verticalLayout_3.addWidget(self.label_explain)
         self.verticalLayout.addWidget(self.widget_link_info)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.gridLayout_3 = QtWidgets.QGridLayout()
+        self.gridLayout_3.setContentsMargins(-1, 6, -1, -1)
+        self.gridLayout_3.setObjectName("gridLayout_3")
         self.checkBox = QtWidgets.QCheckBox(LinkSelect)
         self.checkBox.setChecked(True)
         self.checkBox.setObjectName("checkBox")
-        self.horizontalLayout.addWidget(self.checkBox)
+        self.gridLayout_3.addWidget(self.checkBox, 1, 0, 1, 1)
+        self.check_left_join = QtWidgets.QCheckBox(LinkSelect)
+        self.check_left_join.setChecked(True)
+        self.check_left_join.setObjectName("check_left_join")
+        self.gridLayout_3.addWidget(self.check_left_join, 0, 0, 1, 1)
+        self.verticalLayout.addLayout(self.gridLayout_3)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem2)
         self.buttonBox = QtWidgets.QDialogButtonBox(LinkSelect)
@@ -110,8 +115,7 @@ class Ui_LinkSelect(object):
         self.label_from.setText(_translate("LinkSelect", "<html><head/><body><p><span style=\" font-weight:600;\">{from_table}.{from_resource}</span></p></body></html>"))
         self.label_4.setText(_translate("LinkSelect", "will be linked to"))
         self.label_to.setText(_translate("LinkSelect", "<html><head/><body><p><span style=\" font-weight:600;\">{to}.{to_table}.{to_resource}</span></p></body></html>"))
-        self.label_explain.setText(_translate("LinkSelect", "The remaining columns from {to}.{to_table} will be available as output columns."))
         self.checkBox.setText(_translate("LinkSelect", "Ignore case when comparing contents."))
+        self.check_left_join.setText(_translate("LinkSelect", "Also include incomplete cases"))
 
 from ..resourcetree import CoqResourceTree
-

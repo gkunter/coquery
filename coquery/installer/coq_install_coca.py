@@ -190,30 +190,6 @@ class BuilderClass(BaseCorpusBuilder):
     def get_license():
         return "COCA is available under the terms of a commercial license."
 
-    @staticmethod
-    def get_installation_note():
-        _, _, db_type, _, _ = options.get_con_configuration()
-
-        if db_type == SQL_MYSQL:
-            return """
-            <p><b>MySQL installation note</b><p>
-            <p>The COCA installer uses a special feature of MySQL servers
-            which allows to load large chunks of data into the database in a
-            single step.</p>
-            <p>This feature notably speeds up the installation of the COCA
-            corpus. However, it may be disabled on your MySQL servers. In that
-            case, the installation will fail with an error message similar to
-            the following: </p>
-            <p><code>The used command is not allowed with this MySQL
-            version</code></p>
-            <p>Should the installation fail, please ask your MySQL server
-            administrator to enable loading of local in-files by setting the
-            option <code>local-infile</code> in the MySQL configuration file.
-            </p>
-            """
-        else:
-            return None
-
     def build_load_files(self):
         file_list = self.get_file_list(self.arguments.path, self.file_filter)
         files = sorted(file_list)
@@ -242,6 +218,8 @@ class BuilderClass(BaseCorpusBuilder):
                            self.source_genre, self.source_subgenre_id,
                            self.source_label, self.source_title),
                     table=self.source_table,
+                    na_values="",
+                    fillna=0,
                     skiprows=2))
 
             elif base_name == "Sub-genre codes.txt":

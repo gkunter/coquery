@@ -2,7 +2,7 @@
 """
 sqlwrap.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,12 +11,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import os
 import logging
-import warnings
-import sqlalchemy
 import codecs
-import tempfile
 import sys
 import pandas as pd
 
@@ -29,7 +25,6 @@ from .errors import DependencyError, SQLProgrammingError
 from .defines import SQL_MYSQL, SQL_SQLITE
 from .general import get_chunk
 from . import options
-from . import sqlhelper
 from . import capturer
 
 if options.use_mysql:
@@ -58,62 +53,20 @@ class SqlDB(object):
         self.encoding = encoding
         self.local_infile = local_infile
 
-        current_server = options.cfg.current_server
-        self.sql_url = sqlhelper.sql_url(current_server, self.db_name)
-        self.engine = sqlalchemy.create_engine(self.sql_url)
-        test, version = sqlhelper.test_configuration(current_server)
+        self.sql_url = options.cfg.current_connection.url(db_name)
+        self.engine = options.cfg.current_connection.get_engine(db_name)
+
+        test, version = options.cfg.current_connection.test()
         if test:
             self.version = version
         else:
             self.version = ""
         self.connection = None
 
-    def create_database(self, db_name):
-        self.sql_url = sqlhelper.sql_url(options.cfg.current_server)
-        self.engine = sqlalchemy.create_engine(self.sql_url)
-        with self.engine.connect() as connection:
-            if self.db_type == SQL_MYSQL:
-                S = """
-                    CREATE DATABASE {}
-                    CHARACTER SET utf8mb4
-                    COLLATE utf8mb4_unicode_ci
-                    """.format(db_name)
-                connection.execute(S)
-            self.use_database(db_name)
-
     def use_database(self, db_name):
         self.db_name = db_name
-        self.sql_url = sqlhelper.sql_url(options.cfg.current_server,
-                                         self.db_name)
-        self.engine = sqlalchemy.create_engine(self.sql_url)
-
-    def has_database(self, db_name):
-        """
-        Check if the database 'db_name' exists on the current connection.
-
-        Parameters
-        ----------
-        db_name : str
-            The name of the database
-
-        Returns
-        -------
-        b : bool
-            True if the database exists, or False otherwise.
-        """
-        if self.db_type == SQL_MYSQL:
-            with self.engine.connect() as connection:
-                results = connection.execute("SHOW DATABASES")
-            try:
-                for x in results:
-                    if x[0] == db_name.split()[0]:
-                        return db_name
-            except pymysql.ProgrammingError as ex:
-                warnings.warn(ex)
-                raise ex
-            return False
-        elif self.db_type == SQL_SQLITE:
-            return os.path.exists(SqlDB.sqlite_path(db_name))
+        self.sql_url = options.cfg.current_connection.url(db_name)
+        self.engine = options.cfg.current_connection.get_engine(db_name)
 
     def has_table(self, table_name):
         """
@@ -179,7 +132,7 @@ class SqlDB(object):
 
         Returns
         -------
-        l : list
+        results : list
             A list of tuples representing the results from the find.
         """
 
@@ -205,8 +158,8 @@ class SqlDB(object):
                 S = "{} COLLATE NOCASE".format(S)
 
         S = S.replace("\\", "\\\\")
-        l = self.connection.execute(S).fetchall()
-        return l
+        results = self.connection.execute(S).fetchall()
+        return results
 
     def kill_connection(self):
         try:
@@ -263,10 +216,9 @@ class SqlDB(object):
                                         in explain_column_width])
             line_string = "-" * (sum(explain_column_width) - 3 +
                                  3 * len(explain_column_width))
-            log_rows = ["EXPLAIN %s" % S]
-            log_rows.append(line_string)
-            log_rows.append(format_string % tuple(explain_table_rows[0]))
-            log_rows.append(line_string)
+            log_rows = ["EXPLAIN {}".format(S), line_string,
+                        format_string % tuple(explain_table_rows[0]),
+                        line_string]
             for x in explain_table_rows[1:]:
                 log_rows.append(format_string % tuple(x))
             log_rows.append(line_string)
@@ -284,6 +236,7 @@ class SqlDB(object):
             self.explain(S)
         logging.debug(S)
 
+        cursor = None
         if self.db_type == SQL_MYSQL:
             if not self.Con.open:
                 self.Con = self.get_connection()
@@ -318,6 +271,11 @@ class SqlDB(object):
             exist. If "replace", any existing table is replaced by the
             rows from the dataframe. If "fail", the dataframe is NOT
             loaded into the table.
+
+        Returns
+        -------
+        lines : int
+            The number of lines that have been loaded into the table.
         """
         df.index = pd.RangeIndex(start=1, stop=len(df)+1, step=1)
         df.to_sql(table_name,
@@ -325,6 +283,7 @@ class SqlDB(object):
                   if_exists=if_exists,
                   index=bool(index_label),
                   index_label=index_label)
+        return len(df)
 
     def load_file(self, file_name, encoding, table, index,
                   if_exists="append", skip=None, chunksize=250000, **kwargs):
@@ -385,7 +344,6 @@ class SqlDB(object):
                     kwargs["header"] = None
                 kwargs["skiprows"] = None
 
-
         return count
 
     def load_infile(self, file_name, table_name, if_exists="append",
@@ -404,7 +362,7 @@ class SqlDB(object):
         with capt:
             df = pd.read_csv(file_name, engine="c", **kwargs)
         for x in capt:
-            logging.warn("File {} – {}".format(file_name, x))
+            logging.warning("File {} – {}".format(file_name, x))
             print("File {} – {}".format(file_name, x))
 
         if fillna is not None:
@@ -639,21 +597,3 @@ class SqlDB(object):
             self.explain(S)
         logging.debug(S)
         self.connection.execute(S)
-
-    def get_database_size(self, database_name):
-        """ Returns the size of the database in bytes."""
-        if self.db_type == SQL_MYSQL:
-            sql_str = """
-                SELECT data_length+index_length
-                FROM information_schema.tables
-                WHERE table_schema = '{}'""".format(database_name)
-            return self.connection.execute(sql_str).fetchone()[0]
-        elif self.db_type == SQL_SQLITE:
-            return os.path.getsize(self.sqlite_path(database_name))
-
-    def drop_database(self, database_name):
-        if self.db_type == SQL_MYSQL:
-            self.connection.execute("DROP DATABASE {}".format(
-                database_name.split()[0]))
-        elif self.db_type == SQL_SQLITE:
-            os.remove(self.sqlite_path(database_name))

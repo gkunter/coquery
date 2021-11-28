@@ -15,7 +15,7 @@ import re
 
 from .pyqt_compat import QtWidgets, get_toplevel_window
 from .ui.regexTesterUi import Ui_RegexDialog
-from .classes import CoqWidgetFader
+from .widgets.coqwidgetfader import CoqWidgetFader
 
 from coquery.unicode import utf8
 
@@ -320,8 +320,10 @@ p, li { white-space: pre-wrap; }
         s = utf8(self.ui.edit_regex.text())
         widgets = QtWidgets.QApplication.instance().inputFocusWidgets()
         widgets = [x for x in widgets
-                   if x not in (self.ui.edit_regex, self.ui.edit_test_string)]
-
+                   if x not in (self.ui.edit_regex,
+                                self.ui.edit_test_string,
+                                self.ui.text_cheatsheet)]
+        widget = None
         if widgets:
             for widget in widgets[::-1]:
                 if isinstance(widget, QtWidgets.QLineEdit):
@@ -333,7 +335,8 @@ p, li { white-space: pre-wrap; }
         else:
             widget = get_toplevel_window().ui.edit_query_string
             widget.textCursor().insertText(s)
-        CoqWidgetFader(widget).fade()
+        if widget:
+            CoqWidgetFader(widget).fade()
 
     @staticmethod
     def show(parent=None):

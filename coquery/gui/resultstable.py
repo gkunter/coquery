@@ -2,7 +2,7 @@
 """
 resultstable.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -10,10 +10,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 from __future__ import unicode_literals
 
-import logging
 from coquery import options
-from coquery.defines import *
-from coquery.unicode import utf8
+from coquery.defines import COLUMN_NAMES, QUERY_MODE_CONTINGENCY
 from coquery import managers
 from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
 from . import classes
@@ -21,11 +19,12 @@ from . import classes
 _left_align = int(QtCore.Qt.AlignLeft) | int(QtCore.Qt.AlignVCenter)
 _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)
 
+
 class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
     fill = False
 
     def __init__(self, *args, **kwargs):
-        threshold = kwargs.pop("threshold", 0.95)
+        kwargs.pop("threshold", None)
         super(CoqResultCellDelegate, self).__init__(*args, **kwargs)
         CoqResultCellDelegate._app = options.cfg.app
         CoqResultCellDelegate._table = get_toplevel_window().table_model
@@ -47,12 +46,14 @@ class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
             return self._app.palette().color(QtGui.QPalette().HighlightedText)
         else:
             try:
-                return QtGui.QColor(options.cfg.row_color[self._table.content.index[index.row()]])
+                return QtGui.QColor(options.cfg.row_color[
+                    self._table.content.index[index.row()]])
             except KeyError:
                 pass
             # return column color if specified:
             try:
-                return QtGui.QColor(options.cfg.column_color[self._table.header[index.column()]])
+                return QtGui.QColor(options.cfg.column_color[
+                    self._table.header[index.column()]])
             except KeyError:
                 # return default color
                 return self.fg_color
@@ -65,10 +66,6 @@ class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
                 return self.alternating_bg[index.row() & 1]
             else:
                 return self.bg_color
-
-    #def sizeHint(self, option, index):
-        #rect = options.cfg.metrics.boundingRect(index.data(QtCore.Qt.DisplayRole))
-        #return rect.adjusted(0, 0, 15, 0).size()
 
     def paint(self, painter, option, index):
         """
@@ -158,8 +155,11 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
             if option.state & QtWidgets.QStyle.State_Selected:
                 painter.fillRect(option.rect, bg)
             elif value != 0:
-                rect = QtCore.QRect(option.rect.topLeft(), option.rect.bottomRight())
-                rect.setWidth(int(option.rect.width() * min(self.max_value, value)/self.max_value))
+                rect = QtCore.QRect(option.rect.topLeft(),
+                                    option.rect.bottomRight())
+                width = (option.rect.width() * min(self.max_value, value) /
+                         self.max_value)
+                rect.setWidth(int(width))
                 painter.fillRect(rect, QtGui.QColor("lightgreen"))
         if fg:
             painter.setPen(QtGui.QPen(fg))
@@ -178,16 +178,6 @@ class CoqProbabilityDelegate(CoqResultCellDelegate):
         finally:
             painter.restore()
 
-    #def get_background(self, option, index):
-        #try:
-            #value = float(index.data(QtCore.Qt.DisplayRole))
-            #if  value > 1:
-                #return QtGui.QColor("lightyellow")
-            #else:
-                #return super(CoqProbabilityDelegate, self).get_background(option, index)
-        #except ValueError:
-            #return super(CoqProbabilityDelegate, self).get_background(option, index)
-
 
 class CoqPercentDelegate(CoqProbabilityDelegate):
     max_value = 100
@@ -204,16 +194,17 @@ class CoqLikelihoodDelegate(CoqResultCellDelegate):
         self.color_base = self._app.palette().color(QtGui.QPalette.Base)
         self.color_dark = self._app.palette().color(QtGui.QPalette.Button)
         self.color_darkest = self._app.palette().color(QtGui.QPalette.Mid)
-        self.color_highlight = self._app.palette().color(QtGui.QPalette().Highlight)
+        self.color_highlight = self._app.palette().color(
+            QtGui.QPalette().Highlight)
 
     def paint(self, painter, option, index):
         self.col_label = self._table.header[index.column()].rpartition("_")[-1]
-        self.group_value = self._table.content.iloc[:,0][index.row()]
+        self.group_value = self._table.content.iloc[:, 0][index.row()]
         self.offs = self.col_label.count(":") + 1
 
         super(CoqLikelihoodDelegate, self).paint(painter, option, index)
         if (self.col_label.startswith(self.group_value) and
-            self.col_label != self.group_value):
+                self.col_label != self.group_value):
             painter.save()
             try:
                 rect = option.rect
@@ -272,30 +263,34 @@ class CoqResultsTableView(classes.CoqTableView):
         h_header = self.horizontalHeader()
         session = get_toplevel_window().Session
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+        rev_lookup = dict(zip(COLUMN_NAMES.values(), COLUMN_NAMES.keys()))
         for i in range(h_header.count()):
             column = self.model().header[h_header.logicalIndex(i)]
             if column.startswith("func_"):
                 fun = manager.get_function(column)
                 try:
-                    retranslate = dict(zip(COLUMN_NAMES.values(), COLUMN_NAMES.keys()))[fun.get_name()]
+                    retranslate = rev_lookup[fun.get_name()]
                 except (KeyError, AttributeError):
                     pass
                 else:
                     column = retranslate
             if column in ("statistics_proportion",
-                      "statistics_normalized", "statistics_ttr",
-                      "statistics_group_proportion", "statistics_group_ttr",
-                      "coq_conditional_probability",
-                      "coq_conditional_probability_left",
-                      "coq_conditional_probability_right",
-                      "coq_statistics_uniquenessratio"):
+                          "statistics_normalized",
+                          "statistics_ttr",
+                          "statistics_group_proportion",
+                          "statistics_group_ttr",
+                          "coq_conditional_probability",
+                          "coq_conditional_probability_left",
+                          "coq_conditional_probability_right",
+                          "coq_statistics_uniquenessratio"):
                 deleg = CoqProbabilityDelegate(self)
             elif column in ("statistics_percent", "statistics_group_percent"):
                 deleg = CoqPercentDelegate(self)
             elif column in ("statistics_column_total"):
                 deleg = CoqTotalDelegate(self)
             elif column.startswith("statistics_g_test"):
-                deleg = CoqLikelihoodDelegate(self, threshold=manager.threshold)
+                deleg = CoqLikelihoodDelegate(self,
+                                              threshold=manager.threshold)
             else:
                 deleg = CoqResultCellDelegate(self)
             self.setItemDelegateForColumn(i, deleg)
@@ -308,7 +303,7 @@ class CoqResultsTableView(classes.CoqTableView):
 
         # set row delegate for ALL row of Contingency aggregates:
         if (options.cfg.MODE == QUERY_MODE_CONTINGENCY and
-            not session.is_statistics_session()):
+                not session.is_statistics_session()):
             row = self.model().rowCount() - 1
             self._old_row_delegate = (row, self.itemDelegateForRow(row))
             self.setItemDelegateForRow(row, CoqTotalDelegate(self))

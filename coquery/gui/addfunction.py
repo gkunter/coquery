@@ -99,7 +99,8 @@ class FunctionWidget(QtWidgets.QWidget):
         self.argument_list = []
 
         name = func.get_name()
-        desc = FUNCTION_DESC.get(func._name, "(no description available)")
+        desc = (func.get_description() or
+                FUNCTION_DESC.get(func._name, "(no description available)"))
 
         self.checkable = checkable
 
@@ -365,14 +366,16 @@ class FunctionDialog(QtWidgets.QDialog):
                                functions.Comparison,
                                functions.BaseProportion,
                                functions.BaseFreq,
-                               functions.LogicFunction)
+                               functions.LogicFunction,
+                               functions.ConversionFunction)
         elif all([x != object for x in self.df[self.columns].dtypes]):
             function_groups = (functions.OperatorFunction,
                                functions.StatisticalFunction,
                                functions.Comparison,
                                functions.BaseProportion,
                                functions.BaseFreq,
-                               functions.LogicFunction)
+                               functions.LogicFunction,
+                               functions.ConversionFunction)
         else:
             function_groups = (functions.Comparison,
                                functions.BaseProportion,
@@ -404,7 +407,7 @@ class FunctionDialog(QtWidgets.QDialog):
                 pass
 
         for i, fun_class in enumerate(self.get_function_groups()):
-            group = QtWidgets.QListWidgetItem(fun_class.get_description())
+            group = QtWidgets.QListWidgetItem(fun_class.get_group())
             self.ui.list_classes.addItem(group)
 
             fun_list = []

@@ -10,23 +10,26 @@ coquery$ python -m test.test_functionlist
 
 from __future__ import unicode_literals
 
-import unittest
 import warnings
 import pandas as pd
+import numpy as np
 from argparse import Namespace
 import logging
 
 from coquery.functionlist import FunctionList
 from coquery.functions import Function, StringChain, StringLength
 from coquery import options
+from test.testcase import CoqTestCase, run_tests
 
 
 class BreakFunction(StringLength):
     _name = "BREAK"
+
     def evaluate(*args, **kwargs):
         raise RuntimeError
 
-class TestFunctionList(unittest.TestCase):
+
+class TestFunctionList(CoqTestCase):
     def setUp(self):
         options.cfg = Namespace()
         options.cfg.drop_on_na = False
@@ -161,28 +164,37 @@ class TestFunctionList(unittest.TestCase):
             {"coq_word_label_1": ["abc"] * 3 + ["x"] * 2,
              "coq_word_label_2": ["a"] * 4 + [None]})
 
-        func1 = StringChain(columns=["coq_word_label_1",
-                                     "coq_word_label_2"])
-        breaking = BreakFunction(columns=[func1.get_id()])
-        func3 = StringLength(columns=[func1.get_id()])
-        f_list = FunctionList([func1, breaking, func3])
+        okay_func1 = StringLength(columns=["coq_word_label_1"])
+        breaking_func = BreakFunction(columns=[okay_func1.get_id()])
+        okay_func2 = StringLength(columns=[okay_func1.get_id()])
+        f_list = FunctionList([okay_func1, breaking_func, okay_func2])
 
         logging.disable(logging.ERROR)
         df = f_list.lapply(df)
         logging.disable(logging.NOTSET)
+
         self.assertTrue(len(f_list.exceptions()) == 1)
 
-        self.assertTrue(func1.get_id() in df.columns)
-        self.assertTrue(breaking.get_id() not in df.columns)
-        self.assertTrue(func3.get_id() in df.columns)
-        self.assertEqual(list(df[func3.get_id()].values),
-                         [4, 4, 4, 2, 1])
+        self.assertTrue(okay_func1.get_id() in df.columns)
+        np.testing.assert_array_equal(
+            df[okay_func1.get_id()].values,
+            [3, 3, 3, 1, 1])
+
+        self.assertTrue(okay_func2.get_id() in df.columns)
+        np.testing.assert_array_equal(
+            df[okay_func2.get_id()].values, [1, 1, 1, 1, 1])
+
+        self.assertTrue(breaking_func.get_id() in df.columns)
+        np.testing.assert_array_equal(
+            df[breaking_func.get_id()].values, [None] * len(df))
+
+
+provided_tests = [TestFunctionList]
+
 
 def main():
-    suite = unittest.TestSuite([
-        unittest.TestLoader().loadTestsFromTestCase(TestFunctionList),
-        ])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
+
 
 if __name__ == '__main__':
     main()

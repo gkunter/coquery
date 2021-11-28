@@ -13,117 +13,110 @@
   <property name="windowTitle">
    <string>Add a group – Coquery</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3">
-   <item>
-    <layout class="QGridLayout" name="gridLayout" columnstretch="1,2">
-     <property name="horizontalSpacing">
-      <number>-1</number>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>&amp;Group name:</string>
      </property>
-     <property name="verticalSpacing">
-      <number>10</number>
+     <property name="buddy">
+      <cstring>edit_label</cstring>
      </property>
-     <property name="bottomMargin">
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="edit_label">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2" rowspan="2">
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <item>
+      <widget class="QRadioButton" name="radio_keep_duplicates">
+       <property name="text">
+        <string>&amp;Keep duplicates</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="radio_remove_duplicates">
+       <property name="text">
+        <string>&amp;Remove duplicates</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0" colspan="3">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
       <number>0</number>
      </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>&amp;Group name:</string>
-       </property>
-       <property name="buddy">
-        <cstring>edit_label</cstring>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="edit_label">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_duplicates">
-       <property name="text">
-        <string>Duplicates:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <property name="leftMargin">
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>&amp;Columns</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="margin">
         <number>4</number>
        </property>
        <item>
-        <widget class="QRadioButton" name="radio_keep_duplicates">
-         <property name="text">
-          <string>&amp;Keep</string>
+        <widget class="CoqListSelect" name="widget_selection"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_functions">
+      <attribute name="title">
+       <string>&amp;Functions</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="layout_functions">
+       <property name="margin">
+        <number>4</number>
+       </property>
+       <item>
+        <widget class="CoqSearchLine" name="edit_search_functions"/>
+       </item>
+       <item>
+        <widget class="CoqLinkedLists" name="linked_functions">
+         <property name="editTriggers">
+          <set>QAbstractItemView::CurrentChanged</set>
          </property>
-         <property name="checked">
+         <property name="alternatingRowColors">
           <bool>true</bool>
          </property>
         </widget>
        </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_filters">
+      <attribute name="title">
+       <string>Filters</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="margin">
+        <number>9</number>
+       </property>
        <item>
-        <widget class="QRadioButton" name="radio_remove_duplicates">
-         <property name="text">
-          <string>&amp;Remove</string>
-         </property>
-        </widget>
+        <widget class="CoqEditFilters" name="widget_filters" native="true"/>
        </item>
       </layout>
-     </item>
-     <item row="3" column="0" colspan="2">
-      <widget class="QDialogButtonBox" name="buttonBox">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="standardButtons">
-        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0" colspan="2">
-      <widget class="QTabWidget" name="tabWidget">
-       <property name="currentIndex">
-        <number>0</number>
-       </property>
-       <widget class="QWidget" name="tab">
-        <attribute name="title">
-         <string>&amp;Columns</string>
-        </attribute>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <property name="margin">
-          <number>4</number>
-         </property>
-         <item>
-          <widget class="CoqListSelect" name="widget_selection"/>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QWidget" name="tab_functions">
-        <attribute name="title">
-         <string>&amp;Functions</string>
-        </attribute>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="margin">
-          <number>4</number>
-         </property>
-         <item>
-          <widget class="CoqLinkedLists" name="linked_functions">
-           <property name="editTriggers">
-            <set>QAbstractItemView::CurrentChanged</set>
-           </property>
-           <property name="alternatingRowColors">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </widget>
-     </item>
-    </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="3">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -138,10 +131,20 @@
    <extends>QListView</extends>
    <header>..linkedlists</header>
   </customwidget>
+  <customwidget>
+   <class>CoqSearchLine</class>
+   <extends>QLineEdit</extends>
+   <header>..searchline</header>
+  </customwidget>
+  <customwidget>
+   <class>CoqEditFilters</class>
+   <extends>QWidget</extends>
+   <header>..editfilters</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>widget_selection</tabstop>
-  <tabstop>radio_keep_duplicates</tabstop>
   <tabstop>buttonBox</tabstop>
  </tabstops>
  <resources/>

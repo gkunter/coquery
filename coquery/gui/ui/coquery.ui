@@ -6,16 +6,22 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>753</width>
-    <height>807</height>
+    <width>831</width>
+    <height>722</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Coquery</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_4">
-    <item>
+   <layout class="QGridLayout" name="gridLayout_6">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <item row="0" column="0">
      <widget class="QSplitter" name="splitter">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -27,7 +33,7 @@
          <verstretch>1</verstretch>
         </sizepolicy>
        </property>
-       <layout class="QGridLayout" name="gridLayout" rowstretch="0,0" columnstretch="4,5,3">
+       <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="3,5,3">
         <property name="leftMargin">
          <number>0</number>
         </property>
@@ -37,9 +43,177 @@
         <property name="rightMargin">
          <number>0</number>
         </property>
-        <property name="spacing">
-         <number>6</number>
-        </property>
+        <item row="0" column="0" rowspan="2">
+         <widget class="QGroupBox" name="group_feature_selection">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>Fe&amp;ature selection</string>
+          </property>
+          <layout class="QVBoxLayout" name="output_columns">
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_2">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>&amp;Corpus:</string>
+               </property>
+               <property name="buddy">
+                <cstring>combo_corpus</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="combo_corpus">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::WheelFocus</enum>
+               </property>
+               <property name="editable">
+                <bool>false</bool>
+               </property>
+               <property name="insertPolicy">
+                <enum>QComboBox::InsertAlphabetically</enum>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::AdjustToContents</enum>
+               </property>
+               <property name="frame">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_7">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QGroupBox" name="group_buttons">
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_run_query">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&amp;New query</string>
+             </property>
+             <property name="shortcut">
+              <string>Ctrl+N</string>
+             </property>
+             <property name="autoDefault">
+              <bool>true</bool>
+             </property>
+             <property name="default">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_run_query_to_file">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&amp;New query to file</string>
+             </property>
+             <property name="shortcut">
+              <string>Ctrl+N</string>
+             </property>
+             <property name="autoDefault">
+              <bool>true</bool>
+             </property>
+             <property name="default">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="button_stop_query">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&amp;Stop</string>
+             </property>
+             <property name="autoDefault">
+              <bool>false</bool>
+             </property>
+             <property name="default">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
         <item row="0" column="2" rowspan="2">
          <widget class="QGroupBox" name="group_management">
           <property name="sizePolicy">
@@ -51,7 +225,7 @@
           <property name="title">
            <string>Data &amp;management</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0">
+          <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
            <item>
             <widget class="QTableWidget" name="list_toolbox">
              <property name="sizePolicy">
@@ -195,22 +369,32 @@
             </widget>
            </item>
            <item>
-            <widget class="QStackedWidget" name="tool_widget">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+            <spacer name="verticalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
              </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>4</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QStackedWidget" name="tool_widget">
              <property name="currentIndex">
-              <number>1</number>
+              <number>5</number>
              </property>
              <widget class="QWidget" name="tool_widget_column_order">
-              <layout class="QVBoxLayout" name="verticalLayout_11">
+              <layout class="QVBoxLayout" name="verticalLayout_4">
                <item>
                 <widget class="CoqButtonList" name="list_column_order" native="true">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -220,238 +404,239 @@
               </layout>
              </widget>
              <widget class="QWidget" name="tool_widget_page_context">
-              <layout class="QVBoxLayout" name="verticalLayout_7">
-               <property name="margin">
-                <number>0</number>
-               </property>
-               <item>
-                <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0,0,0,1" columnstretch="1,0,0,1">
-                 <property name="margin">
-                  <number>0</number>
+              <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,0,0,1">
+               <item row="0" column="0">
+                <spacer name="horizontalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
                  </property>
-                 <item row="0" column="0">
-                  <spacer name="horizontalSpacer_7">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="0" column="1" colspan="2">
-                  <widget class="QWidget" name="widget_context" native="true">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <layout class="QVBoxLayout" name="verticalLayout_2">
-                    <item>
-                     <widget class="QRadioButton" name="radio_context_mode_none">
-                      <property name="text">
-                       <string>No context</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="Line" name="line">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QRadioButton" name="radio_context_mode_columns">
-                      <property name="styleSheet">
-                       <string notr="true">text-align: center center</string>
-                      </property>
-                      <property name="text">
-                       <string>Colu&amp;mns</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QRadioButton" name="radio_context_mode_kwic">
-                      <property name="styleSheet">
-                       <string notr="true">text-align: center center</string>
-                      </property>
-                      <property name="text">
-                       <string>&amp;KWIC</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QRadioButton" name="radio_context_mode_string">
-                      <property name="styleSheet">
-                       <string notr="true">text-align: center center</string>
-                      </property>
-                      <property name="text">
-                       <string>Sing&amp;le string</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item row="0" column="3">
-                  <spacer name="horizontalSpacer_8">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QSpinBox" name="context_left_span">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>1</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="buttonSymbols">
-                    <enum>QAbstractSpinBox::UpDownArrows</enum>
-                   </property>
-                   <property name="suffix">
-                    <string/>
-                   </property>
-                   <property name="prefix">
-                    <string>Left: </string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="2">
-                  <widget class="QSpinBox" name="context_right_span">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>1</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="frame">
-                    <bool>true</bool>
-                   </property>
-                   <property name="buttonSymbols">
-                    <enum>QAbstractSpinBox::UpDownArrows</enum>
-                   </property>
-                   <property name="suffix">
-                    <string/>
-                   </property>
-                   <property name="prefix">
-                    <string>Right: </string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1" colspan="2">
-                  <widget class="Line" name="line_2">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="1" colspan="2">
-                  <widget class="QCheckBox" name="check_restrict">
-                   <property name="text">
-                    <string>&amp;Restrict to sentences</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="4" column="0" colspan="3">
-                  <spacer name="verticalSpacer_2">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>0</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                </layout>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="0" column="1" colspan="2">
+                <widget class="QWidget" name="widget_context" native="true">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_5">
+                  <property name="spacing">
+                   <number>1</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_none">
+                    <property name="text">
+                     <string>No context</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="Line" name="line">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_columns">
+                    <property name="styleSheet">
+                     <string notr="true">text-align: center center</string>
+                    </property>
+                    <property name="text">
+                     <string>Colu&amp;mns</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_kwic">
+                    <property name="styleSheet">
+                     <string notr="true">text-align: center center</string>
+                    </property>
+                    <property name="text">
+                     <string>&amp;KWIC</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QRadioButton" name="radio_context_mode_string">
+                    <property name="styleSheet">
+                     <string notr="true">text-align: center center</string>
+                    </property>
+                    <property name="text">
+                     <string>Sing&amp;le string</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="0" column="3">
+                <spacer name="horizontalSpacer_4">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="1" column="1">
+                <widget class="QSpinBox" name="context_left_span">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>1</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::UpDownArrows</enum>
+                 </property>
+                 <property name="suffix">
+                  <string/>
+                 </property>
+                 <property name="prefix">
+                  <string>Left: </string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QSpinBox" name="context_right_span">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>1</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::UpDownArrows</enum>
+                 </property>
+                 <property name="suffix">
+                  <string/>
+                 </property>
+                 <property name="prefix">
+                  <string>Right: </string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1" colspan="2">
+                <widget class="Line" name="line_2">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="1" colspan="2">
+                <widget class="QCheckBox" name="check_restrict">
+                 <property name="text">
+                  <string>&amp;Restrict to sentences</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="1">
+                <spacer name="verticalSpacer_4">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tool_widget_page_stopwords">
-              <layout class="QVBoxLayout" name="verticalLayout_5">
-               <property name="margin">
-                <number>0</number>
-               </property>
-               <item>
-                <layout class="QGridLayout" name="gridLayout_4" columnstretch="1,0,1">
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="label_stopwords">
-                   <property name="text">
-                    <string>Number of stop words: {}</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <spacer name="horizontalSpacer_3">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QPushButton" name="button_stopwords">
-                   <property name="text">
-                    <string>Change stop &amp;words...</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="2">
-                  <spacer name="horizontalSpacer_6">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>31</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="2" column="1">
-                  <spacer name="verticalSpacer_6">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>215</width>
-                     <height>167</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                </layout>
+             <widget class="QWidget" name="tool_widget_page_stopwords_2">
+              <layout class="QGridLayout" name="gridLayout_4">
+               <item row="0" column="2" rowspan="3">
+                <spacer name="horizontalSpacer_6">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="0" column="1">
+                <widget class="QLabel" name="label_stopwords">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>Number of stop words: {}</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="1" column="1">
+                <widget class="QPushButton" name="button_stopwords">
+                 <property name="text">
+                  <string>Change stop &amp;words...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0" rowspan="3">
+                <spacer name="horizontalSpacer_5">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tool_widget_page_groups">
-              <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0">
-               <property name="margin">
-                <number>0</number>
-               </property>
+             <widget class="QWidget" name="tool_widget_page_groups_2">
+              <layout class="QVBoxLayout" name="verticalLayout_6">
                <item>
                 <widget class="CoqGroupTree" name="tree_groups">
                  <property name="sizePolicy">
@@ -469,20 +654,55 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tool_widget_page_transform">
-              <layout class="QVBoxLayout" name="verticalLayout_10">
-               <property name="margin">
-                <number>0</number>
-               </property>
-               <item>
+             <widget class="QWidget" name="tool_widget_page_transform_2">
+              <layout class="QGridLayout" name="gridLayout_7">
+               <item row="0" column="0">
+                <spacer name="horizontalSpacer_8">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="0" column="1">
                 <layout class="QVBoxLayout" name="layout_aggregate">
-                 <property name="margin">
+                 <property name="spacing">
+                  <number>1</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
                   <number>0</number>
                  </property>
                 </layout>
                </item>
-               <item>
-                <spacer name="verticalSpacer_3">
+               <item row="0" column="2">
+                <spacer name="horizontalSpacer_7">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="1" column="0" colspan="3">
+                <spacer name="verticalSpacer">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
                  </property>
@@ -496,81 +716,109 @@
                </item>
               </layout>
              </widget>
-             <widget class="QWidget" name="tool_widget_page_summary">
-              <layout class="QVBoxLayout" name="verticalLayout_13">
-               <property name="margin">
-                <number>0</number>
-               </property>
-               <item>
-                <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,0,0,1">
-                 <item row="0" column="0" rowspan="2">
-                  <spacer name="horizontalSpacer_4">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="0" column="3" rowspan="2">
-                  <spacer name="horizontalSpacer_5">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>0</width>
-                     <height>69</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item row="2" column="1">
+             <widget class="QWidget" name="tool_widget_page_summary_2">
+              <layout class="QGridLayout" name="gridLayout_5">
+               <item row="0" column="1">
+                <widget class="QPushButton" name="button_add_summary_function">
+                 <property name="text">
+                  <string>Summary functions{}...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QPushButton" name="button_filters">
+                 <property name="text">
+                  <string>Result filters{}...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="Line" name="line_3">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="1">
+                <layout class="QGridLayout" name="gridLayout_8" columnstretch="0,1">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>0</number>
+                 </property>
+                 <item row="0" column="0">
                   <widget class="QCheckBox" name="check_sample_matches">
                    <property name="text">
                     <string/>
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="2">
+                 <item row="0" column="1">
                   <widget class="QLabel" name="label">
                    <property name="text">
-                    <string>Show &amp;random sample:</string>
+                    <string>Show rando&amp;m sample:</string>
                    </property>
                    <property name="buddy">
-                    <cstring>check_sample_matches</cstring>
+                    <cstring>spin_sample_size</cstring>
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="2">
+                 <item row="1" column="1">
                   <widget class="QSpinBox" name="spin_sample_size">
                    <property name="suffix">
                     <string> match(es)</string>
                    </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1" colspan="2">
-                  <widget class="QPushButton" name="button_filters">
-                   <property name="text">
-                    <string>Filter results{}...</string>
+                   <property name="minimum">
+                    <number>1</number>
                    </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1" colspan="2">
-                  <widget class="QPushButton" name="button_add_summary_function">
-                   <property name="text">
-                    <string>Summary functions{}...</string>
+                   <property name="maximum">
+                    <number>999999999</number>
+                   </property>
+                   <property name="value">
+                    <number>10</number>
                    </property>
                   </widget>
                  </item>
                 </layout>
                </item>
-               <item>
-                <spacer name="verticalSpacer">
+               <item row="0" column="2" rowspan="5">
+                <spacer name="horizontalSpacer_9">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="0" column="0" rowspan="5">
+                <spacer name="horizontalSpacer_10">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="4" column="1">
+                <spacer name="verticalSpacer_8">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
                  </property>
@@ -589,7 +837,16 @@
            <item>
             <widget class="QWidget" name="button_box_reaggregate" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <property name="margin">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
                <number>0</number>
               </property>
               <item>
@@ -628,7 +885,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QGroupBox" name="box_input_settings">
+         <widget class="QGroupBox" name="group_query_strings">
           <property name="title">
            <string>Quer&amp;y strings</string>
           </property>
@@ -636,7 +893,7 @@
            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
           </property>
           <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="0" alignment="Qt::AlignTop">
+           <item row="0" column="0">
             <widget class="QRadioButton" name="radio_query_string">
              <property name="text">
               <string/>
@@ -647,25 +904,41 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="CoqTextEdit" name="edit_query_string">
+            <widget class="QLineEdit" name="dummy_1">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <sizepolicy hsizetype="Ignored" vsizetype="Minimum">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
             </widget>
            </item>
-           <item row="1" column="0" alignment="Qt::AlignTop">
+           <item row="2" column="0">
             <widget class="QRadioButton" name="radio_query_file">
              <property name="text">
               <string/>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <layout class="QGridLayout" name="gridLayout_6" columnstretch="1,0">
-             <item row="0" column="0">
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="dummy_2">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0">
+             <item>
               <widget class="CoqClickableLabel" name="edit_file_name">
                <property name="enabled">
                 <bool>true</bool>
@@ -683,11 +956,11 @@
                 <enum>QFrame::Sunken</enum>
                </property>
                <property name="text">
-                <string>(no &amp;query file selected)</string>
+                <string/>
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
+             <item>
               <widget class="QPushButton" name="button_change_file">
                <property name="text">
                 <string>C&amp;hange...</string>
@@ -699,154 +972,18 @@
              </item>
             </layout>
            </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QGroupBox" name="groupBox_2">
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
-           <item>
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>10</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="button_run_query">
+           <item row="0" column="2" rowspan="2">
+            <widget class="CoqTextEdit" name="edit_query_string">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="text">
-              <string>&amp;New query</string>
-             </property>
-             <property name="shortcut">
-              <string>Ctrl+N</string>
-             </property>
-             <property name="autoDefault">
-              <bool>true</bool>
-             </property>
-             <property name="default">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="button_stop_query">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>&amp;Stop</string>
-             </property>
-             <property name="autoDefault">
-              <bool>false</bool>
-             </property>
-             <property name="default">
+             <property name="acceptRichText">
               <bool>false</bool>
              </property>
             </widget>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_2">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>10</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="0" column="0" rowspan="2">
-         <widget class="QGroupBox" name="box_corpus_select">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="title">
-           <string>Fe&amp;ature selection</string>
-          </property>
-          <layout class="QVBoxLayout" name="output_columns">
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,1">
-             <property name="spacing">
-              <number>10</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="label_2">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="text">
-                <string>&amp;Corpus:</string>
-               </property>
-               <property name="buddy">
-                <cstring>combo_corpus</cstring>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="combo_corpus">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::WheelFocus</enum>
-               </property>
-               <property name="editable">
-                <bool>false</bool>
-               </property>
-               <property name="insertPolicy">
-                <enum>QComboBox::InsertAlphabetically</enum>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QComboBox::AdjustToContents</enum>
-               </property>
-               <property name="frame">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="verticalSpacer_7">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </widget>
@@ -897,7 +1034,16 @@
             <property name="spacing">
              <number>0</number>
             </property>
-            <property name="margin">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
              <number>0</number>
             </property>
             <item>
@@ -987,7 +1133,7 @@ background-color: rgb(244, 165, 130);</string>
            <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Noto Sans [GOOG]'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Droid Sans'; font-size:11pt; font-weight:600;&quot;&gt;No match.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="textInteractionFlags">
@@ -1004,13 +1150,24 @@ p, li { white-space: pre-wrap; }
     </item>
    </layout>
   </widget>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>753</width>
-     <height>31</height>
+     <width>831</width>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1065,60 +1222,6 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_toggle_columns"/>
     <addaction name="action_toggle_management"/>
    </widget>
-   <widget class="QMenu" name="menuAnalyse">
-    <property name="title">
-     <string>&amp;Visualizations</string>
-    </property>
-    <widget class="QMenu" name="menuFrequencies">
-     <property name="title">
-      <string>&amp;Bar charts</string>
-     </property>
-     <addaction name="action_percentage_bars"/>
-     <addaction name="action_stacked_bars"/>
-     <addaction name="action_barchart_plot"/>
-    </widget>
-    <widget class="QMenu" name="menuFrequency_maps">
-     <property name="title">
-      <string>&amp;Frequency maps</string>
-     </property>
-     <addaction name="action_heat_map"/>
-     <addaction name="action_tree_map"/>
-     <addaction name="action_word_cloud"/>
-     <addaction name="action_bubble_chart"/>
-    </widget>
-    <widget class="QMenu" name="menuCorpus_locations">
-     <property name="title">
-      <string>&amp;Corpus locations</string>
-     </property>
-     <addaction name="action_barcode_plot"/>
-     <addaction name="action_beeswarm_plot"/>
-    </widget>
-    <widget class="QMenu" name="menuDensity_plots">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="title">
-      <string>&amp;Numeric plots</string>
-     </property>
-     <addaction name="action_kde_plot"/>
-     <addaction name="action_ecd_plot"/>
-     <addaction name="action_scatter_plot"/>
-    </widget>
-    <widget class="QMenu" name="menuTime_data">
-     <property name="title">
-      <string>&amp;Time data</string>
-     </property>
-     <addaction name="action_percentage_area_plot"/>
-     <addaction name="action_stacked_area_plot"/>
-     <addaction name="action_line_plot"/>
-    </widget>
-    <addaction name="menuCorpus_locations"/>
-    <addaction name="menuFrequencies"/>
-    <addaction name="menuTime_data"/>
-    <addaction name="menuFrequency_maps"/>
-    <addaction name="menuDensity_plots"/>
-    <addaction name="separator"/>
-   </widget>
    <widget class="QMenu" name="menu_Results">
     <property name="title">
      <string>&amp;Results</string>
@@ -1131,37 +1234,15 @@ p, li { white-space: pre-wrap; }
     <addaction name="action_add_function"/>
     <addaction name="separator"/>
     <addaction name="action_find"/>
+    <addaction name="separator"/>
+    <addaction name="action_view_sql"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCorpus"/>
    <addaction name="menu_Results"/>
-   <addaction name="menuAnalyse"/>
    <addaction name="menuSettings"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar">
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <property name="sizeGripEnabled">
-    <bool>false</bool>
-   </property>
-  </widget>
-  <action name="action_open_input_file">
-   <property name="icon">
-    <iconset theme="document-open">
-     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Open input file...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
-   </property>
-  </action>
   <action name="action_help">
    <property name="icon">
     <iconset theme="help-contents">
@@ -1177,26 +1258,6 @@ p, li { white-space: pre-wrap; }
   <action name="action_about_coquery">
    <property name="text">
     <string>&amp;About Coquery</string>
-   </property>
-  </action>
-  <action name="actionDummy">
-   <property name="text">
-    <string>Dummy</string>
-   </property>
-  </action>
-  <action name="action_distinct_tokens">
-   <property name="text">
-    <string>Distinct tokens</string>
-   </property>
-  </action>
-  <action name="action_frequency">
-   <property name="text">
-    <string>Frequency</string>
-   </property>
-  </action>
-  <action name="action_all_tokens">
-   <property name="text">
-    <string>All tokens</string>
    </property>
   </action>
   <action name="action_statistics">
@@ -1238,33 +1299,6 @@ p, li { white-space: pre-wrap; }
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="action_build_corpus">
-   <property name="icon">
-    <iconset theme="document-new">
-     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Build new corpus...</string>
-   </property>
-   <property name="toolTip">
-    <string>Build a new corpus from text files in a folder</string>
-   </property>
-  </action>
-  <action name="action_remove_corpus">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset theme="edit-delete">
-     <normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</normaloff>../../../../../../../../../../../../../../../../../../.designer/backup</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Remove corpus...</string>
-   </property>
-   <property name="toolTip">
-    <string>Permanently and irrevocably remove corpus database</string>
-   </property>
-  </action>
   <action name="action_manage_corpus">
    <property name="icon">
     <iconset theme="server-database">
@@ -1280,50 +1314,6 @@ p, li { white-space: pre-wrap; }
     <string>Ctrl+M</string>
    </property>
   </action>
-  <action name="action_tree_map">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Tree map</string>
-   </property>
-  </action>
-  <action name="action_heat_map">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Heat map</string>
-   </property>
-  </action>
-  <action name="action_word_cloud">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Word cloud</string>
-   </property>
-  </action>
-  <action name="action_barcode_plot">
-   <property name="text">
-    <string>&amp;Barcode plot</string>
-   </property>
-  </action>
-  <action name="action_beeswarm_plot">
-   <property name="text">
-    <string>Bee&amp;swarm plot</string>
-   </property>
-  </action>
-  <action name="action_barchart_plot">
-   <property name="text">
-    <string>&amp;Bars</string>
-   </property>
-  </action>
-  <action name="action_time_series_plot">
-   <property name="text">
-    <string>T&amp;ime series</string>
-   </property>
-  </action>
   <action name="action_corpus_documentation">
    <property name="icon">
     <iconset theme="help-browser">
@@ -1333,79 +1323,9 @@ p, li { white-space: pre-wrap; }
     <string>&amp;Documentation...</string>
    </property>
   </action>
-  <action name="action_percentage_area_plot">
-   <property name="text">
-    <string>&amp;Percentage areas</string>
-   </property>
-  </action>
-  <action name="action_stacked_area_plot">
-   <property name="text">
-    <string>&amp;Stacked areas</string>
-   </property>
-  </action>
-  <action name="action_line_plot">
-   <property name="text">
-    <string>&amp;Lines</string>
-   </property>
-  </action>
-  <action name="actionStop_words">
-   <property name="text">
-    <string>Stop words...</string>
-   </property>
-  </action>
-  <action name="actionStop_words_2">
-   <property name="text">
-    <string>&amp;Stop words...</string>
-   </property>
-  </action>
-  <action name="action_percentage_bars">
-   <property name="text">
-    <string>&amp;Percentage bars</string>
-   </property>
-  </action>
-  <action name="action_stacked_bars">
-   <property name="text">
-    <string>&amp;Stacked bars</string>
-   </property>
-  </action>
   <action name="action_view_log">
    <property name="text">
     <string>View session &amp;log...</string>
-   </property>
-  </action>
-  <action name="action_mysql_server_help">
-   <property name="text">
-    <string>MySQL server help</string>
-   </property>
-  </action>
-  <action name="action_Column_context_menu">
-   <property name="text">
-    <string>[Column context menu]</string>
-   </property>
-  </action>
-  <action name="action_Row_context_menu">
-   <property name="text">
-    <string>[Row context menu]</string>
-   </property>
-  </action>
-  <action name="actionCopy_to_clipboard">
-   <property name="text">
-    <string>Copy to clipboard</string>
-   </property>
-  </action>
-  <action name="actionSave_results">
-   <property name="text">
-    <string>Save</string>
-   </property>
-  </action>
-  <action name="action_Selection_menu">
-   <property name="text">
-    <string>[Selection menu]</string>
-   </property>
-  </action>
-  <action name="action_bubble_chart">
-   <property name="text">
-    <string>&amp;Bubble chart</string>
    </property>
   </action>
   <action name="action_save_results">
@@ -1430,16 +1350,6 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
-   </property>
-  </action>
-  <action name="action_kde_plot">
-   <property name="text">
-    <string>&amp;Kernel Density Estimate</string>
-   </property>
-  </action>
-  <action name="action_ecd_plot">
-   <property name="text">
-    <string>&amp;Estimated cumulative distribution</string>
    </property>
   </action>
   <action name="action_save_selection">
@@ -1481,116 +1391,6 @@ p, li { white-space: pre-wrap; }
   <action name="action_available_modules">
    <property name="text">
     <string>Available &amp;modules...</string>
-   </property>
-  </action>
-  <action name="actionKWIC_Keywords_in_context">
-   <property name="text">
-    <string>KWIC (Keywords in context)</string>
-   </property>
-  </action>
-  <action name="actionSingle_string">
-   <property name="text">
-    <string>Single context string</string>
-   </property>
-  </action>
-  <action name="actionContext_columns">
-   <property name="text">
-    <string>Context columns</string>
-   </property>
-  </action>
-  <action name="actionEdit_stop_word_list">
-   <property name="text">
-    <string>Edit stop word list..</string>
-   </property>
-  </action>
-  <action name="actionAdd_or_remove_grouping_column">
-   <property name="text">
-    <string>Add or remove grouping column...</string>
-   </property>
-  </action>
-  <action name="actionUse_grouping_functions">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Apply group functions</string>
-   </property>
-  </action>
-  <action name="actionUse_group_filters">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Use group filters</string>
-   </property>
-  </action>
-  <action name="actionFrequency_list">
-   <property name="text">
-    <string>Frequency list</string>
-   </property>
-  </action>
-  <action name="actionContingency_table">
-   <property name="text">
-    <string>Contingency table</string>
-   </property>
-  </action>
-  <action name="actionCollocations">
-   <property name="text">
-    <string>Collocations</string>
-   </property>
-  </action>
-  <action name="actionG_test_matrix">
-   <property name="text">
-    <string>G-test matrix</string>
-   </property>
-  </action>
-  <action name="actionUse_summary_functions">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Apply summary functions</string>
-   </property>
-  </action>
-  <action name="actionSelect_summary_functions">
-   <property name="text">
-    <string>Select summary functions...</string>
-   </property>
-  </action>
-  <action name="actionAdd_edit_or_remove_row_filter">
-   <property name="text">
-    <string>Add, edit or remove row filter...</string>
-   </property>
-  </action>
-  <action name="actionApply_row_filters">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Apply row filters</string>
-   </property>
-  </action>
-  <action name="actionDrop_duplicate_rows">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Drop duplicate rows</string>
-   </property>
-  </action>
-  <action name="actionAdd_edit_or_remove_group_filters">
-   <property name="text">
-    <string>Add, edit or remove group filters...</string>
-   </property>
-  </action>
-  <action name="actionSelect_group_functions">
-   <property name="text">
-    <string>Select group functions...</string>
-   </property>
-  </action>
-  <action name="actionContext_options">
-   <property name="text">
-    <string>Context options...</string>
    </property>
   </action>
   <action name="action_reference_corpus">
@@ -1639,11 +1439,6 @@ p, li { white-space: pre-wrap; }
   <action name="action_show_hidden">
    <property name="text">
     <string>Show &amp;hidden columns</string>
-   </property>
-  </action>
-  <action name="action_scatter_plot">
-   <property name="text">
-    <string>&amp;Scatter plot</string>
    </property>
   </action>
   <action name="action_add_column">
@@ -1695,7 +1490,12 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_pos_helper">
    <property name="text">
-    <string>POS Tag helper..</string>
+    <string>&amp;POS Tag helper..</string>
+   </property>
+  </action>
+  <action name="action_view_sql">
+   <property name="text">
+    <string>View SQL queries...</string>
    </property>
   </action>
  </widget>
@@ -1745,11 +1545,6 @@ p, li { white-space: pre-wrap; }
  </customwidgets>
  <tabstops>
   <tabstop>combo_corpus</tabstop>
-  <tabstop>radio_query_string</tabstop>
-  <tabstop>edit_query_string</tabstop>
-  <tabstop>radio_query_file</tabstop>
-  <tabstop>button_change_file</tabstop>
-  <tabstop>list_toolbox</tabstop>
   <tabstop>button_apply_management</tabstop>
   <tabstop>button_cancel_management</tabstop>
   <tabstop>button_run_query</tabstop>

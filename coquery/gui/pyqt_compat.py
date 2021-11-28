@@ -2,7 +2,7 @@
 """
 pyqt_compat.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,33 +14,34 @@ from __future__ import unicode_literals
 import sys
 import warnings
 
-pyside = False
-pyqt = False
-
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
-from PyQt5 import QtHelp
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 QtCore.Signal = QtCore.pyqtSignal
 QtCore.Slot = QtCore.pyqtSlot
 QtCore.Property = QtCore.pyqtProperty
 QtCore.QString = str
 
+pyside = False
+pyqt = False
+
+
 class CoqSettings(QtCore.QSettings):
     def value(self, key, default=None):
         try:
             val = super(CoqSettings, self).value(key, default)
         except Exception as e:
-            s = "Exception when requesting setting key '{}': {}".format(key, e)
+            s = "Exception when requesting setting key '{}': {}".format(
+                key, e)
             print(s)
             warnings.warn(s)
             val = default
         return val
 
+
 def QWebView(*args, **kwargs):
     import PyQt5.QtWebKit as QtWebKit
     return QtWebKit.QWebView(*args, **kwargs)
+
 
 if sys.platform == 'win32':
     frameShadow = QtWidgets.QFrame.Raised
@@ -48,6 +49,11 @@ if sys.platform == 'win32':
 else:
     frameShadow = QtWidgets.QFrame.Raised
     frameShape = QtWidgets.QFrame.StyledPanel
+
+
+def tr(*args, **kwargs):
+    return QtWidgets.QApplication.instance().translate(*args, **kwargs)
+
 
 def get_toplevel_window(name="MainWindow"):
     """
@@ -59,6 +65,7 @@ def get_toplevel_window(name="MainWindow"):
             return widget
     return None
 
+
 def close_toplevel_widgets():
     """
     Closes all top-level widgets.
@@ -69,4 +76,8 @@ def close_toplevel_widgets():
             widget.close()
             del widget
 
+
 STYLE_WARN = 'QLineEdit {background-color: lightyellow; }'
+
+COLOR_NAMES = {QtGui.QColor(name).name().lower(): name for name
+               in QtGui.QColor.colorNames()}

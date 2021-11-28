@@ -2,7 +2,7 @@
 """
 functionlist.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,20 +15,18 @@ import pandas as pd
 import datetime
 import warnings
 import sys
-import traceback
-import logging
 
 from . import options
 from .general import CoqObject
-from .defines import msg_runtime_error_function
+from .errors import RegularExpressionError
 
 
 class FunctionList(CoqObject):
-    def __init__(self, l=None, *args, **kwargs):
+    def __init__(self, lst=None, *args, **kwargs):
         super(FunctionList, self).__init__()
         self._exceptions = []
-        if l:
-            self._list = l
+        if lst:
+            self._list = lst
         else:
             self._list = []
 
@@ -44,6 +42,9 @@ class FunctionList(CoqObject):
         # This code only keeps track of the attributes. The actual dropping
         # takes place (or doesn't) in the summarize() method of the manager.
         if manager:
+            # FIXME: The following check is super weird. The variable
+            # `drop_on_na` is always either True or None, but never False.
+            # This can't be right.
             if manager.drop_on_na is not None:
                 drop_on_na = True
             else:
@@ -53,14 +54,16 @@ class FunctionList(CoqObject):
 
         self._exceptions = []
         for fun in list(self._list):
+            fun.kwargs["session"] = session
             if any(col not in df.columns for col in fun.columns):
                 self._list.remove(fun)
                 continue
-
             if options.cfg.drop_on_na:
                 drop_on_na = True
             else:
                 drop_on_na = drop_on_na and fun.drop_on_na
+            new_column = fun.get_id()
+
             try:
                 if options.cfg.benchmark:
                     print(fun.get_name())
@@ -71,17 +74,17 @@ class FunctionList(CoqObject):
                 else:
                     val = fun.evaluate(df, **fun.kwargs)
             except Exception as e:
-                # if an exception occurs, the function is removed, and the
-                # error is logged.
-                self._list.remove(fun)
-                error = "Error during function call {}".format(
-                    fun.get_label(session))
-                logging.exception(error)
-                self._exceptions.append((error, e, sys.exc_info()))
-            else:
+                # if an exception occurs, the error is logged, and an empty
+                # column containing only NAs is added
+                if isinstance(e, RegularExpressionError):
+                    msg = e.error_message.strip()
+                else:
+                    msg = f"Error in function call {fun.get_label(session)}"
+                self._exceptions.append((msg, e, sys.exc_info()))
+                val = pd.Series([None] * len(df), name=new_column)
+            finally:
                 # Functions can return either single columns or data frames.
                 # Handle the function result accordingly:
-                new_column = fun.get_id()
                 if fun.single_column:
                     df[new_column] = val
                 else:
@@ -116,7 +119,7 @@ class FunctionList(CoqObject):
         if not self.has_function(fun):
             self._list.append(fun)
         else:
-            warnings.warn("Function duplicate not added: {}".format(fun))
+            warnings.warn(f"Function duplicate not added: {fun}")
 
     def remove_function(self, fun):
         self._list.remove(fun)
@@ -134,10 +137,9 @@ class FunctionList(CoqObject):
             func.columns = [new.get_id() if col == old.get_id() else col
                             for col in func.columns]
 
-    def __iter__(self, *args, **kwargs):
-        return self._list.__iter__(*args, **kwargs)
+    def __iter__(self):
+        return self._list.__iter__()
 
-    def __repr__(self, *args, **kwargs):
-        s = super(FunctionList, self).__repr__(*args, **kwargs)
-        return "{}({})".format(
-            s, self._list.__repr__(*args, **kwargs))
+    def __repr__(self):
+        s = super(FunctionList, self).__repr__()
+        return f"{s}({self._list.__repr__()})"

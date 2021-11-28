@@ -6,7 +6,7 @@ coq_install_icle.py is part of Coquery.
 Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
-For details, see the file LICENSE that you should have received along 
+For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
@@ -18,6 +18,38 @@ import pandas as pd
 from coquery.corpusbuilder import *
 from coquery.unicode import utf8
 from coquery.bibliography import *
+
+"""
+Right now, there's no straightforward way to make this installer work cross-
+platform because the corpus uses the MS Access file format .mdb for the
+meta data. These files can be read in Linux if the mdbtools are installed
+first. Also, the meza module (available via PyPi) is required. The meta data
+can be extracted like so:
+
+In [1]: from meza import io
+In [2]: import pandas as pd
+
+In [3]: records = io.read(
+    "/usr/local/share/corpora/source/ICLE/DATA/_icle.mdb")
+In [4]: lst = list(records)
+
+In [5]: df = pd.DataFrame(lst)
+In [6]: df = df.dropna(axis="index", how="all")
+In [7]: df = df.loc[df["country"].notna()]
+In [8]: df["monthseng"] = (df["monthseng"].replace("None", pd.np.nan)
+                                          .astype(float))
+In [9]: df["unieng"] = (df["unieng"].replace("None", pd.np.nan)
+                                    .astype(float))
+In [10]: df["filename"] = df["file"] + ".txt"
+In [11]: df.to_csv(
+    "/usr/local/share/corpora/source/ICLE/meta.csv", index=False)
+
+Now, the ICLE can be build from the .txt files with the meta.csv file just
+created as the meta data file. What is important is that the .txt files are
+stored in a separate folder – on the CD, they are placed in the DATA folder
+alongside some binaries which will confuse the corpus builder.
+"""
+
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "*.*"
@@ -35,7 +67,7 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_source_id = "TextId"
     corpus_file_id = "FileId"
     corpus_speaker_id = "SpeakerId"
-    
+
     source_table = "Texts"
     source_id = "TextId"
     source_batch = "Batch"
@@ -47,7 +79,7 @@ class BuilderClass(BaseCorpusBuilder):
     source_status = "Status"
     source_institute = "Institute"
     source_comment = "Comments"
-    
+
     speaker_table = "Speakers"
     speaker_id = "SpeakerId"
     speaker_age = "Age"
@@ -60,19 +92,20 @@ class BuilderClass(BaseCorpusBuilder):
     speaker_otherlang1 = "Other_language_1"
     speaker_otherlang2 = "Other_language_2"
     speaker_otherlang3 = "Other_language_3"
-    
+
     file_table = "Files"
     file_id = "FileId"
     file_name = "Filename"
     file_path = "Path"
 
     special_files = ["source_info.csv", "tokens.txt"]
+    special_files = ["tokens.txt"]
     expected_files = special_files + ["BGSU1003.txt", "CNHK1052.txt"]
-    
+
     def __init__(self, gui=False, *args):
        # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
-        
+
         self.create_table_description(self.file_table,
             [Identifier(self.file_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
             Column(self.file_name, "TINYTEXT NOT NULL"),
@@ -111,14 +144,14 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.source_institute, "VARCHAR(88) NOT NULL"),
              Column(self.source_comment, "VARCHAR(141) NOT NULL"),
                 ])
-    
+
         self.create_table_description(self.corpus_table,
             [Identifier(self.corpus_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
              Link(self.corpus_file_id, self.file_table),
              Link(self.corpus_source_id, self.source_table),
              Link(self.corpus_speaker_id, self.speaker_table)])
-            
+
         self._sources = {}
         self._speakers = {}
         self._words = {}
@@ -130,19 +163,19 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_db_name():
         return "coq_icle"
-    
+
     @staticmethod
     def get_title():
         return "The International Corpus of Learner English"
-        
+
     @staticmethod
     def get_language():
         return "English"
-    
+
     @staticmethod
     def get_language_code():
         return "en-L2"
-        
+
     @staticmethod
     def get_description():
         return [
@@ -164,7 +197,7 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_url():
         return "https://www.uclouvain.be/en-cecl-icle.html"
-    
+
     @staticmethod
     def get_license():
         return "The ICLE is available under the terms of a commercial license.</a>."
@@ -192,11 +225,11 @@ class BuilderClass(BaseCorpusBuilder):
          #"CZKR": "ICLE-CZ-KRAL",
          #"DBAN": "ICLE-DB-KVH",
          #"CZKR": "ICLE-CZ-PRAG",
-        
+
         #if filename.startswith("BGSU"):
-            #id_str = 
+            #id_str =
         #elif filename.startswith("CNHK"):
-            #id_str = 
+            #id_str =
         #elif filename.startswith("CNUK"):
             #id_str = "ICLE-CN-UK"
         #return "ICLE
@@ -220,28 +253,30 @@ class BuilderClass(BaseCorpusBuilder):
                     row.monthseng = None
                 if row.age == -1:
                     row.age = None
-                    
-                self._sources[utf8(row.file)] = self.table(self.source_table).add(
-                    {self.source_batch: self._filename_to_batch(row.file),
-                    self.source_title: utf8(row.title),
-                    self.source_type: row.type,
-                    self.source_condition: row.conditions,
-                    self.source_reftool: row.reftools,
-                    self.source_exam: row.exam,
-                    self.source_status: row.status,
-                    self.source_institute: utf8(row.instit2),
-                    self.source_comment: utf8(row.comments)})
-                self._speakers[utf8(row.file)] = self.table(self.speaker_table).add(
-                    {self.speaker_age: row.age,
-                     self.speaker_sex: row.sex,
-                     self.speaker_country: row.country,
-                     self.speaker_language: row.llanguage,
-                     self.speaker_schoolenglish: row.schooleng,
-                     self.speaker_unienglish: row.unieng,
-                     self.speaker_abroadenglish: row.monthseng,
-                     self.speaker_otherlang1: row.olang1,
-                     self.speaker_otherlang2: row.olang2,
-                     self.speaker_otherlang3: row.olang3})
+
+                self._sources[utf8(row.file)] = (
+                    self.table(self.source_table).add(
+                        {self.source_batch: self._filename_to_batch(row.file),
+                         self.source_title: utf8(row.title),
+                         self.source_type: row.type,
+                         self.source_condition: row.conditions,
+                         self.source_reftool: row.reftools,
+                         self.source_exam: row.exam,
+                         self.source_status: row.status,
+                         self.source_institute: utf8(row.instit2),
+                         self.source_comment: utf8(row.comments)}))
+                self._speakers[utf8(row.file)] = (
+                    self.table(self.speaker_table).add(
+                        {self.speaker_age: row.age,
+                         self.speaker_sex: row.sex,
+                         self.speaker_country: row.country,
+                         self.speaker_language: row.llanguage,
+                         self.speaker_schoolenglish: row.schooleng,
+                         self.speaker_unienglish: row.unieng,
+                         self.speaker_abroadenglish: row.monthseng,
+                         self.speaker_otherlang1: row.olang1,
+                         self.speaker_otherlang2: row.olang2,
+                         self.speaker_otherlang3: row.olang3}))
         elif base_name == "tokens.txt":
             hold_back = []
             with codecs.open(filename, "r", encoding="utf-16") as input_file:
@@ -280,19 +315,19 @@ class BuilderClass(BaseCorpusBuilder):
                                     self.word_pos: "UNKNOWN",
                                     self.word_claws: "UNKNOWN"}
                         self._words[row] = self.table(self.word_table).add(d)
-                
+
         elif base_name in self.expected_files:
             self._source_id = self._sources[base_name.partition(".")[0]]
             self._speaker_id = self._speakers[base_name.partition(".")[0]]
-            
+
             d = {self.corpus_file_id: self._file_id,
                 self.corpus_source_id: self._source_id,
                 self.corpus_speaker_id: self._speaker_id}
-            
+
             with codecs.open(filename, "r") as input_file:
                 batch = None
                 for row in input_file:
-                    if batch == None:
+                    if batch is None:
                         """
                         process batch name
                         """
@@ -310,8 +345,8 @@ class BuilderClass(BaseCorpusBuilder):
 
                                 self.add_token_to_corpus(dict(d))
                                 word = word[1:]
-                            
-                            # construct word, taking punctuation and escaped 
+
+                            # construct word, taking punctuation and escaped
                             # punctuation into account:
                             l = []
                             escaped = True
@@ -340,7 +375,7 @@ class BuilderClass(BaseCorpusBuilder):
                                          self.word_claws: "UNKNOWN"}, case=True)
                                     self.add_token_to_corpus(dict(d))
                                     l = []
-                                # add any following punctuation marks as 
+                                # add any following punctuation marks as
                                 # punctuation tokens:
                                 d[self.corpus_word_id] = self.table(self.word_table).get_or_insert(
                                     {self.word_label: ch,
@@ -357,10 +392,10 @@ class BuilderClass(BaseCorpusBuilder):
                                     self.word_pos: "UNKNOWN",
                                     self.word_claws: "UNKNOWN"}, case=True)
                                 self.add_token_to_corpus(dict(d))
-    
+
     def store_filename(self, file_name):
         if os.path.basename(file_name) not in self.special_files:
             super(BuilderClass, self).store_filename(file_name)
-                    
+
 if __name__ == "__main__":
     BuilderClass().build()

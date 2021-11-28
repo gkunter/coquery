@@ -1,7 +1,7 @@
 """
 linkselect.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -33,14 +33,18 @@ class LinkSelect(QtWidgets.QDialog):
         self.from_text = utf8(self.ui.label_from.text())
         self.from_corpus_text = utf8(self.ui.label_from_corpus.text())
         self.to_text = utf8(self.ui.label_to.text())
-        self.explain_text = utf8(self.ui.label_explain.text())
+        #self.explain_text = utf8(self.ui.label_explain.text())
 
         self.insert_data()
-        self.ui.combo_corpus.currentIndexChanged.connect(self.external_changed)
-        self.ui.tree_resource.currentItemChanged.connect(self.resource_changed)
-        self.ui.tree_external.currentItemChanged.connect(self.external_resource_changed)
+        self.ui.combo_corpus.currentIndexChanged.connect(
+            self.external_changed)
+        self.ui.tree_resource.currentItemChanged.connect(
+            self.resource_changed)
+        self.ui.tree_external.currentItemChanged.connect(
+            self.external_resource_changed)
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+        ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+        ok_button.setEnabled(False)
 
         try:
             self.resize(options.settings.value("linkselect_size"))
@@ -55,7 +59,9 @@ class LinkSelect(QtWidgets.QDialog):
         self.ui.tree_resource.setCurrentItemByString(self.rc_from)
 
     def check_dialog(self):
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+        ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+        ok_button.setEnabled(False)
+
         self.ui.widget_link_info.hide()
         from_item = self.ui.tree_resource.currentItem()
         to_item = self.ui.tree_external.currentItem()
@@ -64,16 +70,17 @@ class LinkSelect(QtWidgets.QDialog):
         if to_item.childCount() or from_item.childCount():
             return
 
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
+        ok_button.setEnabled(True)
         self.ui.widget_link_info.show()
 
     def set_to_labels(self, **kwargs):
         self.ui.label_to.setText(self.to_text.format(**kwargs))
-        self.ui.label_explain.setText(self.explain_text.format(**kwargs))
+        #self.ui.label_explain.setText(self.explain_text.format(**kwargs))
 
     def set_from_labels(self, **kwargs):
         self.ui.label_from.setText(self.from_text.format(**kwargs))
-        self.ui.label_from_corpus.setText(self.from_corpus_text.format(**kwargs))
+        self.ui.label_from_corpus.setText(
+            self.from_corpus_text.format(**kwargs))
 
     def closeEvent(self, event):
         options.settings.setValue("linkselect_size", self.size())
@@ -81,10 +88,13 @@ class LinkSelect(QtWidgets.QDialog):
     def exec_(self, *args, **kwargs):
         result = super(LinkSelect, self).exec_(*args, **kwargs)
         if result == self.Accepted:
+            join_type = ("LEFT JOIN" if self.ui.check_left_join.checkState()
+                         else "INNER JOIN")
             kwargs = {
                 "res_from": self.corpus_name,
                 "res_to": utf8(self.ui.combo_corpus.currentText()),
-                "case": bool(self.ui.checkBox.checkState())}
+                "case": bool(self.ui.checkBox.checkState()),
+                "join": join_type}
             from_item = self.ui.tree_resource.currentItem()
             try:
                 kwargs["rc_from"] = utf8(from_item.objectName())
@@ -120,13 +130,13 @@ class LinkSelect(QtWidgets.QDialog):
 
     def external_changed(self, index):
         if type(index) == int:
-            corpus = utf8(self.ui.combo_corpus.itemText(index))
+            name = utf8(self.ui.combo_corpus.itemText(index))
         else:
-            corpus = utf8(index)
-        if not corpus:
+            name = utf8(index)
+        if not name:
             return
 
-        resource, _ = options.get_resource(corpus)
+        resource = options.cfg.current_connection.resources()[name][0]
         self.ui.tree_external.setup_resource(resource,
                                              skip=("coquery"),
                                              checkable=False,
@@ -141,7 +151,9 @@ class LinkSelect(QtWidgets.QDialog):
             to_table = utf8(current.parent().text(0))
         else:
             to_table = "invalid"
-        self.set_to_labels(to=to_res, to_resource=to_feature, to_table=to_table)
+        self.set_to_labels(to=to_res,
+                           to_resource=to_feature,
+                           to_table=to_table)
         self.check_dialog()
 
     def clear_data(self):
@@ -149,9 +161,10 @@ class LinkSelect(QtWidgets.QDialog):
         self.ui.tree_external.clear()
 
     def insert_data(self):
-        corpora = sorted([resource.name for _, (resource, _, _)
-                          in options.cfg.current_resources.items()
-                          if resource.name != self.corpus_name])
+        corpora = sorted(
+            [resource.name for _, (resource, _, _)
+             in options.cfg.current_connection.resources().items()
+             if resource.name != self.corpus_name])
         self.ui.combo_corpus.addItems(corpora)
         min_width = self.ui.combo_corpus.sizeHint().width()
         self.ui.label_from_corpus.setMinimumWidth(min_width)
@@ -163,7 +176,8 @@ class LinkSelect(QtWidgets.QDialog):
 
 
 class CorpusSelect(LinkSelect):
-    def __init__(self, current, exclude_corpus=None, title=None, subtitle=None, parent=None):
+    def __init__(self, current, exclude_corpus=None, title=None,
+                 subtitle=None, parent=None):
         super(CorpusSelect, self).__init__(parent=parent)
         self.corpus_name = exclude_corpus
 
@@ -182,16 +196,18 @@ class CorpusSelect(LinkSelect):
         self.ui.checkBox.hide()
         self.ui.combo_corpus.setFocus()
 
-        self.ui.tree_external.setSelectionMode(self.ui.tree_external.NoSelection)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
+        self.ui.tree_external.setSelectionMode(
+            self.ui.tree_external.NoSelection)
+        ok_button = self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok)
+        ok_button.setEnabled(True)
         if subtitle:
             self.ui.group_external_corpus.setTitle(subtitle)
         if title:
             self.setWindowTitle(title)
 
     @staticmethod
-    def pick(current, exclude_corpus, title=None, subtitle=None, parent=None):
-        dialog = CorpusSelect(current, exclude_corpus, title, subtitle, parent)
+    def pick(*args, **kwargs):
+        dialog = CorpusSelect(*args, **kwargs)
         dialog.setVisible(True)
         link = dialog.exec_()
         if link:

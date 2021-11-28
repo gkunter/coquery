@@ -10,25 +10,26 @@ coquery$ python -m test.test_filters
 
 from __future__ import unicode_literals
 
-import unittest
-import os.path
-import sys
+import numpy as np
 import pandas as pd
 import re
 
-from coquery.filters import *
-from coquery.defines import *
+from coquery.defines import (OP_EQ, OP_GE, OP_GT, OP_IN, OP_LE,
+                             OP_LT, OP_MATCH, OP_NE, OP_NMATCH, OP_RANGE)
+from coquery.filters import Filter, parse_filter_text
+from test.testcase import CoqTestCase, run_tests
 
 STRING_COLUMN = "coq_word_label_1"
 INT_COLUMN = "coq_corpus_id_1"
 FLOAT_COLUMN = "coq_fraction_1"
 BOOL_COLUMN = "coq_truth_1"
 
-class TestFilterString(unittest.TestCase):
+
+class TestFilterString(CoqTestCase):
     df = pd.DataFrame({
             STRING_COLUMN: ['abc', "Peter's", 'xxx', None],
             INT_COLUMN: [1, 2, 3, 7],
-            FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan],
+            FLOAT_COLUMN: [-1.2345, 0, 1.2345, np.nan],
             BOOL_COLUMN: [True, True, False, False]})
 
     def test_string_values(self):
@@ -166,14 +167,14 @@ class TestFilterString(unittest.TestCase):
         filt2 = Filter(STRING_COLUMN, str, OP_EQ, None)
         filt3 = Filter(STRING_COLUMN, str, OP_NE, None)
         filt4 = Filter(STRING_COLUMN, str, OP_GT, None)
-        filt5 = Filter(INT_COLUMN, int, OP_EQ, pd.np.nan)
-        filt6 = Filter(INT_COLUMN, int, OP_NE, pd.np.nan)
+        filt5 = Filter(INT_COLUMN, int, OP_EQ, np.nan)
+        filt6 = Filter(INT_COLUMN, int, OP_NE, np.nan)
 
         filt7 = Filter(FLOAT_COLUMN, float, OP_EQ, "")
         filt8 = Filter(FLOAT_COLUMN, float, OP_EQ, None)
         filt9 = Filter(FLOAT_COLUMN, float, OP_NE, None)
-        filt10 = Filter(FLOAT_COLUMN, float, OP_EQ, pd.np.nan)
-        filt11 = Filter(FLOAT_COLUMN, float, OP_NE, pd.np.nan)
+        filt10 = Filter(FLOAT_COLUMN, float, OP_EQ, np.nan)
+        filt11 = Filter(FLOAT_COLUMN, float, OP_NE, np.nan)
 
         self.assertEqual(filt1.get_filter_string(),
                          "coq_word_label_1 == ''")
@@ -227,11 +228,12 @@ class TestFilterString(unittest.TestCase):
         self.assertEqual(filt5.get_filter_string(),
                          "1 <= coq_corpus_id_1 < 3")
 
-class TestApply(unittest.TestCase):
+
+class TestApply(CoqTestCase):
     df = pd.DataFrame({
             STRING_COLUMN: ['abc', "Peter's", 'xxx', None],
             INT_COLUMN: [1, 2, 3, 7],
-            FLOAT_COLUMN: [-1.2345, 0, 1.2345, pd.np.nan],
+            FLOAT_COLUMN: [-1.2345, 0, 1.2345, np.nan],
             BOOL_COLUMN: [True, True, False, False]})
 
     def assert_index_equal(self, df1, df2):
@@ -242,9 +244,9 @@ class TestApply(unittest.TestCase):
         filt2 = Filter(BOOL_COLUMN, bool, OP_NE, True)
 
         self.assert_index_equal(filt1.apply(self.df),
-                                self.df[self.df[BOOL_COLUMN] == True])
+                                self.df[self.df[BOOL_COLUMN]])
         self.assert_index_equal(filt2.apply(self.df),
-                                self.df[self.df[BOOL_COLUMN] != True])
+                                self.df[~self.df[BOOL_COLUMN]])
 
     def test_string_filter(self):
         filt1 = Filter(STRING_COLUMN, str, OP_EQ, "xxx")
@@ -274,7 +276,8 @@ class TestApply(unittest.TestCase):
         self.assert_index_equal(
             filt6.apply(self.df), self.df[self.df[STRING_COLUMN] >= "xxx"])
         self.assert_index_equal(
-            filt7.apply(self.df), self.df[self.df[STRING_COLUMN].isin(["abc", "xxx"])])
+            filt7.apply(self.df),
+            self.df[self.df[STRING_COLUMN].isin(["abc", "xxx"])])
         self.assert_index_equal(
             filt8.apply(self.df),
             self.df[("abc" <= self.df[STRING_COLUMN]) &
@@ -343,7 +346,7 @@ class TestApply(unittest.TestCase):
             filt13.apply(self.df), self.df[self.df[FLOAT_COLUMN] == 1.2345])
 
 
-class TestModuleMethods(unittest.TestCase):
+class TestModuleMethods(CoqTestCase):
     def test_parse_filter_text_1(self):
         template = ("Filter("
                     "feature='{}', operator='{}', value='{}', "
@@ -365,16 +368,14 @@ class TestModuleMethods(unittest.TestCase):
         self.assertEqual(str(filt), s)
 
 
-provided_tests = (TestFilterString, TestApply,
+provided_tests = [TestFilterString,
+                  TestApply,
                   TestModuleMethods,
-                  )
+                  ]
 
 
 def main():
-    suite = unittest.TestSuite(
-        [unittest.TestLoader().loadTestsFromTestCase(x)
-         for x in provided_tests])
-    unittest.TextTestRunner().run(suite)
+    run_tests(provided_tests)
 
 
 if __name__ == '__main__':

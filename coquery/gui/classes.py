@@ -2,29 +2,24 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import (unicode_literals, print_function,
+                        absolute_import, division)
 
 import logging
 import os
-import sys
-import random
 import pandas as pd
+import numpy as np
 from collections import deque
 
-from coquery import general, NAME
 from coquery import options
 from coquery import managers
-from coquery import session
 from coquery.unicode import utf8
 
 from .pyqt_compat import (QtCore, QtGui, QtWidgets,
@@ -48,6 +43,12 @@ class inputFocusFilter(QtCore.QObject):
         return super(inputFocusFilter, self).eventFilter(widget, event)
 
 
+try:
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+except Exception as e:
+    print(e)
+
+
 class CoqApplication(QtWidgets.QApplication):
     def __init__(self, *arg, **kwarg):
         super(CoqApplication, self).__init__(*arg, **kwarg)
@@ -64,85 +65,6 @@ class CoqApplication(QtWidgets.QApplication):
 
     def inputFocusWidgets(self):
         return self._input_focus_widgets
-
-
-class CoqThread(QtCore.QThread):
-    taskStarted = QtCore.Signal()
-    taskFinished = QtCore.Signal()
-    taskException = QtCore.Signal(Exception)
-    taskAbort = QtCore.Signal()
-
-    def __init__(self, FUN, parent=None, *args, **kwargs):
-        super(CoqThread, self).__init__(parent)
-        self.FUN = FUN
-        self.exiting = False
-        self.args = args
-        self.kwargs = kwargs
-        self.quitted = False
-
-    def __del__(self):
-        self.exiting = True
-        try:
-            self.wait()
-        except RuntimeError:
-            pass
-
-    def setInterrupt(self, fun):
-        self.INTERRUPT_FUN = fun
-
-    def quit(self):
-        self.quitted = True
-        if hasattr(self, "INTERRUPT_FUN"):
-            self.INTERRUPT_FUN()
-        super(CoqThread, self).quit()
-
-    def run(self):
-        self.taskStarted.emit()
-        self.exiting = False
-        self.quitted = False
-        result = None
-        try:
-            if options.cfg.profile:
-                import cProfile
-                profiler = cProfile.Profile()
-                try:
-                    result = profiler.runcall(self.FUN, *self.args, **self.kwargs)
-                finally:
-                    profiler.dump_stats(os.path.join(
-                        general.get_home_dir(),
-                        "thread{}.profile".format(hex(id(self)))))
-            else:
-                result = self.FUN(*self.args, **self.kwargs)
-        except Exception as e:
-            if self.parent:
-                self.parent().exc_info = sys.exc_info()
-                self.parent().exception = e
-            self.taskException.emit(e)
-            print("CoqThread.run():", e)
-        self.taskFinished.emit()
-        return result
-
-
-class CoqStaticBox(QtWidgets.QDialog):
-    def __init__(self, title, content, *args, **kwargs):
-        super(CoqStaticBox, self).__init__(*args, **kwargs)
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setWindowTitle(title)
-        self.layout = QtWidgets.QHBoxLayout(self)
-        self.label = QtWidgets.QLabel(content)
-        self.layout.addWidget(self.label)
-        self.setModal(True)
-        self.open()
-        self.show()
-        self.adjustSize()
-        self.update()
-        self.repaint()
-        get_toplevel_window().repaint()
-        QtWidgets.QApplication.sendPostedEvents()
-        QtWidgets.QApplication.processEvents()
-        self.update()
-        self.repaint()
-        get_toplevel_window().repaint()
 
 
 class CoqVerticalHeader(QtWidgets.QHeaderView):
@@ -212,6 +134,7 @@ class CoqHorizontalHeader(QtWidgets.QHeaderView):
         super(CoqHorizontalHeader, self).reset()
         self._selected_columns = []
 
+
 class CoqHelpBrowser(QtWidgets.QTextBrowser):
     def __init__(self, help_engine, *args, **kwargs):
         self.help_engine = help_engine
@@ -221,7 +144,8 @@ class CoqHelpBrowser(QtWidgets.QTextBrowser):
         if name.scheme() == "qthelp":
             return self.help_engine.fileData(name)
         else:
-            return super(CoqHelpBrowser, self).loadResource(resource_type, name)
+            return super(CoqHelpBrowser, self).loadResource(
+                resource_type, name)
 
 
 class CoqFeatureList(QtWidgets.QListWidget):
@@ -229,9 +153,10 @@ class CoqFeatureList(QtWidgets.QListWidget):
 
     def __init__(self, parent=None):
         super(CoqFeatureList, self).__init__(parent)
-        self.setAcceptDrops(True)
         self.setDragDropMode(self.DragDrop)
         self.setSelectionMode(self.SingleSelection)
+        self.setAcceptDrops(False)
+
         # add (and remove) dummy item to determine usual size of entries:
         super(CoqFeatureList, self).addItem(QtWidgets.QListWidgetItem(""))
         self._item_height = (self.visualItemRect(self.item(0)).height() +
@@ -240,9 +165,23 @@ class CoqFeatureList(QtWidgets.QListWidget):
                             self.padding())
         self.takeItem(0)
 
+    def hasItem(self, which):
+        which_column = which.data(QtCore.Qt.UserRole)
+        for i in range(self.count()):
+            item = self.item(i)
+            column = item.data(QtCore.Qt.UserRole)
+            if which_column == column:
+                return True
+        return False
+
     def addItem(self, item):
-        item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
-        super(CoqFeatureList, self).addItem(item)
+        if not self.hasItem(item):
+            item.setSizeHint(QtCore.QSize(self.itemWidth(),
+                                          self.itemHeight()))
+            item.setToolTip(
+                "Drag feature '{}' to receiving feature tray".format(
+                    item.text()))
+            super(CoqFeatureList, self).addItem(item)
         self.featureAdded.emit(item)
 
     def itemWidth(self):
@@ -254,18 +193,6 @@ class CoqFeatureList(QtWidgets.QListWidget):
     def padding(self):
         return 4 * self.frameWidth()
         return 0
-
-    def dragEnterEvent(self, e):
-        if ("application/x-qabstractitemmodeldatalist" in
-                e.mimeData().formats()):
-            e.accept()
-        else:
-            super(CoqFeatureList, self).dragEnterEvent(e)
-
-    def dropEvent(self, e):
-        super(CoqFeatureList, self).dropEvent(e)
-        e.setDropAction(QtCore.Qt.MoveAction)
-        e.accept()
 
 
 class CoqFeatureTray(CoqFeatureList):
@@ -279,6 +206,7 @@ class CoqFeatureTray(CoqFeatureList):
 
     def __init__(self, parent=None):
         super(CoqFeatureTray, self).__init__(parent)
+        self.setAcceptDrops(True)
         self.setEditTriggers(self.NoEditTriggers)
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -308,7 +236,7 @@ class CoqFeatureTray(CoqFeatureList):
             return None
 
     def data(self):
-        if self.count():
+        if self.count() and self.isEnabled():
             return utf8(self.item(0).data(QtCore.Qt.UserRole))
         else:
             return None
@@ -325,6 +253,13 @@ class CoqFeatureTray(CoqFeatureList):
             self.send_back()
         super(CoqFeatureTray, self).clear()
         self.featureCleared.emit()
+
+    def addItem(self, item):
+        item.setSizeHint(QtCore.QSize(self.itemWidth(), self.itemHeight()))
+        item.setToolTip(
+            "Click on Clear button to remove '{}'".format(item.text()))
+        super(QtWidgets.QListWidget, self).addItem(item)
+        self.featureAdded.emit(item)
 
     def setItem(self, item, source):
         if self.count():
@@ -421,7 +356,7 @@ class CoqInfoLabel(QtWidgets.QLabel):
         self.setCursor(QtCore.Qt.WhatsThisCursor)
 
         self.setText("")
-        self.setPixmap(get_toplevel_window().get_icon("sign-info").pixmap(
+        self.setPixmap(get_toplevel_window().get_icon("Info").pixmap(
             QtCore.QSize(QtWidgets.QSpinBox().sizeHint().height(),
                          QtWidgets.QSpinBox().sizeHint().height())))
 
@@ -430,55 +365,30 @@ class CoqClickableLabel(QtWidgets.QLabel):
     clicked = QtCore.Signal()
     textChanged = QtCore.Signal()
 
+    def __init__(self, *args, **kwargs):
+        super(CoqClickableLabel, self).__init__(*args, **kwargs)
+        self._content = None
+
     def mousePressEvent(self, ev):
         self.clicked.emit()
 
+    def setPlaceholderText(self, s):
+        super(CoqClickableLabel, self).setText(s)
+
     def setText(self, s):
         super(CoqClickableLabel, self).setText(s)
+        self._content = s
         self.textChanged.emit()
 
-class CoqWidgetFader(QtCore.QObject):
-    def __init__(self, widget, duration=250):
-        def blend(left, right, i, steps):
-            x = (steps - i - 1) / steps * left
-            y = i / steps * right
-            return int(x + y)
-
-        self._widget = widget
-
-        app = QtWidgets.QApplication.instance()
-        start = app.palette().color(QtGui.QPalette.Normal,
-                                    QtGui.QPalette.Highlight)
-        end = widget.palette().color(widget.backgroundRole())
-        self._pal = []
-
-        steps = 128
-
-        for i in range(steps):
-            blended = (blend(start.red(), end.red(), i, steps),
-                       blend(start.green(), end.green(), i, steps),
-                       blend(start.blue(), end.blue(), i, steps))
-            self._pal.append("#{:02x}{:02x}{:02x}".format(*blended))
-
-        self._delay = duration / steps
-
-    def fade(self):
-        self.fade_widget(0)
-
-    def fade_widget(self, step):
-        s = "background-color: '{}'".format(self._pal[step])
-        self._widget.setStyleSheet(s)
-        if step < len(self._pal) - 1:
-            QtCore.QTimer.singleShot(self._delay,
-                                     lambda: self.fade_widget(step + 1))
-        else:
-            self._widget.setStyleSheet("")
+    def text(self):
+        return self._content
 
 
 class CoqSwitch(QtWidgets.QWidget):
     toggled = QtCore.Signal()
 
-    def __init__(self, state=None, on="on", off="off", text="", *args, **kwargs):
+    def __init__(self, state=None, on="on", off="off", text="",
+                 *args, **kwargs):
         super(CoqSwitch, self).__init__(*args, **kwargs)
 
         self._layout = QtWidgets.QHBoxLayout(self)
@@ -503,7 +413,8 @@ class CoqSwitch(QtWidgets.QWidget):
         self._inner_layout.addWidget(self._check)
         #self._slider = QtWidgets.QSlider(self)
         #self._slider.setOrientation(QtCore.Qt.Horizontal)
-        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                           #QtWidgets.QSizePolicy.Preferred)
         #sizePolicy.setHorizontalStretch(0)
         #sizePolicy.setVerticalStretch(0)
         #self._slider.setSizePolicy(sizePolicy)
@@ -528,7 +439,9 @@ class CoqSwitch(QtWidgets.QWidget):
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
         self._label.setSizePolicy(sizePolicy)
-        self._label.setMinimumWidth(max(QtWidgets.QLabel(on).sizeHint().width(), QtWidgets.QLabel(off).sizeHint().width()))
+        self._label.setMinimumWidth(
+            max(QtWidgets.QLabel(on).sizeHint().width(),
+                QtWidgets.QLabel(off).sizeHint().width()))
 
         self._on_text = on
         self._off_text = off
@@ -578,7 +491,8 @@ class CoqSwitch(QtWidgets.QWidget):
             #self._slider.setValue(1)
             self._label.setText(self._on_text)
 
-            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal,
+                                                  #QtGui.QPalette.Highlight)
             #s = """
             #{style_handle}
 
@@ -595,7 +509,8 @@ class CoqSwitch(QtWidgets.QWidget):
             self._check.setCheckState(QtCore.Qt.Unchecked)
             self._label.setText(self._off_text)
 
-            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Dark)
+            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal,
+                                                  #QtGui.QPalette.Dark)
             #s = """
             #{style_handle}
 
@@ -688,7 +603,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
         CoqGroupBox {{
             font: {title_weight};
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+                                              stop: 0 {button_button},
+                                              stop: 1 {button_midlight});
             border: 1px solid gray;
             border-radius: 2px;
             border-style: inset;
@@ -699,7 +615,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
             font: {title_weight};
 
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 {button_midlight}, stop: 1 {button_button});
+                                            stop: 0 {button_midlight},
+                                            stop: 1 {button_button});
             border-top: 1px;
             border-left: 1px;
             border-right: 1px;
@@ -743,7 +660,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
         CoqGroupBox::title {{
             font: {title_weight};
             background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                            stop: 0 {button_button}, stop: 1 {button_midlight});
+                                            stop: 0 {button_button},
+                                            stop: 1 {button_midlight});
             border-top: 1px;
             border-left: 1px;
             border-right: 1px;
@@ -786,7 +704,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
         if "title_weight" not in kwargs:
             kwargs["title_weight"] = "normal"
         palette = options.cfg.app.palette()
-        s = s.format(path=os.path.join(options.cfg.base_path, "icons", "small-n-flat", "PNG"),
+        s = s.format(path=os.path.join(options.cfg.base_path, "icons",
+                                       "small-n-flat", "PNG"),
                      sign_up="sign-minimize.png",
                      sign_down="sign-maximize.png",
                      icon_size=icon_size, header_size=header_size,
@@ -906,10 +825,12 @@ class CoqDetailBox(QtWidgets.QWidget):
             self.box = box
 
         self.frame = QtWidgets.QFrame(self)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
         self.frame.setFrameShape(frameShape)
         self.frame.setFrameShadow(frameShadow)
@@ -918,12 +839,15 @@ class CoqDetailBox(QtWidgets.QWidget):
         self.header_layout.setSpacing(4)
 
         self.header = QtWidgets.QPushButton(self.frame)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                           QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.header.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.header.sizePolicy().hasHeightForWidth())
         self.header.setSizePolicy(sizePolicy)
-        self.header.setStyleSheet("text-align: left; padding: 4px; padding-left: 1px;")
+        self.header.setStyleSheet(
+            "text-align: left; padding: 4px; padding-left: 1px;")
         self.header.clicked.connect(self.onClick)
         self.header_layout.addWidget(self.header)
 
@@ -990,8 +914,8 @@ class CoqDetailBox(QtWidgets.QWidget):
             return options.cfg.app.palette().color(x).name()
 
         try:
-            up = get_toplevel_window().get_icon("Chevron Up_2")
-            down = get_toplevel_window().get_icon("Chevron Right_2")
+            up = get_toplevel_window().get_icon("Multiply")
+            down = get_toplevel_window().get_icon("Plus Math")
         except AttributeError:
             up = None
             down = None
@@ -1014,13 +938,19 @@ class CoqDetailBox(QtWidgets.QWidget):
                     None))
                 self.header.setToolTip(s)
 
+                highlight = options.cfg.app.palette().color(
+                    QtGui.QPalette.Highlight)
+                darker_highlight = QtGui.QColor(highlight)
+                darker_highlight.setAlpha(0.5)
+
                 kwargs = {
                     "border": get_pal(QtGui.QPalette.Button),
-                    "hoverborder": get_pal(QtGui.QPalette.Highlight),
-                    "hoverhighlight": get_pal(QtGui.QPalette.Midlight),
-                    "hoverlowlight": get_pal(QtGui.QPalette.Button),
+                    "hoverborder": get_pal(QtGui.QPalette.Midlight),
+                    "hoverhighlight": get_pal(QtGui.QPalette.Highlight),
+                    "hoverlowlight": darker_highlight.name(),
                     "presshighlight": get_pal(QtGui.QPalette.Button),
-                    "presslowlight": get_pal(QtGui.QPalette.Midlight)}
+                    "presslowlight": get_pal(QtGui.QPalette.Midlight),
+                    "hovercolor": get_pal(QtGui.QPalette.HighlightedText)}
                 self.header.setStyleSheet("""
                     QPushButton {{
                         text-align: left;
@@ -1032,6 +962,7 @@ class CoqDetailBox(QtWidgets.QWidget):
                         padding: 4px;
                         padding-left: 1px;
                         border: 1px solid {hoverborder};
+                        color: {hovercolor};
                         background-color: qLineargradient(
                             x1: 0, y1: 0, x2: 0, y2: 1,
                             stop: 0 {hoverhighlight},
@@ -1052,6 +983,7 @@ class CoqDetailBox(QtWidgets.QWidget):
                 # harmless RuntimeError
                 pass
             self.header.setFlat(True)
+            self.header.update()
             icon = down
         if icon:
             self.header.setIcon(icon)
@@ -1423,30 +1355,22 @@ class LogTableModel(QtCore.QAbstractTableModel):
     """
     Define a QAbstractTableModel class that stores logging messages.
     """
-    def __init__(self, parent, *args):
+    def __init__(self, data, parent, *args):
         super(LogTableModel, self).__init__(parent, *args)
-        try:
-            self.content = options.cfg.gui_logger.log_data
-        except AttributeError:
-            self.content = []
+        self.content = data
         self.header = ["Date", "Time", "Level", "Message"]
 
     def data(self, index, role):
         if not index.isValid():
             return None
-        row = index.row()
-        column = index.column()
 
-        record = self.content[row]
+        record = self.content[index.row()]
         if role == QtCore.Qt.DisplayRole:
-            if column == 0:
-                return record.asctime.split()[0]
-            elif column == 1:
-                return record.asctime.split()[1]
-            elif column == 2:
-                return record.levelname
-            elif column == 3:
-                return record.message
+            day, time = record.asctime.split()
+            return (day,
+                    time,
+                    record.levelname,
+                    record.message)[index.column()]
         elif role == QtCore.Qt.ForegroundRole:
             if record.levelno in [logging.ERROR, logging.CRITICAL]:
                 return QtGui.QBrush(QtCore.Qt.white)
@@ -1482,7 +1406,9 @@ class LogProxyModel(QtCore.QSortFilterProxyModel):
             S = "---"
         else:
             S = "|".join(options.cfg.show_log_messages)
-        regexp = QtCore.QRegExp(S, QtCore.Qt.CaseInsensitive, QtCore.QRegExp.RegExp)
+        regexp = QtCore.QRegExp(S,
+                                QtCore.Qt.CaseInsensitive,
+                                QtCore.QRegExp.RegExp)
         self.setFilterRegExp(regexp)
         self.setFilterKeyColumn(2)
 
@@ -1521,152 +1447,29 @@ class CoqTextEdit(QtWidgets.QTextEdit):
 
     def dropEvent(self, e):
         # get the relative position from the mime data
-        if "application/x-qabstractitemmodeldatalist" in e.mimeData().formats():
+        if ("application/x-qabstractitemmodeldatalist"
+                in e.mimeData().formats()):
             label = e.mimeData().text()
             if label == "word_label":
                 self.insertPlainText("*")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "word_pos":
-                self.insertPlainText(".[*]")
+                self.insertPlainText("*.[*]")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "lemma_label":
                 self.insertPlainText("[*]")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "lemma_transcript":
                 self.insertPlainText("[/*/]")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
             elif label == "word_transcript":
                 self.insertPlainText("/*/")
                 e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
         elif e.mimeData().hasText():
             self.insertPlainText(e.mimeData().text())
             e.setDropAction(QtCore.Qt.CopyAction)
-            e.accept()
-        #x, y = map(int, mime.split(','))
 
-        #if e.keyboardModifiers() & QtCore.Qt.ShiftModifier:
-            ## copy
-            ## so create a new button
-            #button = Button('Button', self)
-            ## move it to the position adjusted with the cursor position at drag
-            #button.move(e.pos()-QtCore.QPoint(x, y))
-            ## show it
-            #button.show()
-            ## store it
-            #self.buttons.append(button)
-            ## set the drop action as Copy
-            #e.setDropAction(QtCore.Qt.CopyAction)
-        #else:
-            ## move
-            ## so move the dragged button (i.e. event.source())
-            #e.source().move(e.pos()-QtCore.QPoint(x, y))
-            ## set the drop action as Move
-            #e.setDropAction(QtCore.Qt.MoveAction)
-        # tell the QDrag we accepted it
         e.accept()
-
-
-class CoqTextTag(QtWidgets.QFrame):
-    """ Define a QFrame that functions as a text tag. """
-
-    def __init__(self, *args):
-        super(CoqTextTag, self).__init__(*args)
-        self.setupUi()
-        self.close_button.clicked.connect(self.removeRequested)
-
-    def setText(self, *args):
-        self.label.setText(*args)
-
-    def text(self, *args):
-        return self.label.text(*args)
-
-    def setupUi(self):
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-        self.horizontalLayout = QtWidgets.QHBoxLayout(self)
-        self.horizontalLayout.setContentsMargins(2, 1, 2, 1)
-
-        self.label = QtWidgets.QLabel(self)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy)
-        self.label.setLineWidth(0)
-
-        self.horizontalLayout.addWidget(self.label)
-        self.close_button = QtWidgets.QPushButton(self)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.close_button.sizePolicy().hasHeightForWidth())
-        self.close_button.setSizePolicy(sizePolicy)
-        self.close_button.setFlat(True)
-
-        self.horizontalLayout.addWidget(self.close_button)
-
-        icon = get_toplevel_window().get_icon("Delete")
-
-        height = self.fontMetrics().height()
-        new_height = int(height * 0.75)
-        self._style_font = "font-size: {}px".format(new_height)
-        self._style_border_radius = "border-radius: {}px".format(int(new_height / 3))
-        self.setBackground("lavender")
-        self.close_button.setIcon(icon)
-        self.close_button.setIconSize(QtCore.QSize(new_height, new_height))
-        self.adjustSize()
-
-    def setBackground(self, color):
-        self._style_background = "background-color: {}".format(color)
-        s = " ".join(["{};".format(x) for x in [self._style_background, self._style_border_radius, self._style_font]])
-        self.setStyleSheet(s)
-
-    def content(self):
-        return self.text()
-
-    def setContent(self, text):
-        """ Set the content of the tag to text. Validate the content, and set
-        the tag background accordingly. """
-        self.setText(self.format_content(text))
-
-    @staticmethod
-    def format_content(text):
-        """ Return the text string as it appears on the tag. """
-        return text
-
-    def mouseMoveEvent(self, e):
-        """ Define a mouse event that allows dragging of the tag by pressing
-        and holding the left mouse button on it. """
-        if e.buttons() != QtCore.Qt.LeftButton:
-            return
-
-        mimeData = QtCore.QMimeData()
-        mimeData.setText(self.content())
-
-        pixmap = QtWidgets.QPixmap.grabWidget(self)
-
-        drag = QtWidgets.QDrag(self)
-        drag.setMimeData(mimeData)
-        drag.setPixmap(pixmap)
-        drag.setHotSpot(e.pos())
-
-        self.parent().parent().parent().parent().dragTag(drag, self)
-
-    def removeRequested(self):
-        self.parent().parent().parent().parent().destroyTag(self)
-
-    def validate(self):
-        """ Validate the content, and return True if the content is valid,
-        or False otherwise. """
-        return True
 
 
 class CoqListWidget(QtWidgets.QListWidget):
@@ -1819,230 +1622,6 @@ class CoqIntEdit(CoqFloatEdit):
             return None
 
 
-class CoqTagEdit(QtWidgets.QLineEdit):
-    """ Define a QLineEdit class that is used to enter query filters. """
-
-    filter_examples = []
-
-    def __init__(self, *args):
-        super(CoqTagEdit, self).__init__(*args)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-        #self.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; }'))
-
-        if self.filter_examples:
-            self.setPlaceholderText("e.g. {}".format(random.sample(self.filter_examples, 1)[0]))
-
-
-class CoqTagContainer(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        super(CoqTagContainer, self).__init__(parent)
-        self.layout = CoqFlowLayout(spacing=5)
-        self.setLayout(self.layout)
-        # make this widget take up all available space:
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-
-    def add(self, item):
-        self.layout.addWidget(item)
-
-
-class CoqTagBox(QtWidgets.QWidget):
-    """ Defines a QWidget class that contains and manages filter tags. """
-
-    def __init__(self, parent=None, label="Filter"):
-        super(CoqTagBox, self).__init__(parent)
-        if not label.endswith(":"):
-            label = label + ":"
-        self._label = label
-        self.setupUi()
-        self.edit_tag.returnPressed.connect(lambda: self.addTag(utf8(self.edit_tag.text())))
-        self.edit_tag.textEdited.connect(self.editTagText)
-        # self._tagList stores the
-        self._tagList = []
-        self._filterList = []
-        self._tagType = CoqTextTag
-        self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
-
-    def setTagType(self, tagType):
-        self._tagType = tagType
-
-    def setTagList(self, tagList):
-        self._tagList = tagList
-
-    def tagList(self):
-        return self._tagList
-
-    def setupUi(self):
-        # make this widget take up all available space:
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-
-        self.scroll_area = QtWidgets.QScrollArea()
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scroll_area.sizePolicy().hasHeightForWidth())
-        self.scroll_area.setSizePolicy(sizePolicy)
-        self.scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
-        self.scroll_area.setWidgetResizable(True)
-
-        self.scroll_content = QtWidgets.QWidget()
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scroll_content.sizePolicy().hasHeightForWidth())
-        self.scroll_content.setSizePolicy(sizePolicy)
-
-        self.cloud_area = CoqFlowLayout(spacing=5)
-        self.scroll_content.setLayout(self.cloud_area)
-        self.scroll_area.setWidget(self.scroll_content)
-
-        self.edit_label = QtWidgets.QLabel(self._label)
-        self.edit_tag = CoqTagEdit()
-
-        self.edit_layout = QtWidgets.QHBoxLayout(spacing=5)
-        self.edit_layout.addWidget(self.edit_label)
-        self.edit_layout.addWidget(self.edit_tag)
-
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.edit_tag.sizePolicy().hasHeightForWidth())
-        self.edit_tag.setSizePolicy(sizePolicy)
-
-        self.layout = QtWidgets.QVBoxLayout(self)
-        self.layout.addWidget(self.scroll_area)
-        self.layout.addLayout(self.edit_layout)
-        self.layout.setStretch(1, 0)
-
-        self.setAcceptDrops(True)
-
-        col = options.cfg.app.palette().color(QtGui.QPalette.Light)
-        S = "QScrollArea {{ background-color: rgb({}, {}, {}); }}".format(
-            col.red(), col.green(), col.blue())
-        self.scroll_content.setStyleSheet(S)
-
-    def dragEnterEvent(self, e):
-        e.acceptProposedAction()
-
-    def dragMoveEvent(self, e):
-        current_rect = QtCore.QRect(
-            e.pos() - self.drag.pixmap().rect().topLeft() - self.drag.hotSpot(),
-            e.pos() + self.drag.pixmap().rect().bottomRight() - self.drag.hotSpot())
-
-        for i, tag in enumerate(self.cloud_area.itemList):
-            if tag.geometry().contains(current_rect.topLeft()) or             tag.geometry().contains(current_rect.bottomLeft()) and abs(i - self.ghost_index) == 1:
-                self.cloud_area.removeWidget(self.ghost_tag)
-                self.cloud_area.insertWidget(i, self.ghost_tag)
-                self.ghost_tag.show()
-                self.ghost_index = i
-                break
-        else:
-            self.cloud_area.removeWidget(self.ghost_tag)
-            self.cloud_area.addWidget(self.ghost_tag)
-            self.ghost_tag.show()
-            self.ghost_index = i
-        e.acceptProposedAction()
-
-    def dropEvent(self, e):
-        e.acceptProposedAction()
-
-    def addTag(self, s):
-        """ Add the current text as a query filter. """
-        if not s:
-            s = utf8(self.edit_tag.text())
-        tag = self._tagType(self)
-
-        tag.setContent(s)
-        #if self.edit_tag.setStyleSheet(_fromUtf8('CoqTagEdit { border-radius: 5px; font: condensed; background-color: rgb(255, 255, 192); }'))
-            #return
-
-        self._filterList.append(tag)
-        self.cloud_area.addWidget(tag)
-        self.edit_tag.setText("")
-        self.editTagText("")
-
-    def destroyTag(self, tag):
-        self.cloud_area.removeWidget(tag)
-        tag.close()
-
-    def insertTag(self, index, tag):
-        self.cloud_area.insertWidget(index, tag)
-
-    def hasTag(self, s):
-        """
-        Check if there is a tag with the given string.
-
-        Parameters
-        ----------
-        s : str
-            The string to search for.
-
-        Returns
-        -------
-        b : bool
-            True if there is a tag that contains the string as a label, or
-            False otherwise.
-        """
-        for tag_label in [utf8(self.cloud_area.itemAt(x).widget().text()) for x in range(self.cloud_area.count())]:
-            if s == tag_label:
-                return True
-        return False
-
-    def findTag(self, tag):
-        """ Returns the index number of the tag in the cloud area, or -1 if
-        the tag is not in the cloud area. """
-        return self.cloud_area.findWidget(tag)
-
-    def dragTag(self, drag, tag):
-        # check if there is only one tag in the tag area:
-        if self.cloud_area.count() == 1:
-            return
-
-        self.drag = drag
-        #self.ghost_tag = self._tagType(self)
-        #self.ghost_tag.setContent(tag.content())
-
-        self.ghost_tag = QtWidgets.QLabel(self)
-        ghost_pixmap = drag.pixmap().copy()
-        painter = QtWidgets.QPainter(ghost_pixmap)
-        painter.setCompositionMode(painter.CompositionMode_DestinationIn)
-        painter.fillRect(ghost_pixmap.rect(), QtGui.QColor(0, 0, 0, 96))
-        painter.end()
-        self.ghost_tag.setPixmap(ghost_pixmap)
-
-        # the ghost tag will initially be shown at the old position, but
-        # may move around depending on the drag position
-        old_index = self.findTag(tag)
-        self.ghost_index = old_index
-        self.cloud_area.removeWidget(tag)
-        self.cloud_area.insertWidget(old_index, self.ghost_tag)
-        tag.hide()
-
-        if drag.exec_(QtCore.Qt.MoveAction) == QtCore.Qt.MoveAction:
-            self.insertTag(self.ghost_index, tag)
-        else:
-            self.insertTag(old_index, tag)
-        tag.show()
-        self.cloud_area.removeWidget(self.ghost_tag)
-        self.ghost_tag.close()
-        self.ghost_tag = None
-
-    def editTagText(self, s):
-        """ Set the current background to default. """
-        self.edit_tag.setStyleSheet("CoqTagEdit { border-radius: 5px; font: condensed; }")
-
-
 class CoqTableView(QtWidgets.QTableView):
     resizeRow = QtCore.Signal(int, int)
 
@@ -2071,9 +1650,10 @@ class CoqTableView(QtWidgets.QTableView):
             if self.rowHeight(n) != height:
                 self.resizeRow.emit(n, height)
 
-        cols = [x for x in self.model().header if x in (("coq_context_left",
-                                                         "coq_context_right",
-                                                         "coq_context_string"))]
+        cols = [x for x in self.model().header
+                if x in (("coq_context_left",
+                          "coq_context_right",
+                          "coq_context_string"))]
         if not cols:
             return
 
@@ -2086,7 +1666,7 @@ class CoqTableView(QtWidgets.QTableView):
             (df.columns[i], QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)) for i in range(self.horizontalHeader().count())])
 
         df[cols].apply(
-            lambda x: set_height(pd.np.where(df.index == x.name)[0], x),
+            lambda x: set_height(np.where(df.index == x.name)[0], x),
             axis="columns")
 
     def resizeColumnsToContents(self, *args, **kwargs):
@@ -2115,18 +1695,20 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         super(CoqTableModel, self).__init__(parent, *args)
         self._parent = parent
 
-        self.content = df[[x for x in df.columns if not x.startswith("coquery_invisible")]]
-        self.invisible_content = df[[x for x in df.columns if x.startswith("coquery_invisible")]]
+        self.content = df[[x for x in df.columns
+                           if not x.startswith("coquery_invisible")]]
+        self.invisible_content = df[[x for x in df.columns
+                                     if x.startswith("coquery_invisible")]]
         self.header = self.content.columns
         self._session = session
-        self._manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
+        self._manager = managers.get_manager(options.cfg.MODE,
+                                             session.Resource.name)
         self._align = []
         self._dtypes = []
 
         columns = self.header
         if len(columns) != len(columns.unique()):
-            logger.warn("Duplicate column headers: {}".format(columns))
-            print("Duplicate column headers: {}".format(columns))
+            logging.warn("Duplicate column headers: {}".format(columns))
             columns = columns.unique()
 
         # prepare look-up lists that speed up data retrieval:
@@ -2140,7 +1722,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if sorter and sorter.reverse:
                 # right-align columns with reverse sorting:
                 self._align.append(_right_align)
-            elif df[col].dtype in (int, float):
+            elif pd.api.types.is_numeric_dtype(df[col]):
                 # always right-align numeric columns:
                 self._align.append(_right_align)
             elif col == "coq_context_left":
@@ -2156,8 +1738,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         flags = super(CoqTableModel, self).flags(index)
         try:
             if self.content.columns[index.column()].startswith("coq_userdata"):
-                editable= (get_toplevel_window()
-                           .ui.aggregate_radio_list[0].isChecked())
+                editable = (get_toplevel_window()
+                            .ui.aggregate_radio_list[0].isChecked())
                 if editable:
                     return flags | QtCore.Qt.ItemIsEditable
         except IndexError:
@@ -2170,85 +1752,73 @@ class CoqTableModel(QtCore.QAbstractTableModel):
     def setData(self, index, value, role):
         col = self.content.columns[index.column()]
         row = self.content.index[index.row()]
+        tab = self._session.data_table
         if (role == QtCore.Qt.EditRole and
                 col.startswith("coq_userdata")):
             self.content[col][row] = value
             self.formatted[col][row] = value
             corpus_id = self.invisible_content.iloc[index.row()]["coquery_invisible_corpus_id"]
-            which = self._session.data_table.coquery_invisible_corpus_id == corpus_id
-            self._session.data_table[col][which] = value
+            which = tab.coquery_invisible_corpus_id == corpus_id
+            tab[col][which] = value
             self.dataChanged.emit(index, index)
             return True
         return False
 
     @staticmethod
     def format_content(source, num_to_str=True):
+        """
+        Create a data frame that contains the visual representations of the
+        input data frame.
+
+        This function is required for several reasons:
+        - QTableView is very slow for data types that are not strings
+        - Handling of missing values has increased in Pandas starting with
+          version 1.0, but still needs some attention
+        - Boolean and float columns require special formatting
+        """
         df = pd.DataFrame(index=source.index)
 
-        for col in source.columns:
+        for col in source:
+            val = source[col]
+
             # copy invisible columns:
             if col.startswith("coquery_invisible"):
-                df[col] = source[col]
+                df[col] = val
                 continue
 
             # special case: only NAs?
-            if source[col].isnull().all():
-                df[col] = source[col].astype(object)
+            if val.isnull().all():
+                df[col] = val.astype(object)
                 continue
 
-            dtype = pd.Series(source[col].dropna().tolist()).dtype
-            # float
-            if dtype in (float, pd.np.float64):
-                # try to force floats to int:
-                try:
-                    as_int = source[col].astype(int, error_on_fail=False)
-                except (ValueError, TypeError):
-                    as_int = pd.Series(index=source[col].index)
-
+            if pd.api.types.is_numeric_dtype(val):
                 if num_to_str:
-                    if all(as_int == source[col]):
-                        df[col] = as_int.apply(lambda x: str(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
+                    if col.startswith("statistics_g_test"):
+                        val = abs(val)
+
+                    # try to downcast from float to int:
+                    dtype = val.dropna().convert_dtypes().dtype
+                    if pd.api.types.is_integer_dtype(dtype):
+                        val = map(lambda x: str(x) if not pd.isna(x) else
+                                            options.cfg.na_string,
+                                  val.values)
                     else:
-                        if col.startswith("statistics_g_test"):
-                            val = abs(source[col])
-                        else:
-                            val = source[col]
+                        # use float format string to show specified number of
+                        # digits:
+                        val = map(lambda x: (options.cfg.float_format.format(x)
+                                             if not pd.isna(x) else
+                                             options.cfg.na_string),
+                                  val.values)
 
-                        df[col] = val.apply(lambda x: options.cfg.float_format.format(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
-                else:
-                    if all(as_int == source[col]):
-                        df[col] = as_int.apply(lambda x: int(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
-                    else:
-                        df[col] = source[col]
-
-            # int
-            elif dtype in (int, pd.np.int64):
-                if num_to_str:
-                    df[col] = source[col].apply(lambda x: str(x) if (
-                                                    x is not None and
-                                                    x is not pd.np.nan) else None)
-                else:
-                    df[col] = source[col]
-
-            # bool
-            elif dtype == bool:
-                df[col] = source[col].apply(lambda x: ["no", "yes"][bool(x)] if (
-                                                x is not None and
-                                                x is not pd.np.nan) else None)
-            # object
-            elif dtype == object:
-                df[col] = source[col]
-            # unknown column type
+            # use bool substitute labels:
+            elif pd.api.types.is_bool_dtype(val):
+                val = map(lambda x: (("yes" if x else "no") if not pd.isna(x)
+                                     else options.cfg.na_string),
+                          val.values)
             else:
-                df[col] = source[col].astype(str)
+                val = val.astype(str).fillna(options.cfg.na_string)
+            df[col] = pd.Series(val)
 
-        df = df.fillna(options.cfg.na_string)
         return df
 
     def data(self, index, role):
@@ -2307,7 +1877,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if role == QtCore.Qt.DisplayRole:
                 val = self.content.index[index]
                 return (utf8(val + 1)
-                        if isinstance(val, (pd.np.integer, int))
+                        if isinstance(val, (np.integer, int))
                         else utf8(val))
             else:
                 return None
@@ -2356,20 +1926,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         return self.content.columns.size
 
 
-class CoqTabBar(QtWidgets.QTabBar):
-    def __init__(self, *args, **kwargs):
-        super(CoqTabBar, self).__init__(*args, **kwargs)
-        self.addTab("Disactivated columns")
-        self.setShape(self.RoundedWest)
-        self.show()
-
-
 class CoqHiddenTableModel(CoqTableModel):
     def data(self, index, role):
         if role == QtCore.Qt.DisplayRole:
             return self.formatted.values[index.row()][index.column()]
         else:
             return super(CoqHiddenTableModel, self).data(index, role)
+
 
 class CoqWidgetListView(QtWidgets.QListView):
     """
@@ -2428,105 +1991,3 @@ class CoqWidgetListView(QtWidgets.QListView):
         """
         super(CoqWidgetListView, self).setModel(model)
         self.selectionModel().selectionChanged.connect(self.changeSelect)
-
-
-class CoqFlowLayout(QtWidgets.QLayout):
-    """ Define a QLayout with flowing widgets that reorder automatically. """
-
-    def __init__(self, parent=None, margin=0, spacing=-1):
-        super(CoqFlowLayout, self).__init__(parent)
-        self.setContentsMargins(margin, margin, margin, margin)
-        self.setSpacing(spacing)
-        self.itemList = []
-
-    def __del__(self):
-        item = self.takeAt(0)
-        while item:
-            item = self.takeAt(0)
-
-    def clear(self):
-        for tag in [x.widget() for x in self.itemList]:
-            tag.removeRequested()
-
-    def addItem(self, item):
-        self.itemList.append(item)
-        self.update()
-
-    def count(self):
-        return len(self.itemList)
-
-    def itemAt(self, index):
-        if index >= 0 and index < len(self.itemList):
-            return self.itemList[index]
-        return None
-
-    def takeAt(self, index):
-        if index >= 0 and index < len(self.itemList):
-            return self.itemList.pop(index)
-        return None
-
-    def insertWidget(self, index, widget):
-        """ Insert a widget at a specific position. """
-
-        # first, add the widget, and then move its position to
-        # the specified index:
-        self.addWidget(widget)
-        self.itemList.insert(index, self.itemList.pop(-1))
-
-    def findWidget(self, widget):
-        """ Return the index number of the widget, or -1 if the widget is not
-        in the layout. """
-        try:
-            return [x.widget() for x in self.itemList].index(widget)
-        except ValueError:
-            return -1
-
-    def expandingDirections(self):
-        return QtCore.Qt.Orientations(QtCore.Qt.Horizontal)
-
-    def hasHeightForWidth(self):
-        return True
-
-    def heightForWidth(self, width):
-        height = self.doLayout(QtCore.QRect(0, 0, width, 0), True)
-        return height
-
-    def setGeometry(self, rect):
-        super(CoqFlowLayout, self).setGeometry(rect)
-        self.doLayout(rect, False)
-
-    def sizeHint(self):
-        return self.minimumSize()
-
-    def minimumSize(self):
-        w = self.geometry().width()
-        h = self.doLayout(QtCore.QRect(0, 0, w, 0), True)
-        return QtCore.QSize(w + 2 * self.margin(), h + 2 * self.margin())
-
-    def margin(self):
-        return 0
-
-    def doLayout(self, rect, testOnly):
-        x = rect.x()
-        y = rect.y()
-        lineHeight = 0
-        spaceX = self.spacing()
-        spaceY = self.spacing()
-
-        for item in self.itemList:
-            nextX = x + item.sizeHint().width() + spaceX
-            if nextX - spaceX > rect.right() and lineHeight > 0:
-                x = rect.x()
-                y = y + lineHeight + spaceY
-                nextX = x + item.sizeHint().width() + spaceX
-                lineHeight = 0
-
-            if not testOnly:
-                item.setGeometry(QtCore.QRect(QtCore.QPoint(x, y),
-                                              item.sizeHint()))
-            x = nextX
-            lineHeight = max(lineHeight, item.sizeHint().height())
-
-        return y + lineHeight - rect.y()
-
-logger = logging.getLogger(NAME)

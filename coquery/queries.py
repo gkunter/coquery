@@ -2,7 +2,7 @@
 """
 queries.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,34 +11,21 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 from __future__ import print_function
-from __future__ import division
 
-import math
 import hashlib
 import logging
-
-try:
-    range = xrange
-except NameError:
-    pass
-
-try:
-    from numba import jit
-except (ImportError, OSError):
-    def jit(f):
-        def inner(f, *args):
-            return f(*args)
-        return lambda *args: inner(f, *args)
+import os
 
 import pandas as pd
+import numpy as np
 
-from .defines import *
-from .errors import *
-from .general import *
+from coquery.defines import (QUERY_ITEM_LEMMA, QUERY_ITEM_WORD,
+                             CONTEXT_NONE)
+
 from . import tokens
 from . import options
-from . import managers
-from . import NAME
+from coquery.connections import SQLiteConnection
+from coquery.unicode import utf8
 
 
 class TokenQuery(object):
@@ -62,28 +49,45 @@ class TokenQuery(object):
         self.results_frame = pd.DataFrame()
         self._keys = []
         self.empty_query = False
+        self.sql_list = []
 
-
-    @staticmethod
-    def get_visible_columns(df, session, ignore_hidden=False):
+    def attach_databases(self, connection, attach_list):
         """
-        Return a list with the column names that are currently visible.
+        Attach databases on SQLite connections.
         """
-        print("TokenQuery.get_visible_columns() is deprecated.")
-        if ignore_hidden:
-            return [x for x in list(df.columns.values) if (
-                not x.startswith("coquery_invisible") and
-                x in session.output_order)]
-        else:
-        # FIXME: use manager for column visibility
-            return [x for x in list(df.columns.values) if (
-                not x.startswith("coquery_invisible") and
-                x in session.output_order)]
+        if isinstance(options.cfg.current_connection, SQLiteConnection):
+            for db_name in attach_list:
+                path = os.path.join(options.cfg.database_path,
+                                    "{}.db".format(db_name))
+                S = "ATTACH DATABASE '{}' AS {}".format(
+                    path, db_name)
+                try:
+                    connection.execute(S)
+                    self.sql_list.append(S)
+                except Exception:
+                    error = ("Exception raised when executing {}").format(S)
+                    logging.warning(error)
 
-            #return [x for x in list(df.columns.values) if (
-                #not x.startswith("coquery_invisible") and
-                #x in session.output_order and
-                #options.cfg.column_visibility.get(x, True))]
+    def fix_case(self, df):
+        if not options.cfg.output_case_sensitive and len(df.index) > 0:
+            word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
+            lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
+            for x in df.columns:
+                if ((word_column and word_column in x) or
+                        (lemma_column and lemma_column in x)):
+                    try:
+                        if options.cfg.output_to_lower:
+                            fnc = str.lower
+                        else:
+                            fnc = str.upper
+                        df[x] = pd.Series(
+                            map(lambda s: fnc(s) if not pd.isna(s) else
+                                          pd.NA,
+                                df[x].values))
+                    except AttributeError:
+                        print("attribute error!")
+                        pass
+        return df
 
     def run(self, connection=None, to_file=False, **kwargs):
         """
@@ -101,66 +105,65 @@ class TokenQuery(object):
             directly to a file contains less information, e.g. it doesn't
             contain an origin ID or a corpus ID (unless requested).
         """
-        manager = managers.get_manager(options.cfg.MODE,
-                                       self.Resource.name)
+        manager = self.Session.get_manager(options.cfg.MODE)
         manager_hash = manager.get_hash()
 
         self.results_frame = pd.DataFrame()
 
         self._max_number_of_tokens = 0
         for x in self.query_list:
-            self._max_number_of_tokens = max(self._max_number_of_tokens, len(x))
+            self._max_number_of_tokens = max(self._max_number_of_tokens,
+                                             len(x))
 
         tokens.QueryToken.set_pos_check_function(
             self.Resource.pos_check_function)
 
+        self.sql_list = []
+
+        if isinstance(options.cfg.current_connection, SQLiteConnection):
+            attach_list = self.Resource.get_attach_list(
+                options.cfg.selected_features)
+            self.attach_databases(connection, attach_list)
+
         for i, self._sub_query in enumerate(self.query_list):
-            self._current_number_of_tokens = len([x for _, x in self._sub_query if x])
-            self._current_subquery_string = " ".join(["%s" % x for _, x in self._sub_query])
+            sub_str = [item if item else "_NULL"
+                       for _, item in self._sub_query]
+            self.sql_list.append(
+                "-- query string: {}".format(" ".join(sub_str)))
+            lst = [utf8(x) for _, x in self._sub_query if x]
+            self._current_number_of_tokens = len(lst)
+            self._current_subquery_string = " ".join(lst)
 
             if len(self.query_list) > 1:
                 s = "Subquery #{} of {}: {}".format(
                             i+1,
                             len(self.query_list),
                             self._current_subquery_string)
-                logger.info(s)
+                logging.info(s)
 
             query_string = self.Resource.get_query_string(
                 query_items=self._sub_query,
                 selected=options.cfg.selected_features,
                 to_file=to_file)
 
+            self.sql_list.append(query_string)
+
             df = None
             if options.cfg.use_cache and query_string:
                 try:
-                    md5 = hashlib.md5("".join(sorted(query_string)).encode()).hexdigest()
+                    s = "".join(sorted(query_string)).encode()
+                    md5 = hashlib.md5(s).hexdigest()
                     df = options.cfg.query_cache.get((self.Resource.name,
                                                       manager_hash, md5))
                 except KeyError:
-                    pass
+                    md5 = ""
 
             if df is None:
                 if not query_string:
                     df = pd.DataFrame()
                 else:
                     if options.cfg.verbose:
-                        logger.info(query_string)
-
-                    # SQLite: attach external databases
-                    if self.Resource.db_type == SQL_SQLITE:
-                        attach_list = self.Resource.get_attach_list(
-                            options.cfg.selected_features)
-                        for db_name in attach_list:
-                            path = os.path.join(options.cfg.database_path,
-                                                "{}.db".format(db_name))
-                            S = "ATTACH DATABASE '{}' AS {}".format(
-                                path, db_name)
-                            try:
-                                connection.execute(S)
-                            except Exception:
-                                error = ("Exception raised when executing "
-                                         "{}").format(S)
-                                logging.warn(error)
+                        logging.info(query_string)
 
                     try:
                         results = (connection
@@ -171,69 +174,26 @@ class TokenQuery(object):
                         print(e)
                         raise e
 
-                    df = pd.DataFrame(list(iter(results)), columns=results.keys())
-
+                    df = pd.DataFrame(results, columns=results.keys())
                     if len(df) == 0:
                         df = pd.DataFrame(columns=results.keys())
 
                     del results
 
                     if options.cfg.use_cache:
-                        options.cfg.query_cache.add((self.Resource.name, manager_hash, md5), df)
+                        options.cfg.query_cache.add(
+                            (self.Resource.name, manager_hash, md5),
+                            df)
 
-            if not options.cfg.output_case_sensitive and len(df.index) > 0:
-                word_column = getattr(self.Resource, QUERY_ITEM_WORD, None)
-                lemma_column = getattr(self.Resource, QUERY_ITEM_LEMMA, None)
-                for x in df.columns:
-                    if ((word_column and word_column in x) or
-                            (lemma_column and lemma_column in x)):
-                        try:
-                            if options.cfg.output_to_lower:
-                                df[x] = df[x].apply(lambda x: x.lower() if x else x)
-                            else:
-                                df[x] = df[x].apply(lambda x: x.upper() if x else x)
+            df = self.fix_case(df)
 
-                        except AttributeError:
-                            pass
-
-            df["coquery_invisible_number_of_tokens"] = self._current_number_of_tokens
+            n = self._current_number_of_tokens
+            df["coquery_invisible_number_of_tokens"] = n
 
             if len(df) > 0:
                 if self.results_frame.empty:
                     self.results_frame = df
                 else:
-                    # apply clumsy hack that tries to make sure that the dtypes of
-                    # data frames containing NaNs or empty strings does not change
-                    # when appending the new data frame to the previous.
-
-                    if df.dtypes.tolist() != self.results_frame.dtypes.tolist():
-                        print("DIFFERENT DTYPES!")
-
-                    ## The same hack is also needed in session.run_queries().
-                    #if len(self.results_frame) > 0 and df.dtypes.tolist() != dtype_list.tolist():
-                        #for x in df.columns:
-                            ## the idea is that pandas/numpy use the 'object'
-                            ## dtype as a fall-back option for strange results,
-                            ## including those with NaNs.
-                            ## One problem is that integer columns become floats
-                            ## in the process. This is so because Pandas does not
-                            ## have an integer NA type:
-                            ## http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
-
-                            #if df.dtypes[x] != dtype_list[x]:
-                                #_working = None
-                                #if df.dtypes[x] == object:
-                                    #if not df[x].any():
-                                        #df[x] = [np.nan] * len(df)
-                                        #dtype_list[x] = self.results_frame[x].dtype
-                                #elif dtype_list[x] == object:
-                                    #if not self.results_frame[x].any():
-                                        #self.results_frame[x] = [np.nan] * len(self.results_frame)
-                                        #dtype_list[x] = df[x].dtype
-                    #else:
-                        #dtype_list = df.dtypes
-                    #print(dtype_list)
-
                     self.results_frame = self.results_frame.append(df)
 
         self.results_frame = self.results_frame.reset_index(drop=True)
@@ -320,8 +280,8 @@ class TokenQuery(object):
         # if df is empty, a dummy data frame is created with NAs in all
         # content columns. This is needed so that frequency queries with empty
         # results can be displayed as 0.
-        # FIXME: "coquery_invisible_dummy" is used to handle empty queries. There
-        # is probably a better way of doing this.
+        # FIXME: "coquery_invisible_dummy" is used to handle empty queries.
+        # There is probably a better way of doing this.
         if (len(df) == 0):
             col = []
             for x in options.cfg.selected_features:
@@ -336,14 +296,16 @@ class TokenQuery(object):
             if options.cfg.context_mode != CONTEXT_NONE:
                 col.append("coquery_invisible_corpus_id")
                 col.append("coquery_invisible_origin_id")
-            df = pd.DataFrame([[pd.np.nan] * len(col)], columns=col)
-            df["coquery_invisible_number_of_tokens"] = self._current_number_of_tokens
+            df = pd.DataFrame([[np.nan] * len(col)], columns=col)
+            n = self._current_number_of_tokens
+            df["coquery_invisible_number_of_tokens"] = n
             self.empty_query = True
         else:
             df["coquery_invisible_dummy"] = 0
             self.empty_query = False
 
-        columns = [x for x in options.cfg.selected_features if x.startswith("coquery_")]
+        columns = [x for x in options.cfg.selected_features
+                   if x.startswith("coquery_")]
         columns += list(self.input_frame.columns)
 
         for column in columns:
@@ -366,9 +328,13 @@ class TokenQuery(object):
                 # add column labels for the columns in the input file:
                 if all([x is None for x in self.input_frame.columns]):
                     # no header in input file, so use X1, X2, ..., Xn:
-                    input_columns = [("coq_X{}".format(x), x) for x in range(len(self.input_frame.columns))]
+                    input_columns = [
+                        ("coq_X{}".format(x), x)
+                        for x in range(len(self.input_frame.columns))]
                 else:
-                    input_columns = [("coq_{}".format(x), x) for x in self.input_frame.columns]
+                    input_columns = [
+                        ("coq_{}".format(x), x)
+                        for x in self.input_frame.columns]
                 for df_col, input_col in input_columns:
                     df[df_col] = self.input_frame[input_col][0]
         df["coquery_invisible_query_id"] = self._query_id
@@ -383,14 +349,6 @@ class StatisticsQuery(TokenQuery):
         return df
 
     def run(self, connection=None, to_file=False, **kwargs):
-        self.results_frame = self.Session.Resource.get_statistics(connection, **kwargs)
+        self.results_frame = self.Session.Resource.get_statistics(connection,
+                                                                  **kwargs)
         return self.results_frame
-
-
-def get_query_type(MODE):
-    if MODE == QUERY_MODE_STATISTICS:
-        return StatisticsQuery
-    else:
-        return TokenQuery
-
-logger = logging.getLogger(NAME)

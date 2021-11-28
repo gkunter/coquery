@@ -2,7 +2,7 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -31,16 +31,13 @@ import os
 import sys
 import logging
 import re
-
-import hashlib
+import pandas as pd
 from collections import defaultdict
 
 from . import general, NAME
-from .errors import (
-    IllegalImportInModuleError, IllegalCodeInModuleError,
-    ConfigurationError, ModuleIncompleteError,
-    add_source_path)
+from .errors import ConfigurationError, add_source_path
 from .defines import (
+    DEFAULT_CONFIGURATION,
     SQL_SQLITE, SQL_MYSQL,
     DEFAULT_MISSING_VALUE,
     QUERY_MODES, QUERY_MODE_TOKENS,
@@ -48,6 +45,8 @@ from .defines import (
 from .unicode import utf8
 from .links import parse_link_text
 from .filters import parse_filter_text
+from .connections import get_connection, SQLiteConnection
+from coquery.general import has_module
 
 
 # make ast work in all Python versions:
@@ -133,16 +132,17 @@ class UnicodeConfigParser(RawConfigParser):
     def write(self, fp, DEFAULTSECT="main"):
         """Fixed for Unicode output"""
         if self._defaults:
-            fp.write("[%s]\n" % DEFAULTSECT)
+            fp.write("[{}]\n".format(DEFAULTSECT))
             for (key, value) in self._defaults.items():
-                fp.write("%s = %s\n" % (key, utf8(value).replace('\n', '\n\t')))
+                fp.write("{} = {}\n".format(
+                    key, utf8(value).replace('\n', '\n\t')))
             fp.write("\n")
         for section in self._sections:
-            fp.write("[%s]\n" % section)
+            fp.write("[{}]\n".format(section))
             for (key, value) in self._sections[section].items():
                 if key != "__name__":
-                    fp.write("%s = %s\n" %
-                             (key, utf8(value).replace('\n', '\n\t')))
+                    fp.write("{} = {}\n".format(
+                        key, utf8(value).replace('\n', '\n\t')))
             fp.write("\n")
 
     # This function is needed to override default lower-case conversion
@@ -244,7 +244,8 @@ if sys.version_info < (3, 0):
                 parts[i:i] = [inserts[i]]
 
             # join all the action items with spaces
-            text = u' '.join([item.decode("utf-8") for item in parts if item is not None])
+            text = u' '.join([item.decode("utf-8") for item in parts
+                              if item is not None])
 
             # clean up separators for mutually exclusive groups
             open = r'[\[(]'
@@ -259,7 +260,8 @@ if sys.version_info < (3, 0):
             return text
 
         def _join_parts(self, part_strings):
-            part_strings = [utf8(x) for x in part_strings if utf8(x) and x is not argparse.SUPPRESS]
+            part_strings = [utf8(x) for x in part_strings
+                            if utf8(x) and x is not argparse.SUPPRESS]
             return "".join(part_strings)
 else:
     class CoqHelpFormatter(argparse.HelpFormatter):
@@ -277,16 +279,15 @@ class Options(object):
             self.args.base_path = os.path.dirname(__file__)
         self.prog_name = NAME
         self.config_name = "%s.cfg" % NAME.lower()
-        self.parser = argparse.ArgumentParser(prog=self.prog_name, add_help=False, formatter_class=CoqHelpFormatter)
+        self.parser = argparse.ArgumentParser(
+            prog=self.prog_name,
+            add_help=False,
+            formatter_class=CoqHelpFormatter)
 
         self.args.config_path = os.path.join(self.args.coquery_home,
                                              self.config_name)
-        self.args.current_server = "Default"
-        self.args.server_configuration = {
-            self.args.current_server: {
-                "name": self.args.current_server,
-                "type": SQL_SQLITE,
-                "path": ""}}
+        connection = SQLiteConnection(DEFAULT_CONFIGURATION)
+        self.args.connections = dict(Default=connection)
 
         self.args.reference_corpus = {}
         self.args.main_window = None
@@ -337,8 +338,7 @@ class Options(object):
         self.args.no_ngram = False
 
         self.args.managers = {}
-        self.args.summary_group = []
-        self.args.current_resources = get_available_resources(self.args.current_server)
+        self.args.summary_groups = []
 
     @property
     def cfg(self):
@@ -358,7 +358,6 @@ class Options(object):
         group.add_argument("-i", "--inputfile", help="read query strings from INPUTFILE", type=str, dest="input_path")
         group.add_argument("-q", "--query", help="use QUERY for search, ignoring any INPUTFILE", dest="query_list")
         self.parser.add_argument("-f", "--filter", help="use FILTER to query only a selection of texts", type=str, default="", dest="source_filter")
-        self.parser.add_argument("--connection", help="use dabase connection named CURRENT_SERVER", type=str, dest="current_server")
 
         # File options:
         group = self.parser.add_argument_group("File options")
@@ -414,118 +413,51 @@ class Options(object):
         is used, both a corpus and a query mode have to be specified, and
         only the database settings from the configuration file are used.
         """
+        # FIXME: This needs complete revision! The way the different arguments
+        # and parses are handled are relicts from a time when the program
+        # needed command line support.
 
         self.setup_parser()
 
         # Do a first argument parse to get the corpus to be used, and
         # whether a GUI is requested. This parse doesn't raise an argument
         # error.
-        args, unknown = self.parser.parse_known_args()
+        cmd_args, unknown = self.parser.parse_known_args()
 
-        self.args.gui = args.gui
+        self.args.gui = cmd_args.gui
         self.args.to_file = False
 
-        match = re.search("--connection\s+(.+)", self.args.parameter_string)
-        if match:
-            self.args.current_server = match.group(1)
-
         self.read_configuration(read_file)
-        self.setup_default_connection()
 
-        # create a dictionary that contains the corpora available for the
-        # current connection:
-        if sys.version_info < (3, 0):
-            self.corpus_argument_dict = {
-                "help": "specify the corpus to use",
-                "choices": sorted([x.encode("utf-8") for x in get_available_resources(self.args.current_server).keys()]),
-                "type": type(str(""))}
-        else:
-            self.corpus_argument_dict = {
-                "help": "specify the corpus to use",
-                "choices": sorted([utf8(x) for x in get_available_resources(self.args.current_server).keys()]),
-                "type": type(str(""))}
-
-        # add the corpus names as possible values for the argument parser:
-        self.parser.add_argument("corpus", nargs="?", **self.corpus_argument_dict)
-        args, unknown = self.parser.parse_known_args()
-
-        try:
-            if args.corpus:
-                self.args.corpus = args.corpus
-            elif not self.args.corpus:
-                self.args.corpus = ""
-        except AttributeError:
-            self.args.corpus = ""
+        # FIXME: Do we still need a second parse?
+        cmd_args, unknown = self.parser.parse_known_args()
 
         self.args.corpus = utf8(self.args.corpus)
-        # if no corpus is selected and no GUI is requested, display the help
-        # and exit.
-        if not self.args.corpus and not (self.args.gui):
-            self.parser.print_help()
-            sys.exit(1)
-        D = {}
 
-        shorthands = {}
+        self.parser.add_argument("-h", "--help",
+                                 help="show this help message and exit",
+                                 action="store_true")
 
-        if self.args.corpus:
-            try:
-                # build a dictionary D for the selected corpus that contains as
-                # values the features provided by each of the tables defined in
-                # the resource. The features are included as tuples, with first,
-                # the display name and second, the resource feature name.
-                resource, _ = get_resource(self.args.corpus, self.args.current_server)
-                corpus_features = resource.get_corpus_features()
-                lexicon_features = resource.get_lexicon_features()
-                for rc_feature, column in corpus_features + lexicon_features:
-                    if not rc_feature.startswith("corpusngram"):
-                        table = "{}_table".format(rc_feature.split("_")[0])
-                        if table not in D:
-                            D[table] = set([])
-                        D[table].add((column, rc_feature))
-
-                if self.args.corpus == "COCA":
-                    group = self.parser.add_argument_group("COCA compatibility", "These options apply only to the COCA corpus module, and are unsupported by any other corpus.")
-                    # COCA compatibility options
-                    group.add_argument("--exact-pos-tags", help="part-of-speech tags must match exactly the label used in the query string (default: be COCA-compatible and match any part-of-speech tag that starts with the given label)", action="store_true", dest="exact_pos_tags")
-                    group.add_argument("-@", "--use-pos-diacritics", help="use undocumented characters '@' and '%%' in queries using part-of-speech tags (default: be COCA-compatible and ignore these characters in part-of-speech tags)", action="store_true", dest="ignore_pos_chars")
-            except (KeyError, TypeError, AttributeError) as e:
-                print(e)
-
-        if D:
-            # add choice arguments for the available table columns:
-            for rc_table in D.keys():
-                table = getattr(resource, utf8(rc_table))
-                if len(D[rc_table]) > 1:
-                    D[rc_table].add(("ALL", None))
-                    group_help = "These options specify which data columns from the table '{0}' will be included in the output. You can either repeat the option for every column that you wish to add, or you can use --{0} ALL if you wish to include all columns from the table in the output.".format(table)
-                    group_name = "Output options for table '{}'".format(table)
-                else:
-                    group_name = "Output option for table '{}'".format(table)
-                    group_help = "This option will include the data column '{1}' from the table '{0}' in the output.".format(table, list(D[rc_table])[0][0])
-                group = self.parser.add_argument_group(group_name, group_help)
-                group.add_argument("--{}".format(table), choices=sorted([x for x, _ in D[rc_table]]), dest=rc_table, action="append")
-
-        self.parser.add_argument("-h", "--help", help="show this help message and exit", action="store_true")
-
+        # FIXME: And do we really need a third parse still?
         # reparse the arguments, this time with options that allow feature
         # selection based on the table structure of the corpus
-        args, unknown = self.parser.parse_known_args()
+        cmd_args, unknown = self.parser.parse_known_args()
         if unknown:
             self.parser.print_help()
             sys.exit(1)
-        if args.help:
+        if cmd_args.help:
             self.parser.print_help()
             sys.exit(0)
 
-        if args.input_path:
+        if cmd_args.input_path:
             self.args.input_path_provided = True
         else:
             self.args.input_path_provided = False
 
         # merge the newly-parsed command-line arguments with those read from
         # the configation file.
-        for command_argument in vars(args).keys():
-            if command_argument in vars(self.args) and not vars(args)[command_argument]:
+        for arg in cmd_args.__dict__:
+            if arg in self.args and not cmd_args.__dict__[arg]:
                 # do not overwrite the command argument if it was set in the
                 # config file stored self.args, but not set at the command
                 # line
@@ -533,40 +465,13 @@ class Options(object):
             else:
                 # overwrite the setting from the configuration file with the
                 # command-line setting:
-                vars(self.args)[command_argument] = vars(args)[command_argument]
+                self.args.__dict__[arg] = cmd_args.__dict__[arg]
 
         try:
             self.args.MODE = QUERY_MODES[self.args.MODE]
         except KeyError:
             if self.args.MODE not in QUERY_MODES.values():
                 self.args.MODE = QUERY_MODE_TOKENS
-
-        # evaluate the shorthand options. If set, add the corresponding
-        # resource feature to the list of selected features
-        for key in shorthands:
-            if vars(self.args)[key.strip("-")]:
-                self.args.selected_features.add(shorthands[key])
-
-        # Go through the table dictionary D, and add the resource features
-        # to the list of selected features if the corresponding choice
-        # parameter was set:
-        for rc_table in D:
-            argument_list = vars(self.args)[rc_table]
-            if argument_list:
-                # if ALL was selected, all resource features for the current
-                # table are added to the list of selected features:
-                if "ALL" in argument_list:
-                    self.args.selected_features += [x for _, x in D[rc_table] if x]
-                else:
-                    # otherwise, go through each argument, and find the
-                    # resource feature for which the display name matches
-                    # the argument:
-                    for arg in argument_list:
-                        for column, rc_feature in D[rc_table]:
-                            if column == arg:
-                                self.args.selected_features.add(rc_feature)
-
-        self.args.selected_features = set(self.args.selected_features)
 
         # the following lines are deprecated and should be removed once
         # feature selection is fully implemented:
@@ -580,10 +485,11 @@ class Options(object):
         self.args.context_sentence = False
 
         try:
-            self.args.input_separator = self.args.input_separator.decode('string_escape')
+            sep = self.args.input_separator.decode('string_escape')
         except AttributeError:
-            self.args.input_separator = (
-                codecs.getdecoder("unicode_escape")(self.args.input_separator)[0])
+            decoder = codecs.getdecoder("unicode_escape")
+            sep = decoder(self.args.input_separator)[0]
+        self.args.input_separator = sep
 
         # make sure that a command query consisting of one string is still
         # stored as a list:
@@ -591,21 +497,11 @@ class Options(object):
             if type(self.args.query_list) != list:
                 self.args.query_list = [self.args.query_list]
             try:
-                self.args.query_list = [x.decode("utf8") for x in self.args.query_list]
+                self.args.query_list = [x.decode("utf8")
+                                        for x in self.args.query_list]
             except AttributeError:
                 pass
         logging.info("Command line parameters: " + self.args.parameter_string)
-
-    def setup_default_connection(self):
-        """
-        Create the default SQLite connection.
-        """
-        if (not self.args.current_server or
-                "Default" not in self.args.server_configuration):
-            d = {"name": "Default", "type": SQL_SQLITE, "path": ""}
-            self.args.server_configuration[d["name"]] = d
-            self.args.current_server = d["name"]
-            self.args.current_resources = get_available_resources(self.args.current_server)
 
     def read_configuration(self, read_file):
         defaults = {
@@ -662,7 +558,8 @@ class Options(object):
             try:
                 config_file.read(self.cfg.config_path)
             except (IOError, TypeError, ParsingError) as e:
-                warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
+                s = "Configuration file {} could not be read."
+                warnings.warn(s.format(cfg.config_path))
                 raise ConfigurationError((str(e).replace("\\n", "\n")
                                                 .replace("\n", "<br>")))
             else:
@@ -674,97 +571,113 @@ class Options(object):
                 config_file.add_section(x)
 
         # read SQL configuration:
-        server_configuration = defaultdict(dict)
+        connection_dict = defaultdict(dict)
         for name, value in config_file.items("sql"):
             if name.startswith("config_"):
-                try:
-                    _, number, variable = name.split("_")
-                except ValueError:
+                fields = name.split("_")
+                if len(fields) != 3:
                     continue
                 else:
-                    if variable == "port":
-                        try:
-                            server_configuration[number][variable] = int(value)
-                        except ValueError:
-                            continue
-                    elif variable in ["name", "host", "type", "user", "password", "path"]:
-                        server_configuration[number][variable] = value
-        for i in server_configuration:
-            d = server_configuration[i]
-            if "type" not in d:
-                d["type"] = SQL_MYSQL
-            if d["type"] == SQL_MYSQL:
-                required_vars = ["name", "host", "port", "user", "password"]
-            elif d["type"] == SQL_SQLITE:
-                if "path" not in d:
-                    d["path"] = ""
-                required_vars = ["name", "path"]
-            try:
-                if all(var in d for var in required_vars):
-                    self.args.server_configuration[d["name"]] = d
-            except KeyError:
-                pass
+                    _, number, variable = fields
+                if variable == "port":
+                    try:
+                        connection_dict[number][variable] = int(value)
+                    except ValueError:
+                        continue
+                elif variable in {"name", "host", "type", "user", "password",
+                                  "path"}:
+                    connection_dict[number][variable] = value
+
+                    # for backward compatibility:
+                    if variable == "type":
+                        connection_dict[number]["dbtype"] = value
+
+        for i in connection_dict:
+            connection = get_connection(**connection_dict[i])
+            self.args.connections[connection.name] = connection
+
+        # select active SQL configuration, or use Default as fallback
+        connection_name = DEFAULT_CONFIGURATION
+        try:
+            connection_name = config_file.str("sql", "active_configuration")
+        except Exception:
+            pass
+        if self.args.connections[connection_name].enabled:
+            self.args.current_connection = self.args.connections[connection_name]
+        else:
+            self.args.current_connection = self.args.connections[DEFAULT_CONFIGURATION]
 
         # read reference corpora
         for key, val in config_file.items("reference_corpora"):
             if re.match("reference\d+$", key):
                 configuration, corpus = val.split(",")
                 self.args.reference_corpus[configuration] = corpus
-        # select active SQL configuration, or use Default as fallback
-        try:
-            configuration = config_file.str("sql", "active_configuration")
-        except (NoOptionError, AttributeError, ValueError):
-            configuration = "Default"
-        else:
-            if configuration not in self.args.server_configuration:
-                configuration = "Default"
-        self.args.current_server = configuration
-
-        self.args.current_resources = get_available_resources(self.args.current_server)
 
         # only use the other settings from the configuration file if a
         # GUI is used:
         if self.args.gui:
             # Read MAIN section:
-            self.args.corpus = config_file.str("main", "default_corpus", d=defaults)
+            self.args.corpus = config_file.str(
+                "main", "default_corpus", d=defaults)
             self.args.MODE = config_file.str("main", "query_mode", d=defaults)
             last_query = config_file.str("main", "query_string", d=defaults)
-
             try:
                 self.args.query_list = decode_query_string(last_query)
             except (ValueError):
                 self.args.query_list = []
                 pass
-            self.args.query_cache_size = config_file.int("main", "query_cache_size", d=defaults)
-            self.args.query_case_sensitive = config_file.bool("main", "query_case_sensitive", d=defaults)
-            self.args.output_case_sensitive = config_file.bool("main", "output_case_sensitive", d=defaults)
+            self.args.query_cache_size = config_file.int(
+                "main", "query_cache_size", d=defaults)
+            self.args.query_case_sensitive = config_file.bool(
+                "main", "query_case_sensitive", d=defaults)
+            self.args.output_case_sensitive = config_file.bool(
+                "main", "output_case_sensitive", d=defaults)
             self.args.regexp = config_file.bool("main", "regexp", d=defaults)
-            self.args.regexp = config_file.bool("main", "experimental", d=defaults)
-            self.args.output_to_lower = config_file.bool("main", "output_to_lower", d=defaults)
-            self.args.drop_on_na = config_file.bool("main", "drop_on_na", d=defaults)
-            self.args.na_string = config_file.str("main", "na_string", d=defaults)
+            self.args.experimental = config_file.bool(
+                "main", "experimental", d=defaults)
+            self.args.output_to_lower = config_file.bool(
+                "main", "output_to_lower", d=defaults)
+            self.args.drop_on_na = config_file.bool(
+                "main", "drop_on_na", d=defaults)
+            self.args.na_string = config_file.str(
+                "main", "na_string", d=defaults)
             self.args.custom_installer_path = config_file.str(
                 "main", "custom_installer_path", d=defaults)
             self.args.binary_path = config_file.str(
                 "main", "binary_path", d=defaults)
             if use_cachetools:
-                self.args.use_cache = config_file.bool("main", "use_cache", d=defaults)
+                self.args.use_cache = config_file.bool(
+                    "main", "use_cache", d=defaults)
             else:
                 self.args.use_cache = False
-            self.args.input_path = config_file.str("main", "csv_file", d=defaults)
-            self.args.input_separator = config_file.str("main", "csv_separator", d=defaults)
-            self.args.query_column_number = config_file.int("main", "csv_column", d=defaults)
-            self.args.file_has_headers = config_file.bool("main", "csv_has_header", d=defaults)
-            self.args.skip_lines = config_file.int("main", "csv_line_skip", d=defaults)
-            self.args.quote_char = config_file.str("main", "csv_quote_char", d=defaults)
-            self.args.xkcd = config_file.bool("main", "xkcd", fallback=False)
+            self.args.input_path = config_file.str(
+                "main", "csv_file", d=defaults)
+            self.args.input_separator = config_file.str(
+                "main", "csv_separator", d=defaults)
+            self.args.query_column_number = config_file.int(
+                "main", "csv_column", d=defaults)
+            self.args.file_has_headers = config_file.bool(
+                "main", "csv_has_header", d=defaults)
+            self.args.skip_lines = config_file.int(
+                "main", "csv_line_skip", d=defaults)
+            self.args.quote_char = config_file.str(
+                "main", "csv_quote_char", d=defaults)
+            self.args.xkcd = config_file.bool(
+                "main", "xkcd", fallback=False)
+
             # read CONTEXT section:
-            self.args.context_left = config_file.int("context", "context_left", d=defaults)
-            self.args.context_right = config_file.int("context", "context_right", d=defaults)
-            self.args.context_mode = config_file.str("context", "context_mode", d=defaults)
-            self.args.context_restrict = config_file.bool("context", "context_restrict", d=defaults)
-            self.args.collo_left = config_file.int("context", "collo_left", d=defaults)
-            self.args.collo_right = config_file.int("context", "collo_right", d=defaults)
+            self.args.context_left = config_file.int(
+                "context", "context_left", d=defaults)
+            self.args.context_right = config_file.int(
+                "context", "context_right", d=defaults)
+            self.args.context_mode = config_file.str(
+                "context", "context_mode", d=defaults)
+            self.args.context_restrict = config_file.bool(
+                "context", "context_restrict", d=defaults)
+            self.args.collo_left = config_file.int(
+                "context", "collo_left", d=defaults)
+            self.args.collo_right = config_file.int(
+                "context", "collo_right", d=defaults)
 
             # read OUTPUT section:
             for variable, value in config_file.items("output"):
@@ -788,52 +701,74 @@ class Options(object):
             # read GUI section:
             group = config_file.str("gui", "group_columns", fallback="")
             self.args.group_columns = group.split(",")
-            self.args.last_toolbox = config_file.int("gui", "last_toolbox", fallback=0)
-            self.args.select_radio_query_file = config_file.bool("gui", "select_radio_query_file", fallback=False)
+            self.args.last_toolbox = config_file.int(
+                "gui", "last_toolbox", fallback=0)
+            self.args.select_radio_query_file = config_file.bool(
+                "gui", "select_radio_query_file", fallback=False)
             stopwords = config_file.str("gui", "stopword_list", fallback="")
-            self.args.stopword_list = [x for x
-                                       in decode_query_string(stopwords).split("\n")
-                                       if x]
+            lst = [x for x in decode_query_string(stopwords).split("\n") if x]
+            self.args.stopword_list = lst
             group = config_file.str("gui", "group_columns", fallback="")
-            self.args.ask_on_quit = config_file.bool("gui", "ask_on_quit", fallback=True)
-            self.args.word_wrap = config_file.bool("gui", "word_wrap", fallback=False)
-            self.args.save_query_string = config_file.bool("gui", "save_query_string", fallback=True)
-            self.args.save_query_file = config_file.bool("gui", "save_query_file", fallback=True)
+            self.args.ask_on_quit = config_file.bool(
+                "gui", "ask_on_quit", fallback=True)
+            self.args.word_wrap = config_file.bool(
+                "gui", "word_wrap", fallback=False)
+            self.args.save_query_string = config_file.bool(
+                "gui", "save_query_string", fallback=True)
+            self.args.save_query_file = config_file.bool(
+                "gui", "save_query_file", fallback=True)
 
             # various paths:
-            self.args.query_file_path = config_file.str("gui", "query_file_path", fallback=os.path.expanduser("~"))
-            self.args.textgrids_file_path = config_file.str("gui", "textgrids_file_path", fallback=os.path.expanduser("~"))
-            self.args.results_file_path = config_file.str("gui", "results_file_path", fallback=os.path.expanduser("~"))
-            self.args.output_file_path = config_file.str("gui", "output_file_path", fallback=os.path.expanduser("~"))
+            user_path = os.path.expanduser("~")
+            self.args.query_file_path = config_file.str(
+                "gui", "query_file_path", fallback=user_path)
+            self.args.textgrids_file_path = config_file.str(
+                "gui", "textgrids_file_path", fallback=user_path)
+            self.args.results_file_path = config_file.str(
+                "gui", "results_file_path", fallback=user_path)
+            self.args.output_file_path = config_file.str(
+                "gui", "output_file_path", fallback=user_path)
             self.args.export_file_path = config_file.str(
-                "gui", "export_file_path", fallback=os.path.expanduser("~"))
-            self.args.stopwords_file_path = config_file.str("gui", "stopwords_file_path", fallback=os.path.expanduser("~"))
-            self.args.filter_file_path = config_file.str("gui", "filter_file_path", fallback=os.path.expanduser("~"))
-            self.args.uniques_file_path = config_file.str("gui", "uniques_file_path", fallback=os.path.expanduser("~"))
-            self.args.corpus_table_source_path = config_file.str("gui", "corpus_table_source_path", fallback="")
+                "gui", "export_file_path", fallback=user_path)
+            self.args.stopwords_file_path = config_file.str(
+                "gui", "stopwords_file_path",
+                fallback=user_path)
+            self.args.filter_file_path = config_file.str(
+                "gui", "filter_file_path", fallback=user_path)
+            self.args.uniques_file_path = config_file.str(
+                "gui", "uniques_file_path", fallback=user_path)
+            self.args.corpus_table_source_path = config_file.str(
+                "gui", "corpus_table_source_path", fallback="")
             self.args.text_source_path = config_file.str(
                 "gui", "text_source_path",
                 fallback=os.path.join(self.args.base_path, "texts", "alice"))
 
-            self.args.show_data_management = config_file.bool("gui", "show_data_management", fallback=True)
-            self.args.show_output_columns = config_file.bool("gui", "show_output_columns", fallback=True)
-
-            self.args.drop_duplicates = config_file.bool("gui", "drop_duplicates", fallback=False)
-            self.args.number_of_tokens = config_file.int("gui", "number_of_tokens", fallback=0)
-            self.args.limit_matches = config_file.bool("gui", "limit_matches", fallback=False)
-            self.args.sample_size = config_file.int("gui", "sample_size", fallback=0)
-            self.args.sample_matches = config_file.bool("gui", "sample_matches", fallback=False)
+            self.args.show_data_management = config_file.bool(
+                "gui", "show_data_management", fallback=True)
+            self.args.show_output_columns = config_file.bool(
+                "gui", "show_output_columns", fallback=True)
+            self.args.drop_duplicates = config_file.bool(
+                "gui", "drop_duplicates", fallback=False)
+            self.args.number_of_tokens = config_file.int(
+                "gui", "number_of_tokens", fallback=0)
+            self.args.limit_matches = config_file.bool(
+                "gui", "limit_matches", fallback=False)
+            self.args.sample_size = config_file.int(
+                "gui", "sample_size", fallback=0)
+            self.args.sample_matches = config_file.bool(
+                "gui", "sample_matches", fallback=False)
 
             s = config_file.str("gui", "show_log_messages", d=defaults)
             try:
-                self.args.show_log_messages = [x.strip() for x in s.split(",") if x]
-            except:
+                self.args.show_log_messages = [x.strip()
+                                               for x in s.split(",") if x]
+            except Exception:
                 s = defaults["show_log_messages"]
             self.args.digits = config_file.int(
                 "gui", "decimal_digits", d=defaults)
             self.args.float_format = config_file.str(
                 "gui", "float_format",
-                fallback="{:.%if}" % self.args.digits)
+                fallback="{{:.{}f}}".format(self.args.digits))
 
             # read FILTER section
 
@@ -844,7 +779,6 @@ class Options(object):
                 except ValueError:
                     pass
                 else:
-                    print(filt)
                     self.args.filter_list.append(filt)
 
             # read FUNCTIONS section
@@ -885,6 +819,7 @@ class Options(object):
             grp_columns = {}
             grp_function_types = defaultdict(dict)
             grp_function_columns = defaultdict(dict)
+            grp_filters = defaultdict(dict)
             grp_distinct = {}
 
             for var, value in config_file.items("groups"):
@@ -892,6 +827,7 @@ class Options(object):
                 if (len(parsed) == 3 and parsed[0] == "group"):
                     num = parsed[1]
                     attr = parsed[2]
+
                     if attr.startswith("fnc"):
                         # group functions
                         f_parsed = attr.split("_")
@@ -901,18 +837,33 @@ class Options(object):
                                 grp_function_types[num][f_num] = value
                             elif f_attr == "columns":
                                 grp_function_columns[num][f_num] = value
+
+                    elif attr.startswith("filter"):
+                        f_parsed = attr.split("_")
+                        if len(f_parsed) == 2:
+                            try:
+                                filt = parse_filter_text(value)
+                            except ValueError:
+                                pass
+                            else:
+                                print("---")
+                                print(filt)
+                                print("---")
+                                _, f_num = f_parsed
+                                grp_filters[num][f_num] = filt
+
                     elif attr == "name":
                         grp_names[num] = value
+
                     elif attr == "columns":
                         grp_columns[num] = value
+
                     elif attr == "distinct":
-                        grp_distinct[num] = bool(value)
+                        grp_distinct[num] = value == "True"
 
             self.args.groups = []
             for num in grp_names:
-                name = grp_names.get(num)
-                distinct = grp_distinct.get(num, False)
-                columns = grp_columns.get(num, None)
+                # build group function list
                 function_list = []
                 for f_num in grp_function_types.get(num, {}):
                     f_type = grp_function_types[num][f_num]
@@ -922,9 +873,19 @@ class Options(object):
                         if fnc:
                             function_list.append(
                                 (fnc, f_columns.strip().split(",")))
+
+                name = grp_names.get(num)
+                distinct = grp_distinct.get(num, False)
+                columns = grp_columns.get(num, None)
+                filters = grp_filters.get(num, {})
+                filter_list = [filters[x] for x in sorted(filters.keys())]
+
                 if columns is not None:
-                    group = Group(name, columns.split(","),
-                                  function_list, distinct)
+                    group = Group(name=name,
+                                  columns=columns.split(","),
+                                  functions=function_list,
+                                  filters=filter_list,
+                                  distinct=distinct)
                     self.args.groups.append(group)
 
             # process [summary]
@@ -975,10 +936,8 @@ class Options(object):
                     cols = columns.strip().split(",")
                 else:
                     cols = []
-                summary = Summary(name, cols, function_list)
-            if not sum_names:
-                summary = Summary("summary", [], [])
-            self.args.summary_group.append(summary)
+                self.args.summary_groups.append(
+                    Summary(name, cols, function_list))
 
         # Use QSettings?
         if settings:
@@ -988,7 +947,8 @@ class Options(object):
             finally:
                 settings.setValue("column_properties", column_properties)
             if column_properties:
-                current_properties = column_properties.get(self.args.corpus, {})
+                current_properties = column_properties.get(self.args.corpus,
+                                                           {})
             else:
                 current_properties = {}
             self.args.column_color = current_properties.get("colors", {})
@@ -998,18 +958,91 @@ class Options(object):
                     _, _, column = x.partition("column_width_")
                     self.args.column_width[column] = settings.value(x, int)
 
+
+class CSVOptions(object):
+    def __init__(self, file_name="", sep=",", header=True, quote_char='"',
+                 skip_lines=0, encoding="utf-8", selected_column=None,
+                 mapping=None, dtypes=None, nrows=None, excel=False):
+        self.sep = sep
+        self.header = header
+        self.quote_char = quote_char
+        self.skip_lines = skip_lines
+        self.encoding = encoding
+        self.selected_column = selected_column
+        self.mapping = mapping if mapping else {}
+        self.dtypes = dtypes
+        self.file_name = file_name
+        self.nrows = nrows
+        self.excel = excel
+
+    def __repr__(self):
+        return ("CSVOptions(sep='{}', header={}, quote_char='{}', "
+                "skip_lines={}, encoding='{}', selected_column={}, "
+                "nrows={}, mapping={}, dtypes={}, excel={})".format(
+                    self.sep, self.header, self.quote_char.replace("'", "\'"),
+                    self.skip_lines, self.encoding, self.selected_column,
+                    self.nrows, self.mapping, self.dtypes, self.excel))
+
+    def read_file(self, path):
+        if use_xlrd and self.excel:
+            df = self.read_excel_file(path)
+        else:
+            df = self.read_csv_file(path)
+        return df
+
+    def read_csv_file(self, path):
+        kwargs = {
+            "encoding": self.encoding,
+            "header": 0 if self.header else None,
+            "sep": self.sep,
+            "skiprows": self.skip_lines,
+            "quotechar": self.quote_char,
+            "low_memory": False,
+            "error_bad_lines": False}
+        try:
+            df = pd.read_csv(path, **kwargs)
+        except Exception as e:
+            print(path)
+            from pprint import pprint
+            pprint(kwargs)
+            logging.error(e)
+            print(e)
+            raise e
+        return df
+
+    def read_excel_file(self, path):
+        try:
+            df = pd.read_excel(
+                path,
+                header=0 if self.header else None,
+                skiprows=self.skip_lines)
+        except Exception as e:
+            logging.error(e)
+            print(e)
+            raise e
+        return df
+
+
 cfg = None
 settings = None
 
 
 def save_configuration():
+    """
+    Saves the current configuration.
+
+    Currently, two files are still used: an .ini text file that uses
+    sections, and a QSettings file. Eventually, the two should be merged.
+    """
+    connection_name = cfg.current_connection.name
     config = UnicodeConfigParser()
     if os.path.exists(cfg.config_path):
         with codecs.open(cfg.config_path, "r", "utf-8") as input_file:
             try:
                 config.read(input_file)
             except (IOError, TypeError):
-                warnings.warn("Configuration file {} could not be read.".format(cfg.config_path))
+                s = "Configuration file {} could not be read."
+                warnings.warn(s.format(cfg.config_path))
     if "main" not in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
@@ -1047,19 +1080,22 @@ def save_configuration():
 
     if "sql" not in config.sections():
         config.add_section("sql")
-    if cfg.current_server:
-        config.set("sql", "active_configuration", cfg.current_server)
 
-    for i, server in enumerate(cfg.server_configuration):
-        d = cfg.server_configuration[server]
-        if d["type"] == SQL_MYSQL:
-            required_vars = ["name", "host", "port", "user", "password", "type"]
-        elif d["type"] == SQL_SQLITE:
-            required_vars = ["name", "type", "path"]
+    config.set("sql", "active_configuration", connection_name)
+
+    for i, name in enumerate(cfg.connections):
+        connection = cfg.connections[name]
+        if connection.db_type() == SQL_MYSQL:
+            required_vars = ["name", "host", "port", "user", "password"]
         else:
-            required_vars = []
-        for x in required_vars:
-            config.set("sql", "config_{}_{}".format(i, x), d[x])
+            required_vars = ["name", "path"]
+
+        config.set("sql", "config_{}_type".format(i), connection.db_type())
+
+        for var in required_vars:
+            config.set("sql",
+                       "config_{}_{}".format(i, var),
+                       getattr(connection, var))
 
     if cfg.selected_features:
         if "output" not in config.sections():
@@ -1089,7 +1125,9 @@ def save_configuration():
 
     for i, grp in enumerate(cfg.groups):
         config.set("groups", "group_{}_name".format(i), grp.name)
-        config.set("groups", "group_{}_distinct".format(i), str(grp.show_distinct))
+        config.set("groups",
+                   "group_{}_distinct".format(i),
+                   str(grp.show_distinct))
         config.set("groups", "group_{}_columns".format(i),
                    ",".join(grp.columns))
         for j, (fnc, columns) in enumerate(grp.functions):
@@ -1097,13 +1135,16 @@ def save_configuration():
                        fnc._name)
             config.set("groups", "group_{}_fnc_{}_columns".format(i, j),
                        ",".join(columns))
+        for j, filt in enumerate(grp.filters):
+            config.set("groups", "group_{}_filter_{}".format(i, j),
+                       str(filt))
 
     if "summary" not in config.sections():
         config.add_section("summary")
 
     config.set("summary", "summary_distinct", cfg.show_distinct)
 
-    for i, grp in enumerate(cfg.summary_group):
+    for i, grp in enumerate(cfg.summary_groups):
         config.set("summary", "summary_{}_name".format(i), grp.name)
         config.set("summary", "summary_{}_columns".format(i),
                    ",".join(grp.columns))
@@ -1116,10 +1157,10 @@ def save_configuration():
     if cfg.table_links:
         if "links" not in config.sections():
             config.add_section("links")
-        for i, link in enumerate(cfg.table_links[cfg.current_server]):
+        for i, link in enumerate(cfg.table_links[connection_name]):
             config.set("links",
                        "link{}".format(i+1),
-                       '{},{}'.format(cfg.current_server, link))
+                       '{},{}'.format(connection_name, link))
 
     if "context" not in config.sections():
         config.add_section("context")
@@ -1135,7 +1176,8 @@ def save_configuration():
         for x in cfg.column_width:
             if (not x.startswith("coquery_invisible") and
                     cfg.column_width[x] and x):
-                settings.setValue("column_width_{}".format(x), cfg.column_width[x])
+                settings.setValue("column_width_{}".format(x),
+                                  cfg.column_width[x])
 
         if "gui" not in config.sections():
             config.add_section("gui")
@@ -1150,7 +1192,8 @@ def save_configuration():
         config.set("gui", "decimal_digits", cfg.digits)
 
         try:
-            config.set("gui", "select_radio_query_file", cfg.select_radio_query_file)
+            config.set("gui", "select_radio_query_file",
+                       cfg.select_radio_query_file)
         except AttributeError:
             config.set("gui", "select_radio_query_file", False)
         try:
@@ -1203,7 +1246,8 @@ def save_configuration():
         except AttributeError:
             config.set("gui", "uniques_file_path", os.path.expanduser("~"))
         try:
-            config.set("gui", "corpus_table_source_path", cfg.corpus_table_source_path)
+            config.set("gui", "corpus_table_source_path",
+                       cfg.corpus_table_source_path)
         except AttributeError:
             config.set("gui", "corpus_table_source_path", "")
         try:
@@ -1233,55 +1277,13 @@ def save_configuration():
             config.set("gui", "save_query_string", True)
 
         if cfg.show_log_messages:
-            config.set("gui", "show_log_messages", ",".join(cfg.show_log_messages))
+            config.set("gui", "show_log_messages",
+                       ",".join(cfg.show_log_messages))
         else:
             config.set("gui", "show_log_messages", None)
 
     with codecs.open(cfg.config_path, "w", "utf-8") as output_file:
         config.write(output_file)
-
-
-def get_con_configuration():
-    """
-    Returns a tuple containing the currently active connection configuration.
-
-    The method uses the configuration name stored in the attribute
-    'current_server' to retrieve the configuration values from the
-    dictionary 'server_configuration'.
-
-    Returns
-    -------
-    tup : tuple or None
-        If there is a configuration for the currently selected server,
-        the method returns the tuple (db_host, db_port, db_name,
-        db_password). If no configuration is available, the method
-        returns None.
-    """
-    if cfg.current_server in cfg.server_configuration:
-        d = cfg.server_configuration[cfg.current_server]
-        if d["type"] == SQL_MYSQL:
-            return (d["host"], d["port"], d["type"], d["user"], d["password"])
-        elif d["type"] == SQL_SQLITE:
-            return (None, None, SQL_SQLITE, None, None)
-    else:
-        return None
-
-
-def get_configuration_type():
-    """
-    Return the type of the current configuration.
-
-    Returns
-    -------
-    s : str or None
-        Depending on the type of the currenct configuration, `s` equals
-        either the constant SQL_MYSQL or SQL_SQLITE from defines.py. If
-        no configuration is available, return None.
-    """
-    if cfg.current_server in cfg.server_configuration:
-        return cfg.server_configuration[cfg.current_server]["type"]
-    else:
-        return None
 
 
 def process_options(use_file=True):
@@ -1309,108 +1311,10 @@ def process_options(use_file=True):
     add_source_path(cfg.custom_installer_path)
 
 
-def validate_module(path, expected_classes, whitelisted_modules, allow_if=False, hash=True):
-    """
-    Read the Python code from path, and validate that it contains only
-    the required class definitions and whitelisted module imports.
-
-    The corpus modules are plain Python code, which opens an attack
-    vector for people who want to compromise the system: if an attacker
-    managed to plant a Python file in the corpus module directory, this
-    file wouldbe processed automatically, and without validation, the
-    content would also be executed.
-
-    This method raises an exception if the Python file in the specified
-    path contains unexpected code.
-    """
-
-    return hashlib.md5(utf8("Dummy").encode("utf-8"))
-
-    allowed_parents = (ast.If, ast.FunctionDef, ast.TryExcept, ast.TryFinally, ast.While, ast.For,
-                       ast.With)
-
-    if sys.version_info < (3, 0):
-        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign,
-                              ast.Return, ast.TryExcept, ast.TryFinally,
-                              ast.Pass, ast.Raise, ast.Assert, ast.Print)
-    else:
-        allowed_statements = (ast.FunctionDef, ast.Assign, ast.AugAssign,
-                              ast.Return, ast.TryExcept, ast.TryFinally,
-                              ast.Pass, ast.Raise, ast.Assert)
-
-    def validate_node(node, parent):
-        if isinstance(node, ast.ClassDef):
-            if node.name in expected_classes:
-                expected_classes.remove(node.name)
-
-        elif isinstance(node, ast.ImportFrom):
-            if whitelisted_modules != "all" and node.module not in whitelisted_modules:
-                raise IllegalImportInModuleError(corpus_name, cfg.current_server, node.module, node.lineno)
-
-        elif isinstance(node, ast.Import):
-            for element in node.names:
-                if whitelisted_modules != "all" and element not in whitelisted_modules:
-                    raise IllegalImportInModuleError(corpus_name, cfg.current_server, element, node.lineno)
-
-        elif isinstance(node, allowed_statements):
-            pass
-
-        elif isinstance(node, ast.Expr):
-            if isinstance(node.value, ast.Str):
-                pass
-            else:
-                if not isinstance(parent, allowed_parents):
-                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-
-        elif isinstance(node, ast.If):
-            if parent is None:
-                if not allow_if:
-
-                    raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-            elif not isinstance(parent, allowed_parents):
-                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-
-        elif isinstance(node, (ast.While, ast.For, ast.With, ast.Continue, ast.Break)):
-            # these types are only allowed if the node is nested in
-            # a legal node type:
-            if not isinstance(parent, allowed_parents):
-                raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-        else:
-            print(node)
-            raise IllegalCodeInModuleError(corpus_name, cfg.current_server, node.lineno)
-
-        # recursively validate the content of the node:
-        if hasattr(node, "body"):
-            for child in node.body:
-                validate_node(child, node)
-
-    corpus_name = os.path.splitext(os.path.basename(path))[0]
-    try:
-        with codecs.open(path, "r") as module_file:
-            content = module_file.read()
-            tree = ast.parse(content)
-
-            for node in tree.body:
-                validate_node(node, None)
-    except Exception as e:
-        logging.error(e)
-
-    if expected_classes:
-        raise ModuleIncompleteError(corpus_name, cfg.current_server, expected_classes)
-    if hash:
-        #return hashlib.md5(content.encode("utf-8"))
-        return hashlib.md5(utf8("MD5 hash not available").encode("utf-8"))
-
-
 def set_current_server(name):
     """
-    Changes the current server name. Also, update the currently available
+    Changes the current server paths. Also, update the currently available
     resources.
-
-    This method changes the content of the configuration variable
-    'current_server' to the content of the argument 'name'. It also calls the
-    method get_available_resources() for this configuration, and stores the
-    result in the configuration variable 'current_resources'.
 
     Parameters
     ----------
@@ -1418,12 +1322,9 @@ def set_current_server(name):
         The name of the MySQL configuration
     """
     global cfg
-    cfg.current_server = name
+    cfg.current_connection = cfg.connections.get(name, None)
+    cfg.current_connection.find_resources()
 
-    if name:
-        cfg.current_resources = get_available_resources(name)
-    else:
-        cfg.current_resources = None
     # make sure that a subdirectory exists in "connections" for the current
     # connection:
     path = os.path.join(cfg.connections_path, name)
@@ -1438,9 +1339,8 @@ def set_current_server(name):
     if not os.path.exists(cfg.adhoc_path):
         os.makedirs(cfg.adhoc_path)
 
-    if cfg.server_configuration[name]["type"] == SQL_SQLITE:
-        cfg.database_path = (cfg.server_configuration[name]["path"] or
-                             os.path.join(path, "databases"))
+    if cfg.current_connection.db_type() == SQL_SQLITE:
+        cfg.database_path = cfg.current_connection.path
         if not os.path.exists(cfg.database_path):
             os.makedirs(cfg.database_path)
 
@@ -1449,8 +1349,9 @@ def get_resource_of_database(db_name):
     """
     Get the resource that uses the database.
     """
-    for name in cfg.current_resources:
-        resource, _, _ = cfg.current_resources[name]
+    resources = cfg.current_connection.resources()
+    for name in resources:
+        resource, _, _ = resources[name]
         if resource.db_name == db_name:
             return resource
     return None
@@ -1480,53 +1381,30 @@ def get_available_resources(configuration):
         (module.Resource, module.Corpus, module_name)
     """
 
-    def ensure_init_file(path):
-        """
-        Creates an empty file __init__.py in the given path if necessary.
-        """
-        if not os.path.exists(path):
-            os.makedirs(path)
-        if not os.path.exists(os.path.join(path, "__init__.py")):
-            open(os.path.join(path, "__init__.py"), "a").close()
-
     d = {}
     if configuration is None:
         return d
 
     # add corpus_path to sys.path so that modules can be imported from
     # that location:
-    corpora_path = os.path.join(general.get_home_dir(), "connections", configuration, "corpora")
+    corpora_path = os.path.join(general.get_home_dir(),
+                                "connections", configuration, "corpora")
 
     # create the directory if it doesn't exist yet:
     # cycle through the modules in the corpus path:
     for module_name in glob.glob(os.path.join(corpora_path, "*.py")):
         corpus_name, ext = os.path.splitext(os.path.basename(module_name))
         corpus_name = utf8(corpus_name)
-        #try:
-            #validate_module(
-                #module_name,
-                #expected_classes = ["Resource", "Corpus"],
-                #whitelisted_modules = ["corpus", "__future__"],
-                #allow_if = False,
-                #hash = False)
-        #except (ModuleIncompleteError,
-                #IllegalImportInModuleError, IllegalFunctionInModuleError,
-                #IllegalCodeInModuleError) as e:
-            #warnings.warn(str(e))
-        #except SyntaxError as e:
-            #warnings.warn("There is a syntax error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            #continue
-        #except IndentationError as e:
-            #warnings.warn("There is an indentation error in corpus module {}. Please remove this corpus module, and reinstall it afterwards.".format(corpus_name))
-            #continue
 
         try:
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
         except Exception as e:
-            s = "There is an error in corpus module '{}': {}\nThe corpus is not available for queries.".format(corpus_name, str(e))
+            s = ("There is an error in corpus module '{}': {}\n"
+                 "The corpus is not available for queries.").format(
+                     corpus_name, str(e))
             print(s)
-            logging.warn(s)
+            logging.warning(s)
         else:
             try:
                 d[module.Resource.name] = (module.Resource,
@@ -1534,33 +1412,9 @@ def get_available_resources(configuration):
                                            module_name)
             except (AttributeError, ImportError) as e:
                 print(e)
-                warnings.warn("{} does not appear to be a valid corpus module.".format(corpus_name))
+                s = "{} does not appear to be a valid corpus module."
+                warnings.warn(s.format(corpus_name))
     return d
-
-
-def get_resource(name, connection=None):
-    """
-    Return a tuple containing the Resource and the Corpus of the corpus module
-    specified by 'name'.
-
-    Arguments
-    ---------
-    name : str
-        The name of the corpus module
-    connection : str or None
-        The name of the database connection. If None, the current connection
-        is used.
-
-    Returns
-    -------
-    res : tuple
-        A tuple consisting of the Resource class and the Corpus class defined
-        in the corpus module
-    """
-    if not connection:
-        connection = cfg.current_server
-    Resource, Corpus, path = get_available_resources(connection)[name]
-    return Resource, Corpus
 
 
 def decode_query_string(s):
@@ -1573,7 +1427,7 @@ def decode_query_string(s):
     """
     in_quote = False
     escape = False
-    l = []
+    lst = []
     char_list = []
     s = s.replace("%%", "%")
     for ch in s:
@@ -1589,15 +1443,15 @@ def decode_query_string(s):
                 if in_quote:
                     char_list.append(ch)
                 else:
-                    l.append("".join(char_list))
+                    lst.append("".join(char_list))
                     char_list = []
             else:
                 char_list.append(ch)
-    l.append("".join(char_list))
-    return "\n".join(l)
+    lst.append("".join(char_list))
+    return "\n".join(lst)
 
 
-def encode_query_string(s):
+def encode_query_string(query):
     """
     Encode a query string that has can be written to a configuration file.
 
@@ -1606,43 +1460,13 @@ def encode_query_string(s):
     into a comma-separated, quoted and escaped string that can be passed on
     to the configuration file.
     """
-    l = s.split("\n")
     str_list = []
-    for s in l:
+    for s in query.split("\n"):
         s = s.replace("\\", "\\\\")
         s = s.replace('"', '\\"')
         s = s.replace("%", "%%")
         str_list.append(s)
     return ",".join(['"{}"'.format(x) for x in str_list])
-
-
-def has_module(name):
-    """
-    Check if the Python module 'name' is available.
-
-    Parameters
-    ----------
-    name : str
-        The name of the Python module, as used in an import instruction.
-
-    This function uses ideas from this Stack Overflow question:
-    http://stackoverflow.com/questions/14050281/
-
-    Returns
-    -------
-    b : bool
-        True if the module exists, or False otherwise.
-    """
-
-    if sys.version_info > (3, 3):
-        import importlib.util
-        return importlib.util.find_spec(name) is not None
-    elif sys.version_info > (2, 7, 99):
-        import importlib
-        return importlib.find_loader(name) is not None
-    else:
-        import pkgutil
-        return pkgutil.find_loader(name) is not None
 
 
 _recent_python = sys.version_info < (2, 7)
@@ -1661,6 +1485,9 @@ use_cachetools = has_module("cachetools")
 use_statsmodels = has_module("statsmodels")
 use_alsaaudio = has_module("alsaaudio")
 use_winsound = has_module("winsound")
+use_squarify = has_module("squarify")
+use_sphfile = has_module("sphfile")
+use_sqlparse = has_module("sqlparse")
 
 
 missing_modules = []

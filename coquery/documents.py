@@ -2,7 +2,7 @@
 """
 documents.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -203,14 +203,14 @@ def plain_to_str(path):
         if encoding is None:
             s = ("Cannot detect encoding of file {}. Is this file really a "
                  "text file in one of the supported formats?").format(path)
-            logging.warn(s)
+            logging.warning(s)
             raw_text = content
         else:
             if confidence < 0.5:
                 s = ("Low confidence ({:.2}) about the encoding of file {}. "
                      "Assuming encoding '{}'.").format(
                          confidence, path, encoding)
-                logging.warn(s)
+                logging.warning(s)
             else:
                 s = "Encoding '{}' detected for file {} (confidence: {:.2})"
                 s = s.format(encoding, path, confidence)

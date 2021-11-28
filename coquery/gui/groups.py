@@ -2,7 +2,7 @@
 """
 groups.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -19,6 +19,7 @@ from coquery.managers import Group, Summary
 from coquery.functions import (
                     get_base_func,
                     Entropy,
+                    Add,
                     Min, Max, Mean, Median, StandardDeviation,
                     InterquartileRange,
                     Freq, FreqNorm,
@@ -33,6 +34,7 @@ from coquery.functions import (
                     Percent, Proportion,
                     Tokens, Types,
                     TypeTokenRatio,
+                    StandardizedTypeTokenRatio, StandardizedTypeTokenRatio250,
                     CorpusSize, SubcorpusSize)
 
 from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
@@ -250,7 +252,11 @@ class GroupFunctionDelegate(QtWidgets.QItemDelegate):
 
 class GroupDialog(QtWidgets.QDialog):
     function_list = (Freq, FreqNorm, FreqPTW, FreqPMW,
-                     RowNumber, Tokens, Types, TypeTokenRatio,
+                     RowNumber, Tokens, Types,
+                     TypeTokenRatio,
+                     StandardizedTypeTokenRatio,
+                     StandardizedTypeTokenRatio250,
+                     Add,
                      Min, Max, Mean, Median, StandardDeviation,
                      InterquartileRange,
                      ReferenceCorpusLLKeyness,
@@ -264,25 +270,35 @@ class GroupDialog(QtWidgets.QDialog):
         self.ui = Ui_GroupDialog()
         self.ui.setupUi(self)
 
+        self.ui.ok_button = self.ui.buttonBox.button(
+            QtWidgets.QDialogButtonBox.Ok)
+
         # Remove group function columns as they may not be available yet
         # when the group is formed.
         # FIXME: at some point, this needs to be redone so that earlier
         # group columns are available for later groups.
-        all_columns = [x for x in all_columns
-                       if not re.match("func_.*_group_", x)]
+        self.all_columns = [x for x in all_columns
+                            if not re.match("func_.*_group_", x)]
+        group.columns = [x for x in group.columns if x in all_columns]
         selected_columns = [x for x in group.columns
                             if not re.match("func_.*_group_", x)]
+
         self.ui.edit_label.setText(group.name)
         self.ui.radio_remove_duplicates.setChecked(group.show_distinct)
+
         self.ui.widget_selection.setSelectedList(
             selected_columns,
             get_toplevel_window().Session.translate_header)
-
         self.ui.widget_selection.setAvailableList(
-            [x for x in all_columns
+            [x for x in self.all_columns
              if x not in group.columns],
             get_toplevel_window().Session.translate_header)
 
+        self.ui.widget_selection.itemSelectionChanged.connect(
+            self.check_buttons)
+        self.ui.widget_selection.itemSelectionChanged.connect(
+            self.update_tabs)
+        self.check_buttons(selected=self.ui.widget_selection.selectedItems())
         function_columns = {fnc_class: columns
                             for fnc_class, columns in group.functions}
 
@@ -292,19 +308,20 @@ class GroupDialog(QtWidgets.QDialog):
         function_groups = self.get_function_groups()
 
         for fun_base in sorted(function_groups,
-                               key=lambda x: x.get_description()):
+                               key=lambda x: x.get_group()):
 
             group_item = QtWidgets.QListWidgetItem(
-                fun_base.get_description())
+                fun_base.get_group())
             function_items = []
             for fnc in function_groups[fun_base]:
                 list_item = QtGui.QStandardItem()
                 if fnc in function_columns:
                     columns = function_columns[fnc]
-                    available = [x for x in all_columns if x not in columns]
+                    available = [x for x in self.all_columns
+                                 if x not in columns]
                     check = QtCore.Qt.Checked
                 else:
-                    columns = all_columns
+                    columns = self.all_columns
                     available = []
                     check = QtCore.Qt.Unchecked
                 list_item.setData([fnc, columns, available, check],
@@ -314,6 +331,49 @@ class GroupDialog(QtWidgets.QDialog):
             self.ui.linked_functions.addList(group_item, function_items)
 
         self.ui.linked_functions.setCurrentCategoryRow(0)
+
+        self.dtypes = []
+
+        vis_cols = list(get_toplevel_window().table_model.content.columns)
+        hidden_cols = list(get_toplevel_window().hidden_model.content.columns)
+
+        vis_dtypes = get_toplevel_window().table_model.content.dtypes
+        hidden_dtypes = get_toplevel_window().hidden_model.content.dtypes
+
+        for col in self.all_columns:
+            if col in vis_cols:
+                dtype = vis_dtypes[col]
+            else:
+                dtype = hidden_dtypes[col]
+            self.dtypes.append(dtype)
+
+        self.ui.widget_filters.setData(self.all_columns,
+                                       self.dtypes,
+                                       group.filters,
+                                       get_toplevel_window().Session)
+
+    def _get_dtypes(self, columns):
+        return [self.dtypes[self.all_columns.index(col)] for col in columns]
+
+    def check_buttons(self, selected=None):
+        selected = selected or []
+        self.ui.ok_button.setEnabled(len(selected) > 0)
+
+    def update_tabs(self, selected):
+        features = [item.data(QtCore.Qt.UserRole) for item in selected]
+        columns = [col for col in self.all_columns if col not in features]
+        dtypes = self._get_dtypes(columns)
+        filters = self.ui.widget_filters.filters()
+
+        return
+        self.ui.widget_filters.setData(columns,
+                                       dtypes,
+                                       filters,
+                                       get_toplevel_window().Session)
+        self.ui.widget_filters.setEnabled(len(columns))
+
+
+
 
     def setup_values(self, group):
         self.ui.edit_label.setText(group.name)
@@ -349,15 +409,15 @@ class GroupDialog(QtWidgets.QDialog):
 
     def exec_(self, *args, **kwargs):
         result = super(GroupDialog, self).exec_(*args, **kwargs)
-        if result == QtWidgets.QDialog.Accepted:
-            name = utf8(self.ui.edit_label.text())
-            columns = [x.data(QtCore.Qt.UserRole)
-                       for x in self.ui.widget_selection.selectedItems()]
-            functions = self.get_selected_items()
-            show_distinct = bool(self.ui.radio_remove_duplicates.isChecked())
-
-            group = Group(name, columns, functions, show_distinct)
-            return group
+        if result == self.Accepted:
+            kwargs = dict(
+                name=utf8(self.ui.edit_label.text()),
+                columns=[x.data(QtCore.Qt.UserRole)
+                         for x in self.ui.widget_selection.selectedItems()],
+                functions=self.get_selected_items(),
+                filters=self.ui.widget_filters.filters(),
+                distinct=bool(self.ui.radio_remove_duplicates.isChecked()))
+            return Group(**kwargs)
         else:
             return None
 
@@ -391,22 +451,26 @@ class SummaryDialog(GroupDialog):
                     RowNumber,
                     Percent, Proportion,
                     Tokens, Types,
-                    TypeTokenRatio,
+                    TypeTokenRatio, StandardizedTypeTokenRatio,
                     CorpusSize, SubcorpusSize)
 
     def __init__(self, group, all_columns, parent=None):
         super(SummaryDialog, self).__init__(group, all_columns, parent)
         self.ui.label.hide()
-        self.ui.label_duplicates.hide()
         self.ui.radio_remove_duplicates.hide()
         self.ui.radio_keep_duplicates.hide()
         self.ui.widget_selection.hide()
         self.ui.edit_label.hide()
-        function_list = self.ui.horizontalLayout_2.takeAt(0).widget()
+        edit_search = self.ui.layout_functions.takeAt(0).widget()
+        function_list = self.ui.layout_functions.takeAt(0).widget()
         self.ui.tabWidget.hide()
-        self.ui.gridLayout.addWidget(function_list, 0, 0)
+        self.ui.gridLayout.addWidget(edit_search, 0, 0)
+        self.ui.gridLayout.addWidget(function_list, 1, 0)
         self.ui.gridLayout.setColumnStretch(0, 1)
         self.ui.gridLayout.setColumnStretch(1, 0)
+
+    def check_buttons(self, selected=False):
+        pass
 
     @staticmethod
     def edit(group, all_columns, parent=None):

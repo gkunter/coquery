@@ -2,7 +2,7 @@
 """
 figureoptions.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2017 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,13 +11,12 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
 
-import sys
 import seaborn as sns
-import matplotlib as mpl
 
 from coquery import options
 from .pyqt_compat import QtWidgets, QtGui, QtCore
 from .ui.figureOptionsUi import Ui_FigureOptions
+
 
 class CoqColorItem(QtWidgets.QListWidgetItem):
     def __init__(self, color):
@@ -30,11 +29,11 @@ class CoqColorItem(QtWidgets.QListWidgetItem):
         self.set_color((int(r * 255), int(g * 255), int(b * 255)))
         self.color = color
 
-    def data(self, role, *args):
+    def data(self, role):
         if role == QtCore.Qt.UserRole:
             return self.color
         else:
-            return super(CoqColorItem, self).data(role, *args)
+            return super(CoqColorItem, self).data(role)
 
     def set_color(self, color):
         self.setText("#{:02X}{:02X}{:02X}".format(*color))
@@ -45,11 +44,12 @@ class CoqColorItem(QtWidgets.QListWidgetItem):
         else:
             self.setForeground(QtGui.QBrush(QtGui.QColor("white")))
 
+
 class FigureOptions(QtWidgets.QDialog):
-    def __init__(self, default=dict(), parent=None, icon=None):
+    def __init__(self, default=None, parent=None, icon=None):
         super(FigureOptions, self).__init__(parent)
 
-        self.options = default
+        self.options = default or {}
         self.parent = parent
         self.ui = Ui_FigureOptions()
         self.ui.setupUi(self)
@@ -76,7 +76,8 @@ class FigureOptions(QtWidgets.QDialog):
 
         self.ui.spin_number.setValue(self.options.get("color_number", 6))
 
-        #self.current_palette = QtWidgets.QStandardItemModel(self.ui.color_test_area)
+        #self.current_palette = QtWidgets.QStandardItemModel(
+            #self.ui.color_test_area)
         if self.palette_name == "custom":
             self.custom_palette = self.options.get("color_palette_values", [])
 
@@ -298,40 +299,52 @@ class FigureOptions(QtWidgets.QDialog):
         for x in dir(self.ui):
             if x.startswith("label_sample_"):
                 element_name = x.split("label_sample_")[-1]
-                pointsize = int(getattr(self.ui, "spin_size_{}".format(element_name)).value())
-                self.set_element_font(element_name, QtWidgets.QFont(new_font.family(), pointsize))
+                spin = getattr(self.ui, "spin_size_{}".format(element_name))
+                pointsize = int(spin.value())
+                font = QtWidgets.QFont(new_font.family(), pointsize)
+                self.set_element_font(element_name, font)
 
     def accept(self):
         self.options["label_main"] = str(self.ui.label_main.text())
         self.options["label_x_axis"] = str(self.ui.label_x_axis.text())
         self.options["label_y_axis"] = str(self.ui.label_y_axis.text())
         self.options["label_legend"] = str(self.ui.label_legend.text())
-        self.options["label_legend_columns"] = int(self.ui.spin_columns.value())
+        cols = int(self.ui.spin_columns.value())
+        self.options["label_legend_columns"] = cols
 
         try:
-            self.options["color_transparency"] = float(self.ui.slide_transparency.value())
+            alpha = self.ui.slide_transparency.value()
+            self.options["color_transparency"] = float(alpha)
         except AttributeError:
             pass
 
         self.options["color_palette"] = self.palette_name
         self.options["color_palette_values"] = self.get_current_palette()
-        if len(self.options["color_palette_values"]) < self.options.get("color_number", 6):
-            self.options["color_palette_values"] = (self.options["color_palette_values"] * self.options.get("color_number", 6))[:self.options.get("color_number", 6)]
 
-        for x in ["main", "x_axis", "x_ticks", "y_axis", "y_ticks", "legend", "legend_entries"]:
-            self.options["font_{}".format(x)] = getattr(self.ui, "label_sample_{}".format(x)).font()
+        # expand the color palette if the number of colors exceeds the number
+        # of entries in the palette
+        col_num = self.options.get("color_number", 6)
+        pal_values = self.options["color_palette_values"] * col_num
+        if len(pal_values) < col_num:
+            pal_values = (pal_values * col_num)[:col_num]
+            self.options["color_palette_values"] = pal_values
+
+        for x in ["main", "x_axis", "x_ticks", "y_axis", "y_ticks", "legend",
+                  "legend_entries"]:
+            font = getattr(self.ui, "label_sample_{}".format(x)).font()
+            self.options["font_{}".format(x)] = font
 
         super(FigureOptions, self).accept()
         options.settings.setValue("figureoptions_size", self.size())
-
 
     @staticmethod
     def get_default():
         return
 
     @staticmethod
-    def manage(default=dict(), parent=None, icon=None):
-        dialog = FigureOptions(default=dict(default), parent=parent, icon=icon)
+    def manage(default=None, parent=None, icon=None):
+        dialog = FigureOptions(
+            default=default or {}, parent=parent, icon=icon)
         result = dialog.exec_()
         if result == QtWidgets.QDialog.Accepted:
             return dialog.options
@@ -341,11 +354,3 @@ class FigureOptions(QtWidgets.QDialog):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.reject()
-
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    print(FigureOptions.manage())
-
-if __name__ == "__main__":
-    main()
-

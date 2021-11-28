@@ -2,7 +2,7 @@
 """
 menus.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017, 2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -87,8 +87,9 @@ class CoqColumnMenu(QtWidgets.QMenu):
     addGroupRequested = QtCore.Signal(str)
     removeGroupRequested = QtCore.Signal(str)
 
-    def __init__(self, columns=[], title="", parent=None, *args, **kwargs):
+    def __init__(self, columns=None, title="", parent=None, *args, **kwargs):
         super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
+        columns = columns or []
         self.columns = columns
 
         session = get_toplevel_window().Session
@@ -207,8 +208,9 @@ class CoqColumnMenu(QtWidgets.QMenu):
 class CoqHiddenColumnMenu(CoqColumnMenu):
     showColumnRequested = QtCore.Signal(list)
 
-    def __init__(self, columns=[], title="", parent=None, *args, **kwargs):
+    def __init__(self, columns=None, title="", parent=None, *args, **kwargs):
         super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
+        columns = columns or []
         self.columns = columns
 
         self.add_header(columns)

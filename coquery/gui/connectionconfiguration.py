@@ -2,7 +2,7 @@
 """
 Connectionconfiguration.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,7 +15,6 @@ from __future__ import unicode_literals
 import socket
 import re
 import string
-import sqlalchemy
 import os
 import shutil
 import sys
@@ -23,16 +22,22 @@ import logging
 
 from coquery.general import (utf8,
                              get_available_space, format_file_size)
-from coquery import sqlhelper
 from coquery import options
-from coquery.defines import (DEFAULT_CONFIGURATION, SQL_MYSQL, SQL_SQLITE,
-                             msg_not_enough_space, msg_completely_remove)
+from coquery.defines import (
+    DEFAULT_CONFIGURATION, SQL_MYSQL, SQL_SQLITE,
+    msg_not_enough_space, msg_completely_remove, msg_invalid_ip,
+    msg_mysql_remove, msg_mysql_access_denied, msg_mysql_success,
+    msg_mysql_invalid,
+    msg_sql_new_user_fail, msg_sql_new_user_success, msg_sql_root_fail)
+from coquery.connections import (get_connection,
+                                 MySQLConnection, SQLiteConnection)
 
-from .pyqt_compat import (QtCore, QtWidgets, QtGui,
-                          get_toplevel_window, STYLE_WARN)
+from .pyqt_compat import (QtCore, QtWidgets, QtGui, STYLE_WARN)
 from . import errorbox
-from .classes import CoqProgressDialog, CoqThread
+from .classes import CoqProgressDialog
+from .threads import CoqThread
 from .ui.connectionConfigurationUi import Ui_ConnectionConfig
+from .app import get_icon
 
 
 def check_valid_host(s):
@@ -84,7 +89,8 @@ def check_valid_host(s):
         if not any([x in string.ascii_letters for x in s]):
             return
         if s.endswith("."):
-            s= s[:-1] # strip exactly one dot from the right, if present
+            # strip exactly one dot from the right, if present
+            s = s[:-1]
         allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
         return all(allowed.match(x) for x in s.split("."))
 
@@ -116,10 +122,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
         self.ui = Ui_ConnectionConfig()
         self.ui.setupUi(self)
-        self.ui.button_add.setIcon(
-            get_toplevel_window().get_icon("sign-add"))
-        self.ui.button_remove.setIcon(
-            get_toplevel_window().get_icon("sign-delete"))
+        self.ui.button_add.setIcon(get_icon("Plus"))
+        self.ui.button_remove.setIcon(get_icon("Minus"))
 
         self.ui.ok_button = self.ui.buttonBox.button(self.ui.buttonBox.Ok)
         self.add_new_placeholder()
@@ -131,7 +135,6 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
         # Add auto complete to file name edit:
         completer = QtWidgets.QCompleter()
-        #model = QtWidgets.QDirModel(completer)
         model = QtWidgets.QFileSystemModel(completer)
         model.setRootPath(os.path.expanduser("~"))
         model.setFilter(QtCore.QDir.Dirs |
@@ -172,6 +175,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                                self.ui.password, self.ui.input_db_path)
 
         for signal in (self.ui.hostname.textChanged,
+                       self.ui.radio_sqlite.toggled,
+                       self.ui.radio_mysql.toggled,
                        self.ui.user.textChanged,
                        self.ui.port.valueChanged,
                        self.ui.password.textChanged,
@@ -183,85 +188,108 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.ui.connection_name.textChanged.connect(self.change_name)
         self.ui.input_db_path.textChanged.connect(self.check_path)
         self.ui.input_db_path.textEdited.connect(self.edit_path)
-        #try:
-            #self.resize(
-                #options.settings.value("connectionconnection_size"))
-        #except TypeError:
-            #pass
+        try:
+            self.resize(
+                options.settings.value("connectionconnection_size"))
+        except TypeError:
+            pass
 
     def add_new_placeholder(self):
         name = "New connection..."
-        d = dict(type=SQL_SQLITE, host="127.0.0.1", port=3306,
-                 user="mysql", password="mysql", path="",
-                 name="")
+        connection = SQLiteConnection("", "")
         item = QtWidgets.QListWidgetItem(name)
-        item.setData(QtCore.Qt.UserRole, d)
+        item.setData(QtCore.Qt.UserRole, connection)
         self.ui.list_config.insertItem(0, item)
 
     def get_gui_content(self):
+        name = utf8(self.ui.connection_name.text())
+        db_type = (SQL_MYSQL if self.ui.radio_mysql.isChecked() else
+                   SQL_SQLITE)
+
         d = dict()
-        d["name"] = utf8(self.ui.connection_name.text())
         d["host"] = utf8(self.ui.hostname.text())
         d["port"] = int(self.ui.port.text())
         d["user"] = utf8(self.ui.user.text())
         d["password"] = utf8(self.ui.password.text())
-        d["type"] = (SQL_MYSQL if self.ui.radio_mysql.isChecked() else
-                     SQL_SQLITE)
-        if d["type"] == SQL_MYSQL:
-            d["path"] = ""
-        else:
-            d["path"] = os.path.abspath(utf8(self.ui.input_db_path.text()))
-        return d
+        d["path"] = os.path.abspath(utf8(self.ui.input_db_path.text()))
+
+        return get_connection(name, db_type, **d)
 
     def add_new_connection(self):
-        d = self.get_gui_content()
-        self.add_connection(d)
-        self.select_item(d["name"])
+        connection = self.get_gui_content()
+        self.add_connection(connection)
+        self.select_item(connection.name)
 
     def is_new_connection(self):
         return (self.ui.list_config.currentRow() ==
                 self.ui.list_config.count() - 1)
 
     def add_connection(self, conf):
-        name = utf8(conf["name"])
+        name = utf8(conf.name)
         item = QtWidgets.QListWidgetItem(name)
         item.setData(QtCore.Qt.UserRole, conf)
         item.setData(QtCore.Qt.UserRole + 1, conf)
         self.ui.list_config.insertItem(
             self.ui.list_config.count() - 1, item)
 
-    def update_connection(self, d):
-        self.ui.list_config.currentItem().setData(QtCore.Qt.UserRole, d)
-
     def remove_connection(self):
-        name = utf8(self.ui.list_config.currentItem().text())
+        item = self.ui.list_config.currentItem()
+        connection = item.data(QtCore.Qt.UserRole)
+        name = utf8(item.text())
         confirm_remove = False
-        if options.cfg.server_configuration[name]["type"] == SQL_MYSQL:
+
+        # get confirmation for removal from user, if necessary:
+        if connection.db_type() == SQL_MYSQL:
             confirm_remove = True
-        else:
-            db_paths = self.files_from_connection(name)
             resources = options.get_available_resources(name)
-            size = sum([os.path.getsize(x) for x in db_paths])
-            kwargs = dict(name=name, size=format_file_size(size),
-                        list="<br>".join(list(resources.keys())))
-            if len(db_paths) > 1:
-                kwargs.update(dict(are="are", number=len(db_paths),
-                                    corpora="corpora"))
+            number_of_resources = len(resources)
+            if number_of_resources:
+                kwargs = dict(name=name,
+                              list="<br>".join(list(resources.keys())),
+                              number=number_of_resources)
+                if number_of_resources > 1:
+                    kwargs.update(dict(are="are", corpora="corpora"))
+                else:
+                    kwargs.update(dict(are="is", corpora="corpus"))
+                response = QtWidgets.QMessageBox.warning(
+                    self,
+                    "Completely remove connection – Coquery",
+                    msg_mysql_remove.strip().format(**kwargs),
+                    QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.Yes)
+                confirm_remove = response == QtWidgets.QMessageBox.Yes
+
+        elif connection.db_type() == SQL_SQLITE:
+            db_paths = self.files_from_connection(connection)
+            resources = options.get_available_resources(name)
+            if not db_paths:
+                confirm_remove = True
             else:
-                kwargs.update(dict(are="is", number="one",
-                                    corpora="corpus"))
-            s = msg_completely_remove.format(**kwargs)
-            response = QtWidgets.QMessageBox.warning(self,
-                        "Completely remove connection – Coquery",
-                        s,
-                        QtWidgets.QMessageBox.No,
-                        QtWidgets.QMessageBox.Yes)
-            confirm_remove = response == QtWidgets.QMessageBox.Yes
+                size = sum([os.path.getsize(x) for x in db_paths])
+                kwargs = dict(name=name, size=format_file_size(size),
+                              list="<br>".join(list(resources.keys())))
+                if len(db_paths) > 1:
+                    kwargs.update(dict(are="are", number=len(db_paths),
+                                       corpora="corpora"))
+                else:
+                    kwargs.update(dict(are="is", number="one",
+                                       corpora="corpus"))
+                s = msg_completely_remove.format(**kwargs)
+                response = QtWidgets.QMessageBox.warning(
+                    self,
+                    "Completely remove connection – Coquery",
+                    s,
+                    QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.Yes)
+                confirm_remove = response == QtWidgets.QMessageBox.Yes
+
+        # removal is either confirmed or no confirmation is necessary,
+        # proceed:
         if confirm_remove:
-            self._removed.add(name)
-            for old_name in list(self._renamed.keys()):
-                if self._renamed[old_name] == name:
-                    self._renamed.pop(old_name)
+            self._removed.add(connection)
+            for renamed_connection in self._renamed:
+                if self._renamed[renamed_connection] == name:
+                    self._renamed.pop(renamed_connection)
             current_row = self.ui.list_config.currentRow()
             self.ui.list_config.takeItem(current_row)
             if current_row == self.ui.list_config.count() - 1:
@@ -270,7 +298,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
     def select_item(self, name):
         for i in range(self.ui.list_config.count()):
             item = self.ui.list_config.item(i)
-            if item.data(QtCore.Qt.UserRole)["name"] == name:
+            if item.data(QtCore.Qt.UserRole).name == name:
                 self.ui.list_config.setCurrentItem(item)
                 return item
         self.ui.list_config.setCurrentItem(None)
@@ -286,6 +314,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         data = item.data(QtCore.Qt.UserRole)
         self.set_connection(data)
         self._path_edited = False
+        self.check_connection()
 
     def block_input_signals(self):
         for widget in self._input_widgets:
@@ -298,7 +327,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
     def set_connection(self, d):
         self.block_input_signals()
 
-        name = d["name"]
+        name = d.name
         self.ui.connection_name.setText(name)
 
         is_default = (name == DEFAULT_CONFIGURATION)
@@ -311,23 +340,22 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         self.ui.radio_sqlite.setVisible(is_new)
         self.ui.label_mysql_server.setVisible(is_new)
 
-        if d["type"] == SQL_MYSQL:
+        if isinstance(d, MySQLConnection):
             self.ui.radio_mysql.setChecked(True)
             self.ui.frame_mysql.show()
             self.ui.frame_sqlite.hide()
-
-            if d["host"] == "127.0.0.1":
+            if d.host == "127.0.0.1":
                 self.ui.radio_local.setChecked(True)
                 self.ui.hostname.setDisabled(True)
             else:
                 self.ui.radio_remote.setChecked(True)
-                self.ui.hostname.setText(d["host"])
+                self.ui.hostname.setText(d.host)
                 self.ui.hostname.setDisabled(False)
 
-            self.ui.user.setText(d["user"])
-            self.ui.password.setText(d["password"])
-            self.ui.port.setValue(int(d["port"]))
-        elif d["type"] == SQL_SQLITE:
+            self.ui.user.setText(d.user)
+            self.ui.password.setText(d.password)
+            self.ui.port.setValue(int(d.port))
+        elif isinstance(d, SQLiteConnection):
             self.ui.radio_sqlite.setChecked(True)
             self.ui.frame_sqlite.show()
             self.ui.frame_mysql.hide()
@@ -335,7 +363,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         if is_new:
             path = ""
         elif not is_default:
-            path = d.get("path", "")
+            path = getattr(d, "path", "")
         else:
             path = os.path.join(
                 options.cfg.connections_path, name, "databases")
@@ -372,15 +400,22 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             S = ("The Python package 'pymysql' is not installed on this "
                  "system. MySQL connections are not available.")
             self.noConnection.emit(Exception(S))
+
+            self.ui.group_credentials.setDisabled(True)
+            self.ui.group_server.setDisabled(True)
+
             return
 
         if self.ui.radio_local.isChecked:
             hostname = "127.0.0.1"
         else:
             hostname = utf8(self.ui.hostname.text())
+
         if check_valid_host(hostname):
-            self.probe_thread = CoqThread(lambda: self.probe_host(hostname),
-                                          self)
+            self.probe_thread = CoqThread(
+                lambda: self.probe_host(hostname), self)
+            self.probe_thread.taskException.connect(self.probe_exception)
+
             self.ui.button_status.setStyleSheet(
                 'QPushButton {background-color: grey; color: grey;}')
             self.timer = QtCore.QTimer()
@@ -389,14 +424,17 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             self.timer.start(1000)
             self.probe_thread.start()
         else:
-            self.noConnection.emit(Exception("Invalid hostname or invalid IP address"))
+            self.noConnection.emit(Exception(msg_invalid_ip))
+
+    def probe_exception(self):
+        print(self.exc_info, self.exception)
 
     def toggle_engine(self):
         """
         Change the current database engine type.
         """
         d = self.ui.list_config.currentItem().data(QtCore.Qt.UserRole)
-        name = d["name"]
+        name = d.name
 
         # the default connection cannot be changed:
         if name == DEFAULT_CONFIGURATION:
@@ -462,8 +500,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 self.ui.input_db_path.setText(default_path)
         else:
             item = self.ui.list_config.currentItem()
-            old_name = utf8(item.data(QtCore.Qt.UserRole + 1)["name"])
-            self._renamed[old_name] = new_name
+            connection = item.data(QtCore.Qt.UserRole + 1)
+            self._renamed[connection] = new_name
             self.ui.list_config.currentItem().setText(new_name)
             ok_button.setEnabled(True)
             self.ui.button_add.setDisabled(True)
@@ -511,7 +549,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 self.timeout_remain = self.timeout_remain - 1
                 s = "Testing connection (timeout in {} seconds)...".format(
                     self.timeout_remain)
-                self.ui.label_connection.setText(s)
+                self.ui.text_status.setText(s)
         except AttributeError:
             pass
 
@@ -521,12 +559,13 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         else:
             db_type = SQL_SQLITE
 
-        ok, exc = sqlhelper.test_configuration(
-                    (hostname,
-                    self.ui.port.value(),
-                    db_type,
-                    str(self.ui.user.text()),
-                    str(self.ui.password.text())))
+        kwargs = dict(host=hostname,
+                      port=int(self.ui.port.value()),
+                      user=utf8(self.ui.user.text()),
+                      password=utf8(self.ui.password.text()),
+                      path=utf8(self.ui.input_db_path.text()))
+        con = get_connection(None, db_type, **kwargs)
+        ok, exc = con.test()
         if not ok:
             if "access denied" in str(exc.orig).lower():
                 self.accessDenied.emit(exc.orig)
@@ -536,25 +575,29 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             self.connected.emit(exc)
 
     def update_connection(self, state, exc=None):
+        def style_button(color):
+            S = 'QPushButton {{ background-color: {col}; color: {col}; }}'
+            return S.format(col=color)
+
         if state == "noConnection":
             match = re.search(r'\"(.*)\"', str(exc))
             if match:
-                self.ui.label_connection.setText(match.group(1))
+                self.ui.text_status.setText(match.group(1))
             else:
-                self.ui.label_connection.setText(str(exc))
-            self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
+                self.ui.text_status.setText(str(exc))
+            self.ui.button_status.setStyleSheet(style_button("yellow"))
             self.ui.ok_button.setDisabled(True)
         elif state == "accessDenied":
-            self.ui.label_connection.setText("A MySQL server was found, but access was denied. Check the user name and password, or create a new MySQL user.")
-            self.ui.button_status.setStyleSheet('QPushButton {background-color: yellow; color: yellow;}')
+            self.ui.text_status.setText(msg_mysql_access_denied.strip())
+            self.ui.button_status.setStyleSheet(style_button("yellow"))
             self.ui.ok_button.setDisabled(True)
         elif state == "configurationError":
-            self.ui.label_connection.setText("The current configuration does not appear to be valid. Please check the settings of the dialog.")
-            self.ui.button_status.setStyleSheet('QPushButton {background-color: red; color: red;}')
+            self.ui.text_status.setText(msg_mysql_invalid.strip())
+            self.ui.button_status.setStyleSheet(style_button("red"))
             self.ui.ok_button.setDisabled(True)
         elif state == "connected":
-            self.ui.button_status.setStyleSheet('QPushButton {background-color: green; color: green;}')
-            self.ui.label_connection.setText("Coquery is successfully connected to the MySQL server.")
+            self.ui.text_status.setText(msg_mysql_success.strip())
+            self.ui.button_status.setStyleSheet(style_button("green"))
         self.state = state
         try:
             self.timer.stop()
@@ -575,8 +618,8 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             old_configs = {}
             try:
                 # rename the connections:
-                for tup in self._renamed.items():
-                    self.rename_connection(*tup)
+                for connection, new_name in self._renamed.items():
+                    connection.rename(new_name)
 
                 # move files
                 for i in range(self.ui.list_config.count() - 1):
@@ -589,21 +632,20 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                 for name in new_configs:
                     new = new_configs[name]
                     old = old_configs.get(name, None)
-                    if (new["type"] == SQL_SQLITE and
+                    if (isinstance(new, SQLiteConnection) and
                             old and
-                            new["path"] != old["path"]):
+                            new.path != old.path):
                         try:
                             self.move_connection(
-                                name, old["path"], data["path"])
-
+                                name, old.path, new.path)
                         except Exception as e:
                             errorbox.ErrorBox.show(sys.exc_info())
                             data = old
                     d[name] = new
 
                 # *really* remove the files that are slated for removal:
-                for name in self._removed:
-                    self.wipe_connection(name)
+                for connection in self._removed:
+                    self.wipe_connection(connection)
 
             except Exception as e:
                 print(e)
@@ -612,25 +654,30 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         else:
             return None
 
-    def files_from_connection(self, name):
-        resources = options.get_available_resources(name)
-        from_path = options.cfg.server_configuration[name]["path"]
-        db_paths = [os.path.join(from_path,
-                                 "{}.db".format(resources[x][0].db_name))
-                    for x in resources]
+    def files_from_connection(self, connection):
+        resources = connection.resources()
+        try:
+            from_path = connection.path
+        except AttributeError:
+            db_paths = []
+        else:
+            db_paths = [os.path.join(from_path,
+                                     "{}.db".format(resources[x][0].db_name))
+                        for x in resources]
         return db_paths
 
     @staticmethod
-    def choose(connection_name, connection_dict, parent=None):
+    def choose(connection_name, connections, parent=None):
+        result = None
         try:
             dialog = ConnectionConfiguration(parent=parent)
-            for config in connection_dict:
-                dialog.add_connection(connection_dict[config])
+            for connection in connections:
+                dialog.add_connection(connections[connection])
             dialog.select_item(connection_name)
             dialog.show()
             result = dialog.exec_()
         except Exception as e:
-            result = None
+            print(e)
             raise e
         finally:
             return result
@@ -641,38 +688,39 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         password = str(self.ui.password.text())
         create_data = createuser.CreateUser.get(name, password, self)
 
-        hostname = utf8(self.ui.hostname.text())
-
         if create_data:
             root_name, root_password, name, password = create_data
-            try:
-                engine = sqlalchemy.create_engine(sqlhelper.sql_url((
-                    hostname,
-                    self.ui.port.value(),
-                    SQL_MYSQL,
-                    root_name,
-                    root_password)))
-            except sqlalchemy.exc.SQLAlchemyError as e:
-                QtWidgets.QMessageBox.critical(self, "Access as root failed", "<p>A root access to the MySQL server could not be established.</p><p>Please check the MySQL root name and the MySQL root password, and try again to create a user.")
-                return
-            S = """
-            CREATE USER '{user}'@'{hostname}' IDENTIFIED BY '{password}';
-            GRANT ALL PRIVILEGES ON * . * TO '{user}'@'{hostname}';
-            FLUSH PRIVILEGES;""".format(
-                user=name, password=password, hostname=hostname)
 
-            with engine.connect() as connection:
-                try:
-                    connection.execute(S)
-                except sqlalchemy.exc.SQLAlchemyError:
-                    QtWidgets.QMessageBox.critical(self, "Error creating user", "Apologies – the user named '{}' could not be created on the MySQL server.".format(name))
-                    return
-                except Exception as e:
-                    print(e)
-                    raise e
-                else:
-                    QtWidgets.QMessageBox.information(self, "User created", "The user named '{}' has successfully been created on the MySQL server.".format(name))
-            engine.dispose()
+            if self.ui.radio_local.isChecked():
+                host = "127.0.0.1"
+            else:
+                host = utf8(self.ui.hostname.text())
+            port = int(self.ui.port.value())
+            con = MySQLConnection(name="",
+                                  host=host, port=port,
+                                  user=root_name, password=root_password)
+            try:
+                engine = con.get_engine()
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(
+                    self, "Access as root failed", msg_sql_root_fail)
+                return
+            finally:
+                engine.dispose()
+
+            try:
+                con.create_user(name, password)
+            except Exception as e:
+                print(e)
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "User not created", msg_sql_new_user_fail.format(name))
+                return
+            else:
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "User created", msg_sql_new_user_success.format(name))
+
             self.ui.user.setText(name)
             self.ui.password.setText(password)
             self.check_connection()
@@ -695,18 +743,9 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             self.update_connection(self.get_gui_content())
             self.unblock_input_signals()
 
-    def rename_connection(self, old_name, new_name):
-        old_path = os.path.join(options.cfg.connections_path, old_name)
-        new_path = os.path.join(options.cfg.connections_path, new_name)
-        try:
-            os.rename(old_path, new_path)
-        except Exception as e:
-            errorbox.ErrorBox.show(sys.exc_info(), e)
-        logging.info("Renamed connection '{}' as '{}'".format(
-            old_name, new_name))
-
-    def wipe_connection(self, name):
-        for file_name in self.files_from_connection(name):
+    def wipe_connection(self, connection):
+        name = connection.name
+        for file_name in self.files_from_connection(connection):
             try:
                 os.remove(file_name)
             except Exception as e:
@@ -718,9 +757,10 @@ class ConnectionConfiguration(QtWidgets.QDialog):
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info(), e)
         logging.info("Completely removed connection '{}'".format(name))
+        options.cfg.connections.pop(name)
 
-    def move_connection(self, name, from_path, to_path):
-        db_paths = self.files_from_connection(name)
+    def move_connection(self, connection, from_path, to_path):
+        db_paths = self.files_from_connection(connection)
         # We add a 20 percent safety margin to the calculated disk usage,
         # just to make sure that there will be enough space on the new
         # target:
@@ -730,7 +770,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
 
         if available < used:
             kwargs = dict(
-                name=name,
+                name=connection.name,
                 from_path=from_path,
                 to_path=to_path,
                 available=format_file_size(available),
@@ -763,7 +803,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
             for source_file in db_paths:
                 os.remove(source_file)
         logging.info("Moved databases of '{}' from {} to {}".format(
-            name, from_path, to_path))
+            connection.name, from_path, to_path))
 
     def exception_during_move(self, exception):
         errorbox.ErrorBox.show(self.exc_info, self.exception)

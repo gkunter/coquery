@@ -3,7 +3,7 @@
 """
 coq_install_malti.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2018 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -31,9 +31,9 @@ section_map = {"academic": "Academic",
                 "religion": "Religion",
                 "sport": "Sport"}
 
-re_text = re.compile('\<text id="(.*)">')
-re_p = re.compile('\<p id="(.*)">')
-re_s = re.compile('\<s id="(.*)">')
+re_text = re.compile('<text id="(.*)">')
+re_p = re.compile('<p id="(.*)">')
+re_s = re.compile('<s id="(.*)">')
 
 
 class BuilderClass(BaseCorpusBuilder):
