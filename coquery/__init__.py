@@ -10,6 +10,6 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-__version__ = "0.11.prev"
+__version__ = "0.11.prev2"
 NAME = "Coquery"
-DATE = "2016, 2017"
+DATE = "2016-2021"

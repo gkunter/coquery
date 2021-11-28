@@ -27,6 +27,9 @@
                 analyse a text corpus. The program is available for Windows, Linux,
                 and Mac OS X computers.</p>
                 <h2>News</h2>
+                    <p><b>November 30, 2021</b>: Installer files for second preview of the next version 0.11.0 are available for
+                    <a href="download/coquery-0.11.prev2-setup-win32.exe">Windows</a> and
+                    <a href="download/coquery-0.11.prev2-macos-sierra.dmg">Mac OS</a>.</p>
                     <p><b>October 31, 2017</b>: Installer files for a preview
                     of the next version 0.11.0 are available for
                     <a href="download/coquery-0.11.prev-setup-win32.exe">Windows</a> and

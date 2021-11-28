@@ -6,12 +6,12 @@
 ; Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 
-# define coq_version "0.11.prev"
+# define coq_version "0.11.prev2"
 # define coq_icon "icons\artwork\logo.ico"
 
 AppId={{42204621-F37F-40C3-96E2-886FFF94D497}
 AppName=Coquery
-AppCopyright=Copyright (C) 2016, 2017 Gero Kunter
+AppCopyright=Copyright (C) 2016-2021 Gero Kunter
 AppVersion={#coq_version}
 AppVerName=Coquery {#coq_version}
 AppPublisher=Coquery maintainers
