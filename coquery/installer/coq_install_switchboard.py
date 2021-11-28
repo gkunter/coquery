@@ -17,9 +17,11 @@ import pandas as pd
 import numpy as np
 import logging
 import re
+from io import BytesIO
+
 
 from coquery import options
-from coquery.corpusbuilder import BaseCorpusBuilder, IO_Stream
+from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.unicode import utf8
 from coquery.bibliography import Book, PersonList, Person
 from coquery.tables import Column, Identifier, Link
@@ -284,8 +286,8 @@ class BuilderClass(BaseCorpusBuilder):
             text = [x.replace("\", ", "\",").replace(", \"", ",\"")
                     for x in input_file.readlines()]
 
-        df = pd.read_csv(IO_Stream(bytearray("\n".join(text),
-                                             encoding="utf-8")),
+        stream = BytesIO(bytearray("\n".join(text), encoding="utf-8"))
+        df = pd.read_csv(stream,
                          sep=str(","),
                          names=[cls.source_topic,
                                 "ivi_no",
