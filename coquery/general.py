@@ -2,7 +2,7 @@
 """
 general.py is part of Coquery.
 
-Copyright (c) 2016-2020 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -99,11 +99,10 @@ class Collapser(object):
         value is identical to the input value.
         """
         if s in {"<b>", "<u>", "<s>", "<em>"} or s.startswith("<span"):
-            return "{}{}".format(cls.whitespace, s)
+            return f"{cls.whitespace}{s}"
         elif s in {"</b>", "</u>", "</s>", "</em>"} or s.startswith("</span"):
-            return "{}{}".format(s, cls.whitespace)
-        else:
-            return s
+            return f"{s}{cls.whitespace}"
+        return s
 
     @classmethod
     def _collapse_list(cls, word_list):
@@ -351,8 +350,7 @@ def get_home_dir(create=True):
     elif sys.platform == "darwin":
         basepath = os.path.expanduser("~/Library/Application Support")
     else:
-        raise RuntimeError("Unsupported operating system: {}".format(
-            sys.platform))
+        raise RuntimeError(f"Unsupported operating system: {sys.platform}")
 
     coquery_home = os.path.join(basepath, "Coquery")
     connections_path = os.path.join(coquery_home, "connections")
@@ -379,6 +377,12 @@ class CoqObject(object):
         lst = [self.__class__.__name__]
         dir_super = dir(super(CoqObject, self))
         for x in sorted([x for x in dir(self) if x not in dir_super]):
+            _session_removed = False
+            if x == "kwargs":
+                if "session" in getattr(self, "kwargs"):
+                    session = getattr(self, "kwargs")["session"]
+                    _session_removed = True
+                    getattr(self, "kwargs").pop("session")
             if (not x.startswith("_") and
                     not hasattr(getattr(self, x), "__call__")):
                 attr = getattr(self, x)
@@ -392,11 +396,14 @@ class CoqObject(object):
                     for key in sorted(attr.keys()):
                         val = attr[key]
                         if isinstance(val, CoqObject):
-                            lst.append("{}{}".format(x, val.get_hash()))
+                            lst.append(f"{x}{val.get_hash()}")
                         else:
-                            lst.append("{}{}".format(x, str(val)))
+                            lst.append(f"{x}{str(val)}")
                 else:
                     lst.append(str(attr))
+            if _session_removed:
+                getattr(self, "kwargs")["session"] = session
+
         return hashlib.md5(u"".join(lst).encode()).hexdigest()
 
 
