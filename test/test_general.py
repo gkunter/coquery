@@ -14,8 +14,7 @@ import os
 import numpy as np
 
 from coquery.general import (
-    check_fs_case_sensitive, has_module, recycle,
-    pretty, collapse_words, EnglishCollapser)
+    check_fs_case_sensitive, has_module, pretty, collapse_words)
 from test.testcase import CoqTestCase, run_tests
 
 
@@ -497,8 +496,6 @@ class TestEnglishCollapseWords(CoqTestCase):
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
-
-
     def test_double_ascii_quoting_1(self):
         """
         Use double ASCII quoting.
@@ -558,7 +555,6 @@ class TestEnglishCollapseWords(CoqTestCase):
 class TestFailing(CoqTestCase):
 
     pass
-
 
 
 provided_tests = [
