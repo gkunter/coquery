@@ -2,7 +2,7 @@
 """
 testcase.py is part of Coquery.
 
-Copyright (c) 2018-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
 import pandas as pd
+import numpy as np
 
 
 class CoqTestCase(unittest.TestCase):
@@ -38,7 +39,7 @@ class CoqTestCase(unittest.TestCase):
 
         map_dtypes = ((pd.Series, d_s1, d_s2),
                       (pd.Index, d_i1, d_i2),
-                      (pd.np.ndarray, d_np1, d_np2),
+                      (np.ndarray, d_np1, d_np2),
                       (pd.DataFrame, d_df1, d_df2))
 
         for key, val in d1.items():
@@ -53,7 +54,7 @@ class CoqTestCase(unittest.TestCase):
                     dct2[key] = D2.pop(key)
                     break
 
-        super(CoqTestCase, self).assertDictEqual(D1, D2)
+        super().assertDictEqual(D1, D2)
 
         try:
             self.assertEqual(sorted(d_df1.keys()), sorted(d_df2.keys()))
@@ -71,10 +72,10 @@ class CoqTestCase(unittest.TestCase):
                 pd.testing.assert_frame_equal(d_df1[key], d_df2[key])
 
             for key in d_np1.keys():
-                pd.np.testing.assert_array_almost_equal(d_np1[key], d_np2[key])
+                np.testing.assert_array_almost_equal(d_np1[key], d_np2[key])
         except AssertionError:
-            msg = "Dictionaries are different\n\nLeft:  {d1}\nRight: {d2}"
-            raise AssertionError(msg.format(d1=d1, d2=d2))
+            msg = f"Dictionaries are different\n\nLeft:  {d1}\nRight: {d2}"
+            raise AssertionError(msg)
 
 
 def run_tests(test_list):
