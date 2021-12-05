@@ -11,6 +11,12 @@ coquery$ python -m test.test_colorizers
 from __future__ import unicode_literals
 from __future__ import division
 
+
+import matplotlib as mpl
+
+mpl.use("Qt5Agg")
+mpl.rcParams["backend"] = "Qt5Agg"
+
 import pandas as pd
 import seaborn as sns
 
@@ -45,7 +51,7 @@ class TestColorizer(CoqTestCase):
         self.assertListEqual(pal, bw_pal)
 
     def test_get_palette_bw_rev(self):
-        colorizer = Colorizer("{}_r".format(PALETTE_BW), 5)
+        colorizer = Colorizer(f"{PALETTE_BW}_r", 5)
         pal = colorizer.get_palette()
         bw_pal = [(0, 0, 0),
                   (1, 1, 1),
@@ -55,7 +61,7 @@ class TestColorizer(CoqTestCase):
         self.assertListEqual(pal, bw_pal)
 
     def test_get_palette_single(self):
-        colorizer = Colorizer("{}_#ff0000".format(COQ_SINGLE), 5)
+        colorizer = Colorizer(f"{COQ_SINGLE}_#ff0000", 5)
         pal = colorizer.get_palette()
         single_pal = [(1, 0, 0)] * 5
         self.assertListEqual(pal, single_pal)
