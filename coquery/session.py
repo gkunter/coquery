@@ -210,7 +210,6 @@ class Session(object):
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
 
-        dtype_list = []
         self.queries = {}
         _queried = []
 
@@ -249,40 +248,6 @@ class Session(object):
                 self.sql_queries.append(current_query.sql_list)
                 raw_length = len(df)
 
-                # apply clumsy hack that tries to make sure that the dtypes of
-                # data frames containing NaNs or empty strings does not change
-                # when appending the new data frame to the previous.
-
-                # The same hack is also needed in TokenQuery.run().
-                if (len(self.data_table) > 0 and
-                        df.dtypes.tolist() != dtype_list.tolist()):
-                    for x in df.columns:
-                        # the idea is that pandas/numpy use the 'object'
-                        # dtype as a fall-back option for strange results,
-                        # including those with NaNs.
-                        # One problem is that integer columns become floats
-                        # in the process. This is so because Pandas does not
-                        # have an integer NA type:
-                        # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#support-for-integer-na
-
-                        try:
-                            df.dtypes[x] != dtype_list[x]
-                        except (IndexError, KeyError):
-                            continue
-
-                        if df.dtypes[x] != dtype_list[x]:
-                            if df.dtypes[x] == object:
-                                if not df[x].any():
-                                    df[x] = [np.nan] * len(df)
-                                    dtype_list[x] = self.data_table[x].dtype
-                            elif dtype_list[x] == object:
-                                if not self.data_table[x].any():
-                                    dummy = [np.nan] * len(self.data_table)
-                                    self.data_table[x] = dummy
-                                    dtype_list[x] = df[x].dtype
-                else:
-                    dtype_list = df.dtypes
-
                 df = current_query.insert_static_data(df)
                 self.to_file = to_file
 
@@ -306,37 +271,7 @@ class Session(object):
         finally:
             db_connection.close()
 
-        if sys.version_info < (3, 0):
-            raise Warning("Python 2.7 is not supported anymore.")
-
         self.finalize_table()
-
-        if not options.cfg.gui:
-            self.aggregate_data()
-            if not options.cfg.output_path:
-                output_file = sys.stdout
-            else:
-                if options.cfg.append:
-                    file_mode = "a"
-                else:
-                    file_mode = "w"
-
-                output_file = codecs.open(
-                    options.cfg.output_path,
-                    file_mode,
-                    encoding=options.cfg.output_encoding)
-
-            columns = [x for x in self.output_object.columns.values
-                       if not x.startswith("coquery_invisible")]
-
-            self.output_object[columns].to_csv(
-                output_file,
-                header=[self.translate_header(x) for x in columns],
-                sep=options.cfg.output_separator,
-                encoding="utf-8",
-                float_format="%.{}f".format(options.cfg.digits),
-                index=False)
-            output_file.flush()
 
     def finalize_table(self):
         """
@@ -349,21 +284,23 @@ class Session(object):
         - Resetting the internal index
         """
 
+        # Set column order
         ordered_columns = self.set_preferred_order(
             list(self.data_table.columns))
         self.data_table = self.data_table[ordered_columns]
 
+        # Handle dtypes and deal with missing values
         for col in self.data_table.columns:
             S = self.data_table[col]
-            if S.dtype == object:
-                S = S.replace({"": pd.NA, None: pd.NA})
-            else:
-                S = S.replace({None: pd.NA})
+            S = S.replace({None: pd.NA, np.NaN: pd.NA})
             dtype = S.dropna().convert_dtypes().dtype
-            if pd.api.types.is_numeric_dtype(dtype):
-                self.data_table[col] = pd.to_numeric(S,
-                                                     errors="coerce",
-                                                     downcast="integer")
+            if pd.api.types.is_integer_dtype(dtype):
+                S = pd.Series(S, dtype=pd.Int64Dtype())
+            elif pd.api.types.is_numeric_dtype(dtype):
+                S = pd.to_numeric(S, errors="coerce", downcast="integer")
+            self.data_table[col] = S
+
+        # Reset row index
         self.data_table = self.data_table.reset_index(drop=True)
 
     def get_manager(self, query_mode):
@@ -526,7 +463,7 @@ class Session(object):
             manager = self.get_manager(options.cfg.MODE)
             # check if there is a parenthesis in the header (there shouldn't
             # ever be one, actually)
-            match = re.search("(.*)\((.*)\)", header)
+            match = re.search(r"(.*)\((.*)\)", header)
             if match:
                 s = match.group(1)
                 Print(s, header)
@@ -539,7 +476,7 @@ class Session(object):
                     Print(10)
                     return header
             else:
-                match = re.search("(func_\w+_\w+)_(\d+)_(\d*)", header)
+                match = re.search(r"(func_\w+_\w+)_(\d+)_(\d*)", header)
                 if match:
                     header = match.group(1)
                     num = match.group(2)
