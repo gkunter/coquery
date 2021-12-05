@@ -4,7 +4,10 @@
 from __future__ import print_function
 
 
-from coquery import tokens
+from coquery.tokens import (
+    COCAToken,
+    TokenParseError,
+    get_quantifiers, preprocess_query, parse_query_string)
 from test.testcase import CoqTestCase, run_tests
 
 
@@ -13,114 +16,119 @@ class TestTokensModuleMethods(CoqTestCase):
         S1 = "this is a query"
         S2 = "this    is a query    "
         L = ["this", "is", "a", "query"]
-        self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L)
-        self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S1, COCAToken), L)
+        self.assertEqual(parse_query_string(S2, COCAToken), L)
 
     def test_parse_query_string2(self):
         S = "/this/ /is/ /a/ /query/"
         L = ["/this/", "/is/", "/a/", "/query/"]
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string3(self):
         S = "/this is a query/"
         L = ["/this is a query/"]
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string4(self):
         S = "[this] [is] [a] [query]"
         L = ["[this]", "[is]", "[a]", "[query]"]
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string5(self):
         S = "[this is a query]"
         L = ["[this is a query]"]
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string6(self):
         S = '"this" "is" "a" "query"'
         L = ['"this"', '"is"', '"a"', '"query"']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string7(self):
         S = '"this is a query"'
         L = ['"this is a query"']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string8(self):
         S = '/this|that/ is a query'
         L = ['/this|that/', 'is', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string9(self):
         S = '[this|that] is a query'
         L = ['[this|that]', 'is', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string10(self):
         S = '"this|that" is a query'
         L = ['"this|that"', 'is', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string11(self):
         S = '#this is a query'
         L = ['#this', 'is', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string12(self):
         S = '~this is a query'
         L = ['~this', 'is', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string_escape1(self):
         S = r'\"this is a query\"'
         L = ['\\"this', 'is', 'a', 'query\\"']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string_escape2(self):
         S1 = r'this \[is] a query'
         L1 = ['this', '\\[is]', 'a', 'query']
         S2 = r'this \[is a query'
         L2 = ['this', '\\[is', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
-        self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
+        self.assertEqual(parse_query_string(S1, COCAToken), L1)
+        self.assertEqual(parse_query_string(S2, COCAToken), L2)
 
     def test_parse_query_string_escape3(self):
         S1 = r'this \/is] a query'
         L1 = ['this', '\\/is]', 'a', 'query']
         S2 = r'this is a que\/ry'
         L2 = ['this', 'is', 'a', 'que\\/ry']
-        self.assertEqual(tokens.parse_query_string(S1, tokens.COCAToken), L1)
-        self.assertEqual(tokens.parse_query_string(S2, tokens.COCAToken), L2)
+        self.assertEqual(parse_query_string(S1, COCAToken), L1)
+        self.assertEqual(parse_query_string(S2, COCAToken), L2)
 
     def test_parse_query_string_escape4(self):
         S = r'this\ is a query'
         L = ['this\\ is', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
+
+    def test_parse_query_string_illegal_escape1(self):
+        S = "\\"
+        with self.assertRaises(TokenParseError):
+            parse_query_string(S, COCAToken)
 
     def test_unicode_1(self):
         B = b"string"
         U = u"string"
         self.assertEqual(
-            type(tokens.parse_query_string(B, tokens.COCAToken)[0]), type(U))
+            type(parse_query_string(B, COCAToken)[0]), type(U))
         B = "string_äöü"
         U = u"string"
         self.assertEqual(
-            type(tokens.parse_query_string(B, tokens.COCAToken)[0]), type(U))
+            type(parse_query_string(B, COCAToken)[0]), type(U))
 
     def test_unicode_2(self):
         S = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
         L = [u'ȧƈƈḗƞŧḗḓ', u'ŧḗẋŧ', u'ƒǿř', u'ŧḗşŧīƞɠ']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_unicode_3(self):
         S = '[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ] ƒǿř ŧḗşŧīƞɠ'
         L = [u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', u'ƒǿř', u'ŧḗşŧīƞɠ']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_unicode_4(self):
         S = u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ] ƒǿř ŧḗşŧīƞɠ'
         L = [u'[ȧƈƈḗƞŧḗḓ|ŧḗẋŧ]', u'ƒǿř', u'ŧḗşŧīƞɠ']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string_bad1(self):
         L = [
@@ -143,88 +151,82 @@ class TestTokensModuleMethods(CoqTestCase):
             ]
 
         for x in L:
-            try:
-                self.assertRaises(
-                    tokens.TokenParseError,
-                    tokens.parse_query_string,
-                    x, tokens.COCAToken)
-            except AssertionError as e:
-                print("Exception not raised: '{}'".format(x))
-                raise e
+            with self.assertRaises(TokenParseError):
+                parse_query_string(x, COCAToken)
 
     def test_word_internal_slashes(self):
         for S in ["th/is/", "t/hi/s", "th/is/"]:
             self.assertEqual(
-                tokens.parse_query_string(S, tokens.COCAToken),
+                parse_query_string(S, COCAToken),
                 [S])
 
     def test_word_internal_brackets(self):
         for S in ["th[is]", "t[hi]s", "th[is]"]:
             self.assertEqual(
-                tokens.parse_query_string(S, tokens.COCAToken),
+                parse_query_string(S, COCAToken),
                 [S])
 
     def test_word_internal_quotes(self):
         for S in ['th"is"', 't"hi"s', 'th"is"']:
             self.assertEqual(
-                tokens.parse_query_string(S, tokens.COCAToken),
+                parse_query_string(S, COCAToken),
                 [S])
 
     def test_parse_query_string_quantifiers(self):
         S = '[this]{1,3} *.[v*]{2} a query'
         L = ['[this]{1,3}', '*.[v*]{2}', 'a', 'query']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string_transcript_pos(self):
         S = '/b*n*/.[n*]'
         L = ['/b*n*/.[n*]']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string_lemma_pos(self):
         S = '[b*n*].[n*]'
         L = ['[b*n*].[n*]']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string_gloss_pos(self):
         S = '"b*n*".[n*]'
         L = ['"b*n*".[n*]']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_query_string_word_pos(self):
         S = 'b*n*.[n*]'
         L = ['b*n*.[n*]']
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_parse_lemmatized_transcript(self):
         S = "#/'bɐlɐl/"
         L = [u"#/'bɐlɐl/"]
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_potentially_malformed_query(self):
         S = "ABC/"
         L = ["ABC/"]
-        self.assertEqual(tokens.parse_query_string(S, tokens.COCAToken), L)
+        self.assertEqual(parse_query_string(S, COCAToken), L)
 
     def test_preprocess_string_literal(self):
         S = r"\? \* \_ \%"
         L = [[(1, "\\?"), (2, "\\*"), (3, "\\_"), (4, "\\%")]]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S, literal=True), L)
+            self.assertItemsEqual(preprocess_query(S, literal=True), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S, literal=True), L)
+            self.assertCountEqual(preprocess_query(S, literal=True), L)
 
     def test_preprocess_string_not_literal(self):
         S = r"\? \* \_ \% ? * _ %"
         L = [[(1, "\\?"), (2, "\\*"), (3, "\\_"), (4, "\\%"),
               (5, "?"), (6, "*"), (7, "_"), (8, "%")]]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
 
 class TestQueryTokenCOCA(CoqTestCase):
-    token_type = tokens.COCAToken
+    token_type = COCAToken
 
     def setUp(self):
         self.token_type.set_pos_check_function(self.pos_check_function)
@@ -1112,6 +1114,29 @@ class TestQueryTokenCOCA(CoqTestCase):
         self.assertEqual(token.id_specifiers, [])
         self.assertEqual(token.word_specifiers, ["##abc"])
 
+    def test_unescaped_hash(self):
+        S = "#"
+        with self.assertRaises(TokenParseError):
+            _ = self.token_type(S)
+
+    def test_single_backslash(self):
+        S = "\\"
+        with self.assertRaises(TokenParseError):
+            _ = self.token_type(S)
+
+    def test_escaped_backslash(self):
+        S = r"\\"
+        token = self.token_type(S)
+        self.assertFalse(token.negated)
+        self.assertFalse(token.lemmatize)
+        self.assertFalse(token.wildcards)
+        self.assertEqual(token.lemma_specifiers, [])
+        self.assertEqual(token.transcript_specifiers, [])
+        self.assertEqual(token.class_specifiers, [])
+        self.assertEqual(token.gloss_specifiers, [])
+        self.assertEqual(token.id_specifiers, [])
+        self.assertEqual(token.word_specifiers, ["\\"])
+
     def test_mix_flag1(self):
         token = self.token_type("~#abc")
         self.assertTrue(token.negated)
@@ -1138,7 +1163,7 @@ class TestQueryTokenCOCA(CoqTestCase):
 
 
 class TestIDQuery(CoqTestCase):
-    token_type = tokens.COCAToken
+    token_type = COCAToken
 
     def test_id_query_1(self):
         token = self.token_type("=123")
@@ -1165,7 +1190,7 @@ class TestIDQuery(CoqTestCase):
         self.assertEqual(token.word_specifiers, [])
 
     def test_escape_1(self):
-        token = self.token_type("\=123")
+        token = self.token_type(r"\=123")
         self.assertFalse(token.negated)
         self.assertFalse(token.lemmatize)
         self.assertFalse(token.wildcards)
@@ -1179,28 +1204,28 @@ class TestIDQuery(CoqTestCase):
 
 class TestQuantification(CoqTestCase):
     def test_no_quantifiers(self):
-        self.assertEqual(tokens.get_quantifiers("xxx"), ("xxx", 1, 1))
+        self.assertEqual(get_quantifiers("xxx"), ("xxx", 1, 1))
 
     def test_quantifiers(self):
-        self.assertEqual(tokens.get_quantifiers("xxx{0,1}"), ("xxx", 0, 1))
+        self.assertEqual(get_quantifiers("xxx{0,1}"), ("xxx", 0, 1))
 
     def test_single_zero_quantifier(self):
-        self.assertEqual(tokens.get_quantifiers("xxx{0}"), ("xxx", 0, 0))
+        self.assertEqual(get_quantifiers("xxx{0}"), ("xxx", 0, 0))
 
     def test_single_nonzero_quantifier(self):
-        self.assertEqual(tokens.get_quantifiers("xxx{1}"), ("xxx", 1, 1))
+        self.assertEqual(get_quantifiers("xxx{1}"), ("xxx", 1, 1))
 
     def test_broken_quantifiers(self):
-        self.assertEqual(tokens.get_quantifiers("xxx0,1}"), ("xxx0,1}", 1, 1))
+        self.assertEqual(get_quantifiers("xxx0,1}"), ("xxx0,1}", 1, 1))
 
         # Actually, none of the remaining quantifiers will occur if the query
         # string is first processed by parse_query_string(), which will raise
         # an exception for them:
-        self.assertEqual(tokens.get_quantifiers("xxx{0,1"), ("xxx{0,1", 1, 1))
-        self.assertEqual(tokens.get_quantifiers("xxx{a,1}"), ("xxx{a,1}", 1, 1))
-        self.assertEqual(tokens.get_quantifiers("xxx{0,b}"), ("xxx{0,b}", 1, 1))
-        self.assertEqual(tokens.get_quantifiers("xxx{a,b}"), ("xxx{a,b}", 1, 1))
-        self.assertEqual(tokens.get_quantifiers("xxx{a}"), ("xxx{a}", 1, 1))
+        self.assertEqual(get_quantifiers("xxx{0,1"), ("xxx{0,1", 1, 1))
+        self.assertEqual(get_quantifiers("xxx{a,1}"), ("xxx{a,1}", 1, 1))
+        self.assertEqual(get_quantifiers("xxx{0,b}"), ("xxx{0,b}", 1, 1))
+        self.assertEqual(get_quantifiers("xxx{a,b}"), ("xxx{a,b}", 1, 1))
+        self.assertEqual(get_quantifiers("xxx{a}"), ("xxx{a}", 1, 1))
 
     def test_preprocess_string0(self):
         S = "a{0,1} fish"
@@ -1208,9 +1233,9 @@ class TestQuantification(CoqTestCase):
             [(1, 'a'),  (2, 'fish')],
             [(1, None), (2, 'fish')]]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string1a(self):
         S = "one more{0,1} thing"
@@ -1218,9 +1243,9 @@ class TestQuantification(CoqTestCase):
             [(1, 'one'), (2, None),   (3, 'thing')],
             [(1, 'one'), (2, 'more'), (3, 'thing')]]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string1b(self):
         S = "one little{0,2} thing"
@@ -1229,9 +1254,9 @@ class TestQuantification(CoqTestCase):
             [(1, 'one'), (2, 'little'), (2, None),     (4, 'thing')],
             [(1, 'one'), (2, 'little'), (2, 'little'), (4, 'thing')]]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string1(self):
         S = "[dt]{0,1} more [j*] [n*]"
@@ -1241,9 +1266,9 @@ class TestQuantification(CoqTestCase):
             [(1, None),   (2, 'more'), (3, '[j*]'), (4, '[n*]')],
             ]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string2(self):
         S = "[dt]{0,1} [jjr] [n*]"
@@ -1253,9 +1278,9 @@ class TestQuantification(CoqTestCase):
             [(1, None),   (2, '[jjr]'), (3, '[n*]')],
             ]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string3(self):
         S = "[dt]{0,1} more [j*]{1,2} [n*]"
@@ -1266,28 +1291,48 @@ class TestQuantification(CoqTestCase):
             [(1, None),   (2, 'more'), (3, '[j*]'), (3, '[j*]'), (5, '[n*]')],
             ]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string4(self):
         S = "more [j*]{0,4} [n*]{1,2}"
         L = [
-            [(1, 'more'), (2, None),   (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, None)],
-            [(1, 'more'), (2, '[j*]'), (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, None)],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, None),   (2, None),   (6, '[n*]'), (6, None)],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, None),   (6, '[n*]'), (6, None)],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (6, '[n*]'), (6, None)],
-            [(1, 'more'), (2, None),   (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, None),   (2, None),   (2, None),   (6, '[n*]'), (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, None),   (2, None),   (6, '[n*]'), (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, None),   (6, '[n*]'), (6, '[n*]')],
-            [(1, 'more'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (6, '[n*]'), (6, '[n*]')],
+                [(1, 'more'),
+                 (2, None),   (2, None),   (2, None),   (2, None),
+                 (6, '[n*]'), (6, None)],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, None),   (2, None),   (2, None),
+                 (6, '[n*]'), (6, None)],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, '[j*]'), (2, None),   (2, None),
+                 (6, '[n*]'), (6, None)],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, None),
+                 (6, '[n*]'), (6, None)],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'),
+                 (6, '[n*]'), (6, None)],
+                [(1, 'more'),
+                 (2, None),   (2, None),   (2, None),   (2, None),
+                 (6, '[n*]'), (6, '[n*]')],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, None),   (2, None),   (2, None),
+                 (6, '[n*]'), (6, '[n*]')],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, '[j*]'), (2, None),   (2, None),
+                 (6, '[n*]'), (6, '[n*]')],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, None),
+                 (6, '[n*]'), (6, '[n*]')],
+                [(1, 'more'),
+                 (2, '[j*]'), (2, '[j*]'), (2, '[j*]'), (2, '[j*]'),
+                 (6, '[n*]'), (6, '[n*]')],
             ]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string5(self):
         S = "prove that"
@@ -1295,22 +1340,22 @@ class TestQuantification(CoqTestCase):
             [(1, "prove"), (2, "that")]
             ]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
     def test_preprocess_string_NULL_1(self):
         S = "prove _NULL that"
         L = [[(1, "prove"), (2, None), (3, "that")]]
         try:
-            self.assertItemsEqual(tokens.preprocess_query(S), L)
+            self.assertItemsEqual(preprocess_query(S), L)
         except AttributeError:
-            self.assertCountEqual(tokens.preprocess_query(S), L)
+            self.assertCountEqual(preprocess_query(S), L)
 
 
 # An CQL query syntax is not implemented yet, but might be in the future.
 #class TestQueryTokenCQL(unittest.TestCase):
-    #token_type = tokens.CQLToken
+    #token_type = CQLToken
 
     #def runTest(self):
         #super(TestQueryToken, self).runTest()
