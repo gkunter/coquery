@@ -668,7 +668,6 @@ class SQLResource(BaseResource):
         self._word_cache = {}
         self.corpus = corpus
         self.attach_list = []
-        self._context_string_template = self.get_context_string_template()
         self._sentence_feature = (
             getattr(self, "corpus_sentence", None) or
             getattr(self, "corpus_sentence_id", None) or
@@ -1337,7 +1336,9 @@ class SQLResource(BaseResource):
                 table_alias=table_alias, table_id=table_id,
                 parent=parent.upper(), parent_id=parent_id, N=n+1)
 
-            table_str = "INNER JOIN {} ON {}".format(table_str, where_str)
+
+            join_type = getattr(cls, "join_type", "INNER")
+            table_str = f"{join_type} JOIN {table_str} ON {where_str}"
             return [table_str], []
 
         def add_joins(n, parent, tup):
