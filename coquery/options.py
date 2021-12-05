@@ -2,7 +2,7 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -132,140 +132,23 @@ class UnicodeConfigParser(RawConfigParser):
     def write(self, fp, DEFAULTSECT="main"):
         """Fixed for Unicode output"""
         if self._defaults:
-            fp.write("[{}]\n".format(DEFAULTSECT))
+            fp.write(f"[{DEFAULTSECT}]\n")
             for (key, value) in self._defaults.items():
-                fp.write("{} = {}\n".format(
-                    key, utf8(value).replace('\n', '\n\t')))
+                value = utf8(value).replace('\n', '\n\t')
+                fp.write(f"{key} = {value}\n")
             fp.write("\n")
         for section in self._sections:
-            fp.write("[{}]\n".format(section))
+            fp.write(f"[{section}]\n")
             for (key, value) in self._sections[section].items():
                 if key != "__name__":
-                    fp.write("{} = {}\n".format(
-                        key, utf8(value).replace('\n', '\n\t')))
+                    value = utf8(value).replace('\n', '\n\t')
+                    fp.write(f"{key} = {value}\n")
             fp.write("\n")
 
     # This function is needed to override default lower-case conversion
     # of the parameter's names. They will be saved 'as is'.
     def optionxform(self, strOut):
         return strOut
-
-
-# Define a HelpFormatter class that works with Unicode corpus names both in
-# Python 2.7 and Python 3.x:
-if sys.version_info < (3, 0):
-    class CoqHelpFormatter(argparse.HelpFormatter):
-        """
-        A HelpFormatter class that is able to handle Unicode argument options.
-
-        The code for _format_actions_usage() is a copy from
-        python2.7/argparse.py, with the addition of the utf8() conversion in
-        one space.
-        """
-        def _format_actions_usage(self, actions, groups):
-            # find group indices and identify actions in groups
-            group_actions = set()
-            inserts = {}
-            for group in groups:
-                try:
-                    start = actions.index(group._group_actions[0])
-                except ValueError:
-                    continue
-                else:
-                    end = start + len(group._group_actions)
-                    if actions[start:end] == group._group_actions:
-                        for action in group._group_actions:
-                            group_actions.add(action)
-                        if not group.required:
-                            if start in inserts:
-                                inserts[start] += ' ['
-                            else:
-                                inserts[start] = '['
-                            inserts[end] = ']'
-                        else:
-                            if start in inserts:
-                                inserts[start] += ' ('
-                            else:
-                                inserts[start] = '('
-                            inserts[end] = ')'
-                        for i in range(start + 1, end):
-                            inserts[i] = '|'
-
-            # collect all actions format strings
-            parts = []
-            for i, action in enumerate(actions):
-
-                # suppressed arguments are marked with None
-                # remove | separators for suppressed arguments
-                if action.help is argparse.SUPPRESS:
-                    parts.append(None)
-                    if inserts.get(i) == '|':
-                        inserts.pop(i)
-                    elif inserts.get(i + 1) == '|':
-                        inserts.pop(i + 1)
-
-                # produce all arg strings
-                elif not action.option_strings:
-                    part = self._format_args(action, action.dest)
-
-                    # if it's in a group, strip the outer []
-                    if action in group_actions:
-                        if part[0] == '[' and part[-1] == ']':
-                            part = part[1:-1]
-
-                    # add the action string to the list
-                    parts.append(part)
-
-                # produce the first way to invoke the option in brackets
-                else:
-                    option_string = action.option_strings[0]
-
-                    # if the Optional doesn't take a value, format is:
-                    #    -s or --long
-                    if action.nargs == 0:
-                        part = '%s' % option_string
-
-                    # if the Optional takes a value, format is:
-                    #    -s ARGS or --long ARGS
-                    else:
-                        default = action.dest.upper()
-                        args_string = self._format_args(action, default)
-                        part = '%s %s' % (option_string, args_string)
-
-                    # make it look optional if it's not required or in a group
-                    if not action.required and action not in group_actions:
-                        part = '[%s]' % part
-
-                    # add the action string to the list
-                    parts.append(part)
-
-            # insert things at the necessary indices
-            for i in sorted(inserts, reverse=True):
-                parts[i:i] = [inserts[i]]
-
-            # join all the action items with spaces
-            text = u' '.join([item.decode("utf-8") for item in parts
-                              if item is not None])
-
-            # clean up separators for mutually exclusive groups
-            open = r'[\[(]'
-            close = r'[\])]'
-            text = argparse._re.sub(r'(%s) ' % open, r'\1', text)
-            text = argparse._re.sub(r' (%s)' % close, r'\1', text)
-            text = argparse._re.sub(r'%s *%s' % (open, close), r'', text)
-            text = argparse._re.sub(r'\(([^|]*)\)', r'\1', text)
-            text = text.strip()
-
-            # return the text
-            return text
-
-        def _join_parts(self, part_strings):
-            part_strings = [utf8(x) for x in part_strings
-                            if utf8(x) and x is not argparse.SUPPRESS]
-            return "".join(part_strings)
-else:
-    class CoqHelpFormatter(argparse.HelpFormatter):
-        pass
 
 
 class Options(object):
@@ -282,7 +165,7 @@ class Options(object):
         self.parser = argparse.ArgumentParser(
             prog=self.prog_name,
             add_help=False,
-            formatter_class=CoqHelpFormatter)
+            formatter_class=argparse.HelpFormatter)
 
         self.args.config_path = os.path.join(self.args.coquery_home,
                                              self.config_name)
@@ -558,8 +441,8 @@ class Options(object):
             try:
                 config_file.read(self.cfg.config_path)
             except (IOError, TypeError, ParsingError) as e:
-                s = "Configuration file {} could not be read."
-                warnings.warn(s.format(cfg.config_path))
+                s = f"Configuration file {cfg.config_path} could not be read."
+                warnings.warn(s)
                 raise ConfigurationError((str(e).replace("\\n", "\n")
                                                 .replace("\n", "<br>")))
             else:
@@ -609,7 +492,7 @@ class Options(object):
 
         # read reference corpora
         for key, val in config_file.items("reference_corpora"):
-            if re.match("reference\d+$", key):
+            if re.match(r"reference\d+$", key):
                 configuration, corpus = val.split(",")
                 self.args.reference_corpus[configuration] = corpus
 
@@ -768,7 +651,7 @@ class Options(object):
                 "gui", "decimal_digits", d=defaults)
             self.args.float_format = config_file.str(
                 "gui", "float_format",
-                fallback="{{:.{}f}}".format(self.args.digits))
+                fallback=f"{{:.{self.args.digits}f}}")
 
             # read FILTER section
 
@@ -1041,8 +924,8 @@ def save_configuration():
             try:
                 config.read(input_file)
             except (IOError, TypeError):
-                s = "Configuration file {} could not be read."
-                warnings.warn(s.format(cfg.config_path))
+                s = f"Configuration file {cfg.config_path} could not be read."
+                warnings.warn(s)
     if "main" not in config.sections():
         config.add_section("main")
     config.set("main", "default_corpus", cfg.corpus)
@@ -1090,12 +973,10 @@ def save_configuration():
         else:
             required_vars = ["name", "path"]
 
-        config.set("sql", "config_{}_type".format(i), connection.db_type())
+        config.set("sql", f"config_{i}_type", connection.db_type())
 
         for var in required_vars:
-            config.set("sql",
-                       "config_{}_{}".format(i, var),
-                       getattr(connection, var))
+            config.set("sql", f"config_{i}_{var}", getattr(connection, var))
 
     if cfg.selected_features:
         if "output" not in config.sections():
@@ -1108,14 +989,13 @@ def save_configuration():
     if "reference_corpora" not in config.sections():
         config.add_section("reference_corpora")
     for i, item in enumerate(cfg.reference_corpus.items()):
-        config.set("reference_corpora",
-                   "reference{}".format(i), ",".join(item))
+        config.set("reference_corpora", f"reference{i}", ",".join(item))
 
     if "filter" not in config.sections():
         config.add_section("filter")
 
     for i, filt in enumerate(cfg.filter_list):
-        config.set("filter", "filter_{}".format(i), str(filt))
+        config.set("filter", f"filter_{i}", str(filt))
 
     if "functions" not in config.sections():
         config.add_section("functions")
@@ -1124,20 +1004,14 @@ def save_configuration():
         config.add_section("groups")
 
     for i, grp in enumerate(cfg.groups):
-        config.set("groups", "group_{}_name".format(i), grp.name)
-        config.set("groups",
-                   "group_{}_distinct".format(i),
-                   str(grp.show_distinct))
-        config.set("groups", "group_{}_columns".format(i),
-                   ",".join(grp.columns))
+        config.set("groups", f"group_{i}_name", grp.name)
+        config.set("groups", f"group_{i}_distinct", str(grp.show_distinct))
+        config.set("groups", f"group_{i}_columns", ",".join(grp.columns))
         for j, (fnc, columns) in enumerate(grp.functions):
-            config.set("groups", "group_{}_fnc_{}_type".format(i, j),
-                       fnc._name)
-            config.set("groups", "group_{}_fnc_{}_columns".format(i, j),
-                       ",".join(columns))
+            config.set("groups", f"group_{i}_fnc_{j}_type", fnc._name)
+            config.set("groups", f"group_{i}_fnc_{j}_columns"",".join(columns))
         for j, filt in enumerate(grp.filters):
-            config.set("groups", "group_{}_filter_{}".format(i, j),
-                       str(filt))
+            config.set("groups", f"group_{i}_filter_{j}", str(filt))
 
     if "summary" not in config.sections():
         config.add_section("summary")
@@ -1145,22 +1019,18 @@ def save_configuration():
     config.set("summary", "summary_distinct", cfg.show_distinct)
 
     for i, grp in enumerate(cfg.summary_groups):
-        config.set("summary", "summary_{}_name".format(i), grp.name)
-        config.set("summary", "summary_{}_columns".format(i),
-                   ",".join(grp.columns))
+        config.set("summary", f"summary_{i}_name", grp.name)
+        config.set("summary", f"summary_{i}_columns", ",".join(grp.columns))
         for j, (fnc, columns) in enumerate(grp.functions):
-            config.set("summary", "summary_{}_fnc_{}_type".format(i, j),
-                       fnc._name)
-            config.set("summary", "summary_{}_fnc_{}_columns".format(i, j),
-                       ",".join(columns))
+            config.set("summary", f"summary_{i}_fnc_{j}_type", fnc._name)
+            config.set(
+                "summary", f"summary_{i}_fnc_{j}_columns", ",".join(columns))
 
     if cfg.table_links:
         if "links" not in config.sections():
             config.add_section("links")
         for i, link in enumerate(cfg.table_links[connection_name]):
-            config.set("links",
-                       "link{}".format(i+1),
-                       '{},{}'.format(connection_name, link))
+            config.set("links", f"link{i+1}", f"{connection_name},{link}")
 
     if "context" not in config.sections():
         config.add_section("context")
@@ -1176,8 +1046,7 @@ def save_configuration():
         for x in cfg.column_width:
             if (not x.startswith("coquery_invisible") and
                     cfg.column_width[x] and x):
-                settings.setValue("column_width_{}".format(x),
-                                  cfg.column_width[x])
+                settings.setValue(f"column_width_{x}", cfg.column_width[x])
 
         if "gui" not in config.sections():
             config.add_section("gui")
@@ -1400,9 +1269,8 @@ def get_available_resources(configuration):
             find = imp.find_module(corpus_name, [corpora_path])
             module = imp.load_module(corpus_name, *find)
         except Exception as e:
-            s = ("There is an error in corpus module '{}': {}\n"
-                 "The corpus is not available for queries.").format(
-                     corpus_name, str(e))
+            s = (f"There is an error in corpus module '{corpus_name}': {e}\n"
+                 "The corpus is not available for queries.")
             print(s)
             logging.warning(s)
         else:
@@ -1412,8 +1280,9 @@ def get_available_resources(configuration):
                                            module_name)
             except (AttributeError, ImportError) as e:
                 print(e)
-                s = "{} does not appear to be a valid corpus module."
-                warnings.warn(s.format(corpus_name))
+                s = (f"'{corpus_name}' does not appear to be a valid corpus "
+                     "module.")
+                warnings.warn(s)
     return d
 
 
@@ -1466,7 +1335,7 @@ def encode_query_string(query):
         s = s.replace('"', '\\"')
         s = s.replace("%", "%%")
         str_list.append(s)
-    return ",".join(['"{}"'.format(x) for x in str_list])
+    return ",".join([f'"{x}"' for x in str_list])
 
 
 _recent_python = sys.version_info < (2, 7)
@@ -1488,7 +1357,9 @@ use_winsound = has_module("winsound")
 use_squarify = has_module("squarify")
 use_sphfile = has_module("sphfile")
 use_sqlparse = has_module("sqlparse")
-
+use_pymongo = has_module("pymongo")
+use_pyodbc = has_module("pyodbc")
+use_meza = has_module("meza")
 
 missing_modules = []
 for mod in ["sqlalchemy", "pandas", "scipy", "PyQt5", "lxml"]:
