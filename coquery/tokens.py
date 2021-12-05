@@ -3,7 +3,7 @@
 """
 tokens.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import itertools
 import re
+from enum import Enum
 
 from .defines import (
     msg_token_dangling_open, msg_unexpected_quantifier_start,
@@ -262,6 +263,16 @@ class COCAToken(QueryToken):
         if self.S is None:
             return
 
+        if self.S == self.lemmatize_flag:
+            raise TokenParseError("The query string consists of a lemmatizer "
+                                  "marker '#' without a following lemma "
+                                  "specification.")
+
+        if self.S == "\\":
+            raise TokenParseError("The query string consists of a single "
+                                  "backslash character '\\' without a "
+                                  "following character to be escaped.")
+
         word_specification = None
         lemma_specification = None
         class_specification = None
@@ -271,7 +282,6 @@ class COCAToken(QueryToken):
 
         pat = r"^\s*(?P<negated>~*)(?P<id>=*)(?P<lemmatize>#*)(?P<item>.*)"
         match = re.search(pat, self.S)
-
 
         id_search = bool(match.groupdict()["id"])
 
@@ -286,6 +296,7 @@ class COCAToken(QueryToken):
                      .replace(r"\~", "~")
                      .replace(r"\=", "=")
                      .replace("'", "''")
+                     .replace(r"\\", "\\")
                      .replace(r"\{", "{"))
 
         if id_search:
@@ -295,15 +306,15 @@ class COCAToken(QueryToken):
                 word_specification = work
             else:
                 # try to match WORD|LEMMA|TRANS.[POS]:
-                regex = ("(\[(?P<lemma>.*)\]|"
-                        "/(?P<trans>.*)/|"
-                        "(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}")
+                regex = (r"(\[(?P<lemma>.*)\]|"
+                         r"/(?P<trans>.*)/|"
+                         r"(?P<word>.*)){1}(\.\[(?P<class>.*)\]){1}")
                 match = re.match(regex, work)
                 if not match:
                     # try to match WORD|LEMMA|TRANS:
-                    regex = ("(\[(?P<lemma>.*)\]|"
-                            "/(?P<trans>.*)/|"
-                            "(?P<word>.*)){1}")
+                    regex = (r"(\[(?P<lemma>.*)\]|"
+                             r"/(?P<trans>.*)/|"
+                             r"(?P<word>.*)){1}")
                     match = re.match(regex, work)
 
                 word_specification = match.groupdict()["word"]
@@ -348,6 +359,16 @@ class COCAToken(QueryToken):
                                         self.gloss_specifiers)])
 
 
+class ParseState(Enum):
+    NORMAL = "NORMAL"
+    ESCAPING = "ESCAPE"
+    IN_BRACKET = "BRACKET"
+    IN_TRANSCRIPT = "TRANS"
+    IN_QUOTE = "QUOTE"
+    IN_QUANTIFICATION = "QUANT"
+    POS_SEPARATOR = "POS"
+
+
 def parse_query_string(S, token_type):
     """
     Split a string into query items, making sure that bracketing and
@@ -369,13 +390,6 @@ def parse_query_string(S, token_type):
         # using Python 3.x
         pass
 
-    ST_NORMAL = "NORMAL"
-    ST_IN_BRACKET = "BRACKET"
-    ST_IN_TRANSCRIPT = "TRANS"
-    ST_IN_QUOTE = "QUOTE"
-    ST_IN_QUANTIFICATION = "QUANT"
-    ST_POS_SEPARATOR = "POS"
-
     tokens = []
     current_word = ""
     pos_string = ""
@@ -384,7 +398,7 @@ def parse_query_string(S, token_type):
     token_closed = False
     comma_added = False
 
-    state = ST_NORMAL
+    state = ParseState.NORMAL
 
     # main loop
     for char_pos, current_char in enumerate(S):
@@ -394,7 +408,7 @@ def parse_query_string(S, token_type):
                       "." * (len(S) - char_pos - 1))
 
         if escaping:
-            current_word = add(current_word, "\\{}".format(current_char))
+            current_word = add(current_word, f"\\{current_char}")
             escaping = False
             continue
         if current_char == "\\":
@@ -402,7 +416,7 @@ def parse_query_string(S, token_type):
             continue
 
         # Normal word state:
-        if state == ST_NORMAL:
+        if state == ParseState.NORMAL:
             # the stripped word is the current word excluding negations and
             # lemmatization characters
             stripped_word = bool(
@@ -435,7 +449,7 @@ def parse_query_string(S, token_type):
                             token_type.bracket_close)
                     raise TokenParseError(S)
                 if current_char == token_type.pos_separator:
-                    state = ST_POS_SEPARATOR
+                    state = ParseState.POS_SEPARATOR
                     token_closed = False
 
             if current_char in {token_type.negation_flag,
@@ -451,15 +465,15 @@ def parse_query_string(S, token_type):
                 if not stripped_word:
                     # set new state:
                     if current_char == token_type.transcript_open:
-                        state = ST_IN_TRANSCRIPT
+                        state = ParseState.IN_TRANSCRIPT
                     elif current_char == token_type.bracket_open:
-                        state = ST_IN_BRACKET
+                        state = ParseState.IN_BRACKET
                     elif current_char == token_type.quote_open:
-                        state = ST_IN_QUOTE
+                        state = ParseState.IN_QUOTE
 
             if current_char == token_type.quantification_open:
                 if stripped_word:
-                    state = ST_IN_QUANTIFICATION
+                    state = ParseState.IN_QUANTIFICATION
                     comma_added = False
                 else:
                     if current_char == token_type.quantification_open:
@@ -474,10 +488,10 @@ def parse_query_string(S, token_type):
             if current_char:
                 current_word = add(current_word, current_char)
 
-        elif state == ST_POS_SEPARATOR:
+        elif state == ParseState.POS_SEPARATOR:
             current_word = add(current_word, current_char)
             if current_char == token_type.bracket_open:
-                state = ST_IN_BRACKET
+                state = ParseState.IN_BRACKET
                 token_closed = False
             else:
                 S = ("{}: illegal character after full stop, expected <code "
@@ -486,28 +500,28 @@ def parse_query_string(S, token_type):
                 raise TokenParseError(S)
 
         # bracket state?
-        elif state == ST_IN_BRACKET:
+        elif state == ParseState.IN_BRACKET:
             current_word = add(current_word, current_char)
             if current_char == token_type.bracket_close:
-                state = ST_NORMAL
+                state = ParseState.NORMAL
                 token_closed = True
 
         # transcript state?
-        elif state == ST_IN_TRANSCRIPT:
+        elif state == ParseState.IN_TRANSCRIPT:
             current_word = add(current_word, current_char)
             if current_char == token_type.transcript_close:
-                state = ST_NORMAL
+                state = ParseState.NORMAL
                 token_closed = True
 
         # quote state?
-        elif state == ST_IN_QUOTE:
+        elif state == ParseState.IN_QUOTE:
             current_word = add(current_word, current_char)
             if current_char == token_type.quote_close:
-                state = ST_NORMAL
+                state = ParseState.NORMAL
                 token_closed = True
 
         # quantification state?
-        elif state == ST_IN_QUANTIFICATION:
+        elif state == ParseState.IN_QUANTIFICATION:
             # only add valid quantification characters to the current word:
             if (current_char
                     in "0123456789, " + token_type.quantification_close):
@@ -537,7 +551,7 @@ def parse_query_string(S, token_type):
                             S = "{}: {}".format(
                                 S, "no upper range in quantification")
                             raise TokenParseError(S)
-                        state = ST_NORMAL
+                        state = ParseState.NORMAL
                         token_closed = True
 
                     current_word = add(current_word, current_char)
@@ -547,20 +561,25 @@ def parse_query_string(S, token_type):
                          S, current_char)
                 raise TokenParseError(S)
 
-    if state != ST_NORMAL:
-        if state == ST_POS_SEPARATOR:
+    if escaping:
+        S = (f"{S}: Escape sequence starting with <code style='color: "
+             "#aa0000'>\\</code> not followed by another character.")
+        raise TokenParseError(S)
+
+    if state != ParseState.NORMAL:
+        if state == ParseState.POS_SEPARATOR:
             raise TokenParseError(msg_missing_pos_spec.format(
                 S, pos_string, token_type.pos_separator))
-        if state == ST_IN_BRACKET:
+        if state == ParseState.IN_BRACKET:
             op = token_type.bracket_open
             cl = token_type.bracket_close
-        elif state == ST_IN_TRANSCRIPT:
+        elif state == ParseState.IN_TRANSCRIPT:
             op = token_type.transcript_open
             cl = token_type.transcript_close
-        elif state == ST_IN_QUOTE:
+        elif state == ParseState.IN_QUOTE:
             op = token_type.quote_open
             cl = token_type.quote_close
-        elif state == ST_IN_QUANTIFICATION:
+        elif state == ParseState.IN_QUANTIFICATION:
             op = token_type.quantification_open
             cl = token_type.quantification_close
         else:
@@ -601,7 +620,7 @@ def get_quantifiers(S):
         A tuple containing three elements: the stripped token string, plus
         the lower and upper number of repetions (in order)
     """
-    regexp = "(?P<token>.*)({\s*(?P<start>\d+)(,\s*(?P<end>\d+))?\s*})+"
+    regexp = r"(?P<token>.*)({\s*(?P<start>\d+)(,\s*(?P<end>\d+))?\s*})+"
     match = re.match(regexp, S)
     if match:
         start = int(match.groupdict()["start"])
