@@ -3,7 +3,7 @@
 """
 coq_install_gapra.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -196,9 +196,9 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.lemma_features, "VARCHAR(128)"),
              Column(self.lemma_feedback, "VARCHAR(128)"),
              Column(self.lemma_form, "VARCHAR(128)"),
-             Column(self.lemma_frequency, "INT"),
+             Column(self.lemma_frequency, "VARCHAR(128)"),
              Column(self.lemma_gender, "VARCHAR(1)"),
-             Column(self.lemma_gloss, "VARCHAR(124)"),
+             Column(self.lemma_gloss, "VARCHAR(255)"),
              Column(self.lemma_headword, "VARCHAR(128)"),
              Column(self.lemma_hypothetical, "VARCHAR(1)"),
              Column(self.lemma_intransitive, "VARCHAR(1)"),
@@ -356,7 +356,7 @@ class BuilderClass(BaseCorpusBuilder):
                              self.lemma_features: entry.get("features"),
                              self.lemma_feedback: entry.get("feedback", ''),
                              self.lemma_form: entry.get("form", ''),
-                             self.lemma_frequency: entry.get("frequency", 0),
+                             self.lemma_frequency: entry.get("frequency", None),
                              self.lemma_gender: entry.get("gender", ""),
                              self.lemma_gloss: entry.get("gloss", ""),
                              self.lemma_headword: headword,
@@ -400,30 +400,30 @@ class BuilderClass(BaseCorpusBuilder):
                         # collapse the dictionaries behind subject,
                         # ind_obj, and dir_obj:
                         subj_dict = entry.get("subject")
-                        l = []
+                        lst = []
                         if subj_dict:
-                            l = [subj_dict["person"], subj_dict["number"]]
+                            lst = [subj_dict["person"], subj_dict["number"]]
                             if "gender" in subj_dict:
-                                l.append(subj_dict["gender"])
-                        subj = "_".join(l)
+                                lst.append(subj_dict["gender"])
+                        subj = "_".join(lst)
 
                         ind_obj_dict = entry.get("ind_obj")
-                        l = []
+                        lst = []
                         if ind_obj_dict:
-                            l = [ind_obj_dict["person"],
-                                 ind_obj_dict["number"]]
+                            lst = [ind_obj_dict["person"],
+                                   ind_obj_dict["number"]]
                             if "gender" in ind_obj_dict:
-                                l.append(ind_obj_dict["gender"])
-                        ind_obj = "_".join(l)
+                                lst.append(ind_obj_dict["gender"])
+                        ind_obj = "_".join(lst)
 
                         dir_obj_dict = entry.get("dir_obj")
-                        l = []
+                        lst = []
                         if dir_obj_dict:
-                            l = [dir_obj_dict["person"],
-                                 dir_obj_dict["number"]]
+                            lst = [dir_obj_dict["person"],
+                                   dir_obj_dict["number"]]
                             if "gender" in dir_obj_dict:
-                                l.append(dir_obj_dict["gender"])
-                        dir_obj = "_".join(l)
+                                lst.append(dir_obj_dict["gender"])
+                        dir_obj = "_".join(lst)
 
                         d = {self.corpus_id: self._corpus_id,
                              self.corpus_adverbial:
