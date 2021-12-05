@@ -2,7 +2,7 @@
 """
 uniqueviewer.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -135,7 +135,7 @@ class UniqueViewer(QtWidgets.QDialog):
             self.ui.tableWidget.horizontalHeader().hide()
         else:
             self.ui.tableWidget.setHorizontalHeaderLabels(["Click to sort"])
-            uniques = sorted(self.df[self.column].unique())
+            uniques = sorted(self.df[self.column].dropna().unique())
             value_str = ", ".join([str(x) for x in uniques[:5]])
             if len(uniques) > 6:
                 value_str = "{}, and {} other values".format(
