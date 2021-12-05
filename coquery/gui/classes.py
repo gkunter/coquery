@@ -1536,19 +1536,18 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         # prepare look-up lists that speed up data retrieval:
         for i, col in enumerate(columns):
             # remember dtype of columns:
-            self._dtypes.append(df[col].dtype)
+            dtype = df[col].dropna().convert_dtypes().dtype
+            self._dtypes.append(dtype)
 
             sorter = self._manager.get_sorter(col)
 
-            # set alignment:
-            if sorter and sorter.reverse:
-                # right-align columns with reverse sorting:
+            # set right alignment for reverse sort, numeric data types, or
+            # the right-hand context:
+            if ((sorter and sorter.reverse) or
+                    pd.api.types.is_numeric_dtype(dtype) or
+                    col == "coq_context_left"):
                 self._align.append(_right_align)
-            elif pd.api.types.is_numeric_dtype(df[col]):
-                # always right-align numeric columns:
                 self._align.append(_right_align)
-            elif col == "coq_context_left":
-                # right-align the left context column:
                 self._align.append(_right_align)
             else:
                 # otherwise, left-align:
@@ -1588,58 +1587,54 @@ class CoqTableModel(QtCore.QAbstractTableModel):
         return False
 
     @staticmethod
-    def format_content(source, num_to_str=True):
+    def format_content(source):
         """
         Create a data frame that contains the visual representations of the
         input data frame.
 
         This function is required for several reasons:
         - QTableView is very slow for data types that are not strings
-        - Handling of missing values has increased in Pandas starting with
-          version 1.0, but still needs some attention
+        - Missing values need special treatment
         - Boolean and float columns require special formatting
         """
         df = pd.DataFrame(index=source.index)
 
         for col in source:
             val = source[col]
+            dtype = val.dropna().convert_dtypes().dtype
 
             # copy invisible columns:
             if col.startswith("coquery_invisible"):
                 df[col] = val
                 continue
 
-            # special case: only NAs?
-            if val.isnull().all():
-                df[col] = val.astype(object)
-                continue
+            # FIXME: the sign of G test statistic should not be handled
+            # in the output!
+            if col.startswith("statistics_g_test"):
+                val = abs(val)
 
-            if pd.api.types.is_numeric_dtype(val):
-                if num_to_str:
-                    if col.startswith("statistics_g_test"):
-                        val = abs(val)
+            if pd.api.types.is_numeric_dtype(dtype):
+                if pd.api.types.is_integer_dtype(dtype):
+                    # integers are just converted to strings
+                    to_str_fnc = str
+                else:
+                    # floats use the float format string function
+                    to_str_fnc = options.cfg.float_format.format
 
-                    # try to downcast from float to int:
-                    dtype = val.dropna().convert_dtypes().dtype
-                    if pd.api.types.is_integer_dtype(dtype):
-                        val = map(lambda x: (str(x) if not pd.isna(x) else
-                                             options.cfg.na_string),
-                                  val.values)
-                    else:
-                        # use float format string to show specified number of
-                        # digits:
-                        val = map(lambda x: (options.cfg.float_format.format(x)
-                                             if not pd.isna(x) else
-                                             options.cfg.na_string),
-                                  val.values)
+                val = map(lambda x: (to_str_fnc(x)
+                                     if not pd.isna(x) else
+                                     options.cfg.na_string),
+                          val.values)
 
-            # use bool substitute labels:
-            elif pd.api.types.is_bool_dtype(val):
-                val = map(lambda x: (("yes" if x else "no") if not pd.isna(x)
-                                     else options.cfg.na_string),
+            elif pd.api.types.is_bool_dtype(dtype):
+                # use bool substitute labels:
+                val = map(lambda x: (["no", "yes"][x]
+                                     if not pd.isna(x) else
+                                     options.cfg.na_string),
                           val.values)
             else:
-                val = val.astype(str).fillna(options.cfg.na_string)
+                # just a string
+                val = val.fillna(options.cfg.na_string)
             df[col] = pd.Series(val)
 
         return df
