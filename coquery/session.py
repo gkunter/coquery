@@ -236,15 +236,13 @@ class Session(object):
                         for i in range(self.get_max_token_count())]
                 start_time = time.time()
                 if number_of_queries > 1:
-                    info = "Start query ({} of {}): '{}'".format(
-                        i+1, number_of_queries, current_query.query_string)
-                    logging.info(info)
+                    info = (f"Start query ({i+1} of {number_of_queries}): "
+                            f"'{current_query.query_string}'")
                 else:
-                    logging.info("Start query: '{}'".format(
-                        current_query.query_string))
-
-                df = current_query.run(connection=db_connection,
-                                       to_file=to_file, **kwargs)
+                    info = f"Start query: '{current_query.query_string}'"
+                logging.info(info)
+                df = current_query.run(
+                    connection=db_connection, to_file=to_file, **kwargs)
                 self.sql_queries.append(current_query.sql_list)
                 raw_length = len(df)
 
@@ -603,10 +601,10 @@ class SessionInputFile(Session):
         with open(options.cfg.input_path, "rt") as InputFile:
             read_lines = 0
             try:
-                input_file = pd.read_table(
+                input_file = pd.read_csv(
                     filepath_or_buffer=InputFile,
-                    header=0 if options.cfg.file_has_headers else None,
                     sep=options.cfg.input_separator,
+                    header=0 if options.cfg.file_has_headers else None,
                     quotechar=options.cfg.quote_char,
                     encoding=options.cfg.input_encoding,
                     nrows=options.cfg.csv_restrict,
