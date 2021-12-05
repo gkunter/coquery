@@ -937,12 +937,14 @@ class SQLResource(BaseResource):
             except AttributeError:
                 pass
             else:
-                #S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
-                #df = pd.read_sql(S, engine)
                 S = "SELECT {} FROM {}".format(column, table)
                 df = pd.DataFrame(db_connection.execute(S).fetchall(),
                                   columns=[column])
-                stats.append([table, column, table_sizes[table], len(df[column].unique()), 0, 0, rc_feature])
+                stats.append([table,
+                              column,
+                              table_sizes[table],
+                              len(df[column].unique()),
+                              0, 0, rc_feature])
                 if signal:
                     signal.emit(s.format(rc_feature))
 
@@ -1329,7 +1331,8 @@ class SQLResource(BaseResource):
             if parent == "corpus":
                 sql_template = "{table_alias}.{table_id} = {parent_id}{N}"
             else:
-                sql_template = "{table_alias}.{table_id} = COQ_{parent}_{N}.{parent_id}"
+                sql_template = ("{table_alias}.{table_id} = "
+                                "COQ_{parent}_{N}.{parent_id}")
             where_str = sql_template.format(
                 table_alias=table_alias, table_id=table_id,
                 parent=parent.upper(), parent_id=parent_id, N=n+1)
@@ -1506,15 +1509,27 @@ class SQLResource(BaseResource):
             if spec_list == ["*"]:
                 continue
 
+            reverse_str = False
+
             if item_type == "ID":
                 col = getattr(cls, "corpus_id")
-                tab = "corpus"
+                query_feature = "corpus_id"
             else:
-                try:
-                    col = getattr(cls, getattr(cls, label))
-                except AttributeError:
-                    raise UnsupportedQueryItemError(item_type)
-                _, tab, _ = cls.split_resource_feature(getattr(cls, label))
+                col = None
+                query_feature = getattr(cls, label)
+                if token.S.startswith("*") and len(token.S) > 1:
+                    try:
+                        col = getattr(cls, f"{query_feature}_rev")
+                    except AttributeError:
+                        pass
+                    else:
+                        reverse_str = True
+                if not col:
+                    try:
+                        col = getattr(cls, query_feature)
+                    except AttributeError:
+                        raise UnsupportedQueryItemError(item_type)
+            _, tab, _ = cls.split_resource_feature(query_feature)
 
             if tab == "corpus":
                 template = "{name}{N}"
@@ -1530,7 +1545,8 @@ class SQLResource(BaseResource):
                 format_str = handle_case("{alias} {op} '{val}'")
                 s = format_str.format(alias=alias,
                                       op=get_operator(x),
-                                      val=val)
+                                      val=(val if not reverse_str else
+                                           val[::-1]))
             else:
                 wildcards = []
                 explicit = []
@@ -1725,13 +1741,15 @@ class SQLResource(BaseResource):
                 if s not in columns:
                     columns.append(s)
 
-            if tab in annotations:
-                s = "COQ_{tab_upper}_{N}.{tab_id} AS coquery_invisible_{tab}_id".format(
-                    N=_first_item,
-                    tab=tab, tab_upper=tab.upper(),
-                    tab_id=getattr(cls, "{}_id".format(tab)))
-                if s not in columns:
-                    columns.append(s)
+                if tab in annotations:
+                    s = ("COQ_{tab_upper}_{N}.{tab_id} AS "
+                         "coquery_invisible_{tab}_id").format(
+                             N=_first_item,
+                             tab=tab,
+                             tab_upper=tab.upper(),
+                             tab_id=getattr(cls, f"{tab}_id"))
+                    if s not in columns:
+                        columns.append(s)
 
         id_str = "{name}{N} AS coquery_invisible_corpus_id".format(
                     N=_first_item, name=cls.corpus_id)
@@ -2112,20 +2130,21 @@ class SQLResource(BaseResource):
                         for x in features]
         feature_list.append("{}.{}".format(self.corpus_table, self.corpus_id))
         token_ids = [str(x) for x in tokens]
-        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
-                features=", ".join(feature_list),
-                path=" ".join(self.table_list),
-                corpus=self.corpus_table,
-                corpus_id=self.corpus_id,
-                token_ids=", ".join(token_ids))
+        S = ("SELECT {features} FROM {path} "
+             "WHERE {corpus}.{corpus_id} IN ({token_ids})").format(
+                 features=", ".join(feature_list),
+                 path=" ".join(self.table_list),
+                 corpus=self.corpus_table,
+                 corpus_id=self.corpus_id,
+                 token_ids=", ".join(token_ids))
 
         features = ", ".join(feature_list)
         path = " ".join(self.table_list)
         token_list = ", ".join(token_ids)
         S2 = (f"SELECT {features} "
-             f"FROM {path} "
-             f"WHERE {self.corpus_table}.{self.corpus_id} IN "
-             f"({token_list})")
+              f"FROM {path} "
+              f"WHERE {self.corpus_table}.{self.corpus_id} IN "
+              f"({token_list})")
 
         # FIXME: Replace unwieldy old string by new format string
         assert S == S2
@@ -2563,7 +2582,8 @@ class CorpusClass(object):
                 SELECT {columns}
                 FROM {corpus}
                 {joined_tables}
-                LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id}
+                LEFT JOIN {tag_table}
+                    ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id}
                 WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}
                 """
         else:
@@ -2695,12 +2715,6 @@ class CorpusClass(object):
 
     def expand_row(self, x):
         return list(range(int(x.coquery_invisible_corpus_id), int(x.end)))
-
-    #def parse_df(self, df, tags, token_id, token_width):
-        #df = df.apply(
-            #lambda x: self.parse_row(x, tags, token_id, token_width),
-            #axis="columns")
-        #return df
 
     def parse_df(self, df, tags, token_id, token_width):
         df["COQ_FORMATTED"] = df["coq_word_label_1"].apply(lambda x: [x])
