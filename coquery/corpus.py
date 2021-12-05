@@ -19,7 +19,6 @@ import re
 import logging
 import math
 import pandas as pd
-import numpy as np
 import os
 import tempfile
 import zipfile
@@ -1901,7 +1900,7 @@ class SQLResource(BaseResource):
         n_tokens = int(number_of_tokens if not pd.isna(number_of_tokens)
                        else 0)
 
-        if np.isnan(origin_id):
+        if pd.isna(origin_id):
             results = ([(None, 0)] * left_span +
                        [(None, 1)] * n_tokens +
                        [(None, 2)] * right_span)
@@ -2119,6 +2118,17 @@ class SQLResource(BaseResource):
                 corpus=self.corpus_table,
                 corpus_id=self.corpus_id,
                 token_ids=", ".join(token_ids))
+
+        features = ", ".join(feature_list)
+        path = " ".join(self.table_list)
+        token_list = ", ".join(token_ids)
+        S2 = (f"SELECT {features} "
+             f"FROM {path} "
+             f"WHERE {self.corpus_table}.{self.corpus_id} IN "
+             f"({token_list})")
+
+        # FIXME: Replace unwieldy old string by new format string
+        assert S == S2
 
         engine = options.cfg.current_connection.get_engine(self.db_name)
         df = pd.read_sql(S, engine)
