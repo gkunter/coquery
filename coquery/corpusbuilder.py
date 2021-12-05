@@ -1900,6 +1900,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
                         current = progress_next(current)
                         self.build_create_indices()
 
+                else:
+                    self.set_query_items()
+
                 # write module
                 if not self.interrupted:
                     logging.info("Stage 8")
