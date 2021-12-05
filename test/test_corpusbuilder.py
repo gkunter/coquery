@@ -2,17 +2,17 @@
 
 from __future__ import print_function
 import sys
-import tempfile
 import os
 import argparse
 
 from coquery.defines import SQL_SQLITE
 from coquery.coquery import options
 from coquery.corpusbuilder import (
-    BaseCorpusBuilder, XMLCorpusBuilder, TEICorpusBuilder)
+    BaseCorpusBuilder, XMLCorpusBuilder, TEICorpusBuilder,
+    disambiguate_label)
 from coquery.tables import Table, Column, Identifier, Link
 
-from test.testcase import CoqTestCase, run_tests
+from test.testcase import CoqTestCase, run_tests, tmp_filename
 from test.test_corpora import simple
 
 
@@ -362,9 +362,7 @@ class TestFlatCorpusBuilder(CoqTestCase):
 
 class TestXMLCorpusBuilder(CoqTestCase):
     def setUp(self):
-        self.temp_file = tempfile.NamedTemporaryFile("w")
-        self.temp_file_name = self.temp_file.name
-        self.temp_file.close()
+        self.temp_file_name = tmp_filename()
 
     def tearDown(self):
         try:
@@ -500,8 +498,20 @@ class TestTEICorpusBuilder(TestXMLCorpusBuilder):
         self.assertEqual(len(builder.content), 139)
 
 
-provided_tests = [TestCorpusNgram, TestFlatCorpusBuilder,
-                  TestXMLCorpusBuilder, TestTEICorpusBuilder]
+class TestDisambiguateLabel(CoqTestCase):
+    def test_label(self):
+        lst = ["Word", "ID", "FileId"]
+        label = disambiguate_label("ID", lst)
+        self.assertEqual(label, "ID1")
+
+
+provided_tests = [
+    TestCorpusNgram,
+    TestFlatCorpusBuilder,
+    TestXMLCorpusBuilder,
+    TestTEICorpusBuilder,
+    TestDisambiguateLabel
+    ]
 
 
 def main():

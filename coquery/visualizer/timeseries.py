@@ -2,7 +2,7 @@
 """
 timeseries.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -126,7 +126,7 @@ class TimeSeries(vis.Visualizer):
             x_range = list(range(math.floor(min_x),
                                  math.ceil(max_x + 1), TimeSeries.bandwidth))
             if TimeSeries.bandwidth > 1:
-                labels = ["{}–{}".format(x, x + TimeSeries.bandwidth - 1)
+                labels = [f"{y}–{x + TimeSeries.bandwidth - 1}"
                           for x in x_range]
             else:
                 labels = x_range
@@ -142,7 +142,7 @@ class TimeSeries(vis.Visualizer):
                 df = data[data[category] == level]
                 val = fun(df[numeric])
                 tab = val.value_counts().sort_index()
-                tab = tab.reindex_axis(index).fillna(0)
+                tab = tab.reindex(index).fillna(0)
                 tmp[level] = tab
             df = pd.DataFrame(tmp)
             self.plot_func(df=df, color=col, ax=plt.gca())

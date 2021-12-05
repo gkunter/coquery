@@ -165,10 +165,10 @@ class Session(object):
                 match = re.search(expr, item, re.IGNORECASE)
             return match is not None
 
-        self.db_connection = self.db_engine.connect()
+        dbc = self.db_engine.connect()
         if options.cfg.current_connection.db_type() == SQL_SQLITE:
-            self.db_connection.connection.create_function("REGEXP", 2,
-                                                          _sqlite_regexp)
+            dbc.connection.create_function("REGEXP", 2, _sqlite_regexp)
+        return dbc
 
     def prepare_queries(self):
         self.query_list = []
@@ -200,14 +200,12 @@ class Session(object):
         if self.db_engine is None:
             raise SQLNoConnectorError
 
-        self.connect_to_db()
-
         self.data_table = pd.DataFrame()
         self.quantified_number_labels = []
         Session.query_id += 1
 
         number_of_queries = len(self.query_list)
-        manager = self.get_manager()
+        manager = self.get_manager(options.cfg.MODE)
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
@@ -217,6 +215,8 @@ class Session(object):
         _queried = []
 
         self.sql_queries = []
+
+        db_connection = self.connect_to_db()
 
         try:
             for i, current_query in enumerate(self.query_list):
@@ -230,6 +230,7 @@ class Session(object):
 
                 if options.cfg.gui and number_of_queries > 1:
                     options.cfg.main_window.updateMultiProgress.emit(i+1)
+
                 if not self.quantified_number_labels:
                     self.quantified_number_labels = [
                         current_query.get_token_numbering(i)
@@ -242,7 +243,8 @@ class Session(object):
                 else:
                     logging.info("Start query: '{}'".format(
                         current_query.query_string))
-                df = current_query.run(connection=self.db_connection,
+
+                df = current_query.run(connection=db_connection,
                                        to_file=to_file, **kwargs)
                 self.sql_queries.append(current_query.sql_list)
                 raw_length = len(df)
@@ -282,7 +284,6 @@ class Session(object):
                     dtype_list = df.dtypes
 
                 df = current_query.insert_static_data(df)
-
                 self.to_file = to_file
 
                 if not to_file:
@@ -303,22 +304,12 @@ class Session(object):
                 logging.info(
                     "Query executed ({})".format(", ".join(s_list)))
         finally:
-            self.db_connection.close()
-
-        ordered_columns = self.set_preferred_order(
-            list(self.data_table.columns))
-        self.data_table = self.data_table[ordered_columns]
+            db_connection.close()
 
         if sys.version_info < (3, 0):
-            for col in self.data_table.columns:
-                if self.data_table.dtypes[col] == object:
-                    try:
-                        self.data_table[col] = (
-                            self.data_table[col].str
-                                                .encode("utf-8"))
-                    except Exception as e:
-                        print(e)
-                        logging.warning(e)
+            raise Warning("Python 2.7 is not supported anymore.")
+
+        self.finalize_table()
 
         if not options.cfg.gui:
             self.aggregate_data()
@@ -347,14 +338,41 @@ class Session(object):
                 index=False)
             output_file.flush()
 
-    def get_manager(self, query_mode=None):
-        query_mode = query_mode or options.cfg.MODE
+    def finalize_table(self):
+        """
+        Apply final fixes to the data table retrieved by the current queries.
+
+        The following fixes are applied:
+
+        - Set preferred column order
+        - Guess best dtypes, taking missing values into account
+        - Resetting the internal index
+        """
+
+        ordered_columns = self.set_preferred_order(
+            list(self.data_table.columns))
+        self.data_table = self.data_table[ordered_columns]
+
+        for col in self.data_table.columns:
+            S = self.data_table[col]
+            if S.dtype == object:
+                S = S.replace({"": pd.NA, None: pd.NA})
+            else:
+                S = S.replace({None: pd.NA})
+            dtype = S.dropna().convert_dtypes().dtype
+            if pd.api.types.is_numeric_dtype(dtype):
+                self.data_table[col] = pd.to_numeric(S,
+                                                     errors="coerce",
+                                                     downcast="integer")
+        self.data_table = self.data_table.reset_index(drop=True)
+
+    def get_manager(self, query_mode):
         if not self.Resource:
             return None
         else:
             return managers.get_manager(query_mode, self.Resource.name)
 
-    def set_preferred_order(self, l):
+    def set_preferred_order(self, lst):
         """
         Arrange the column names in l so that they occur in the preferred
         order.
@@ -363,12 +381,12 @@ class Session(object):
         """
         resource_order = self.Resource.get_preferred_output_order()
         for x in resource_order[::-1]:
-            lex_list = [y for y in l if x in y]
+            lex_list = [y for y in lst if x in y]
             lex_list = sorted(lex_list)[::-1]
             for lex in lex_list:
-                l.remove(lex)
-                l.insert(0, lex)
-        return l
+                lst.remove(lex)
+                lst.insert(0, lex)
+        return lst
 
     def has_cached_data(self, query_mode):
         return (self, self.get_manager(query_mode)) in self._manager_cache
@@ -383,18 +401,19 @@ class Session(object):
         a cached table (e.g. for sorting when no recalculation is needed).
         """
 
-        manager = self.get_manager()
+        manager = self.get_manager(options.cfg.MODE)
         manager.set_filters(options.cfg.filter_list)
         manager.set_groups(self.groups)
         manager.set_column_order(options.cfg.column_order)
 
         column_properties = {}
-        try:
-            column_properties = options.settings.value("column_properties",
-                                                       {})
-        finally:
-            options.settings.setValue("column_properties",
-                                      column_properties)
+        if options.cfg.gui:
+            try:
+                column_properties = options.settings.value(
+                    "column_properties", {})
+            finally:
+                options.settings.setValue(
+                    "column_properties", column_properties)
         prop = column_properties.get(options.cfg.corpus, {})
         manager.set_column_substitutions(prop.get("substitutions", {}))
 
@@ -504,7 +523,7 @@ class Session(object):
 
         # deal with function headers:
         if header.startswith("func_"):
-            manager = self.get_manager()
+            manager = self.get_manager(options.cfg.MODE)
             # check if there is a parenthesis in the header (there shouldn't
             # ever be one, actually)
             match = re.search("(.*)\((.*)\)", header)

@@ -113,16 +113,16 @@ class BaseResource(CoqObject):
         hashed, table, feature = cls.split_resource_feature(rc_feature)
         if hashed is not None:
             link, res = get_by_hash(hashed)
-            l = res.format_resource_feature("{}_{}".format(table, feature), N)
-            return ["db_{}_{}".format(res.db_name, x) for x in l]
+            lst = res.format_resource_feature(f"{table}_{feature}", N)
+            return [f"db_{res.db_name}_{x}" for x in lst]
 
         # handle lexicon features:
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
-            return ["coq_{}_{}".format(rc_feature, x+1) for x in range(N)]
+            return [f"coq_{rc_feature}_{x+1}" for x in range(N)]
         # handle remaining features
         else:
-            return ["coq_{}_1".format(rc_feature)]
+            return [f"coq_{rc_feature}_1"]
 
     @classmethod
     def split_resource_feature(cls, rc_feature):
@@ -148,7 +148,8 @@ class BaseResource(CoqObject):
             hashed = None
         table, _, feature = s.partition("_")
         if not table or not feature:
-            raise ValueError("either no table or no feature: '{}'".format(rc_feature))
+            raise ValueError(
+                "either no table or no feature: '{}'".format(rc_feature))
 
         return (hashed, table, feature)
 
@@ -159,7 +160,9 @@ class BaseResource(CoqObject):
         for rc_feature in list(all_features):
             if rc_feature in PREFERRED_ORDER:
                 for i, ordered_feature in enumerate(order):
-                    if PREFERRED_ORDER.index(ordered_feature) > PREFERRED_ORDER.index(rc_feature):
+                    of_index = PREFERRED_ORDER.index(ordered_feature)
+                    rc_index = PREFERRED_ORDER.index(rc_feature)
+                    if of_index > rc_index:
                         order.insert(i, rc_feature)
                         break
                 else:
@@ -171,18 +174,18 @@ class BaseResource(CoqObject):
         for i, rc_feature in enumerate(order):
             _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
-                j = order.index("{}_starttime".format(tab))
+                j = order.index(f"{tab}_starttime")
                 if j < i:
-                    order[j] = "{}_starttime".format(tab)
-                    order[i] = "{}_endtime".format(tab)
+                    order[j] = f"{tab}_starttime"
+                    order[i] = f"{tab}_endtime"
 
         for i, rc_feature in enumerate(all_features):
             _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
-                j = all_features.index("{}_endtime".format(tab))
+                j = all_features.index(f"{tab}_endtime")
                 if j < i:
-                    all_features[j] = "{}_starttime".format(tab)
-                    all_features[i] = "{}_endtime".format(tab)
+                    all_features[j] = f"{tab}_starttime"
+                    all_features[i] = f"{tab}_endtime"
 
         return order + all_features
 
@@ -215,7 +218,8 @@ class BaseResource(CoqObject):
 
         # return the features that can be constructed from the feature name
         # and the table:
-        return ["{}_{}".format(table, feature) for _, table, feature in split_features if table in tables]
+        return ["{}_{}".format(table, feature)
+                for _, table, feature in split_features if table in tables]
 
     @classmethod
     def get_queryable_features(cls):
@@ -226,10 +230,10 @@ class BaseResource(CoqObject):
         Features that represent binary data (audio, video, images) cannot be
         selected because the result table stores only numeric or string data.
         """
-        l = cls.get_resource_features()
+        lst = cls.get_resource_features()
         # FIXME: this function might be usable to make some table IDs
         # exposable (see issue #174)
-        return [x for x in l if
+        return [x for x in lst if
                 x not in cls.audio_features and
                 x not in cls.video_features and
                 x not in cls.image_features]
@@ -346,7 +350,8 @@ class BaseResource(CoqObject):
         requested_features = []
         children = []
         for rc_feature in cls.get_resource_features():
-            if rc_feature.endswith("_{}_id".format(rc_tab)) and not rc_feature.startswith(rc_tab):
+            if (rc_feature.endswith("_{}_id".format(rc_tab)) and
+                    not rc_feature.startswith(rc_tab)):
                 D["parent"] = "{}_table".format(rc_feature.split("_")[0])
             if rc_feature.startswith("{}_".format(rc_tab)):
                 if not rc_feature.endswith("_table"):
@@ -384,7 +389,8 @@ class BaseResource(CoqObject):
             A list of strings, each representing a resource feature that has
             the same display name as 'name'.
         """
-        return [x for x in cls.get_resource_features() if getattr(cls, x) == name]
+        return [x for x in cls.get_resource_features()
+                if getattr(cls, x) == name]
 
     @classmethod
     def get_corpus_features(cls):
@@ -395,7 +401,9 @@ class BaseResource(CoqObject):
         table_dict = cls.get_table_dict()
         if "corpus" not in table_dict:
             return []
-        lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
+        lexicon_tables = cls.get_table_tree(getattr(cls,
+                                                    "lexicon_root_table",
+                                                    "word"))
 
         corpus_variables = []
         cls_lexical_features = getattr(cls, "lexical_features", [])
@@ -405,7 +413,8 @@ class BaseResource(CoqObject):
                     if y not in cls_lexical_features:
                         if y == "corpus_id":
                             corpus_variables.append((y, cls.corpus_id))
-                        elif not y.endswith("_id") and not y.startswith("{}_table".format(x)):
+                        elif (not y.endswith("_id") and
+                                not y.startswith("{}_table".format(x))):
                             corpus_variables.append((y, getattr(cls, y)))
         return corpus_variables
 
@@ -433,17 +442,17 @@ class BaseResource(CoqObject):
         lexicon_tables = cls.get_table_tree(
             getattr(cls, "lexicon_root_table", "word"))
         lexicon_variables = []
-        l = []
+        lst = []
         for x in table_dict:
             if x in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
                     if (not y.endswith("_id") and
-                            not y.startswith("{}_table".format(x))):
+                            not y.startswith(f"{x}_table")):
                         lexicon_variables.append((y, getattr(cls, y)))
-                        l.append(y)
+                        lst.append(y)
 
         for x in getattr(cls, "lexical_features", []):
-            if x not in l:
+            if x not in lst:
                 lexicon_variables.append((x, getattr(cls, x)))
 
         # make sure that all query items are treated as lexicon features:
@@ -1021,16 +1030,16 @@ class SQLResource(BaseResource):
         wildcard_a = -0.75
 
         if s.startswith("~"):
-            l = []
+            lst = []
             s = s.strip("~")
             for ch in s:
                 if ch == "?":
-                    l.append("#")
+                    lst.append("#")
                 elif ch == "*":
-                    l.append("*")
+                    lst.append("*")
                 else:
-                    l.append("?")
-            s = "".join(l)
+                    lst.append("?")
+            s = "".join(lst)
 
         s = s.replace("\\?", "#")
         s = s.replace("\\*", "#")
@@ -1077,8 +1086,8 @@ class SQLResource(BaseResource):
 
     @classmethod
     def get_token_order(cls, token_list):
-        l = sorted(token_list, key=lambda x: cls.string_entropy(x[1][1]))
-        return l
+        lst = sorted(token_list, key=lambda x: cls.string_entropy(x[1][1]))
+        return lst
 
     @classmethod
     def get_corpus_joins(cls, query_items, ignore_ngram=False):
@@ -1202,8 +1211,8 @@ class SQLResource(BaseResource):
 
         # second, create a list of dummy features for each table. This list
         # is then used to pull in all required tables in order:
-        selected = ["{}_dummy".format(x) for x in tables]
-        l = []
+        selected = [f"{x}_dummy" for x in tables]
+        lst = []
         for dummy in sorted(selected):
             _, target, _ = cls.split_resource_feature(dummy)
             # check if the current table is a neighbor of the current root
@@ -1216,8 +1225,8 @@ class SQLResource(BaseResource):
                 sub_select.remove(dummy)
                 tup = cls.get_required_tables(target, sub_select, conditions)
                 # insert tuple for current table into list:
-                l.append(tup)
-        return root, l
+                lst.append(tup)
+        return root, lst
 
     def add_table_path(self, start_feature, end_feature):
         """
@@ -1837,8 +1846,8 @@ class SQLResource(BaseResource):
             current_token = tokens.COCAToken(pos)
             _, table, _ = self.split_resource_feature(pos_feature)
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                getattr(self, "{}_id".format(table)),
-                getattr(self, "{}_table".format(table)),
+                getattr(self, f"{table}_id"),
+                getattr(self, f"{table}_table"),
                 getattr(self, pos_feature),
                 self.get_operator(current_token),
                 pos)
@@ -1849,8 +1858,8 @@ class SQLResource(BaseResource):
         else:
             return False
 
-    def pos_check_function(self, l):
-        return [self.is_part_of_speech(s) for s in l]
+    def pos_check_function(self, lst):
+        return [self.is_part_of_speech(s) for s in lst]
 
     def get_sentence_ids(self, id_list):
         """
@@ -2009,7 +2018,6 @@ class SQLResource(BaseResource):
             source table, and a dictionary with resource features as keys and
             the matching field content as values.
         """
-        l = []
 
         # get the complete row from the corpus table for the current token:
         S = "SELECT * FROM {} WHERE {} = {}".format(
@@ -2022,6 +2030,7 @@ class SQLResource(BaseResource):
         df = pd.read_sql(S, engine)
         engine.dispose()
 
+        lst = []
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
         for column in df.columns:
@@ -2080,8 +2089,8 @@ class SQLResource(BaseResource):
                     D = dict([(x, row.at[0, x]) for x in row.columns
                               if x != id_column])
                     # append the row data to the list:
-                    l.append((table_name, D))
-        return l
+                    lst.append((table_name, D))
+        return lst
 
     def get_file_data(self, token_id, features):
         """
@@ -2125,10 +2134,84 @@ class CorpusClass(object):
     _subcorpus_size_cache = {}
     _corpus_range_cache = {}
     _context_cache = {}
+    _corpus_statistcs_cache = {}
 
     def __init__(self):
         super(CorpusClass, self).__init__()
         self.resource = None
+
+    def get_corpus_statistic(self, statistic, filters=None):
+        """
+        Return a specific statistic from the corpus.
+
+        The corpus can be filtered by providing a filter list.
+
+        Parameters
+        ----------
+        statistic : str
+            A string that is inserted into the SQL query such as COUNT(*) or
+            MIN(...)
+
+        filters : list
+            A list of tuples. The first element is a corpus feature, and
+            the second is a list of possible values.
+
+        Returns
+        -------
+        value : int
+            The value of the query.
+        """
+        filters = filters or []
+
+        if not filters and getattr(self.resource, "number_of_tokens", None):
+            return self.resource.number_of_tokens
+
+        self.resource.table_list = []
+        self.resource.joined_tables = []
+        filter_strings = []
+        for rc_feature, values in filters:
+            _, tab, feat = self.resource.split_resource_feature(rc_feature)
+            self.resource.add_table_path("corpus_id", rc_feature)
+
+            # FIXME: remove code replication with get_subcorpus_range()
+            if len(values) == 1:
+                if type(values[0]) is str:
+                    val = f"'{values[0]}'"
+                else:
+                    val = values[0]
+                s = "{}.{} = {}".format(
+                    getattr(self.resource, f"{tab}_table"),
+                    getattr(self.resource, rc_feature),
+                    val)
+            else:
+                if any([type(x) is str for x in values]):
+                    lst = [f"'{x}'" for x in values]
+                else:
+                    lst = values
+                s = "{}.{} IN ({})".format(
+                    getattr(self.resource, f"{tab}_table"),
+                    getattr(self.resource, rc_feature),
+                    ",".join(lst))
+            filter_strings.append(s)
+
+        if filter_strings:
+            from_str = "{} WHERE {}".format(
+                " ".join(
+                    [self.resource.corpus_table] + self.resource.table_list),
+                " AND ".join(filter_strings))
+        else:
+            from_str = self.resource.corpus_table
+
+        S = "SELECT {} FROM {}".format(statistic, from_str)
+
+        if S not in self._corpus_statistcs_cache:
+            engine = options.cfg.current_connection.get_engine(
+                self.resource.db_name)
+            df = pd.read_sql(S.replace("%", "%%"), engine)
+            engine.dispose()
+            self._corpus_statistcs_cache[S] = df.values.ravel()[0]
+
+        return self._corpus_statistcs_cache[S]
 
     def get_corpus_size(self, filters=None):
         """
@@ -2147,56 +2230,17 @@ class CorpusClass(object):
         size : int
             The number of tokens in the corpus, or in the filtered corpus.
         """
-        filters = filters or []
-
-        if not filters and getattr(self.resource, "number_of_tokens", None):
-            return self.resource.number_of_tokens
-
-        self.resource.table_list = []
-        self.resource.joined_tables = []
-        filter_strings = []
-        for rc_feature, values in filters:
-            _, tab, feat = self.resource.split_resource_feature(rc_feature)
-            self.resource.add_table_path("corpus_id", rc_feature)
-
-            # FIXME: remove code replication with get_subcorpus_range()
-            if len(values) == 1:
-                if type(values[0]) is str:
-                    val = "'{}'".format(values[0])
-                else:
-                    val = values[0]
-                s = "{}.{} = {}".format(
-                    getattr(self.resource, "{}_table".format(tab)),
-                    getattr(self.resource, rc_feature),
-                    val)
-            else:
-                if any([type(x) is str for x in values]):
-                    l = ["'{}'".format(x) for x in values]
-                else:
-                    l = values
-                s = "{}.{} IN ({})".format(
-                    getattr(self.resource, "{}_table".format(tab)),
-                    getattr(self.resource, rc_feature),
-                    ",".join(l))
-            filter_strings.append(s)
-
-        if filter_strings:
-            from_str = "{} WHERE {}".format(
-                " ".join([self.resource.corpus_table] + self.resource.table_list),
-                " AND ".join(filter_strings))
+        if filters:
+            _key = tuple(sorted(filters))
         else:
-            from_str = self.resource.corpus_table
+            _key = tuple()
 
-        S = "SELECT COUNT(*) FROM {}".format(from_str)
-        if S not in self._corpus_size_cache:
-            engine = options.cfg.current_connection.get_engine(
-                self.resource.db_name)
-            df = pd.read_sql(S.replace("%", "%%"), engine)
-            engine.dispose()
-            self._corpus_size_cache[S] = df.values.ravel()[0]
-        if not filters:
-            self.resource.number_of_tokens = self._corpus_size_cache[S]
-        return self._corpus_size_cache[S]
+        try:
+            size = self._corpus_size_cache[_key]
+        except KeyError:
+            size = self.get_corpus_statistic("COUNT(*)", filters)
+            self._corpus_size_cache[_key] = size
+        return self._corpus_size_cache[_key]
 
     def get_subcorpus_size(self, row, columns=None, subst=None):
         """
@@ -2212,7 +2256,9 @@ class CorpusClass(object):
         filter_list = []
         if columns is None:
             columns = row.index
-            corpus_features = [x for x, _ in self.resource.get_corpus_features() if x in options.cfg.selected_features]
+            corpus_features = [x
+                               for x, _ in self.resource.get_corpus_features()
+                               if x in options.cfg.selected_features]
             for column in columns:
                 match = re.match("coq_(.*)_1", column)
                 if match:
@@ -2221,7 +2267,8 @@ class CorpusClass(object):
                     col = None
                 if col in corpus_features:
                     value = row[column]
-                    raw_values = self.reverse_substitution(column, value, subst)
+                    raw_values = self.reverse_substitution(column,
+                                                           value, subst)
                     filter_list.append((col, raw_values))
         else:
             for column in columns:
@@ -2247,10 +2294,10 @@ class CorpusClass(object):
         onto the given value.
         """
         subst = subst or {}
-        l = [key for key, val in subst.get(column, {}).items()
-             if value == val]
-        l.append(value)
-        return l
+        lst = [key for key, val in subst.get(column, {}).items()
+               if value == val]
+        lst.append(value)
+        return lst
 
     def get_subcorpus_range(self, row=None):
         """
@@ -2567,10 +2614,8 @@ class CorpusClass(object):
                        tag=self.resource.tag_label,
                        tag_id=self.resource.tag_id,
                        corpus_id=self.resource.tag_corpus_id,
-                       tag_corpus_id=self.resource.tag_corpus_id,
                        tag_type=self.resource.tag_type,
                        attribute=self.resource.tag_attribute,
-                       current_source_id=source_id,
                        start=max(0, token_id - 1000),
                        end=token_id + token_width + 999)
             tags = pd.read_sql(S, engine)

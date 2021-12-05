@@ -46,6 +46,7 @@ from .app import get_icon
 
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
+logging.getLogger("matplotlib.font_manager").disabled = True
 
 app = get_toplevel_window()
 
@@ -134,6 +135,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def __init__(self, session, parent=None):
         super(VisualizationDesigner, self).__init__(parent)
+
         self.session = session
         self.vis = None
         self.df = None

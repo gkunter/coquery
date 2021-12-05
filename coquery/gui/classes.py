@@ -2,7 +2,7 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,14 +15,16 @@ from __future__ import (unicode_literals, print_function,
 import logging
 import os
 import pandas as pd
+import numpy as np
 from collections import deque
 
 from coquery import options
 from coquery import managers
 from coquery.unicode import utf8
 
-from .pyqt_compat import (QtCore, QtGui, QtWidgets,
-                          frameShadow, frameShape, get_toplevel_window)
+from coquery.gui.pyqt_compat import (QtCore, QtGui, QtWidgets,
+                                     frameShadow, frameShape,
+                                     get_toplevel_window)
 
 from xml.sax.saxutils import escape
 
@@ -210,7 +212,6 @@ class CoqFeatureTray(CoqFeatureList):
 
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        #self.setSpacing(2 * self.frameWidth())
 
         self.setMaximumHeight(self.itemHeight() + 2 * self.frameWidth())
         self.setMinimumHeight(self.itemHeight() + 2 * self.frameWidth())
@@ -383,195 +384,9 @@ class CoqClickableLabel(QtWidgets.QLabel):
         return self._content
 
 
-class CoqSwitch(QtWidgets.QWidget):
-    toggled = QtCore.Signal()
-
-    def __init__(self, state=None, on="on", off="off", text="",
-                 *args, **kwargs):
-        super(CoqSwitch, self).__init__(*args, **kwargs)
-
-        self._layout = QtWidgets.QHBoxLayout(self)
-        self._layout.setSpacing(-1)
-        self._layout.setContentsMargins(0, 0, 0, 0)
-
-        self._frame = QtWidgets.QFrame()
-        self._frame.setFrameShape(frameShape)
-        self._frame.setFrameShadow(QtWidgets.QFrame.Sunken)
-        #size = QtCore.QSize(
-            #QtWidgets.QRadioButton().sizeHint().height() * 2,
-            #QtWidgets.QRadioButton().sizeHint().height())
-        #self._frame.setMaximumSize(size)
-        self._layout.addWidget(self._frame)
-
-        self._inner_layout = QtWidgets.QHBoxLayout(self._frame)
-        self._inner_layout.setSpacing(-1)
-        self._inner_layout.setContentsMargins(0, 0, 0, 0)
-
-        self._check = QtWidgets.QCheckBox(self)
-        self._check.setObjectName("_check")
-        self._inner_layout.addWidget(self._check)
-        #self._slider = QtWidgets.QSlider(self)
-        #self._slider.setOrientation(QtCore.Qt.Horizontal)
-        #sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                                           #QtWidgets.QSizePolicy.Preferred)
-        #sizePolicy.setHorizontalStretch(0)
-        #sizePolicy.setVerticalStretch(0)
-        #self._slider.setSizePolicy(sizePolicy)
-        #size = QtCore.QSize(
-            #self._slider.sizeHint().height() * 1.61,
-            #self._slider.sizeHint().height())
-        #self._slider.setMaximumSize(size)
-        #self._frame.setMaximumSize(size)
-
-        #self._slider.setMaximum(1)
-        #self._slider.setPageStep(1)
-        #self._slider.setSliderPosition(0)
-        #self._slider.setTickPosition(QtWidgets.QSlider.NoTicks)
-        #self._slider.setTickInterval(1)
-        #self._slider.setInvertedAppearance(True)
-        #self._slider.setObjectName("_slider")
-
-        #self._inner_layout.addWidget(self._slider)
-
-        self._label = CoqClickableLabel(self)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(1)
-        sizePolicy.setVerticalStretch(0)
-        self._label.setSizePolicy(sizePolicy)
-        self._label.setMinimumWidth(
-            max(QtWidgets.QLabel(on).sizeHint().width(),
-                QtWidgets.QLabel(off).sizeHint().width()))
-
-        self._on_text = on
-        self._off_text = off
-
-        #self._layout.addWidget(self._label)
-        self._inner_layout.addWidget(self._label)
-
-        #grad0 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Mid)
-        #grad1 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Button)
-        #grad2 = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Light)
-        #br = options.cfg.app.palette().color(QtGui.QPalette.Normal, QtGui.QPalette.Highlight)
-
-        #self._style_handle = """QSlider#_slider::handle:horizontal {{
-                #background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
-                #stop:0 rgb({g0_r}, {g0_g}, {g0_b}),
-                #stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
-                #border: 1px solid rgb({g1_r}, {g1_g}, {g1_b});
-                #border-radius: {rad}px;
-            #}}
-
-            #QSlider#_slider::handle:horizontal:hover {{
-                #background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                #stop:0 rgb({g2_r}, {g2_g}, {g2_b}),
-                #stop:1 rgb({g1_r}, {g1_g}, {g1_b}));
-                #border: 2px solid rgb({g2_r}, {g2_g}, {g2_b});
-                #margin: -2px 0;
-                #border-radius: {rad}px;
-            #}}
-        #""".format(
-            #g0_r = grad0.red(), g0_g=grad0.green(), g0_b=grad0.blue(),
-            #g1_r = grad1.red(), g1_g=grad1.green(), g1_b=grad1.blue(),
-            #g2_r = grad2.red(), g2_g=grad2.green(), g2_b=grad2.blue(),
-            #b_r = br.red(), b_g=br.green(), b_b=br.blue(),
-            #rad=int(self._slider.sizeHint().height()*0.4))
-
-        #self._style_handle = ""
-
-        if not state:
-            self.setOff()
-        else:
-            self.setOn()
-        self._connect_signals()
-
-    def _update(self):
-        if self._on:
-            self._check.setCheckState(QtCore.Qt.Checked)
-            #self._slider.setValue(1)
-            self._label.setText(self._on_text)
-
-            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal,
-                                                  #QtGui.QPalette.Highlight)
-            #s = """
-            #{style_handle}
-
-            #QSlider#_slider::add-page:horizontal {{
-                #background: rgb({r}, {g}, {b});
-            #}}
-
-            #QSlider#_slider::sub-page:horizontal {{
-                #background: rgb({r}, {g}, {b});
-            #}}
-            #"""
-        else:
-            #self._slider.setValue(0)
-            self._check.setCheckState(QtCore.Qt.Unchecked)
-            self._label.setText(self._off_text)
-
-            #col = options.cfg.app.palette().color(QtGui.QPalette.Normal,
-                                                  #QtGui.QPalette.Dark)
-            #s = """
-            #{style_handle}
-
-            #QSlider#_slider::add-page:horizontal {{
-                #background: rgb({r}, {g}, {b});
-            #}}
-
-            #QSlider#_slider::sub-page:horizontal {{
-                #background: rgb({r}, {g}, {b});
-            #}}
-            #"""
-
-        #self.setStyleSheet(s.format(
-                #style_handle=self._style_handle,
-                #r=col.red(), g=col.green(), b=col.blue()))
-
-    def _connect_signals(self):
-        #self._slider.valueChanged.connect(self.toggle)
-        #self._slider.sliderReleased.connect(self._check_release)
-        #self._slider.sliderPressed.connect(self._remember)
-        self._check.stateChanged.connect(self.toggle)
-        self._label.clicked.connect(self.toggle)
-
-    def _disconnect_signals(self):
-        #self._slider.valueChanged.disconnect(self.toggle)
-        #self._slider.sliderReleased.disconnect(self._check_release)
-        #self._slider.sliderPressed.disconnect(self._remember)
-        self._check.stateChanged.disconnect(self.toggle)
-        self._label.clicked.disconnect(self.toggle)
-
-    #def _remember(self):
-        #self._old_pos = int(self._slider.value())
-
-    #def _check_release(self):
-        #if int(self._slider.value()) == self._old_pos:
-            #self.toggle()
-
-    def toggle(self):
-        self._disconnect_signals()
-        self._on = not self._on
-        self._update()
-        self.toggled.emit()
-        self._connect_signals()
-
-    def isOn(self):
-        return self._on
-
-    def isOff(self):
-        return not self._on
-
-    def setOn(self):
-        self._on = True
-        self._update()
-
-    def setOff(self):
-        self._on = False
-        self._update()
-
-
 class CoqExclusiveGroup(object):
-    def __init__(self, l):
-        self._widget_list = [x for x in l if hasattr(x, "toggled")]
+    def __init__(self, lst):
+        self._widget_list = [x for x in lst if hasattr(x, "toggled")]
         _checked = None
         self._maxwidth = 0
         for element in self._widget_list:
@@ -710,7 +525,8 @@ class CoqGroupBox(QtWidgets.QGroupBox):
                      icon_size=icon_size, header_size=header_size,
                      pad_right=pad,
                      button_light=palette.color(QtGui.QPalette.Light).name(),
-                     button_midlight=palette.color(QtGui.QPalette.Midlight).name(),
+                     button_midlight=palette.color(
+                         QtGui.QPalette.Midlight).name(),
                      button_button=palette.color(QtGui.QPalette.Button).name(),
                      button_mid=palette.color(QtGui.QPalette.Mid).name(),
                      button_dark=palette.color(QtGui.QPalette.Dark).name(),
@@ -730,7 +546,7 @@ class CoqGroupBox(QtWidgets.QGroupBox):
     def setTitle(self, text, *args, **kwargs):
         super(CoqGroupBox, self).setTitle(text, *args, **kwargs)
         self._text = text
-        if self._alternative is "":
+        if self._alternative == "":
             self._alternative = text
 
     def setAlternativeTitle(self, text):
@@ -1431,7 +1247,9 @@ class CoqTextEdit(QtWidgets.QTextEdit):
     def __init__(self, *args):
         super(CoqTextEdit, self).__init__(*args)
         self.setAcceptDrops(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding,
+            QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -1593,12 +1411,12 @@ class CoqFloatEdit(QtWidgets.QLineEdit):
                     self.cursorPosition() > 0):
                 return ev.ignore()
             elif (text == "0" and
-                      self.cursorPosition() == 0 and
-                      text_to_dec == "0"):
+                    self.cursorPosition() == 0 and
+                    text_to_dec == "0"):
                 ev = get_next_char_event()
             elif (text == "0" and
-                      self.cursorPosition() > 0 and
-                      all([x == "0" for x in leading_figures])):
+                    self.cursorPosition() > 0 and
+                    all([x == "0" for x in leading_figures])):
                 return ev.ignore()
 
             return super(CoqFloatEdit, self).keyPressEvent(ev)
@@ -1639,15 +1457,20 @@ class CoqTableView(QtWidgets.QTableView):
         self._wrap_flag = int(QtCore.Qt.TextWordWrap) if bool(wrap) else 0
 
     def resizeRowsToContents(self, *args, **kwargs):
-        def set_height(n, row):
+        def set_height(n, row, metric):
             # determine the maximum required height for this row by
             # checking the height of each cell
 
             height = 0
             for col in row.index:
-                height = max(height, metric.boundingRect(rects[col], self._wrap_flag, str(row[col])).height())
+                height = max(
+                    height,
+                    metric.boundingRect(
+                        rects[col], self._wrap_flag, str(row[col])).height())
             if self.rowHeight(n) != height:
                 self.resizeRow.emit(n, height)
+
+        # FIXME: This method may be obsolete
 
         cols = [x for x in self.model().header
                 if x in (("coq_context_left",
@@ -1655,17 +1478,17 @@ class CoqTableView(QtWidgets.QTableView):
                           "coq_context_string"))]
         if not cols:
             return
-
         df = self.model().content
 
         metric = self.fontMetrics()
         # create a dictionary of QRect, each as wide as a column in the
         # table
-        rects = dict([
-            (df.columns[i], QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)) for i in range(self.horizontalHeader().count())])
+        rects = {
+            df.columns[i]: QtCore.QRect(0, 0, self.columnWidth(i) - 2, 99999)
+            for i in range(self.horizontalHeader().count())}
 
         df[cols].apply(
-            lambda x: set_height(pd.np.where(df.index == x.name)[0], x),
+            lambda x: set_height(np.where(df.index == x.name)[0], x, metric),
             axis="columns")
 
     def resizeColumnsToContents(self, *args, **kwargs):
@@ -1721,7 +1544,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if sorter and sorter.reverse:
                 # right-align columns with reverse sorting:
                 self._align.append(_right_align)
-            elif df[col].dtype in (int, float):
+            elif pd.api.types.is_numeric_dtype(df[col]):
                 # always right-align numeric columns:
                 self._align.append(_right_align)
             elif col == "coq_context_left":
@@ -1756,7 +1579,8 @@ class CoqTableModel(QtCore.QAbstractTableModel):
                 col.startswith("coq_userdata")):
             self.content[col][row] = value
             self.formatted[col][row] = value
-            corpus_id = self.invisible_content.iloc[index.row()]["coquery_invisible_corpus_id"]
+            _id_column = "coquery_invisible_corpus_id"
+            corpus_id = self.invisible_content.iloc[index.row(_id_column)]
             which = tab.coquery_invisible_corpus_id == corpus_id
             tab[col][which] = value
             self.dataChanged.emit(index, index)
@@ -1765,77 +1589,59 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
     @staticmethod
     def format_content(source, num_to_str=True):
+        """
+        Create a data frame that contains the visual representations of the
+        input data frame.
+
+        This function is required for several reasons:
+        - QTableView is very slow for data types that are not strings
+        - Handling of missing values has increased in Pandas starting with
+          version 1.0, but still needs some attention
+        - Boolean and float columns require special formatting
+        """
         df = pd.DataFrame(index=source.index)
 
-        for col in source.columns:
+        for col in source:
+            val = source[col]
+
             # copy invisible columns:
             if col.startswith("coquery_invisible"):
-                df[col] = source[col]
+                df[col] = val
                 continue
 
             # special case: only NAs?
-            if source[col].isnull().all():
-                df[col] = source[col].astype(object)
+            if val.isnull().all():
+                df[col] = val.astype(object)
                 continue
 
-            dtype = pd.Series(source[col].dropna().tolist()).dtype
-            # float
-            if dtype in (float, pd.np.float64):
-                # try to force floats to int:
-                try:
-                    as_int = source[col].astype(int, error_on_fail=False)
-                except (ValueError, TypeError):
-                    as_int = pd.Series(index=source[col].index)
-
+            if pd.api.types.is_numeric_dtype(val):
                 if num_to_str:
-                    if all(as_int == source[col]):
-                        df[col] = as_int.apply(
-                            lambda x: str(x) if (
-                                x is not None and
-                                x is not pd.np.nan) else None)
+                    if col.startswith("statistics_g_test"):
+                        val = abs(val)
+
+                    # try to downcast from float to int:
+                    dtype = val.dropna().convert_dtypes().dtype
+                    if pd.api.types.is_integer_dtype(dtype):
+                        val = map(lambda x: (str(x) if not pd.isna(x) else
+                                             options.cfg.na_string),
+                                  val.values)
                     else:
-                        if col.startswith("statistics_g_test"):
-                            val = abs(source[col])
-                        else:
-                            val = source[col]
+                        # use float format string to show specified number of
+                        # digits:
+                        val = map(lambda x: (options.cfg.float_format.format(x)
+                                             if not pd.isna(x) else
+                                             options.cfg.na_string),
+                                  val.values)
 
-                        df[col] = val.apply(
-                            lambda x: options.cfg.float_format.format(x) if (
-                                x is not None and
-                                x is not pd.np.nan) else None)
-                else:
-                    if all(as_int == source[col]):
-                        df[col] = as_int.apply(
-                            lambda x: int(x) if (
-                                x is not None and
-                                x is not pd.np.nan) else None)
-                    else:
-                        df[col] = source[col]
-
-            # int
-            elif dtype in (int, pd.np.int64):
-                if num_to_str:
-                    df[col] = source[col].apply(
-                        lambda x: str(x) if (
-                            x is not None and
-                            x is not pd.np.nan) else None)
-                else:
-                    df[col] = source[col]
-
-            # bool
-            elif dtype == bool:
-                df[col] = source[col].apply(
-                    lambda x: ["no", "yes"][bool(x)] if (
-                        x is not None and
-                        x is not pd.np.nan) else None)
-            # object
-            elif dtype == object:
-                df[col] = source[col]
-            # unknown column type
+            # use bool substitute labels:
+            elif pd.api.types.is_bool_dtype(val):
+                val = map(lambda x: (("yes" if x else "no") if not pd.isna(x)
+                                     else options.cfg.na_string),
+                          val.values)
             else:
-                df[col] = source[col].astype(str)
+                val = val.astype(str).fillna(options.cfg.na_string)
+            df[col] = pd.Series(val)
 
-        df = df.fillna(options.cfg.na_string)
         return df
 
     def data(self, index, role):
@@ -1894,7 +1700,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             if role == QtCore.Qt.DisplayRole:
                 val = self.content.index[index]
                 return (utf8(val + 1)
-                        if isinstance(val, (pd.np.integer, int))
+                        if isinstance(val, (np.integer, int))
                         else utf8(val))
             else:
                 return None

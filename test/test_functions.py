@@ -43,7 +43,6 @@ from coquery.session import Session
 
 from test.testcase import CoqTestCase, run_tests
 
-
 df0 = pd.DataFrame({
     'coq_word_label_1': ['abc'] * 3 + ['x'] * 2,
     'coq_word_label_2': ['a'] * 4 + [None],

@@ -883,7 +883,7 @@ class Freq(BaseFreq):
                        not y.startswith(("coquery_invisible"))]}
         d[columns[0]] = "count"
 
-        val = df.merge(df.groupby(columns)
+        val = df.merge(df.groupby(columns, dropna=False)
                          .agg(d)
                          .rename(columns={columns[0]: self.get_id()})
                          .reset_index(), on=columns, how="left")[self.get_id()]
@@ -1440,7 +1440,7 @@ class SubcorpusSize(CorpusSize):
             if options.cfg.verbose:
                 print(self._name,
                       f"using {self}" if self.find_function(df, fun)
-                      else f"calculating(self)")
+                      else "calculating(self)")
             if self.find_function(df, fun):
                 return df[fun.get_id()]
             corpus_features = [x for x, _

@@ -2,7 +2,7 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -1884,7 +1884,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def finalize_textgrid(self):
         self.stop_progress_indicator()
-        self.showMessage("Done writing {} text grids to {}.".format(self.textgrid_writer.n, self.textgrid_writer.output_path))
+        self.showMessage(f"Done writing {self.textgrid_writer.n} text grids "
+                         f"to {self.textgrid_writer.output_path}.")
 
     def showMessage(self, S):
         self.ui.status_message.setText(S)
@@ -2886,7 +2887,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         else:
             try:
                 state, _ = current_connection.test()
-            except ImportError as e:
+            except ImportError:
                 state = False
 
         current_name = current_connection.name

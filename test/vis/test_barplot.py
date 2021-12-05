@@ -71,6 +71,7 @@ class CoqTestCase1(unittest.TestCase):
         self.df = pd.DataFrame({"X": list("AAAAAAAAAAAAAAAAAAABBBBBBBBBBB"),
                                 "Y": list("xxxxxxxxyyyyyyyyyyyxxxxxxxyyyy"),
                                 "Z": list("111122221111222211221122112222"),
+                                "CONST": ["abc"] * 30,
                                 "NUM": np.random.randint(0, 100, 30)
                                 })
 
@@ -105,6 +106,7 @@ class CoqTestCase2(CoqTestCase1):
         self.df = pd.DataFrame({"X": list("AAAAAAAAAAAAAAAAAAABBBB"),
                                 "Y": list("xxxxxxxxyyyyyyyyyyyyyyy"),
                                 "Z": list("11112222111122221122222"),
+                                "CONST": ["abc"] * 23,
                                 "NUM": np.random.randint(0, 100, 23)
                                 })
 
@@ -461,6 +463,28 @@ class TestStackedPlotSimple(CoqTestCase1):
         vis = StackedBars(None, None)
 
         category = "X"
+        numeric = NUM_COLUMN
+        levels = sorted(self.df[category].unique())
+        data = (self.df.groupby(category)
+                       .size()
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data[COL_COLUMN] = data[category]
+
+        target = {"x": category, "y": numeric,
+                  "levels": levels, "data": data}
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=category, y=None, z=None,
+                                     levels_x=levels, levels_y=None)
+
+        self.assertDictEqual(args, target)
+
+    def test_prepare_argument_X_only_one_level(self):
+        vis = StackedBars(None, None)
+
+        category = "CONST"
         numeric = NUM_COLUMN
         levels = sorted(self.df[category].unique())
         data = (self.df.groupby(category)
