@@ -91,5 +91,5 @@ class AvailableModulesDialog(QtWidgets.QDialog):
 
     @staticmethod
     def view(parent=None):
-        dialog = AvailableModulesDialog(parent=None)
+        dialog = AvailableModulesDialog(parent=parent)
         dialog.exec_()
