@@ -785,7 +785,7 @@ class BuilderGui(InstallerGui):
 
         # test tagging:
         try:
-            nltk.pos_tag("test")
+            nltk.pos_tag(["test"])
         except LookupError as e:
             s = str(e).replace("\n", "")
             match = regexp.match(s)
