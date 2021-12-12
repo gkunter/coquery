@@ -239,6 +239,10 @@ class Heatmap(vis.Visualizer):
                     fmt=fmt,
                     linewidths=1)
 
+    def set_titles(self):
+        self._xlab = self.x or ""
+        self._ylab = self.y or ""
+
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):
         cat, num, none = vis.Visualizer.count_parameters(
