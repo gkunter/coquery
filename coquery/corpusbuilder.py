@@ -224,7 +224,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
     _read_file_formatter = "Reading {file} (%v of %m)..."
 
-    def __init__(self, gui=None):
+    def __init__(self, gui=None, *args):
         self.module_code = module_code
         self.table_description = {}
         self._time_features = []
@@ -258,7 +258,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
             else:
                 self.create_table_description(table, columns)
 
-    def get_table_names(self):
+    def get_table_names(self, **kwargs):
         """
         Return a list of tables that are specified in this corpus builder.
 
@@ -269,6 +269,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
         'Lexicon':
 
         word_table = "Lexicon"
+
+        :param **kwargs: Not used
         """
         lst = []
         for x in dir(self):
