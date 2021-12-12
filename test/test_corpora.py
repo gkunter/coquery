@@ -70,6 +70,10 @@ class CorpusResource(SQLResource):
             dump_file.write(rc_table)
 
 
+class CorpusResourceRevWord(CorpusResource):
+    word_label_rev = "WordRev"
+
+
 def simple(s):
     s = s.replace("\n", " ")
     s = s.replace("\t", " ")
@@ -370,17 +374,6 @@ class TestCorpus(CoqTestCase):
 
     def test_get_origin_rc(self):
         self.assertEqual(self.resource.get_origin_rc(), "corpus_source_id")
-
-    # TEST get_subselect_corpus():
-
-    #def test_get_subselect_corpus_1(self):
-        #query = TokenQuery("*", self.Session)
-        #l = [simple(s) for s
-             #in self.resource.get_subselect_corpus(query.query_list[0])]
-
-        #self.assertListEqual(
-            #l,
-            #[simple(
 
     ## TEST CORPUS JOINS
 
@@ -727,7 +720,7 @@ class TestCorpus(CoqTestCase):
         token = COCAToken("*ing")
         d = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word_rev"]})
+            d, {"word": ["COQ_WORD_1.Word LIKE '%ing'"]})
 
     def test_token_condition_empty_1(self):
         token = COCAToken("*")
@@ -1320,6 +1313,83 @@ class TestCorpus(CoqTestCase):
             sentence_id=np.nan)
         target = ([None] * 7, [], [None] * 7)
         self.assertEqual(target, value)
+
+
+class TestRevCorpus(CoqTestCase):
+    @classmethod
+    def pos_check_function(cls, l):
+        return [x.lower().startswith(("n", "v")) for x in l]
+
+    def setUp(self):
+        self.resource = CorpusResourceRevWord(None, None)
+        self.maxDiff = None
+        options.cfg = argparse.Namespace()
+        options.cfg.number_of_tokens = 0
+        options.cfg.limit_matches = False
+        options.cfg.regexp = False
+        options.cfg.query_case_sensitive = False
+        options.get_configuration_type = lambda: SQL_MYSQL
+        options.cfg.context_mode = CONTEXT_NONE
+        options.cfg.context_left = None
+        options.cfg.context_right = None
+        self.Session = argparse.Namespace()
+        self.Session.Resource = self.resource
+        self.Session.Corpus = None
+
+        options.cfg.current_connection = default_connection
+
+        COCAToken.set_pos_check_function(self.pos_check_function)
+
+    def test_get_token_conditions_5(self):
+        token = COCAToken("*'ll")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(
+            d, {"word": ["COQ_WORD_1.WordRev LIKE 'll''%'"]})
+
+    def test_get_token_conditions_initial_wildcard_rev(self):
+        token = COCAToken("*ing")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(
+            d, {"word": ["COQ_WORD_1.WordRev LIKE 'gni%'"]})
+
+    def test_query_string_initial_wildcard(self):
+        query = TokenQuery("*ing", self.Session)
+        query_string = self.resource.get_query_string(query.query_list[0],
+                                                      ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Start AS Start1,
+                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            WHERE (COQ_WORD_1.WordRev LIKE 'gni%')"""
+
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
+
+    def test_query_string_apostrophe(self):
+        query = TokenQuery("*'ll", self.Session)
+        query_string = self.resource.get_query_string(
+            query.query_list[0], ["word_label"])
+        target_string = """
+            SELECT COQ_WORD_1.Word AS coq_word_label_1,
+                   ID1 AS coquery_invisible_corpus_id,
+                   FileId1 AS coquery_invisible_origin_id
+            FROM (SELECT End AS End1,
+                         FileId AS FileId1,
+                         ID AS ID1,
+                         Start AS Start1,
+                         WordId AS WordId1 FROM Corpus) AS COQ_CORPUS_1
+            INNER JOIN Lexicon AS COQ_WORD_1
+                    ON COQ_WORD_1.WordId = WordId1
+            WHERE (COQ_WORD_1.WordRev LIKE 'll''%')"""
+        self.assertEqual(simple(query_string),
+                         simple(target_string))
 
 
 class TestSuperFlat(CoqTestCase):
@@ -2182,8 +2252,13 @@ def mock_get_available_resources(configuration):
 
 
 provided_tests = [
-                  TestCorpus, TestSuperFlat, TestCorpusWithExternal,
-                  TestNGramCorpus, TestBigramCorpus,
+                  TestCorpus,
+                  TestRevCorpus,
+                  TestSuperFlat,
+                  TestCorpusWithExternal,
+                  TestNGramCorpus,
+                  TestBigramCorpus,
+
                   #TestRenderedContext,
                   ]
 

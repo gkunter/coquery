@@ -17,7 +17,7 @@ your system:
 
 * Pandas 0.15.0 or later
 * SQLAlchemy 1.0 or later
-* either PySide 1.2.0 or PyQt4 4.11.0 or later
+* PyQt5
 
 If you use `pip` to install Coquery, these modules are also installed
 automatically.
@@ -31,12 +31,7 @@ installing them provides additional functionality to the program:
 * NLTK 3.0 or later
 * PDFMiner/pdfminer3k 
 
-If you wish to install them with `pip`, run
-```
-pip install seaborn pymysql nltk pdfminer
-```
-if you are using Python 2.7, or 
+If you wish to install them with `pip`, run:
 ```
 pip install seaborn pymysql nltk pdfminer3k
 ```
-if you are using Python 3.4 or later.

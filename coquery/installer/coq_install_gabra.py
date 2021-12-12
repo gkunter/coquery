@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-coq_install_gapra.py is part of Coquery.
+coq_install_gabra.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,6 +13,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import unicode_literals
 
 import os
+import bson
 
 from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.tables import Column, Identifier, Link
@@ -20,11 +21,24 @@ from coquery.bibliography import Reference, PersonList, Person
 from coquery.defines import VIEW_MODE_TABLES
 
 
+def yn(s) -> str:
+    """
+    Return 'Y' if int(s) is True, or 'N' otherwise. Return an empty
+    string if s is None.
+    """
+    if s:
+        if int(s):
+            return "Y"
+        else:
+            return "N"
+    return ""
+
+
 class BuilderClass(BaseCorpusBuilder):
     default_view_mode = VIEW_MODE_TABLES
     file_filter = "*.bson"
     expected_files = [
-        "lexemes.bson", "roots.bson", "sources.bson", "wordforms.bson"]
+        "roots.bson", "lexemes.bson", "sources.bson", "wordforms.bson"]
 
     root_table = "Roots"
     root_id = "RootId"
@@ -34,7 +48,8 @@ class BuilderClass(BaseCorpusBuilder):
     root_alternatives = "Alternatives"
     _root_dict = {}
 
-    _lemma_dict = {}
+    join_type = "LEFT"
+
     lemma_table = "Lexemes"
 
     lemma_id = "LemmaId"
@@ -51,6 +66,7 @@ class BuilderClass(BaseCorpusBuilder):
     lemma_feedback = "Feedback"
     lemma_form = "Form"
     lemma_frequency = "Frequency"
+    lemma_norm_freq = "NormFreq"
     lemma_gender = "Gender"
     lemma_gloss = "Gloss"
     lemma_headword = "Headword"
@@ -63,12 +79,10 @@ class BuilderClass(BaseCorpusBuilder):
     lemma_participle = "Participle"
     lemma_pending = "Pending"
     lemma_pos = "POS"
-    lemma_radicals = "Radicals"
     lemma_root_id = "RootId"
     lemma_transcript = "Phonetic"
     lemma_verbalnoun = "Verbal_noun"
 
-    _source_dict = {}
     source_id = "SourceId"
     source_key = "Identifier"
     source_table = "Sources"
@@ -166,7 +180,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.create_table_description(
             self.root_table,
-            [Identifier(self.root_id, "SMALLINT(4) UNSIGNED"),
+            [Identifier(self.root_id, "INT(6) UNSIGNED"),
              Column(self.root_radicals, "VARCHAR(128)"),
              Column(self.root_type, "VARCHAR(128)"),
              Column(self.root_alternatives, "VARCHAR(128)"),
@@ -181,43 +195,44 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.source_author, "VARCHAR(1024)"),
              Column(self.source_note, "VARCHAR(1024)")])
 
+        lst = [Identifier(self.lemma_id, "SMALLINT(5) UNSIGNED"),
+               Column(self.lemma_label, "VARCHAR(512)"),
+               Column(self.lemma_adjectival, "VARCHAR(1)"),
+               Column(self.lemma_adverbial, "VARCHAR(1)"),
+               Column(self.lemma_alternatives, "VARCHAR(128)"),
+               Column(self.lemma_apertiumparadigm, "VARCHAR(128)"),
+               Column(self.lemma_archaic, "VARCHAR(1)"),
+               Column(self.lemma_created, "VARCHAR(128)"),
+               Column(self.lemma_derived_form, "TINYINT"),
+               Column(self.lemma_ditransitive, "VARCHAR(1)"),
+               Column(self.lemma_features, "VARCHAR(128)"),
+               Column(self.lemma_feedback, "VARCHAR(128)"),
+               Column(self.lemma_form, "VARCHAR(128)"),
+               Column(self.lemma_frequency, "VARCHAR(128)"),
+               Column(self.lemma_norm_freq, "REAL"),
+               Column(self.lemma_gender, "VARCHAR(1)"),
+               Column(self.lemma_gloss, "VARCHAR(1024)"),
+               Column(self.lemma_headword, "VARCHAR(128)"),
+               Column(self.lemma_hypothetical, "VARCHAR(1)"),
+               Column(self.lemma_intransitive, "VARCHAR(1)"),
+               Column(self.lemma_modified, "VARCHAR(128)"),
+               Column(self.lemma_notduplicate, "VARCHAR(1)"),
+               Column(self.lemma_number, "VARCHAR(128)"),
+               Column(self.lemma_onomastictype, "VARCHAR(128)"),
+               Column(self.lemma_participle, "VARCHAR(1)"),
+               Column(self.lemma_pending, "VARCHAR(1)"),
+               Column(self.lemma_pos, "VARCHAR(8)"),
+               Link(self.lemma_root_id, self.root_table),
+               Column(self.lemma_transcript, "VARCHAR(128)"),
+               Column(self.lemma_verbalnoun, "VARCHAR(1)")]
+
         self.create_table_description(
-            self.lemma_table,
-            [Identifier(self.lemma_id, "SMALLINT(5) UNSIGNED"),
-             Column(self.lemma_label, "VARCHAR(128)"),
-             Column(self.lemma_adjectival, "VARCHAR(1)"),
-             Column(self.lemma_adverbial, "VARCHAR(1)"),
-             Column(self.lemma_alternatives, "VARCHAR(128)"),
-             Column(self.lemma_apertiumparadigm, "VARCHAR(128)"),
-             Column(self.lemma_archaic, "VARCHAR(1)"),
-             Column(self.lemma_created, "VARCHAR(128)"),
-             Column(self.lemma_derived_form, "TINYINT"),
-             Column(self.lemma_ditransitive, "VARCHAR(1)"),
-             Column(self.lemma_features, "VARCHAR(128)"),
-             Column(self.lemma_feedback, "VARCHAR(128)"),
-             Column(self.lemma_form, "VARCHAR(128)"),
-             Column(self.lemma_frequency, "INT"),
-             Column(self.lemma_gender, "VARCHAR(1)"),
-             Column(self.lemma_gloss, "VARCHAR(124)"),
-             Column(self.lemma_headword, "VARCHAR(128)"),
-             Column(self.lemma_hypothetical, "VARCHAR(1)"),
-             Column(self.lemma_intransitive, "VARCHAR(1)"),
-             Column(self.lemma_modified, "VARCHAR(128)"),
-             Column(self.lemma_notduplicate, "VARCHAR(1)"),
-             Column(self.lemma_number, "VARCHAR(128)"),
-             Column(self.lemma_onomastictype, "VARCHAR(128)"),
-             Column(self.lemma_participle, "VARCHAR(1)"),
-             Column(self.lemma_pending, "VARCHAR(1)"),
-             Column(self.lemma_pos, "VARCHAR(8)"),
-             Column(self.lemma_radicals, "VARCHAR(128)"),
-             Link(self.lemma_root_id, self.root_table),
-             Column(self.lemma_transcript, "VARCHAR(128)"),
-             Column(self.lemma_verbalnoun, "VARCHAR(1)")])
+            self.lemma_table, lst)
 
         self.create_table_description(
             self.corpus_table,
             [Identifier(self.corpus_id,         "MEDIUMINT(7) UNSIGNED"),
-             Column(self.corpus_word,           "VARCHAR( 128)"),
+             Column(self.corpus_word,           "VARCHAR( 512)"),
              Column(self.corpus_adverbial,      "VARCHAR(   1)"),
              Column(self.corpus_alternatives,   "VARCHAR( 128)"),
              Column(self.corpus_archaic,        "VARCHAR(   1)"),
@@ -244,36 +259,175 @@ class BuilderClass(BaseCorpusBuilder):
 
         self.add_time_feature(self.source_year)
 
-    def build_load_files(self):
-        import bson
+        self._source_id_dict = {}
+        self._lemma_id_dict = {}
+        self._radicals_dict = {}
 
-        def yn(s):
-            """
-            Return 'Y' if int(s) is True, or 'N' otherwise. Return an empty
-            string if s is None.
-            """
-            if s:
-                if int(s):
-                    return "Y"
-                else:
-                    return "N"
+        self._source_id = None
+        self._root_id = None
+        self._lemma_id = None
+
+    @staticmethod
+    def _parse_noun_spec(dct: dict) -> str:
+        if not dct:
             return ""
+        else:
+            lst = [dct.get(feature)
+                   for feature in ["person", "number", "gender"]
+                   if dct.get(feature)]
+            return "_".join([x for x in lst if x])
 
-        file_list = sorted(self.get_file_list(self.arguments.path,
-                                              self.file_filter))
-        files = [x for x in file_list
-                 if os.path.basename(x).lower() in self.expected_files]
+    def _parse_lexemes_entry(self, entry) -> dict:
+        # Fix some spelling mistakes in the key names:
+        for x, correct in [("achaic", "archaic"),
+                           ("archaic ", "archaic"),
+                           ("adverbial ", "adverbial"),
+                           ("instransitive", "intransitive")]:
+            if x in entry.keys():
+                entry[correct] = entry[x]
+
+        # get root id if possible:
+        root = entry.get("root")
+        if root:
+            radicals = root.get("radicals", "").strip()
+            root_id = self._radicals_dict.get(radicals, 0)
+        else:
+            root_id = 0
+
+        lst = []
+        for ngloss, meaning in enumerate(
+                entry.get("glosses", [])):
+            gls = meaning["gloss"]
+            if len(entry.get("glosses", [])) > 1:
+                lst.append(f"({ngloss + 1}) {gls}")
+            else:
+                lst.append(gls)
+        gloss = "; ".join(lst)
+
+        # look up headword:
+        try:
+            headword = entry.get("headword").get("lemma")
+        except AttributeError:
+            headword = ""
+
+        # fix 'verbalnoun':
+        verbal_noun = entry.get("verbalnoun", "")
+        if verbal_noun == "verbalnoun" or verbal_noun == "1":
+            verbal_noun = "N"
+
+        # FIXME: Some entries contain comments in square brackets in the
+        # FIXME: lemma field. These comments should be removed.
+        # lemma = re.match(r"(.*)(?:\s[[])?", entry.get("lemma")).groups()[0]
+
+        d = {self.lemma_id: self._lemma_id,
+             self.lemma_label: entry.get("lemma"),
+             self.lemma_adjectival: yn(entry.get("adjectival")),
+             self.lemma_adverbial: yn(entry.get("adverbial")),
+             self.lemma_alternatives: ";".join(entry.get("alternatives", [])),
+             self.lemma_apertiumparadigm: entry.get("apertium_paradigm", ""),
+             self.lemma_archaic: yn(entry.get("archaic")),
+             self.lemma_created: entry.get("created", ""),
+             self.lemma_derived_form: entry.get("derived_form", 0),
+             self.lemma_ditransitive: yn(entry.get("ditransitive")),
+             self.lemma_features: entry.get("features"),
+             self.lemma_feedback: entry.get("feedback", ''),
+             self.lemma_form: entry.get("form", ''),
+             self.lemma_frequency: entry.get("frequency", None),
+             self.lemma_norm_freq: entry.get("norm_freq", 0),
+             self.lemma_gender: entry.get("gender", ""),
+             self.lemma_gloss: gloss,
+             self.lemma_headword: headword,
+             self.lemma_hypothetical: yn(entry.get("hypothetical")),
+             self.lemma_intransitive: yn(entry.get("intransitive")),
+             self.lemma_modified: entry.get("modified", ""),
+             self.lemma_notduplicate: yn(entry.get("not_duplicate")),
+             self.lemma_number: entry.get("number", ""),
+             self.lemma_onomastictype: entry.get("onomastic_type", ""),
+             self.lemma_participle: yn(entry.get("participle")),
+             self.lemma_pending: yn(entry.get("pending")),
+             self.lemma_pos: entry.get("pos", ''),
+             self.lemma_root_id: root_id,
+             self.lemma_transcript: entry.get("phonetic", ""),
+             self.lemma_verbalnoun: verbal_noun}
+        return d
+
+    def _parse_wordforms_entry(self, entry) -> dict:
+        # try to get source id at all costs:
+        source_id = 0
+        source_list = entry.get("sources")
+        if source_list:
+            try:
+                source_id = self._source_id_dict[source_list[0]]
+            except KeyError:
+                for x in self._source_id_dict:
+                    if self._source_id_dict[x] == source_list[0]:
+                        source_id = self._source_id_dict[x]
+                        break
+                else:
+                    source_id = 0
+
+        # collapse the dictionaries behind subject,
+        # ind_obj, dir_obj, and possessor:
+        subject_str = self._parse_noun_spec(entry.get("subject"))
+        dir_obj_str = self._parse_noun_spec(entry.get("dir_obj"))
+        ind_obj_str = self._parse_noun_spec(entry.get("ind_obj"))
+        possessor_str = self._parse_noun_spec(entry.get("possessor"))
+
+        alternatives_str = ";".join(entry.get("alternatives", []))
+
+        lexeme_id = entry.get("lexeme_id")
+        lemma_id = self._lemma_id_dict.get(str(lexeme_id), 0)
+
+        d = {self.corpus_id: self._corpus_id,
+             self.corpus_adverbial: yn(entry.get("adverbial")),
+             self.corpus_alternatives: alternatives_str,
+             self.corpus_archaic: yn(entry.get("archaic")),
+             self.corpus_aspect: entry.get("aspect", ""),
+             self.corpus_created: entry.get("created", ""),
+             self.corpus_dir_obj: dir_obj_str,
+             self.corpus_form: entry.get("form", ""),
+             self.corpus_full: entry.get("full", ""),
+             self.corpus_gender: entry.get("gender", ""),
+             self.corpus_generated: yn(entry.get("generated")),
+             self.corpus_gloss: entry.get("gloss", ""),
+             self.corpus_hypothetical: yn(entry.get("hypothetical")),
+             self.corpus_ind_obj: ind_obj_str,
+             self.corpus_lemma_id: lemma_id,
+             self.corpus_modified: entry.get("modified", ""),
+             self.corpus_number: entry.get("number", ""),
+             self.corpus_pattern: entry.get("pattern", ""),
+             self.corpus_transcript: entry.get("phonetic", ""),
+             self.corpus_plural_form: entry.get("plural_form", ""),
+             self.corpus_polarity: entry.get("polarity", ""),
+             self.corpus_possessor: possessor_str,
+             self.corpus_source_id: source_id,
+             self.corpus_subject: subject_str,
+             self.corpus_word: entry.get("surface_form", "")}
+        return d
+
+    def build_load_files(self):
+        file_list = self.get_file_list(self.arguments.path, self.file_filter)
+        files = []
+        for expected_file in self.expected_files:
+            for fn in file_list:
+                if os.path.basename(fn) == expected_file:
+                    files.append(fn)
+                    continue
+        if len(files) != len(self.expected_files):
+            raise RuntimeError(
+                "Not all expected files were found in the selected path.")
+
         if self._widget:
             self._widget.progressSet.emit(len(self.expected_files), "")
             self._widget.progressUpdate.emit(0)
 
         self._corpus_id = 0
 
+        max_cache = 20000
         for i, filepath in enumerate(files):
             filename = os.path.basename(filepath)
 
             if filename == "wordforms.bson":
-                max_cache = 20000
                 self.table(self.corpus_table).set_max_cache(max_cache)
                 self._widget.progressSet.emit(4520596 // max_cache,
                                               "Loading {}".format(filename))
@@ -281,188 +435,48 @@ class BuilderClass(BaseCorpusBuilder):
             else:
                 self._widget.labelSet.emit("Loading {}".format(filename))
 
-            with open(filepath, "rb") as input_file:
-                for entry in bson.decode_file_iter(input_file):
-                    self._entry = entry
-                    if filename == "sources.bson":
-                        self._source_id = len(self._source_dict) + 1
-                        self._source_dict[str(entry["key"])] = self._source_id
-                        d = {
-                            self.source_id: self._source_id,
-                            self.source_label: entry.get("title", ""),
-                            self.source_year: entry.get("year", ""),
-                            self.source_author: entry.get("author", ""),
-                            self.source_key: entry.get("key", ""),
-                            self.source_note: entry.get("note", "")}
+            if filename == "sources.bson":
+                with open(filepath, "rb") as input_file:
+                    for entry in bson.decode_file_iter(input_file):
+                        self._source_id = len(self._source_id_dict) + 1
+                        key = str(entry["key"])
+                        self._source_id_dict[key] = self._source_id
+                        d = {self.source_id: self._source_id,
+                             self.source_label: entry.get("title", ""),
+                             self.source_year: entry.get("year", ""),
+                             self.source_author: entry.get("author", ""),
+                             self.source_key: entry.get("key", ""),
+                             self.source_note: entry.get("note", "")}
                         self.table(self.source_table).add(d)
-
-                    elif filename == "roots.bson":
+            elif filename == "roots.bson":
+                with open(filepath, "rb") as input_file:
+                    for entry in bson.decode_file_iter(input_file):
                         self._root_id = len(self._root_dict) + 1
                         self._root_dict[str(entry["_id"])] = self._root_id
+                        radicals = entry.get("radicals", "").strip()
                         d = {self.root_id: self._root_id,
-                             self.root_radicals: entry.get("radicals", ""),
+                             self.root_radicals: radicals,
                              self.root_type: entry.get("type", ""),
                              self.root_variant: entry.get("variant", 0),
                              self.root_alternatives:
                                  entry.get("alternatives", "")}
                         self.table(self.root_table).add(d)
-
-                    elif filename == "lexemes.bson":
-                        # Fix some spelling mistakes in the key names:
-                        for x, correct in [("achaic", "archaic"),
-                                           ("archaic ", "archaic"),
-                                           ("adverbial ", "adverbial"),
-                                           ("instransitive", "intransitive")]:
-                            if x in entry.keys():
-                                entry[correct] = entry[x]
-                        self._lemma_id = len(self._lemma_dict) + 1
-                        self._lemma_dict[str(entry["_id"])] = self._lemma_id
-
-                        # get root id if possible, and also root radicals:
-                        root_id = None
-                        root = entry.get("root", "")
-                        if root:
-                            root_id = str(root.get("_id"))
-                            root_radicals = root.get("radicals", "")
-                        root_link = self._root_dict.get(root_id, 0)
-
-                        # look up headword:
-                        headword = None
-                        headword_dict = entry.get("headword", "")
-                        if headword_dict:
-                            headword = headword_dict.get("lemma")
-
-                        # fix 'verbalnoun':
-                        verbal_noun = entry.get("verbalnoun", "")
-                        if verbal_noun == "verbalnoun" or verbal_noun == "1":
-                            verbal_noun = "N"
-
-                        d = {self.lemma_id: self._lemma_id,
-                             self.lemma_label: entry.get("lemma", ""),
-                             self.lemma_adjectival:
-                                 yn(entry.get("adjectival")),
-                             self.lemma_adverbial:
-                                 yn(entry.get("adverbial")),
-                             self.lemma_alternatives:
-                                 ";".join(entry.get("alternatives", [])),
-                             self.lemma_apertiumparadigm:
-                                 entry.get("apertium_paradigm", ""),
-                             self.lemma_archaic: yn(entry.get("archaic")),
-                             self.lemma_created: entry.get("created", ""),
-                             self.lemma_derived_form:
-                                 entry.get("derived_form", 0),
-                             self.lemma_ditransitive:
-                                 yn(entry.get("ditransitive")),
-                             self.lemma_features: entry.get("features"),
-                             self.lemma_feedback: entry.get("feedback", ''),
-                             self.lemma_form: entry.get("form", ''),
-                             self.lemma_frequency: entry.get("frequency", 0),
-                             self.lemma_gender: entry.get("gender", ""),
-                             self.lemma_gloss: entry.get("gloss", ""),
-                             self.lemma_headword: headword,
-                             self.lemma_hypothetical:
-                                 yn(entry.get("hypothetical")),
-                             self.lemma_intransitive:
-                                 yn(entry.get("intransitive")),
-                             self.lemma_modified: entry.get("modified", ""),
-                             self.lemma_notduplicate:
-                                 yn(entry.get("not_duplicate")),
-                             self.lemma_number: entry.get("number", ""),
-                             self.lemma_onomastictype:
-                                 entry.get("onomastic_type", ""),
-                             self.lemma_participle:
-                                 yn(entry.get("participle")),
-                             self.lemma_pending: yn(entry.get("pending")),
-                             self.lemma_pos: entry.get("pos", ''),
-                             self.lemma_radicals: root_radicals,
-                             self.lemma_root_id: root_link,
-                             self.lemma_transcript: entry.get("phonetic", ""),
-                             self.lemma_verbalnoun: entry.get("verbalnoun")}
+                        self._radicals_dict[radicals] = self._root_id
+            elif filename == "lexemes.bson":
+                with open(filepath, "rb") as input_file:
+                    for entry in bson.decode_file_iter(input_file):
+                        self._lemma_id = len(self._lemma_id_dict) + 1
+                        self._lemma_id_dict[str(entry["_id"])] = self._lemma_id
+                        d = self._parse_lexemes_entry(entry)
                         self.table(self.lemma_table).add(d)
-
-                    elif filename == "wordforms.bson":
+            elif filename == "wordforms.bson":
+                with open(filepath, "rb") as input_file:
+                    for entry in bson.decode_file_iter(input_file):
                         self._corpus_id += 1
-
-                        # try to get source id at all costs:
-                        source_id = None
-                        source_list = entry.get("sources")
-                        if source_list:
-                            try:
-                                source_id = self._source_dict[source_list[0]]
-                            except KeyError:
-                                for x in self._source_dict:
-                                    if self._source_dict[x] == source_list[0]:
-                                        source_id = self._source_dict[x]
-                                        break
-                                else:
-                                    source_id = 0
-
-                        # collapse the dictionaries behind subject,
-                        # ind_obj, and dir_obj:
-                        subj_dict = entry.get("subject")
-                        l = []
-                        if subj_dict:
-                            l = [subj_dict["person"], subj_dict["number"]]
-                            if "gender" in subj_dict:
-                                l.append(subj_dict["gender"])
-                        subj = "_".join(l)
-
-                        ind_obj_dict = entry.get("ind_obj")
-                        l = []
-                        if ind_obj_dict:
-                            l = [ind_obj_dict["person"],
-                                 ind_obj_dict["number"]]
-                            if "gender" in ind_obj_dict:
-                                l.append(ind_obj_dict["gender"])
-                        ind_obj = "_".join(l)
-
-                        dir_obj_dict = entry.get("dir_obj")
-                        l = []
-                        if dir_obj_dict:
-                            l = [dir_obj_dict["person"],
-                                 dir_obj_dict["number"]]
-                            if "gender" in dir_obj_dict:
-                                l.append(dir_obj_dict["gender"])
-                        dir_obj = "_".join(l)
-
-                        d = {self.corpus_id: self._corpus_id,
-                             self.corpus_adverbial:
-                                 yn(entry.get("adverbial")),
-                             self.corpus_alternatives:
-                                 ";".join(entry.get("alternatives", [])),
-                             self.corpus_archaic: yn(entry.get("archaic")),
-                             self.corpus_aspect: entry.get("aspect", ""),
-                             self.corpus_created: entry.get("created", ""),
-                             self.corpus_dir_obj: dir_obj,
-                             self.corpus_form: entry.get("form", ""),
-                             self.corpus_full: entry.get("full", ""),
-                             self.corpus_gender: entry.get("gender", ""),
-                             self.corpus_generated:
-                                 yn(entry.get("generated")),
-                             self.corpus_gloss: entry.get("gloss", ""),
-                             self.corpus_hypothetical:
-                                 yn(entry.get("hypothetical")),
-                             self.corpus_ind_obj: ind_obj,
-                             self.corpus_lemma_id:
-                                 self._lemma_dict.get(
-                                     str(entry.get("lexeme_id"))),
-                             self.corpus_modified: entry.get("modified", ""),
-                             self.corpus_number: entry.get("number", ""),
-                             self.corpus_pattern: entry.get("pattern", ""),
-                             self.corpus_transcript:
-                                 entry.get("phonetic", ""),
-                             self.corpus_plural_form:
-                                 entry.get("plural_form", ""),
-                             self.corpus_polarity: entry.get("polarity", ""),
-                             self.corpus_possessor:
-                                 entry.get("possessor", ""),
-                             self.corpus_source_id: source_id,
-                             self.corpus_subject: subj,
-                             self.corpus_word: entry.get("surface_form", "")}
-
+                        d = self._parse_wordforms_entry(entry)
                         self.table(self.corpus_table).add(d)
 
                         if self._widget and not self._corpus_id % max_cache:
                             self._widget.progressUpdate.emit(
                                 self._corpus_id // max_cache)
-                self.commit_data()
+            self.commit_data()

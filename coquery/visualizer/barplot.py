@@ -75,7 +75,7 @@ class BarPlot(vis.Visualizer):
         """
         aggregator = vis.Aggregator()
 
-        if (x and y and (data[x].dtype != object or data[y].dtype != object)):
+        if x and y and (data[x].dtype != object or data[y].dtype != object):
             # one of the two given variable is numeric
             if data[x].dtype == object:
                 ax_cat, ax_num = "x", "y"
@@ -165,7 +165,7 @@ class BarPlot(vis.Visualizer):
                 rgb = self.colorizer.get_hues(levels)
             else:
                 df = self.args["data"]
-                rgb = self.colorizer.get_hues(df[self.COL_COLUMN])
+                rgb = self.colorizer.get_hues(df[:, self.COL_COLUMN])
 
             assert len(ax.containers[0]) == len(rgb)
 
@@ -174,7 +174,7 @@ class BarPlot(vis.Visualizer):
         else:
             # colorize two categorical series
             data = self.args["data"]
-            rgb = self.colorizer.get_hues(data[self.COL_COLUMN])
+            rgb = self.colorizer.get_hues(data[:, self.COL_COLUMN])
             data[self.RGB_COLUMN] = rgb
 
             for i, cont in enumerate(ax.containers):
@@ -184,7 +184,7 @@ class BarPlot(vis.Visualizer):
                     row = data[(data[self.x] == val_x) &
                                (data[self.y] == val_y)]
                     if len(row):
-                        color = row[self.RGB_COLUMN].tolist()[0]
+                        color = row[:, self.RGB_COLUMN].tolist()[0]
                         art.set_facecolor(color)
 
     def set_titles(self):
@@ -382,7 +382,7 @@ class StackedBars(BarPlot):
             data = data.reset_index(drop=True)
 
             if len(data[category].unique()) > 1:
-                df = (data.groupby(category)
+                df = (data.groupby(category, dropna=False)
                           .apply(self.group_transform, self.NUM_COLUMN)
                           .reset_index(0))
                 data[self.NUM_COLUMN] = df[self.NUM_COLUMN]

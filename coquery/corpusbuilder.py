@@ -224,7 +224,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
     _read_file_formatter = "Reading {file} (%v of %m)..."
 
-    def __init__(self, gui=None):
+    def __init__(self, gui=None, *args):
         self.module_code = module_code
         self.table_description = {}
         self._time_features = []
@@ -258,7 +258,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
             else:
                 self.create_table_description(table, columns)
 
-    def get_table_names(self):
+    def get_table_names(self, **kwargs):
         """
         Return a list of tables that are specified in this corpus builder.
 
@@ -269,6 +269,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
         'Lexicon':
 
         word_table = "Lexicon"
+
+        :param **kwargs: Not used
         """
         lst = []
         for x in dir(self):
@@ -834,7 +836,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
             # FIXME: Apparently, there was an error in the exception handling
             # that required to remove showing the source code that contained
             # the error. This should be returned at some point.
-            #S = S.splitlines()
+            # S = S.splitlines()
             S = []
             logging.error(e)
             for i, x in enumerate(S):
@@ -1566,11 +1568,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         """ Write a Python module with the necessary specifications to the
         Coquery corpus module directory."""
         base_variables = dir(type(self).__bases__[0])
-        # set_query_items() initializes those class variables that map the
-        # different query item types to resource features from the class.
-        # In order to make these mappings available in the corpus module,
-        # this is called before the module is written:
-        self.set_query_items()
 
         # all class variables that are defined in this class and which...
         # - are not stored in the base class
@@ -1845,7 +1842,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         with self.DB.engine.connect() as self.DB.connection:
             logging.info("Stage 0")
             self.build_initialize()
-            #progress_done()
 
             try:
                 if not self.arguments.only_module:
@@ -1856,7 +1852,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                             self.add_metadata(self.arguments.metadata,
                                               self.arguments.metadata_column)
                         self.build_create_tables()
-                        #progress_done()
 
                     # read files
                     if not self.interrupted:
@@ -1866,7 +1861,12 @@ class BaseCorpusBuilder(corpus.SQLResource):
                             self.store_metadata()
                         self.build_load_files()
                         self.commit_data()
-                        #progress_done()
+                        # set_query_items() initializes those class variables
+                        # that map the different query item types to resource
+                        # features from the class. In order to make these
+                        # mappings available in the corpus module, this is
+                        # called before the module is written:
+                        self.set_query_items()
 
                     # any additional stage
                     if not self.interrupted:
@@ -1875,7 +1875,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                         for stage in self.additional_stages:
                             if not self.interrupted:
                                 stage()
-                        #progress_done()
 
                     # optimize
                     if (not self.interrupted and
@@ -1883,7 +1882,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                         logging.info("Stage 4")
                         current = progress_next(current)
                         self.build_optimize()
-                        #progress_done()
 
                     # lookup table
                     try:
@@ -1892,7 +1890,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
                             logging.info("Stage 5")
                             current = progress_next(current)
                             self.build_lookup_ngram()
-                            #progress_done()
                     except Exception as e:
                         S = "Error building ngram lookup table: {}".format(e)
                         logging.error(S)
@@ -1904,7 +1901,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
                         logging.info("Stage 6")
                         current = progress_next(current)
                         self.build_create_indices()
-                        #progress_done()
+
+                else:
+                    self.set_query_items()
 
                 # write module
                 if not self.interrupted:

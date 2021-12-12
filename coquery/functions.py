@@ -164,7 +164,7 @@ class Function(CoqObject):
     def set_label(self, label):
         self._label = label
 
-    def _func(self, series, *args, **kwargs):
+    def _func(self, series, *args, **kwargs) -> pd.Series:
         """
         Defines the function that is applied the columns in the data frame
         that is passed to this function.
@@ -202,7 +202,7 @@ class Function(CoqObject):
         try:
             val = df[self.columns].apply(self._func)
         except (KeyError, ValueError):
-            val = self.constant(df, None)
+            val = self.constant(df, pd.NA)
 
         return val
 
@@ -252,7 +252,7 @@ class ToCategory(ConversionFunction):
 
         for col in self.columns:
             d[col] = df[col].astype(str)
-            d[col][df[col].isnull()] = None
+            d[col][df[col].isnull()] = pd.NA
 
         return pd.DataFrame(d)
 
@@ -309,7 +309,7 @@ class StringChain(StringFunction):
         sep = kwargs.get("sep", "")
         val = df[self.columns].apply(
             lambda x: sep.join(
-                [str(element) for element in x if element is not None]),
+                [str(element) for element in x if pd.notna(element)]),
             axis="columns")
         return val
 
@@ -331,9 +331,10 @@ class StringSeriesFunction(StringFunction):
         except KeyError:
             pass
 
+        pat = kwargs.get("pat")
+
         if self.str_func in ("replace", "contains", "extract", "count"):
             # ensure that regex functions use unicode:
-            pat = kwargs["pat"]
             if "(?u)" not in pat:
                 kwargs["pat"] = "(?u){}".format(pat)
 
@@ -403,6 +404,7 @@ class StringMatch(StringSeriesFunction):
 class StringExtract(StringSeriesFunction):
     _name = "EXTRACT"
     str_func = "extract"
+    fill_na = pd.NA
     validate_input = StringFunction.validate_regex
     arguments = {"string": [("pat", "Regular expression:", "")],
                  "check": [("case", "Case-sensitive:", False)]}
@@ -462,21 +464,20 @@ class NumFunction(Function):
         Coerce the function argument to the appropriate type depending on the
         values of the supplied data frame.
         """
-
-        column_dtypes = df[self.columns].dtypes
-
-        if all([dt in (int, float) for dt in column_dtypes]):
+        column_dtypes = [df[col].dropna().convert_dtypes().dtype
+                         for col in self.columns]
+        if all([pd.api.types.is_numeric_dtype(dt) for dt in column_dtypes]):
             # if all columns are numeric, the value is coerced to float
             return float(value)
-        elif any([dt == object for dt in column_dtypes]):
-            # if there is any string column, the value is coerced to a string:
-            return str(value)
-        elif any([dt == bool for dt in column_dtypes]):
+        elif any([pd.api.types.is_bool_dtype(dt) for dt in column_dtypes]):
             # if there is any bool column, the value is coerced to a bool:
             return bool(value)
+        elif any([pd.api.types.is_string_dtype(dt) for dt in column_dtypes]):
+            # if there is any string column, the value is coerced to a string:
+            return str(value)
         else:
             # undefined behavior
-            raise TypeError
+            raise TypeError("Undefined behavior")
 
 
 class CalcFunction(NumFunction):
@@ -491,20 +492,36 @@ class CalcFunction(NumFunction):
     def evaluate(self, df, **kwargs):
         parameter = kwargs.get("value", None)
         if len(self.columns) == 1 and not parameter:
-            val = reduce(self._func, df[self.columns[0]].values)
+            try:
+                val = reduce(self._func,
+                             df[self.columns[0]].fillna(np.nan).values)
+            except Exception as e:
+                print(e)
+                raise e
         else:
-            val = df[self.columns[0]].values
+            val = df[self.columns[0]].fillna(np.nan).values
             for x in self.columns[1:]:
-                val = self._func(val, df[x].values)
+                val = self._func(val, df[x].fillna(np.nan).values)
             if parameter:
-                const = self.coerce_value(df, parameter)
-                val = self._func(val, const)
+                try:
+                    const = self.coerce_value(df, parameter)
+                except Exception as e:
+                    print(e)
+                    raise e
+                try:
+                    val = self._func(val, const)
+                except Exception as e:
+                    print(e)
+                    raise e
             if not self._ignore_na:
-                nan_rows = np.any(pd.isnull(df[self.columns].values), axis=1)
+                nan_rows = np.any(
+                    pd.isnull(df[self.columns].fillna(np.nan).values),
+                    axis=1)
                 if nan_rows.any():
                     val = val.astype(object)
                     val[nan_rows] = None
-        return pd.Series(data=val, index=df.index)
+
+        return pd.Series(data=val, index=df.index).fillna(pd.NA)
 
 
 class OperatorFunction(CalcFunction):
@@ -573,7 +590,7 @@ class Binning(OperatorFunction):
     _description = ("Transforms a number to the bin value given the "
                     "argument")
 
-    def _func(self, val, bw):
+    def _func(self, val, bw, **kwargs):
         return (val // bw) * bw
 
 
@@ -723,7 +740,7 @@ class Not(LogicFunction):
     _func = np.logical_not
 
 
-class If(And):
+class If(LogicFunction):
     _name = "IF"
     arguments = {"string": [("value1", "Then:", ""),
                             ("value2", "Else:", "")]}
@@ -733,10 +750,8 @@ class If(And):
         else_val = kwargs.pop("value2")
         kwargs["value"] = True
         val = super().evaluate(df, **kwargs)
-
         # apply conditional replacement:
-        recode = np.where(val, then_val, else_val)
-
+        recode = np.where(val.fillna(np.nan), then_val, else_val)
         _null = pd.isnull(val)
         # replace NaN results by NaN (because np.nan AND True evaluates to
         # True, see e.g. https://stackoverflow.com/q/17273312/)
@@ -773,19 +788,18 @@ class Missing(LogicFunction):
     arguments = {}
 
     def evaluate(self, df, **kwargs):
-        val = ~df[self.columns].notnull()
+        val = df[self.columns].isna()
         return val
 
 
-class Empty(LogicFunction):
+class Empty(Missing):
     _name = "EMPTY"
     arguments = {}
 
     def evaluate(self, df, **kwargs):
-        val = (~df[self.columns].notnull() |
-               df[self.columns].apply(
-                   lambda x: ~x.index.isin(x.to_numpy().nonzero()[0])))
-        return val
+        missing = super().evaluate(df, **kwargs)
+        empty = df[self.columns] == ""
+        return missing | empty
 
 
 #############################################################################
@@ -839,43 +853,10 @@ class Freq(BaseFreq):
             val = self.constant(df, len(df))
             return val
 
-        # There is an ugly, ugly bug/feature in Pandas up to at least 0.18.0
-        # which makes grouping unreliable if there are columns with missing
-        # values.
-        # Reference:
-        # https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#na-values-in-groupby
-        # This is considered rather a bug in this Github issue:
-        # https://github.com/pydata/pandas/issues/3729
-
-        # The replacement workaround based on this post:
-        # https://stackoverflow.com/a/18431417
-        #
-        # What the workaround does is this:
-        # 1. Try to find a replacement value that doesn't occur as a valid
-        #    value in the involved columns
-        # 2. Replace the missing values in that column by the replacement value
-        # 3. Calculate the frequencies of each valid value in the selected
-        #    columns
-        # 4. Replace the replacement value by NaN
-
-        replace_dict = {}
-        for x in columns:
-            if df[x].isnull().any():
-                while True:
-                    if df[x].dtype == object:
-                        repl = "".join(np.random.choice(Freq.DUMMY_STR, 20))
-                    elif df[x].dtype == int:
-                        repl = random.randint(-sys.maxsize, +sys.maxsize)
-                    elif df[x].dtype == float:
-                        repl = random.random()
-                    elif df[x].dtype == bool:
-                        raise TypeError
-
-                    if (df[x] != repl).all():
-                        replace_dict[x] = repl
-                        break
-
-                df[x] = df[x].fillna(replace_dict[x])
+        # There was a bug in Pandas prior to 1.1.0 which made grouping
+        # unreliable if there were columns with missing values (see
+        # issue #3729, https://github.com/pandas-dev/pandas/issues/3729).
+        # Since Pandas 1.1.0, groupby() supports the 'dropna' argument to
 
         d = {x: "first"
              for x in [y for y in df.columns.values
@@ -892,9 +873,6 @@ class Freq(BaseFreq):
         val.apply(lambda x: int(x) if x is not None else x)
         if "coquery_invisible_dummy" in df.columns:
             val[df["coquery_invisible_dummy"].isnull()] = 0
-
-        for x in replace_dict:
-            df[x] = df[x].replace(replace_dict[x], np.nan)
 
         return val
 
@@ -1002,9 +980,9 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
         sep = self.constant(df, " ")
         for col in word_columns:
             val = (df[col].replace("{", "\\{", regex=True)
-                          .replace("\[", "\\[", regex=True)
-                          .replace("\*", "\\*", regex=True)
-                          .replace("\?", "\\?", regex=True))
+                          .replace(r"\[", "\\[", regex=True)
+                          .replace(r"\*", "\\*", regex=True)
+                          .replace(r"\?", "\\?", regex=True))
             lst += [val, sep]
         _s = pd.concat(lst, axis=1).astype(str).sum(axis=1)
 
@@ -1307,7 +1285,7 @@ class ConditionalProbability2(Proportion):
     def evaluate(self, df, **kwargs):
         resource = self.get_resource(**kwargs)
         if resource is None:
-            return self.constant(df, None)
+            return self.constant(df, pd.NA)
 
         span = df[self.columns[0]] + " " + df[self.columns[1]]
         left = df[self.columns[0]]
@@ -1320,7 +1298,7 @@ class ConditionalProbability2(Proportion):
         except Exception as e:
             print(str(e))
             logging.error(str(e))
-            val = self.constant(df, None)
+            val = self.constant(df, pd.NA)
         else:
             val = freq_full / freq_part
         finally:
@@ -1375,12 +1353,11 @@ class MutualInformation(ConditionalProbability2):
     def evaluate(self, df, **kwargs):
         resource = self.get_resource(**kwargs)
         if resource is None:
-            return self.constant(df, None)
+            return self.constant(df, pd.NA)
         span = df[self.columns[0]] + " " + df[self.columns[1]]
         left = df[self.columns[0]]
         right = df[self.columns[1]]
         engine = options.cfg.current_connection.get_engine(resource.db_name)
-        #session = kwargs.get("session")
         try:
             freq_full = span.apply(
                 lambda x: resource.corpus.get_frequency(x, engine))
@@ -1392,12 +1369,14 @@ class MutualInformation(ConditionalProbability2):
         except Exception as e:
             print(str(e))
             logging.error(str(e))
-            val = self.constant(df, None)
+            val = self.constant(df, pd.NA)
         else:
-            val = np.log2(freq_full * size / (freq_left * freq_right))
+            val = np.log2(
+                (freq_full.fillna(np.nan) * size) /
+                (freq_left.fillna(np.nan) * freq_right.fillna(np.nan)))
         finally:
             engine.dispose()
-        return val
+        return val.fillna(pd.NA)
 
 
 #############################################################################
@@ -1542,7 +1521,7 @@ class ContextColumns(Function):
                     "coquery_invisible_origin_id" not in df.columns or
                     "coquery_invisible_number_of_tokens" not in df.columns or
                     df["coquery_invisible_number_of_tokens"].isnull().any()):
-                val = self.constant(df, None)
+                val = self.constant(df, pd.NA)
                 val.name = "coquery_invisible_dummy"
                 return val
             else:

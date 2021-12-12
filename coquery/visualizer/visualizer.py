@@ -15,6 +15,7 @@ from __future__ import unicode_literals
 
 import math
 import collections
+import logging
 
 import scipy.stats as st
 import pandas as pd
@@ -234,6 +235,7 @@ class Visualizer(QtCore.QObject):
         pass
 
     def draw(self, data, color, **kwargs):
+        logging.info("VIS: draw()")
         self.x = kwargs.get("x")
         self.y = kwargs.get("y")
         self.z = kwargs.get("z")

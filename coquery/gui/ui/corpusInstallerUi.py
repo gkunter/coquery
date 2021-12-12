@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'corpusInstaller.ui'
+# Form implementation generated from reading ui file 'coquery/gui/ui/corpusInstaller.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_CorpusInstaller(object):
     def setupUi(self, CorpusInstaller):
         CorpusInstaller.setObjectName("CorpusInstaller")
-        CorpusInstaller.resize(640, 492)
+        CorpusInstaller.resize(768, 604)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -30,28 +30,30 @@ class Ui_CorpusInstaller(object):
         self.corpus_name.setObjectName("corpus_name")
         self.horizontalLayout.addWidget(self.corpus_name)
         self.verticalLayout_4.addLayout(self.horizontalLayout)
+        self.widget_options = QtWidgets.QWidget(CorpusInstaller)
+        self.widget_options.setObjectName("widget_options")
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.widget_options)
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.verticalLayout_4.addWidget(self.widget_options)
         self.gridLayout_2 = QtWidgets.QGridLayout()
         self.gridLayout_2.setVerticalSpacing(8)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.label_only_module = QtWidgets.QLabel(CorpusInstaller)
-        self.label_only_module.setObjectName("label_only_module")
-        self.gridLayout_2.addWidget(self.label_only_module, 1, 1, 1, 1)
-        self.radio_read_files = QtWidgets.QRadioButton(CorpusInstaller)
-        self.radio_read_files.setText("")
-        self.radio_read_files.setObjectName("radio_read_files")
-        self.gridLayout_2.addWidget(self.radio_read_files, 0, 0, 1, 1, QtCore.Qt.AlignTop)
         self.radio_only_module = QtWidgets.QRadioButton(CorpusInstaller)
         self.radio_only_module.setText("")
         self.radio_only_module.setObjectName("radio_only_module")
-        self.gridLayout_2.addWidget(self.radio_only_module, 1, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.radio_only_module, 2, 0, 1, 1)
+        self.label_only_module = CoqClickableLabel(CorpusInstaller)
+        self.label_only_module.setObjectName("label_only_module")
+        self.gridLayout_2.addWidget(self.label_only_module, 2, 2, 1, 1)
+        self.label_read_files = CoqClickableLabel(CorpusInstaller)
+        self.label_read_files.setObjectName("label_read_files")
+        self.gridLayout_2.addWidget(self.label_read_files, 0, 1, 1, 2)
         self.widget_read_files = QtWidgets.QWidget(CorpusInstaller)
         self.widget_read_files.setObjectName("widget_read_files")
         self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.widget_read_files)
-        self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_5.setContentsMargins(0, -1, 0, -1)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.label_read_files = QtWidgets.QLabel(self.widget_read_files)
-        self.label_read_files.setObjectName("label_read_files")
-        self.verticalLayout_5.addWidget(self.label_read_files)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         self.label_input_path = QtWidgets.QLabel(self.widget_read_files)
@@ -141,14 +143,12 @@ class Ui_CorpusInstaller(object):
         self.horizontalLayout_4.addItem(spacerItem)
         self.verticalLayout.addWidget(self.widget_n_gram)
         self.verticalLayout_5.addWidget(self.groupBox)
-        self.gridLayout_2.addWidget(self.widget_read_files, 0, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.widget_read_files, 1, 2, 1, 1)
+        self.radio_read_files = QtWidgets.QRadioButton(CorpusInstaller)
+        self.radio_read_files.setText("")
+        self.radio_read_files.setObjectName("radio_read_files")
+        self.gridLayout_2.addWidget(self.radio_read_files, 0, 0, 1, 1)
         self.verticalLayout_4.addLayout(self.gridLayout_2)
-        self.widget_options = QtWidgets.QWidget(CorpusInstaller)
-        self.widget_options.setObjectName("widget_options")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.widget_options)
-        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.verticalLayout_4.addWidget(self.widget_options)
         self.issue_label = QtWidgets.QLabel(CorpusInstaller)
         self.issue_label.setObjectName("issue_label")
         self.verticalLayout_4.addWidget(self.issue_label)
@@ -196,7 +196,7 @@ class Ui_CorpusInstaller(object):
         self.name_label.setText(_translate("CorpusInstaller", "&Corpus name:"))
         self.label_only_module.setText(_translate("CorpusInstaller", "Only install corpus &module"))
         self.label_read_files.setText(_translate("CorpusInstaller", "Build corpus from &text files"))
-        self.label_input_path.setText(_translate("CorpusInstaller", "Di&rectory containg text files:"))
+        self.label_input_path.setText(_translate("CorpusInstaller", "Directory containg &text files:"))
         self.input_path.setText(_translate("CorpusInstaller", "(no path or file selected)"))
         self.button_input_path.setText(_translate("CorpusInstaller", "&Browse"))
         self.button_input_path.setShortcut(_translate("CorpusInstaller", "Alt+B"))
@@ -211,4 +211,3 @@ class Ui_CorpusInstaller(object):
         self.progress_general.setFormat(_translate("CorpusInstaller", "Stage %v of %m"))
 
 from ..classes import CoqClickableLabel
-

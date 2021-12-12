@@ -15,7 +15,7 @@ import warnings
 import argparse
 import pandas as pd
 import numpy as np
-from numpy import testing as npt
+
 
 from coquery.functions import (
     get_base_func,
@@ -45,7 +45,7 @@ from test.testcase import CoqTestCase, run_tests
 
 df0 = pd.DataFrame({
     'coq_word_label_1': ['abc'] * 3 + ['x'] * 2,
-    'coq_word_label_2': ['a'] * 4 + [None],
+    'coq_word_label_2': ['a'] * 4 + [pd.NA],
     'coq_source_genre_1': ['SPOK', 'NEWS', 'NEWS', 'SPOK', 'NEWS'],
     'coquery_invisible_corpus_id': range(5),
     })
@@ -628,7 +628,7 @@ INT_COLUMN = "coq_corpus_id_1"
 FLOAT_COLUMN = "coq_fraction_1"
 
 df2 = pd.DataFrame({
-        STRING_COLUMN: ['abc', "Peter's", 'xxx', None],
+        STRING_COLUMN: ['abc', "Peter's", 'xxx', pd.NA],
         INT_COLUMN: [1, 2, 3, 7],
         FLOAT_COLUMN: [-1.2345, 0, 1.2345, np.nan]})
 
@@ -668,7 +668,7 @@ class TestFrequencyFunctions(FncTestCase):
 
     def test_freq_with_none(self):
         df = df0.copy()
-        df["coq_test_label_1"] = [None, "A", None, "B", None]
+        df["coq_test_label_1"] = [pd.NA, "A", pd.NA, "B", pd.NA]
         func = Freq(columns=["coq_word_label_1", "coq_test_label_1"])
         val = FunctionList([func]).lapply(df, session=None)[func.get_id()]
         self.assertListEqual(val.tolist(), [2, 1, 2, 1, 1])
@@ -812,19 +812,29 @@ class TestStringFunctions(FncTestCase):
                            "b": [""] * 10 + ["yyannxzzz"] * 5})
         func = StringExtract(columns=["a"], pat="(a).*(x)")
         val = FunctionList([func]).lapply(df, session=None)
-        self.assertListEqual(
-            val.iloc[:, -2].values.ravel().tolist(), ["a"] * 5 + [""] * 10)
-        self.assertListEqual(
-            val.iloc[:, -1].values.ravel().tolist(), ["x"] * 5 + [""] * 10)
+
+        result = val.iloc[:, -2]
+        target = pd.Series(["a"] * 5 + [pd.NA] * 10)
+        self.assertEqual(len(val.iloc[:, -2].compare(target)), 0)
+
+        target = pd.Series(["x"] * 5 + [pd.NA] * 10)
+        self.assertEqual(len(val.iloc[:, -1].compare(target)), 0)
 
     def test_extract_groups_and_compare(self):
-        df = pd.DataFrame({"word": ["win-win", "self-destruct"]})
+        df = pd.DataFrame({"word": ["win-win",
+                                    "lose-win",
+                                    "self-destruct",
+                                    "abcde"]})
 
         func1 = StringExtract(columns=["word"], pat="(.*)-(.*)")
         df = FunctionList([func1]).lapply(df, session=None)
         func2 = Equal(columns=df.columns[-2:])
         val = FunctionList([func2]).lapply(df, session=None)
-        self.skipTest("Test not implemented")
+        pd.testing.assert_series_equal(
+            val[func2.get_id()],
+            pd.Series([True, False, False, False]),
+            check_names=False,
+            check_dtype=False)
 
     def test_extract_with_illegal_regexp(self):
         """
@@ -840,8 +850,10 @@ class TestStringFunctions(FncTestCase):
         func = StringExtract(columns=["Query string"], pat="^? ???")
 
         df = FunctionList([func]).lapply(df, session=None)
-        np.testing.assert_array_equal(
-            df[func.get_id()].values, [None] * len(df))
+        pd.testing.assert_series_equal(
+            df[func.get_id()],
+            pd.Series([pd.NA] * len(df)),
+            check_names=False)
 
     def test_upper(self):
         df = pd.DataFrame({"a": ["abx"] * 5 + ["a"] * 5 + ["bx"] * 5,
@@ -907,7 +919,7 @@ class TestStringFunctions(FncTestCase):
             ["Abc"] * 3 + ["x"] * 2)
         self.assertListEqual(
             val.iloc[:, -1].values.ravel().tolist(),
-            ["A"] * 4 + [None])
+            ["A"] * 4 + [pd.NA])
 
 
 class TestProportionFunctions(FncTestCase):
@@ -918,7 +930,7 @@ class TestProportionFunctions(FncTestCase):
             "abc": 1000,
             "abc a": 5,
             "x a": 10,
-            }.get(s, None)
+            }.get(s, pd.NA)
 
     def _get_corpus_size(_, *args, **kwargs):
         return 100000
@@ -943,24 +955,22 @@ class TestProportionFunctions(FncTestCase):
     def test_mutual_information_1(self):
         columns = ["coq_word_label_1", "coq_word_label_2"]
         func = MutualInformation(columns)
-
-        _f_abc_a = self.Session.Resource.corpus.get_frequency("abc a", None)
-        _f_x_a = self.Session.Resource.corpus.get_frequency("x a", None)
-        _f_abc = self.Session.Resource.corpus.get_frequency("abc", None)
-        _f_x = self.Session.Resource.corpus.get_frequency("x", None)
-        _f_a = self.Session.Resource.corpus.get_frequency("a", None)
-        _n = self.Session.Resource.corpus.get_corpus_size()
-
         func_list = FunctionList([func])
         val = func_list.lapply(self.df, session=self.Session)[func.get_id()]
-        npt.assert_array_equal(
-            val.values,
-            [
-                np.log2((_f_abc_a * _n) / (_f_abc * _f_a)),
-                np.log2((_f_abc_a * _n) / (_f_abc * _f_a)),
-                np.log2((_f_abc_a * _n) / (_f_abc * _f_a)),
-                np.log2((_f_x_a * _n) / (_f_x * _f_a)),
-                np.nan])
+        _f_abc_a = self.Session.Resource.corpus.get_frequency("abc a", pd.NA)
+        _f_x_a = self.Session.Resource.corpus.get_frequency("x a", pd.NA)
+        _f_abc = self.Session.Resource.corpus.get_frequency("abc", pd.NA)
+        _f_x = self.Session.Resource.corpus.get_frequency("x", pd.NA)
+        _f_a = self.Session.Resource.corpus.get_frequency("a", pd.NA)
+        _n = self.Session.Resource.corpus.get_corpus_size()
+
+        target = pd.Series([np.log2((_f_abc_a * _n) / (_f_abc * _f_a)),
+                            np.log2((_f_abc_a * _n) / (_f_abc * _f_a)),
+                            np.log2((_f_abc_a * _n) / (_f_abc * _f_a)),
+                            np.log2((_f_x_a * _n) / (_f_x * _f_a)),
+                            pd.NA])
+
+        pd.testing.assert_series_equal(val, target, check_names=False)
 
 
 class TestMathFunctions(FncTestCase):
@@ -979,7 +989,12 @@ class TestMathFunctions(FncTestCase):
                       value=None, **kwargs):
         func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
-        npt.assert_equal(result[func.get_id()].values, expected)
+
+        pd.testing.assert_series_equal(
+            result[func.get_id()],
+            pd.Series(expected),
+            check_names=False,
+            check_dtype=False)
 
     def test_coerce_value_int_1(self):
         columns = ["column_1", "column_2"]
@@ -1085,7 +1100,7 @@ class TestMathFunctions(FncTestCase):
 
     def test_add_nan(self):
         columns = ["column_1", "column_3"]
-        expected = [4, None, None, 9]
+        expected = [4, pd.NA, pd.NA, 9]
         func = Add
         self.assert_result(func, self.df, columns, expected)
 
@@ -1141,7 +1156,7 @@ class TestMathFunctions(FncTestCase):
 
     def test_div_zero(self):
         columns = ["column_1", "column_3"]
-        expected = [1, None, None, np.inf]
+        expected = [1, pd.NA, pd.NA, np.inf]
         func = Div
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -1307,21 +1322,26 @@ class TestLogicalFunctions(FncTestCase):
         self.df = pd.DataFrame(
             {"column_1": [1, 1, 2, 2, 5, 5],
              "column_2": [1, 1, 3, 3, 3, 3],
-             "column_3": [1, None, 2, None, 3, None],
+             "column_3": [1, pd.NA, 2, pd.NA, 3, pd.NA],
              "column_4": [0, 1, 0, 1, 0, 1],
              "column_5": [2, 2, 2, 2, 0, 0],
-             "column_6": [None, None, None, None, None, None],
+             "column_6": [pd.NA, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA],
              "str_1": ["aaa", "bbb", "ccc", "ddd", "eee", "fff"],
              "str_2": ["ccc", "ccc", "ccc", "ddd", "ddd", "ddd"],
-             "str_3": ["aaa", None, "ccc", None, "eee", None],
-             "str_4": ["X", ""] * 3,
+             "str_3": ["aaa", pd.NA, "ccc", pd.NA, "eee", pd.NA],
+             "str_4": ["", "X"] * 3,
              })
 
     def assert_result(self, func_class, df, columns, expected, value=None,
                       **kwargs):
         func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
-        npt.assert_equal(result[func.get_id()].values, expected)
+        val = result[func.get_id()]
+        pd.testing.assert_series_equal(
+            result[func.get_id()],
+            pd.Series(expected),
+            check_names=False,
+            check_dtype=False)
 
     def test_equal(self):
         columns = ["column_1", "column_2"]
@@ -1335,9 +1355,21 @@ class TestLogicalFunctions(FncTestCase):
         func = Equal
         self.assert_result(func, self.df, columns, expected, value=2)
 
-    def test_equal_none(self):
+    def test_equal_one_has_na(self):
         columns = ["column_1", "column_3"]
         expected = [True, False, True, False, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_equal_both_have_na1(self):
+        columns = ["column_3", "column_3"]
+        expected = [True, False, True, False, True, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_equal_both_have_na2(self):
+        columns = ["column_6", "column_3"]
+        expected = [False, False, False, False, False, False]
         func = Equal
         self.assert_result(func, self.df, columns, expected)
 
@@ -1509,9 +1541,9 @@ class TestLogicalFunctions(FncTestCase):
         func = And
         self.assert_result(func, self.df, columns, expected)
 
-    def test_and_value_none(self):
+    def test_and_value_with_NA(self):
         columns = ["column_3"]
-        expected = [True, None, True, None, True, None]
+        expected = [True, pd.NA, True, pd.NA, True, pd.NA]
         func = And
         self.assert_result(func, self.df, columns, expected, value=True)
 
@@ -1534,9 +1566,9 @@ class TestLogicalFunctions(FncTestCase):
         self.assert_result(func, self.df, columns, expected,
                            value1="one", value2="zero")
 
-    def test_if_none(self):
+    def test_if_with_NA(self):
         columns = ["column_3"]
-        expected = ["one", None, "one", None, "one", None]
+        expected = ["one", pd.NA, "one", pd.NA, "one", pd.NA]
         func = If
         self.assert_result(func, self.df, columns, expected,
                            value1="one", value2="zero")
@@ -1544,14 +1576,26 @@ class TestLogicalFunctions(FncTestCase):
     def test_missing(self):
         columns = ["str_3", "str_4"]
         val = Missing(columns=columns).evaluate(self.df)
-        npt.assert_equal(val["str_3"].values, [False, True] * 3)
-        npt.assert_equal(val["str_4"].values, [False, False] * 3)
+        pd.testing.assert_series_equal(
+            val["str_3"],
+            pd.Series([False, True] * 3),
+            check_names=False)
+        pd.testing.assert_series_equal(
+            val["str_4"],
+            pd.Series([False, False] * 3),
+            check_names=False)
 
     def test_empty(self):
         columns = ["str_3", "str_4"]
         val = Empty(columns=columns).evaluate(self.df)
-        npt.assert_equal(val["str_3"].values, [False, True] * 3)
-        npt.assert_equal(val["str_4"].values, [False, True] * 3)
+        pd.testing.assert_series_equal(
+            val["str_3"],
+            pd.Series([False, True] * 3),
+            check_names=False)
+        pd.testing.assert_series_equal(
+            val["str_4"],
+            pd.Series([True, False] * 3),
+            check_names=False)
 
 
 class TestConversionFunctions(FncTestCase):
@@ -1559,16 +1603,19 @@ class TestConversionFunctions(FncTestCase):
                       **kwargs):
         func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
-        npt.assert_equal(result[func.get_id()].values, expected)
+        pd.testing.assert_series_equal(result[func.get_id()],
+                                       expected,
+                                       check_names=False,
+                                       check_dtype=False)
 
     def test_str_to_num(self):
         df = pd.DataFrame({"str1": list("123"),
                            "str2": list("abc"),
                            "str3": list("1bc")})
 
-        expected1 = [1, 2, 3]
-        expected2 = [np.nan, np.nan, np.nan]
-        expected3 = [1, np.nan, np.nan]
+        expected1 = pd.Series([1, 2, 3])
+        expected2 = pd.Series([pd.NA, pd.NA, pd.NA])
+        expected3 = pd.Series([1, pd.NA, pd.NA])
 
         self.assert_result(ToNumeric, df, ["str1"], expected1)
         self.assert_result(ToNumeric, df, ["str2"], expected2)
@@ -1576,12 +1623,12 @@ class TestConversionFunctions(FncTestCase):
 
     def test_num_to_str(self):
         df = pd.DataFrame({"num1": [1, 2, 3],
-                           "num2": [1, 2, None],
+                           "num2": [1, 2, pd.NA],
                            "num3": [1.5, 2.5, 3.5]})
 
-        expected1 = ["1", "2", "3"]
-        expected2 = ["1.0", "2.0", None]
-        expected3 = ["1.5", "2.5", "3.5"]
+        expected1 = pd.Series(["1", "2", "3"])
+        expected2 = pd.Series(["1", "2", pd.NA])
+        expected3 = pd.Series(["1.5", "2.5", "3.5"])
 
         self.assert_result(ToCategory, df, ["num1"], expected1)
         self.assert_result(ToCategory, df, ["num2"], expected2)

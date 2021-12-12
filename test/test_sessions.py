@@ -21,6 +21,18 @@ from test.testcase import CoqTestCase, run_tests, tmp_filename
 from test.mockclasses import MockConnection, MockResource
 
 
+def write_to_temp_file(path, d):
+    with open(path, "w") as temp_file:
+        lst = []
+        if d.get("header", None):
+            lst.append("{}\n".format(
+                options.cfg.input_separator.join(d["header"])))
+        if d.get("queries", None):
+            lst.append("{}\n".format("\n".join(d["queries"])))
+        S = "".join(lst)
+        temp_file.write(S)
+
+
 class TestSessionInputFile(CoqTestCase):
     def setUp(self):
         options.cfg = argparse.Namespace()
@@ -36,17 +48,6 @@ class TestSessionInputFile(CoqTestCase):
         os.remove(options.cfg.input_path)
         options.cfg.current_connection.close()
 
-    def write_to_temp_file(self, d):
-        with open(options.cfg.input_path, "w") as temp_file:
-            lst = []
-            if d.get("header", None):
-                lst.append("{}\n".format(
-                    options.cfg.input_separator.join(d["header"])))
-            if d.get("queries", None):
-                lst.append("{}\n".format("\n".join(d["queries"])))
-            S = "".join(lst)
-            temp_file.write(S)
-
     def test_input_file_session_init_header_only(self):
         options.cfg.file_has_headers = True
         options.cfg.query_column_number = 0
@@ -54,7 +55,7 @@ class TestSessionInputFile(CoqTestCase):
 
         d = {"header": ["HEADER"]}
 
-        self.write_to_temp_file(d)
+        write_to_temp_file(options.cfg.input_path, d)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -75,7 +76,7 @@ class TestSessionInputFile(CoqTestCase):
         d = {"header": ["HEADER"],
              "queries": ["QUERY"]}
 
-        self.write_to_temp_file(d)
+        write_to_temp_file(options.cfg.input_path, d)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -101,7 +102,7 @@ class TestSessionInputFile(CoqTestCase):
         d = {"header": ["HEADER"],
              "queries": ["QUERY ", "QUERY"]}
 
-        self.write_to_temp_file(d)
+        write_to_temp_file(options.cfg.input_path, d)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -129,7 +130,7 @@ class TestSessionInputFile(CoqTestCase):
         d = {"header": ["HEADER"],
              "queries": queries}
 
-        self.write_to_temp_file(d)
+        write_to_temp_file(options.cfg.input_path, d)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -153,7 +154,7 @@ class TestSessionInputFile(CoqTestCase):
         d = {"header": ["DATA1", "QUERY", "DATA2"],
              "queries": ["tmp,{},tmp".format(s) for s in queries]}
 
-        self.write_to_temp_file(d)
+        write_to_temp_file(options.cfg.input_path, d)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -176,7 +177,7 @@ class TestSessionInputFile(CoqTestCase):
         d = {"header": ["DATA1", "QUERY", "DATA2"],
              "queries": ['tmp,\"#constitute .[v*]\",tmp']}
 
-        self.write_to_temp_file(d)
+        write_to_temp_file(options.cfg.input_path, d)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
