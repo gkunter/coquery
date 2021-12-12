@@ -10,6 +10,7 @@ coquery$ python -m test.vis.test_barcodeplot
 
 import unittest
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -136,7 +137,7 @@ class TestBarcodePlot(_MetaTestCase):
         colors = self.vis.get_colors(colorizer, elements, **params)
         target = [colorizer.mpt_to_hex([palette[0]] * len(self.df))]
 
-        pd.np.testing.assert_array_equal(colors, target)
+        np.testing.assert_array_equal(colors, target)
 
     def test_colorizer_factor(self):
         """
@@ -162,7 +163,7 @@ class TestBarcodePlot(_MetaTestCase):
         self.df["COLORS"] = target[0]
         self.df["MATCH"] = self.df["COLORS"] == self.df["COQ_COLOR"]
 
-        pd.np.testing.assert_array_equal(colors, target)
+        np.testing.assert_array_equal(colors, target)
 
     def test_colorizer_factor_subgroups_1(self):
         """
@@ -189,7 +190,7 @@ class TestBarcodePlot(_MetaTestCase):
         target = [self.df["COQ_COLOR"][self.df[category] == level]
                   for level in levels]
 
-        pd.np.testing.assert_array_equal(colors, target)
+        np.testing.assert_array_equal(colors, target)
 
     def test_colorizer_factor_subgroups_2(self):
         """
@@ -216,7 +217,7 @@ class TestBarcodePlot(_MetaTestCase):
         target = [self.df[self.df[category] == level]["COQ_COLOR"]
                   for level in levels]
 
-        pd.np.testing.assert_array_equal(colors, target)
+        np.testing.assert_array_equal(colors, target)
 
     def test_colorizer_num(self):
         """
@@ -236,7 +237,7 @@ class TestBarcodePlot(_MetaTestCase):
         target = [colorizer.mpt_to_hex(
             [palette[val // 20] for val
              in self.df.sort_values(by=self.vis._id_column)[numeric]])]
-        pd.np.testing.assert_array_equal(colors, target)
+        np.testing.assert_array_equal(colors, target)
 
     def test_validate_data(self):
         valid1 = self.vis.validate_data(None, None, self.df, None)
@@ -298,7 +299,7 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
         self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
 
         ax_args = self.vis._get_axis_params()
-        target = {"yticks": pd.np.array([0.5]),
+        target = {"yticks": np.array([0.5]),
                   "yticklabels": [""],
                   "ylim": (0, 1),
                   "xlim": (0, 1000),
@@ -318,7 +319,7 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
 
         ax_args = self.vis._get_axis_params()
         target = {"xticklabels": [""],
-                  "xticks": pd.np.array([0.5]),
+                  "xticks": np.array([0.5]),
                   "xlim": (0, 1),
                   "ylim": (0, 1000),
                   }
@@ -340,7 +341,7 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
 
         ax_args = self.vis._get_axis_params()
         target = {"xticklabels": levels,
-                  "xticks": pd.np.array([0.5, 1.5]),
+                  "xticks": np.array([0.5, 1.5]),
                   "xlim": (0, 2),
                   "ylim": (0, 1000),
                   }
@@ -363,7 +364,7 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
 
         ax_args = self.vis._get_axis_params()
         target = {"yticklabels": levels,
-                  "yticks": pd.np.array([0.5, 1.5]),
+                  "yticks": np.array([0.5, 1.5]),
                   "ylim": (0, 2),
                   "xlim": (0, 1000),
                   }

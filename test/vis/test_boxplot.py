@@ -9,7 +9,7 @@ coquery$ python -m test.vis.test_boxplot
 """
 
 import unittest
-import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -97,7 +97,7 @@ class TestBoxPlot(CoqTestCase):
         elements = self.vis.plot_facet(**args)
         colors = self.vis.get_colors(colorizer, elements, **args)
         target = [colorizer.mpt_to_hex(palette[:1])]
-        pd.np.testing.assert_array_equal(colors, target)
+        np.testing.assert_array_equal(colors, target)
 
     def test_horizontal_subgroup_get_colors(self):
         numerical = "NUM"
@@ -111,7 +111,7 @@ class TestBoxPlot(CoqTestCase):
         elements = self.vis.plot_facet(**args)
         colors = self.vis.get_colors(colorizer, elements, **args)
         target = [colorizer.mpt_to_hex([col]) for col in palette[:2]]
-        pd.np.testing.assert_array_equal(colors, target)
+        np.testing.assert_array_equal(colors, target)
 
     def test_horizontal_no_subgroup_colorize_elements(self):
         numerical = "NUM"
@@ -138,8 +138,9 @@ class TestBoxPlot(CoqTestCase):
         elements = self.vis.plot_facet(**args)
         colors = self.vis.get_colors(colorizer, elements, **args)
         self.vis.colorize_elements(elements, colors)
-        self.assertEqual(elements[0].get_facecolor()[:3],
-                         palette[0][:3])
+        np.testing.assert_almost_equal(
+            elements[0].get_facecolor()[:3],
+            palette[0][:3])
 
 
 class TestBoxenPlot(TestBoxPlot):
