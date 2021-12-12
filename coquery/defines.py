@@ -404,7 +404,7 @@ MODULE_INFORMATION = {
                  "0.2.0",
                  "Show SQL queries well-formatted",
                  "https://github.com/andialbrecht/sqlparse"),
-    "pymongo": ("Python driver for MongoDB",
+    "PyMongo": ("Python driver for MongoDB",
                 "4.0",
                 "Allows corpus installers to read BSON files",
                 "https://github.com/mongodb/mongo-python-driver"),
