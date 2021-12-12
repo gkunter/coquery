@@ -14,10 +14,10 @@ from __future__ import unicode_literals
 import collections
 import pandas as pd
 import re
-import sys
+
+import sqlalchemy.exc
 
 from .defines import SQL_MYSQL, SQL_SQLITE
-from .unicode import utf8
 
 
 def varchar(n, not_null=True):
@@ -219,11 +219,12 @@ class Table(object):
         # row.
         self._add_lookup = collections.defaultdict(
             lambda: len(self._add_lookup) + 1)
-        self._commited = {}
+        self._committed = {}
         self._col_names = None
         self._engine = None
         self._max_cache = 0
         self._line_counter = 0
+        self._DB = None
 
     @property
     def name(self):
@@ -241,12 +242,12 @@ class Table(object):
 
     def commit(self):
         """
-        Commit the table content to the data base.
+        Commit the table content to the database.
 
-        This table commits the unsaved content of the table to the data base.
+        This table commits the unsaved content of the table to the database.
 
         As this method is usually called after a file has been processed,
-        this ensures that all new table rows are commited, while at the same
+        this ensures that all new table rows are committed, while at the same
         time preserving some memory space.
         """
 
@@ -257,15 +258,6 @@ class Table(object):
                 df.columns = self._get_field_order()
             except ValueError as e:
                 raise ValueError("{}: {}".format(self.name, e))
-
-            # make sure that all strings are unicode, even under
-            # Python 2.7:
-            if sys.version_info < (3, 0):
-                for column in df.columns[df.dtypes == object]:
-                    try:
-                        df[column] = df[column].apply(utf8)
-                    except TypeError:
-                        pass
 
             # apply unicode normalization:
             for column in df.columns[df.dtypes == object]:
@@ -345,6 +337,8 @@ class Table(object):
         values : dict
             A dictionary with column names as keys, and the entry content
             as values.
+
+        case : Not used.
 
         Returns
         -------
@@ -458,9 +452,12 @@ class Table(object):
         col = self.get_column(name)
 
         # test if column contains NULL
-        S = "SELECT MAX({0} IS NULL) FROM {1}".format(col.name, self.name)
-        with self._DB.engine.connect() as connection:
-            has_null = connection.execute(S).fetchone()[0]
+        sql_str = f"SELECT MAX({col.name} IS NULL) FROM {self.name}"
+        try:
+            with self._DB.engine.connect() as connection:
+                has_null = connection.execute(sql_str).fetchone()[0]
+        except sqlalchemy.exc.ProgrammingError:
+            has_null = 0
 
         # In an empty table, the previous check returns NULL. In this case,
         # the original data type will be returned.
@@ -469,10 +466,10 @@ class Table(object):
 
         # integer data types:
         elif col.base_type.endswith("INT"):
-            S = ("SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL"
-                 .format(col.name, self.name))
+            sql_str = (f"SELECT MIN({col.name}), MAX({col.name}) "
+                       f"FROM {self.name} WHERE {self.name} IS NOT NULL")
             with self._DB.engine.connect() as connection:
-                v_min, v_max = connection.execute(S).fetchone()
+                v_min, v_max = connection.execute(sql_str).fetchone()
 
             for dt_min, dt_max, dt_label in sql_int:
                 if v_min >= dt_min and v_max <= dt_max:
@@ -486,10 +483,10 @@ class Table(object):
 
         # character data types:
         elif col.base_type.endswith(("CHAR", "TEXT")):
-            S = "SELECT MAX({2}(RTRIM({0}))) FROM {1}".format(
-                col.name, self.name, func_length)
+            sql_str = (f"SELECT MAX({func_length}(RTRIM({col.name}))) "
+                       f"FROM {self.name}")
             with self._DB.engine.connect() as connection:
-                max_len = connection.execute(S).fetchone()[0]
+                max_len = connection.execute(sql_str).fetchone()[0]
             dt_type = "VARCHAR({})".format(max_len + 1)
 
         # fixed-point types:
@@ -506,10 +503,10 @@ class Table(object):
             else:
                 dt_type = col.data_type
 
-            S = ("SELECT MIN({0}), MAX({0}) FROM {1} WHERE {0} IS NOT NULL"
-                 .format(col.name, self.name))
+            sql_str = (f"SELECT MIN({col.name}), MAX({col.name}) "
+                       f"FROM {self.name} WHERE {self.name} IS NOT NULL")
             with self._DB.engine.connect() as connection:
-                v_min, _ = connection.execute(S).fetchone()
+                v_min, _ = connection.execute(sql_str).fetchone()
 
         # all other data types:
         else:
@@ -577,7 +574,7 @@ class Table(object):
             # SQLite doesn't support the ENUM data type. ENUM columns are
             # therefore converted to VARCHAR columns:
 
-            match = re.match("^\s*enum\((.+)\)(.*)$",
+            match = re.match(r"^\s*enum\((.+)\)(.*)$",
                              column.data_type, re.IGNORECASE)
             if match:
                 max_len = 0
@@ -628,9 +625,9 @@ class Table(object):
             column should be created for this table.
 
             If `index_gen` is False, no generated index column will be
-            generated. If it is True, an generated column named `Next{}` will
-            will be generated with the primary index name inserted into the
-            string. This column will contain the value of the
+            generated. If it is True, a generated column named `Next{}` will
+            be generated with the primary index name inserted into the string.
+            This column will contain the value of the
             primary key + 1.
 
             At the moment, this is only available in MySQL databases.
