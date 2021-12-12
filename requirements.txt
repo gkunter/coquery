@@ -1,9 +1,10 @@
 sqlalchemy
 numpy
+numexpr
 lxml
-matplotlib
-pandas
-seaborn
-tgt
-scipy
-pyqt
+matplotlib~=2.2.5
+pandas>=1.1.2
+seaborn>=0.11.2
+scipy>=1.5.2
+pyqt>=5.9.2
+pymysql

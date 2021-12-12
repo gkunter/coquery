@@ -11,6 +11,12 @@ coquery$ python -m test.test_colorizers
 from __future__ import unicode_literals
 from __future__ import division
 
+
+import matplotlib as mpl
+
+mpl.use("Qt5Agg")
+mpl.rcParams["backend"] = "Qt5Agg"
+
 import pandas as pd
 import seaborn as sns
 

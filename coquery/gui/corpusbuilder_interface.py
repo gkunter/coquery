@@ -79,6 +79,15 @@ class MetaGui(QtWidgets.QDialog):
         self.generalUpdate.connect(self.general_update)
         self.labelSet.connect(self.set_label)
 
+        if (hasattr(self.ui, "label_only_module") and
+                hasattr(self.ui.label_only_module, "clicked")):
+            self.ui.label_only_module.clicked.connect(
+                self.ui.radio_only_module.click)
+        if (hasattr(self.ui, "label_read_files") and
+                hasattr(self.ui.label_read_files, "clicked")):
+            self.ui.label_read_files.clicked.connect(
+                self.ui.radio_read_files.click)
+
     def show_progress(self):
         if hasattr(self.ui, "progress_box"):
             self.ui.progress_box.show()
@@ -785,7 +794,7 @@ class BuilderGui(InstallerGui):
 
         # test tagging:
         try:
-            nltk.pos_tag("test")
+            nltk.pos_tag(["test"])
         except LookupError as e:
             s = str(e).replace("\n", "")
             match = regexp.match(s)

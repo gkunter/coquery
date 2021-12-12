@@ -2,7 +2,7 @@
 """
 colorizer.py is part of Coquery.
 
-Copyright (c) 2018-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,6 +13,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import pandas as pd
+import numpy as np
 
 from coquery.gui.pyqt_compat import QtCore
 from coquery.general import pretty, recycle
@@ -25,7 +26,7 @@ COQ_CUSTOM = "COQCUSTOM"
 
 class Colorizer(QtCore.QObject):
     def __init__(self, palette):
-        super(Colorizer, self).__init__()
+        super().__init__()
         self.palette = palette
         self._title_frm = ""
         self._entry_frm = "{val}"
@@ -78,35 +79,34 @@ class Colorizer(QtCore.QObject):
         self._entry_frm = s
 
     @staticmethod
-    def hex_to_rgb(l):
+    def hex_to_rgb(lst):
         return [(int(s[1:3], 16), int(s[3:5], 16), int(s[5:7], 16))
-                for s in l]
+                for s in lst]
 
     @staticmethod
-    def rgb_to_hex(l):
-        return ["#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
-                for r, g, b in l]
+    def rgb_to_hex(lst):
+        return [f"#{int(r):02x}{int(g):02x}{int(b):02x}" for r, g, b in lst]
 
     @staticmethod
-    def rgb_to_mpt(l):
-        return [(r / 255, g / 255, b / 255) for r, g, b in l]
+    def rgb_to_mpt(lst):
+        return [(r / 255, g / 255, b / 255) for r, g, b in lst]
 
     @staticmethod
-    def mpt_to_rgb(l):
-        return [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in l]
+    def mpt_to_rgb(lst):
+        return [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in lst]
 
     @staticmethod
-    def hex_to_mpt(l):
-        return Colorizer.rgb_to_mpt(Colorizer.hex_to_rgb(l))
+    def hex_to_mpt(lst):
+        return Colorizer.rgb_to_mpt(Colorizer.hex_to_rgb(lst))
 
     @staticmethod
-    def mpt_to_hex(l):
-        return Colorizer.rgb_to_hex(Colorizer.mpt_to_rgb(l))
+    def mpt_to_hex(lst):
+        return Colorizer.rgb_to_hex(Colorizer.mpt_to_rgb(lst))
 
 
 class ColorizeByFactor(Colorizer):
     def __init__(self, palette, values):
-        super(ColorizeByFactor, self).__init__(palette)
+        super().__init__(palette)
         self.values = values
         self.set_title_frm("{z}")
 
@@ -128,7 +128,7 @@ class ColorizeByFactor(Colorizer):
 
 class ColorizeByNum(Colorizer):
     def __init__(self, palette, vrange):
-        super(ColorizeByNum, self).__init__(palette)
+        super().__init__(palette)
         self.vrange = vrange
         self.set_title_frm("{z}")
         self.dtype = None
@@ -152,7 +152,8 @@ class ColorizeByNum(Colorizer):
         else:
             self.bins = pretty((vmin, vmax), ncol)
             self.set_entry_frm("≥ {val}")
-        self.binned = pd.np.digitize(data, self.bins, right=False) - 1
+
+        self.binned = np.digitize(data, self.bins, right=False) - 1
         pal = self.palette
         return [pal[val] for val in self.binned]
 
@@ -175,9 +176,9 @@ class ColorizeByNum(Colorizer):
 
 class ColorizeByFreq(Colorizer):
     def get_hues(self, data, ncol=None):
-        self.bins = pd.np.linspace(data.min(), data.max(),
-                                   ncol,
-                                   endpoint=False)
+        self.bins = np.linspace(data.min(), data.max(),
+                                ncol,
+                                endpoint=False)
         pal = self.get_palette(n=ncol)
-        binned = pd.np.digitize(data, self.bins, right=False) - 1
+        binned = np.digitize(data, self.bins, right=False) - 1
         return [pal[val] for val in binned]

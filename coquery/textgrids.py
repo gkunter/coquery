@@ -2,7 +2,7 @@
 """
 textgrids.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -89,21 +89,21 @@ class TextgridWriter(object):
 
             if tab == "segment":
                 # the segment table is hard-wired:
-                start_label = "{}_starttime".format(tab)
-                end_label = "{}_endtime".format(tab)
+                start_label = f"{tab}_starttime"
+                end_label = f"{tab}_endtime"
                 self.feature_timing[rc_feature] = (start_label, end_label)
             else:
                 # determine the table that contains timing information by
                 # following the table path:
                 self.resource.joined_tables = ["corpus"]
                 self.resource.table_list = ["corpus"]
-                self.resource.add_table_path("corpus_id", "{}_id".format(tab))
+                self.resource.add_table_path("corpus_id", f"{tab}_id")
 
                 for current_tab in self.resource.joined_tables:
                     # check if timing information has been selected for the
                     # current table from the table path:
-                    start_label = "{}_starttime".format(current_tab)
-                    end_label = "{}_endtime".format(current_tab)
+                    start_label = f"{current_tab}_starttime"
+                    end_label = f"{current_tab}_endtime"
 
                     # if so, set the timing entry for the current feature
                     # to these timings:
@@ -113,12 +113,11 @@ class TextgridWriter(object):
                         self.feature_timing[rc_feature] = (start_label,
                                                            end_label)
 
-            rc_feat = "{}_{}".format(tab, feature)
+            rc_feat = f"{tab}_{feature}"
             if hashed is not None:
                 link, res = get_by_hash(hashed)
                 # FIXME: the tier name for external fields is wrong!
-                tier_name = "{}.{}_{}".format(
-                    res.db_name, link.rc_to, link.rc_to)
+                tier_name = f"{res.db_name}.{link.rc_to}_{link.rc_to}"
             else:
                 tier_name = rc_feat
             if (rc_feat not in [start_label, end_label] and
@@ -184,7 +183,7 @@ class TextgridWriter(object):
                 rc_feature, _, number = s.rpartition("_")
                 _, tab, feature = (
                     self.resource.split_resource_feature(rc_feature))
-                tier_name = "{}_{}".format(tab, feature)
+                tier_name = f"{tab}_{feature}"
 
             tier = grid.get_tier_by_name(tier_name)
             if (not tier_name.startswith("segment") and
@@ -209,8 +208,8 @@ class TextgridWriter(object):
                             val = utf8(row[col])
                         try:
                             label_s, label_e = self.feature_timing[tier_name]
-                            start_col = "coq_{}_{}".format(label_s, number)
-                            end_col = "coq_{}_{}".format(label_e, number)
+                            start_col = f"coq_{label_s}_{number}"
+                            end_col = f"coq_{label_e}_{number}"
                             start = left_padding - offset + row[start_col]
                             stop = left_padding - offset + row[end_col]
                         except KeyError:
@@ -220,7 +219,7 @@ class TextgridWriter(object):
                         interval = tgt.Interval(start, stop, val)
                         try:
                             tier.add_interval(interval)
-                        except ValueError as e:
+                        except ValueError:
                             # ValueErrors occur if the new interval overlaps
                             # with a previous interval.
                             # This can happen if no word boundaries are
@@ -229,8 +228,8 @@ class TextgridWriter(object):
                 else:
                     # segment features
                     start_label, end_label = self.feature_timing[tier_name]
-                    start_col = "coq_{}_1".format(start_label)
-                    end_col = "coq_{}_1".format(end_label)
+                    start_col = f"coq_{start_label}_1"
+                    end_col = f"coq_{end_label}_1"
                     for i in df.index:
                         row = df.loc[i]
                         val = utf8(row[col])
@@ -351,8 +350,8 @@ class TextgridWriter(object):
 
                     if hashed is not None:
                         link, res = get_by_hash(hashed)
-                        label = getattr(res, "{}_{}".format(tab, feature))
-                        tier.name = "{}.{}".format(res.name, label)
+                        label = getattr(res, f"{tab}_{feature}")
+                        tier.name = f"{res.name}.{label}"
                     else:
                         # try to retrieve a resource label for the tier name:
                         tier.name = getattr(self.resource, tier.name)
@@ -365,13 +364,13 @@ class TextgridWriter(object):
             if one_grid_per_match:
                 match_fn, match_id = x
                 basename, _ = os.path.splitext(os.path.basename(match_fn))
-                filename = "{}_id{}".format(basename, match_id)
+                filename = f"{basename}_id{match_id}"
             else:
                 match_fn, = x
                 basename, _ = os.path.splitext(os.path.basename(match_fn))
                 filename = basename
-            target = os.path.join(output_path, "{}{}.TextGrid".format(
-                file_prefix, filename))
+            target = os.path.join(output_path,
+                                  f"{file_prefix}{filename}.TextGrid")
             tgt.write_to_file(grid, target)
             self.n += 1
             textgrids[basename].append((grid, filename, self._offsets[x]))
@@ -383,9 +382,7 @@ class TextgridWriter(object):
                 for file_name in files:
                     basename, _ = os.path.splitext(file_name)
                     sources = self.resource.audio_to_source(basename)
-
                     for source in sources:
-
                         if source in textgrids:
                             source_path = os.path.join(root, file_name)
 
@@ -396,10 +393,8 @@ class TextgridWriter(object):
 
                             for tup in textgrids.get(source, []):
                                 grid, grid_name, offs = tup
-                                wav_name = "{}{}.wav".format(file_prefix,
-                                                             grid_name)
-                                dest_path = os.path.join(output_path,
-                                                         wav_name)
+                                wav_name = f"{file_prefix}{grid_name}.wav"
+                                dest_path = os.path.join(output_path, wav_name)
 
                                 start = max(0, offs - left_padding)
                                 end = offs - left_padding + grid.end_time

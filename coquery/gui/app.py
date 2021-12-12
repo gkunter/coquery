@@ -2,7 +2,7 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -164,6 +164,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     dataChanged = QtCore.Signal()
     updatePackStage = QtCore.Signal(tuple)
     updateFileChunk = QtCore.Signal(tuple)
+    customInstallerPathChanged = QtCore.Signal()
 
     def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -1883,7 +1884,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def finalize_textgrid(self):
         self.stop_progress_indicator()
-        self.showMessage("Done writing {} text grids to {}.".format(self.textgrid_writer.n, self.textgrid_writer.output_path))
+        self.showMessage(f"Done writing {self.textgrid_writer.n} text grids "
+                         f"to {self.textgrid_writer.output_path}.")
 
     def showMessage(self, S):
         self.ui.status_message.setText(S)
@@ -2735,8 +2737,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.corpus_manager.buildCorpusFromTable.connect(
                 self.build_corpus_from_table)
             self.corpus_manager.launchBuilder.connect(self.launch_builder)
+
             self.corpusListUpdated.connect(self.corpus_manager.update)
             #self.corpus_manager.check_orphans()
+            self.customInstallerPathChanged.connect(
+                self.corpus_manager.update)
 
             try:
                 self.corpus_manager.exec_()
@@ -2792,6 +2797,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         old_context_font = options.cfg.context_font
         last_wrap = options.cfg.word_wrap
         old_drop_on_na = options.cfg.drop_on_na
+        old_custom_installer_path = options.cfg.custom_installer_path
 
         settings_changed = settings.Settings.manage(options.cfg, self)
         if settings_changed:
@@ -2806,6 +2812,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             try:
                 self.table_model.formatted = self.table_model.format_content(
                     self.table_model.content)
+            except AttributeError:
+                # raised if no query has been run yet, and therefore no
+                # table_model is available
+                pass
             except Exception as e:
                 print(e)
 
@@ -2814,6 +2824,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 for widget in self.widget_list:
                     if isinstance(widget, contextviewer.ContextView):
                         widget.get_context()
+
+            if options.cfg.custom_installer_path != old_custom_installer_path:
+                self.customInstallerPathChanged.emit()
 
             if (old_drop_on_na != options.cfg.drop_on_na):
                 self.reaggregate(start=True)
@@ -2874,7 +2887,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         else:
             try:
                 state, _ = current_connection.test()
-            except ImportError as e:
+            except ImportError:
                 state = False
 
         current_name = current_connection.name

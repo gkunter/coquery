@@ -14,8 +14,7 @@ import os
 import numpy as np
 
 from coquery.general import (
-    check_fs_case_sensitive, has_module, recycle,
-    pretty, collapse_words, EnglishCollapser)
+    check_fs_case_sensitive, has_module, pretty, collapse_words)
 from test.testcase import CoqTestCase, run_tests
 
 
@@ -294,6 +293,12 @@ class TestEnglishCollapseWords(CoqTestCase):
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
+    def test_contractions_4(self):
+        lst = ["'I", "ca", "n't", "help", "it", ",", "'", "said"]
+        target = "'I can't help it,' said"
+        value = collapse_words(lst, "en")
+        self.assertEqual(target, value)
+
     def test_brackets_1(self):
         lst = list("a(b)c[d]e{f}")
         target = "a (b) c [d] e {f}"
@@ -526,8 +531,6 @@ class TestEnglishCollapseWords(CoqTestCase):
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
-
-
     def test_double_ascii_quoting_1(self):
         """
         Use double ASCII quoting.
@@ -584,17 +587,17 @@ class TestEnglishCollapseWords(CoqTestCase):
         self.assertEqual(target, value)
 
 
-
 class TestFailing(CoqTestCase):
 
     pass
 
 
-
-provided_tests = [TestGeneral, TestPretty,
-                  TestCollapseWords, TestEnglishCollapseWords,
-                  TestRecycle,
-                  TestFailing]
+provided_tests = [
+                  TestGeneral, TestPretty,
+                  TestCollapseWords,
+                  TestEnglishCollapseWords,
+                  TestFailing,
+                  ]
 
 
 def main():

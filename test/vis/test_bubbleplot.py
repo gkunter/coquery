@@ -10,13 +10,14 @@ coquery$ python -m test.vis.test_bubbleplot
 
 import unittest
 import pandas as pd
+import numpy as np
 import math
 
 from test.testcase import CoqTestCase
 
 
 def r(x):
-    return pd.np.sqrt(x / pd.np.pi)
+    return np.sqrt(x / np.pi)
 
 
 class TestBubblePlotMethods(CoqTestCase):
@@ -65,11 +66,11 @@ class TestBubblePlotMethods(CoqTestCase):
             ((0, -1), 1),   # intersection
             ((-2, 0), 1),   # no intersection
             ((-1, 0), 1),   # intersection
-            ((pd.np.sqrt(2), pd.np.sqrt(2)), 1),    # no intersection
+            ((np.sqrt(2), np.sqrt(2)), 1),    # no intersection
             ]
 
-        test_results = [self.vis.intersecting((pd.np.array(pos1) + 1, r1),
-                                              (pd.np.array(pos2) + 1, r2))
+        test_results = [self.vis.intersecting((np.array(pos1) + 1, r1),
+                                              (np.array(pos2) + 1, r2))
                         for pos2, r2 in test_range]
         self.assertListEqual(
             test_results,
@@ -80,57 +81,57 @@ class TestBubblePlotMethods(CoqTestCase):
         Test vector rotation method
         """
         test_range = [
-            (1, 0.00 * pd.np.pi, (1, 0)),
-            (1, 0.25 * pd.np.pi, (pd.np.sqrt(2) / 2, pd.np.sqrt(2) / 2)),
-            (1, 0.50 * pd.np.pi, (0, 1)),
-            (1, 0.75 * pd.np.pi, (-pd.np.sqrt(2) / 2, pd.np.sqrt(2) / 2)),
-            (1, 1.00 * pd.np.pi, (-1, 0)),
-            (1, 1.25 * pd.np.pi, (-pd.np.sqrt(2) / 2, -pd.np.sqrt(2) / 2)),
-            (1, 1.50 * pd.np.pi, (0, -1)),
-            (1, 1.75 * pd.np.pi, (pd.np.sqrt(2) / 2, -pd.np.sqrt(2) / 2)),
+            (1, 0.00 * np.pi, (1, 0)),
+            (1, 0.25 * np.pi, (np.sqrt(2) / 2, np.sqrt(2) / 2)),
+            (1, 0.50 * np.pi, (0, 1)),
+            (1, 0.75 * np.pi, (-np.sqrt(2) / 2, np.sqrt(2) / 2)),
+            (1, 1.00 * np.pi, (-1, 0)),
+            (1, 1.25 * np.pi, (-np.sqrt(2) / 2, -np.sqrt(2) / 2)),
+            (1, 1.50 * np.pi, (0, -1)),
+            (1, 1.75 * np.pi, (np.sqrt(2) / 2, -np.sqrt(2) / 2)),
 
-            (2, 0.00 * pd.np.pi, (2, 0)),
-            (2, 0.25 * pd.np.pi, (pd.np.sqrt(2), pd.np.sqrt(2))),
-            (2, 0.50 * pd.np.pi, (0, 2)),
-            (2, 0.75 * pd.np.pi, (-pd.np.sqrt(2), pd.np.sqrt(2))),
-            (2, 1.00 * pd.np.pi, (-2, 0)),
-            (2, 1.25 * pd.np.pi, (-pd.np.sqrt(2), -pd.np.sqrt(2))),
-            (2, 1.50 * pd.np.pi, (0, -2)),
-            (2, 1.75 * pd.np.pi, (pd.np.sqrt(2), -pd.np.sqrt(2))),
+            (2, 0.00 * np.pi, (2, 0)),
+            (2, 0.25 * np.pi, (np.sqrt(2), np.sqrt(2))),
+            (2, 0.50 * np.pi, (0, 2)),
+            (2, 0.75 * np.pi, (-np.sqrt(2), np.sqrt(2))),
+            (2, 1.00 * np.pi, (-2, 0)),
+            (2, 1.25 * np.pi, (-np.sqrt(2), -np.sqrt(2))),
+            (2, 1.50 * np.pi, (0, -2)),
+            (2, 1.75 * np.pi, (np.sqrt(2), -np.sqrt(2))),
             ]
 
         test_results = [self.vis.rotate_vector(x, theta)
                         for x, theta, _ in test_range]
         expected = [result for _, _, result in test_range]
-        pd.np.testing.assert_almost_equal(test_results, expected)
+        np.testing.assert_almost_equal(test_results, expected)
 
     def test_get_angle1(self):
         test_range = [
-            ((pd.np.sqrt(2), 1, 1), 0.5 * pd.np.pi),
-            ((1, 1, 1), pd.np.pi / 3),
-            ((5**2, 3**2, 4**2), pd.np.pi),
+            ((np.sqrt(2), 1, 1), 0.5 * np.pi),
+            ((1, 1, 1), np.pi / 3),
+            ((5**2, 3**2, 4**2), np.pi),
             ]
 
         test_results = [self.vis.get_angle(*tup) for tup, _ in test_range]
         expected = [result for _, result in test_range]
-        pd.np.testing.assert_almost_equal(test_results, expected)
+        np.testing.assert_almost_equal(test_results, expected)
 
 
 class TestBubblePlotAlgorithm(TestBubblePlotMethods):
     def setUp(self):
-        super(TestBubblePlotAlgorithm, self).setUp()
+        super().setUp()
         from coquery.visualizer.bubbleplot import BubblePlot
 
-        pd.np.random.seed(123)
+        np.random.seed(123)
         self.df = pd.DataFrame(
             {"X": list("AAAAAAAAAAAAAAAAAAABBBBBBBBBBB"),
              "Y": list("xxxxxxxxyyyyyyyyyyyxxxxxxxyyyy"),
              "Z": list("111122221111222211221122112222"),
-             "NUM": pd.np.random.randint(0, 100, 30)})
+             "NUM": np.random.randint(0, 100, 30)})
 
         self.df2 = pd.DataFrame(
             {"X": ["A"] * 5 + ["B"] * 3 + ["C"] * 1,
-             "NUM": pd.np.arange(9)})
+             "NUM": np.arange(9)})
         self.vis = BubblePlot(None, None, "NUM")
         self.vis.box_padding = False
 
@@ -205,9 +206,9 @@ class TestBubblePlotAlgorithm(TestBubblePlotMethods):
         # it connects (0, 0) and (x_n, y_n).
         theta = -self.vis.get_angle(l_a, l_b, l_c)
 
-        target = (x_a + l_b * pd.np.cos(theta),
-                  y_a + l_b * pd.np.sin(theta))
-        pd.np.testing.assert_almost_equal(pos, target)
+        target = (x_a + l_b * np.cos(theta),
+                  y_a + l_b * np.sin(theta))
+        np.testing.assert_almost_equal(pos, target)
 
     def test_get_label1(self):
         aggr = pd.DataFrame({"X": ["A", "B"],
@@ -217,8 +218,7 @@ class TestBubblePlotAlgorithm(TestBubblePlotMethods):
         for i in range(len(aggr)):
             row = aggr.iloc[i]
             label = self.vis.get_label(row, ["X"], "COQ_NUMERIC")
-            self.assertEqual(label,
-                             "{} ({})".format(row["X"], row["COQ_NUMERIC"]))
+            self.assertEqual(label, f'{row["X"]} ({row["COQ_NUMERIC"]})')
 
     def test_get_label2(self):
         aggr = (self.df.groupby(["X", "Y"])
@@ -230,9 +230,8 @@ class TestBubblePlotAlgorithm(TestBubblePlotMethods):
         for i in range(len(aggr)):
             row = aggr.iloc[i]
             label = self.vis.get_label(row, ["X", "Y"], "COQ_NUMERIC")
-            self.assertEqual(label,
-                             "{} | {} ({})".format(
-                                 row["X"], row["Y"], row["COQ_NUMERIC"]))
+            self.assertEqual(
+                label, f'{row["X"]} | {row["Y"]} ({row["COQ_NUMERIC"]})')
 
     def test_get_label3(self):
         aggr = (self.df.groupby(["X"])
@@ -242,7 +241,7 @@ class TestBubblePlotAlgorithm(TestBubblePlotMethods):
         for i in range(len(aggr)):
             row = aggr.iloc[i]
             label = self.vis.get_label(row, ["X"], "NUM")
-            self.assertEqual(label, "{}: M={}".format(row["X"], row["NUM"]))
+            self.assertEqual(label, f"{row['X']}: M={row['NUM']}")
 
     def test_prepare_argument(self):
         value = self.vis.prepare_arguments(self.df2, "X", None, None,
@@ -307,12 +306,12 @@ class TestBubblePlotAlgorithm(TestBubblePlotMethods):
         self.vis.y = None
 
         n = 500
-        num = pd.np.concatenate(
-            (pd.np.random.randint(5000, 100000, n // 5),
-             pd.np.random.randint(500, 1000, n // 5),
-             pd.np.random.randint(1, 100, 3 * n // 5)))
+        num = np.concatenate(
+            (np.random.randint(5000, 100000, n // 5),
+             np.random.randint(500, 1000, n // 5),
+             np.random.randint(1, 100, 3 * n // 5)))
 
-        df = pd.DataFrame({"X": pd.np.arange(n), self.vis.NUM_COLUMN: num})
+        df = pd.DataFrame({"X": np.arange(n), self.vis.NUM_COLUMN: num})
         df = df.sample(frac=1).reset_index(drop=True)
 
         circles = self.vis.place_circles(df)

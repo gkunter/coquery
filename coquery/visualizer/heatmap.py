@@ -2,57 +2,20 @@
 """
 heatmap.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-import logging
 import seaborn as sns
 import pandas as pd
+import numpy as np
 
 from coquery.visualizer import visualizer as vis
 from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 from coquery import options
-
-
-def _annotate_heatmap(self, ax, mesh):
-    """
-    This function monkey-patches an issue with annotations in heatmaps in
-    seaborn versions earlier than 0.7.0.
-    """
-    import colorsys
-
-    """Add textual labels with the value in each cell."""
-    try:
-
-        mesh.update_scalarmappable()
-        height, width = self.annot_data.shape
-        xpos, ypos = pd.np.meshgrid(pd.np.arange(width) + 0.5,
-                                    pd.np.arange(height) + 0.5)
-        logging.debug("{}, {}\n\t{}\n\t{}".format(
-            xpos, ypos, mesh, self.annot_data))
-        for x, y, m, color, val in zip(xpos.flat, ypos.flat,
-                                       mesh.get_array(),
-                                       mesh.get_facecolors(),
-                                       self.annot_data.flat):
-            logging.debug("\t\t{}{}".format(m, pd.np.ma.masked))
-            if m is not pd.np.ma.masked:
-                _, l, _ = colorsys.rgb_to_hls(*color[:3])
-                text_color = ".15" if l > .408 else "w"
-                annotation = ("{:" + self.fmt + "}").format(val)
-                text_kwargs = dict(color=text_color, ha="center", va="center")
-                text_kwargs.update(self.annot_kws)
-                ax.text(x, y, annotation, **text_kwargs)
-    except Exception as e:
-        print(e)
-        raise e
-
-
-if sns.__version__ < "0.7.0" or True:
-    sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
 
 
 class Heatmap(vis.Visualizer):
@@ -142,15 +105,15 @@ class Heatmap(vis.Visualizer):
         ix = int(self.combo_normalize.currentIndex())
         self.normalization = self.NORMALIZATIONS[ix]
 
-    def plot_facet(self, data, color, **kwargs):
-        def get_crosstab(data, row_fact, col_fact, row_names, col_names):
-            ct = pd.crosstab(data[row_fact], data[col_fact])
-            ct = ct.reindex_axis(row_names, axis=0)
-            ct = ct.reindex_axis(col_names, axis=1)
-            if self.fill is not None:
-                ct = ct.fillna(self.fill)
-            return ct
+    def get_crosstab(self, data, row_fact, col_fact, row_names, col_names):
+        ct = pd.crosstab(data[row_fact], data[col_fact])
+        ct = ct.reindex(row_names, axis="index")
+        ct = ct.reindex(col_names, axis="columns")
+        if self.fill is not None:
+            ct = ct.fillna(self.fill)
+        return ct
 
+    def plot_facet(self, data, color, **kwargs):
         x = kwargs.get("x")
         y = kwargs.get("y")
         z = kwargs.get("z")
@@ -172,19 +135,18 @@ class Heatmap(vis.Visualizer):
                 levels_y = levels_z
             else:
                 numeric = z
-            ct = (data[[x, y, numeric]].groupby([x, y])
+            ct = (data[[x, y, numeric]].groupby([x, y], dropna=False)
                                        .agg("mean")
                                        .reset_index()
                                        .pivot(x, y, numeric)
                                        .T)
-            ct = ct.reindex_axis(levels_y, axis=0)
-            ct = ct.reindex_axis(levels_x, axis=1)
+            ct = ct.reindex(levels_y, axis=0)
+            ct = ct.reindex(levels_x, axis=1)
             self._xlab = x
             self._ylab = y
 
         elif param_count == 2:
             numeric = None
-            cat = []
             if x:
                 if data[x].dtype in (int, float):
                     numeric = x
@@ -199,26 +161,26 @@ class Heatmap(vis.Visualizer):
                     z = None
             if numeric:
                 cat = [fact for fact in [x, y, z] if fact][0]
-                ct = (data[[cat, numeric]].groupby(cat)
+                ct = (data[[cat, numeric]].groupby(cat, dropna=False)
                                           .agg("mean"))
                 if cat == x or cat == z:
-                    ct = ct.reindex_axis(levels_x).T
+                    ct = ct.reindex(levels_x).T
                 else:
-                    ct = ct.reindex_axis(levels_y)
+                    ct = ct.reindex(levels_y)
             else:
-                ct = get_crosstab(data, x, y, levels_x, levels_y).T
+                ct = self.get_crosstab(data, x, y, levels_x, levels_y).T
             self._xlab = x
             self._ylab = y
         elif x:
             ct = pd.crosstab(pd.Series([""] * len(data[x]), name=""),
                              data[x])
-            ct = ct.reindex_axis(levels_x, axis=1)
+            ct = ct.reindex(levels_x, axis=1)
             self._xlab = x
             self._ylab = "Frequency"
-        elif y:
+        else:
             ct = pd.crosstab(pd.Series([""] * len(data[y]), name=""),
                              data[y]).T
-            ct = ct.reindex_axis(levels_y, axis=0)
+            ct = ct.reindex(levels_y, axis=0)
             self._ylab = y
             self._xlab = "Frequency"
 
@@ -227,7 +189,7 @@ class Heatmap(vis.Visualizer):
         ct = ct.fillna(self.fill) if self.fill is not None else ct
 
         if self.z:
-            fmt = "+.{}f".format(options.cfg.digits)
+            fmt = f"+.{options.cfg.digits}f"
             if self.normalization == self.NORM_BY_ROW:
                 means = ct.mean(axis="columns", skipna=True)
                 std = ct.std(axis="columns", skipna=True)
@@ -239,9 +201,9 @@ class Heatmap(vis.Visualizer):
                 ct = (ct.subtract(means, axis="columns")
                         .divide(std, axis="columns"))
             elif self.normalization == self.NORM_ACROSS:
-                ct = (ct - pd.np.nanmean(ct.values)) / pd.np.nanstd(ct.values)
+                ct = (ct - np.nanmean(ct.values)) / np.nanstd(ct.values)
             else:
-                fmt = ".{}f".format(options.cfg.digits)
+                fmt = f".{options.cfg.digits}f"
 
             if self.center is None:
                 center = None
@@ -276,6 +238,10 @@ class Heatmap(vis.Visualizer):
                     cmap=cmap,
                     fmt=fmt,
                     linewidths=1)
+
+    def set_titles(self):
+        self._xlab = self.x or ""
+        self._ylab = self.y or ""
 
     @staticmethod
     def validate_data(data_x, data_y, df, session):

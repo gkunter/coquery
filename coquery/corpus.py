@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -24,16 +24,17 @@ import tempfile
 import zipfile
 import json
 from csv import QUOTE_NONNUMERIC
+from datetime import datetime
 
 from .errors import UnsupportedQueryItemError
 from .defines import (
     QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
-    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS,
+    QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS, QUERY_ITEM_ID,
     SQL_MYSQL, SQL_SQLITE,
     CONTEXT_NONE,
     PREFERRED_ORDER)
 
-from .general import collapse_words, CoqObject, html_escape
+from .general import collapse_words, CoqObject, html_escape, Print
 from . import tokens
 from . import options
 from .links import get_by_hash
@@ -111,16 +112,16 @@ class BaseResource(CoqObject):
         hashed, table, feature = cls.split_resource_feature(rc_feature)
         if hashed is not None:
             link, res = get_by_hash(hashed)
-            l = res.format_resource_feature("{}_{}".format(table, feature), N)
-            return ["db_{}_{}".format(res.db_name, x) for x in l]
+            lst = res.format_resource_feature(f"{table}_{feature}", N)
+            return [f"db_{res.db_name}_{x}" for x in lst]
 
         # handle lexicon features:
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
-            return ["coq_{}_{}".format(rc_feature, x+1) for x in range(N)]
+            return [f"coq_{rc_feature}_{x+1}" for x in range(N)]
         # handle remaining features
         else:
-            return ["coq_{}_1".format(rc_feature)]
+            return [f"coq_{rc_feature}_1"]
 
     @classmethod
     def split_resource_feature(cls, rc_feature):
@@ -158,7 +159,9 @@ class BaseResource(CoqObject):
         for rc_feature in list(all_features):
             if rc_feature in PREFERRED_ORDER:
                 for i, ordered_feature in enumerate(order):
-                    if PREFERRED_ORDER.index(ordered_feature) > PREFERRED_ORDER.index(rc_feature):
+                    of_index = PREFERRED_ORDER.index(ordered_feature)
+                    rc_index = PREFERRED_ORDER.index(rc_feature)
+                    if of_index > rc_index:
                         order.insert(i, rc_feature)
                         break
                 else:
@@ -170,18 +173,18 @@ class BaseResource(CoqObject):
         for i, rc_feature in enumerate(order):
             _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
-                j = order.index("{}_starttime".format(tab))
+                j = order.index(f"{tab}_starttime")
                 if j < i:
-                    order[j] = "{}_starttime".format(tab)
-                    order[i] = "{}_endtime".format(tab)
+                    order[j] = f"{tab}_starttime"
+                    order[i] = f"{tab}_endtime"
 
         for i, rc_feature in enumerate(all_features):
             _, tab, feat = cls.split_resource_feature(rc_feature)
             if feat == "starttime":
-                j = all_features.index("{}_endtime".format(tab))
+                j = all_features.index(f"{tab}_endtime")
                 if j < i:
-                    all_features[j] = "{}_starttime".format(tab)
-                    all_features[i] = "{}_endtime".format(tab)
+                    all_features[j] = f"{tab}_starttime"
+                    all_features[i] = f"{tab}_endtime"
 
         return order + all_features
 
@@ -226,10 +229,10 @@ class BaseResource(CoqObject):
         Features that represent binary data (audio, video, images) cannot be
         selected because the result table stores only numeric or string data.
         """
-        l = cls.get_resource_features()
+        lst = cls.get_resource_features()
         # FIXME: this function might be usable to make some table IDs
         # exposable (see issue #174)
-        return [x for x in l if
+        return [x for x in lst if
                 x not in cls.audio_features and
                 x not in cls.video_features and
                 x not in cls.image_features]
@@ -397,7 +400,9 @@ class BaseResource(CoqObject):
         table_dict = cls.get_table_dict()
         if "corpus" not in table_dict:
             return []
-        lexicon_tables = cls.get_table_tree(getattr(cls, "lexicon_root_table", "word"))
+        lexicon_tables = cls.get_table_tree(getattr(cls,
+                                                    "lexicon_root_table",
+                                                    "word"))
 
         corpus_variables = []
         cls_lexical_features = getattr(cls, "lexical_features", [])
@@ -436,17 +441,17 @@ class BaseResource(CoqObject):
         lexicon_tables = cls.get_table_tree(
             getattr(cls, "lexicon_root_table", "word"))
         lexicon_variables = []
-        l = []
+        lst = []
         for x in table_dict:
             if x in lexicon_tables and x not in cls.special_table_list:
                 for y in table_dict[x]:
                     if (not y.endswith("_id") and
-                            not y.startswith("{}_table".format(x))):
+                            not y.startswith(f"{x}_table")):
                         lexicon_variables.append((y, getattr(cls, y)))
-                        l.append(y)
+                        lst.append(y)
 
         for x in getattr(cls, "lexical_features", []):
-            if x not in l:
+            if x not in lst:
                 lexicon_variables.append((x, getattr(cls, x)))
 
         # make sure that all query items are treated as lexicon features:
@@ -663,7 +668,6 @@ class SQLResource(BaseResource):
         self._word_cache = {}
         self.corpus = corpus
         self.attach_list = []
-        self._context_string_template = self.get_context_string_template()
         self._sentence_feature = (
             getattr(self, "corpus_sentence", None) or
             getattr(self, "corpus_sentence_id", None) or
@@ -932,12 +936,14 @@ class SQLResource(BaseResource):
             except AttributeError:
                 pass
             else:
-                #S = "SELECT COUNT(DISTINCT {}) FROM {}".format(column, table)
-                #df = pd.read_sql(S, engine)
                 S = "SELECT {} FROM {}".format(column, table)
                 df = pd.DataFrame(db_connection.execute(S).fetchall(),
                                   columns=[column])
-                stats.append([table, column, table_sizes[table], len(df[column].unique()), 0, 0, rc_feature])
+                stats.append([table,
+                              column,
+                              table_sizes[table],
+                              len(df[column].unique()),
+                              0, 0, rc_feature])
                 if signal:
                     signal.emit(s.format(rc_feature))
 
@@ -1024,16 +1030,16 @@ class SQLResource(BaseResource):
         wildcard_a = -0.75
 
         if s.startswith("~"):
-            l = []
+            lst = []
             s = s.strip("~")
             for ch in s:
                 if ch == "?":
-                    l.append("#")
+                    lst.append("#")
                 elif ch == "*":
-                    l.append("*")
+                    lst.append("*")
                 else:
-                    l.append("?")
-            s = "".join(l)
+                    lst.append("?")
+            s = "".join(lst)
 
         s = s.replace("\\?", "#")
         s = s.replace("\\*", "#")
@@ -1080,8 +1086,8 @@ class SQLResource(BaseResource):
 
     @classmethod
     def get_token_order(cls, token_list):
-        l = sorted(token_list, key=lambda x: cls.string_entropy(x[1][1]))
-        return l
+        lst = sorted(token_list, key=lambda x: cls.string_entropy(x[1][1]))
+        return lst
 
     @classmethod
     def get_corpus_joins(cls, query_items, ignore_ngram=False):
@@ -1205,8 +1211,8 @@ class SQLResource(BaseResource):
 
         # second, create a list of dummy features for each table. This list
         # is then used to pull in all required tables in order:
-        selected = ["{}_dummy".format(x) for x in tables]
-        l = []
+        selected = [f"{x}_dummy" for x in tables]
+        lst = []
         for dummy in sorted(selected):
             _, target, _ = cls.split_resource_feature(dummy)
             # check if the current table is a neighbor of the current root
@@ -1219,8 +1225,8 @@ class SQLResource(BaseResource):
                 sub_select.remove(dummy)
                 tup = cls.get_required_tables(target, sub_select, conditions)
                 # insert tuple for current table into list:
-                l.append(tup)
-        return root, l
+                lst.append(tup)
+        return root, lst
 
     def add_table_path(self, start_feature, end_feature):
         """
@@ -1324,12 +1330,15 @@ class SQLResource(BaseResource):
             if parent == "corpus":
                 sql_template = "{table_alias}.{table_id} = {parent_id}{N}"
             else:
-                sql_template = "{table_alias}.{table_id} = COQ_{parent}_{N}.{parent_id}"
+                sql_template = ("{table_alias}.{table_id} = "
+                                "COQ_{parent}_{N}.{parent_id}")
             where_str = sql_template.format(
                 table_alias=table_alias, table_id=table_id,
                 parent=parent.upper(), parent_id=parent_id, N=n+1)
 
-            table_str = "INNER JOIN {} ON {}".format(table_str, where_str)
+
+            join_type = getattr(cls, "join_type", "INNER")
+            table_str = f"{join_type} JOIN {table_str} ON {where_str}"
             return [table_str], []
 
         def add_joins(n, parent, tup):
@@ -1491,19 +1500,37 @@ class SQLResource(BaseResource):
                 (token.word_specifiers, QUERY_ITEM_WORD, "Word"),
                 (token.lemma_specifiers, QUERY_ITEM_LEMMA, "Lemma"),
                 (token.class_specifiers, QUERY_ITEM_POS, "Part-of-speech"),
-                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT, "Transcription"),
-                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss")]:
+                (token.transcript_specifiers, QUERY_ITEM_TRANSCRIPT,
+                 "Transcription"),
+                (token.gloss_specifiers, QUERY_ITEM_GLOSS, "Gloss"),
+                (token.id_specifiers, QUERY_ITEM_ID, "ID")]:
             if not spec_list:
                 continue
 
             if spec_list == ["*"]:
                 continue
 
-            try:
-                col = getattr(cls, getattr(cls, label))
-            except AttributeError:
-                raise UnsupportedQueryItemError(item_type)
-            _, tab, _ = cls.split_resource_feature(getattr(cls, label))
+            reverse_str = False
+
+            if item_type == "ID":
+                col = getattr(cls, "corpus_id")
+                query_feature = "corpus_id"
+            else:
+                col = None
+                query_feature = getattr(cls, label)
+                if token.S.startswith("*") and len(token.S) > 1:
+                    try:
+                        col = getattr(cls, f"{query_feature}_rev")
+                    except AttributeError:
+                        pass
+                    else:
+                        reverse_str = True
+                if not col:
+                    try:
+                        col = getattr(cls, query_feature)
+                    except AttributeError:
+                        raise UnsupportedQueryItemError(item_type)
+            _, tab, _ = cls.split_resource_feature(query_feature)
 
             if tab == "corpus":
                 template = "{name}{N}"
@@ -1519,7 +1546,8 @@ class SQLResource(BaseResource):
                 format_str = handle_case("{alias} {op} '{val}'")
                 s = format_str.format(alias=alias,
                                       op=get_operator(x),
-                                      val=val)
+                                      val=(val if not reverse_str else
+                                           val[::-1]))
             else:
                 wildcards = []
                 explicit = []
@@ -1714,13 +1742,15 @@ class SQLResource(BaseResource):
                 if s not in columns:
                     columns.append(s)
 
-            if tab in annotations:
-                s = "COQ_{tab_upper}_{N}.{tab_id} AS coquery_invisible_{tab}_id".format(
-                    N=_first_item,
-                    tab=tab, tab_upper=tab.upper(),
-                    tab_id=getattr(cls, "{}_id".format(tab)))
-                if s not in columns:
-                    columns.append(s)
+                if tab in annotations:
+                    s = ("COQ_{tab_upper}_{N}.{tab_id} AS "
+                         "coquery_invisible_{tab}_id").format(
+                             N=_first_item,
+                             tab=tab,
+                             tab_upper=tab.upper(),
+                             tab_id=getattr(cls, f"{tab}_id"))
+                    if s not in columns:
+                        columns.append(s)
 
         id_str = "{name}{N} AS coquery_invisible_corpus_id".format(
                     N=_first_item, name=cls.corpus_id)
@@ -1834,8 +1864,8 @@ class SQLResource(BaseResource):
             current_token = tokens.COCAToken(pos)
             _, table, _ = self.split_resource_feature(pos_feature)
             S = "SELECT {} FROM {} WHERE {} {} '{}' LIMIT 1".format(
-                getattr(self, "{}_id".format(table)),
-                getattr(self, "{}_table".format(table)),
+                getattr(self, f"{table}_id"),
+                getattr(self, f"{table}_table"),
                 getattr(self, pos_feature),
                 self.get_operator(current_token),
                 pos)
@@ -1846,8 +1876,8 @@ class SQLResource(BaseResource):
         else:
             return False
 
-    def pos_check_function(self, l):
-        return [self.is_part_of_speech(s) for s in l]
+    def pos_check_function(self, lst):
+        return [self.is_part_of_speech(s) for s in lst]
 
     def get_sentence_ids(self, id_list):
         """
@@ -1889,7 +1919,7 @@ class SQLResource(BaseResource):
         n_tokens = int(number_of_tokens if not pd.isna(number_of_tokens)
                        else 0)
 
-        if pd.np.isnan(origin_id):
+        if pd.isna(origin_id):
             results = ([(None, 0)] * left_span +
                        [(None, 1)] * n_tokens +
                        [(None, 2)] * right_span)
@@ -2006,7 +2036,6 @@ class SQLResource(BaseResource):
             source table, and a dictionary with resource features as keys and
             the matching field content as values.
         """
-        l = []
 
         # get the complete row from the corpus table for the current token:
         S = "SELECT * FROM {} WHERE {} = {}".format(
@@ -2019,6 +2048,7 @@ class SQLResource(BaseResource):
         df = pd.read_sql(S, engine)
         engine.dispose()
 
+        lst = []
         # as each of the columns could potentially link to origin information,
         # we go through all of them:
         for column in df.columns:
@@ -2077,8 +2107,8 @@ class SQLResource(BaseResource):
                     D = dict([(x, row.at[0, x]) for x in row.columns
                               if x != id_column])
                     # append the row data to the list:
-                    l.append((table_name, D))
-        return l
+                    lst.append((table_name, D))
+        return lst
 
     def get_file_data(self, token_id, features):
         """
@@ -2101,12 +2131,24 @@ class SQLResource(BaseResource):
                         for x in features]
         feature_list.append("{}.{}".format(self.corpus_table, self.corpus_id))
         token_ids = [str(x) for x in tokens]
-        S = "SELECT {features} FROM {path} WHERE {corpus}.{corpus_id} IN ({token_ids})".format(
-                features=", ".join(feature_list),
-                path=" ".join(self.table_list),
-                corpus=self.corpus_table,
-                corpus_id=self.corpus_id,
-                token_ids=", ".join(token_ids))
+        S = ("SELECT {features} FROM {path} "
+             "WHERE {corpus}.{corpus_id} IN ({token_ids})").format(
+                 features=", ".join(feature_list),
+                 path=" ".join(self.table_list),
+                 corpus=self.corpus_table,
+                 corpus_id=self.corpus_id,
+                 token_ids=", ".join(token_ids))
+
+        features = ", ".join(feature_list)
+        path = " ".join(self.table_list)
+        token_list = ", ".join(token_ids)
+        S2 = (f"SELECT {features} "
+              f"FROM {path} "
+              f"WHERE {self.corpus_table}.{self.corpus_id} IN "
+              f"({token_list})")
+
+        # FIXME: Replace unwieldy old string by new format string
+        assert S == S2
 
         engine = options.cfg.current_connection.get_engine(self.db_name)
         df = pd.read_sql(S, engine)
@@ -2164,22 +2206,22 @@ class CorpusClass(object):
             # FIXME: remove code replication with get_subcorpus_range()
             if len(values) == 1:
                 if type(values[0]) is str:
-                    val = "'{}'".format(values[0])
+                    val = f"'{values[0]}'"
                 else:
                     val = values[0]
                 s = "{}.{} = {}".format(
-                    getattr(self.resource, "{}_table".format(tab)),
+                    getattr(self.resource, f"{tab}_table"),
                     getattr(self.resource, rc_feature),
                     val)
             else:
                 if any([type(x) is str for x in values]):
-                    l = ["'{}'".format(x) for x in values]
+                    lst = [f"'{x}'" for x in values]
                 else:
-                    l = values
+                    lst = values
                 s = "{}.{} IN ({})".format(
-                    getattr(self.resource, "{}_table".format(tab)),
+                    getattr(self.resource, f"{tab}_table"),
                     getattr(self.resource, rc_feature),
-                    ",".join(l))
+                    ",".join(lst))
             filter_strings.append(s)
 
         if filter_strings:
@@ -2218,14 +2260,16 @@ class CorpusClass(object):
         size : int
             The number of tokens in the corpus, or in the filtered corpus.
         """
+        if filters:
+            _key = tuple(sorted(filters))
+        else:
+            _key = tuple()
 
-        _key = tuple(sorted(filters))
         try:
             size = self._corpus_size_cache[_key]
         except KeyError:
             size = self.get_corpus_statistic("COUNT(*)", filters)
             self._corpus_size_cache[_key] = size
-
         return self._corpus_size_cache[_key]
 
     def get_subcorpus_size(self, row, columns=None, subst=None):
@@ -2280,10 +2324,10 @@ class CorpusClass(object):
         onto the given value.
         """
         subst = subst or {}
-        l = [key for key, val in subst.get(column, {}).items()
-             if value == val]
-        l.append(value)
-        return l
+        lst = [key for key, val in subst.get(column, {}).items()
+               if value == val]
+        lst.append(value)
+        return lst
 
     def get_subcorpus_range(self, row=None):
         """
@@ -2539,7 +2583,8 @@ class CorpusClass(object):
                 SELECT {columns}
                 FROM {corpus}
                 {joined_tables}
-                LEFT JOIN {tag_table} ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id}
+                LEFT JOIN {tag_table}
+                    ON {corpus}.{corpus_id} = {tag_table}.{tag_corpus_id}
                 WHERE {corpus}.{corpus_id} BETWEEN {start} AND {end}
                 """
         else:
@@ -2583,9 +2628,7 @@ class CorpusClass(object):
                 "    AND {corpus}.{source_id} = '{current_source_id}'")
         S = format_string.format(**kwargs)
 
-        if options.cfg.verbose:
-            logging.info(S)
-            print(S)
+        Print(S)
         engine = options.cfg.current_connection.get_engine(
             self.resource.db_name)
         df = pd.read_sql(S, engine)
@@ -2602,10 +2645,8 @@ class CorpusClass(object):
                        tag=self.resource.tag_label,
                        tag_id=self.resource.tag_id,
                        corpus_id=self.resource.tag_corpus_id,
-                       tag_corpus_id=self.resource.tag_corpus_id,
                        tag_type=self.resource.tag_type,
                        attribute=self.resource.tag_attribute,
-                       current_source_id=source_id,
                        start=max(0, token_id - 1000),
                        end=token_id + token_width + 999)
             tags = pd.read_sql(S, engine)
@@ -2620,7 +2661,86 @@ class CorpusClass(object):
             df = df.sort(columns=headers)
         self._context_cache[(token_id, source_id, token_width)] = (df, tags)
 
-    def get_rendered_context(self, token_id, source_id, token_width, context_width, widget):
+    def parse_tags(self, row, open=True):
+        if open:
+            s1 = "<{} {}>"
+            s2 = "<{}>"
+        else:
+            s1 = "</{} {}>"
+            s2 = "</{}>"
+        attr = row.COQ_ATTRIBUTE
+        tag = self.tag_to_html(row.COQ_TAG_TAG)
+        if attr:
+            attr = re.sub("=([^,]*)", r"='\g<1>'", attr)
+            return s1.format(tag, attr)
+        else:
+            return s2.format(tag)
+
+    def parse_row(self, row, tags, token_id, token_width):
+        Print("parse_row", len(tags))
+        word = row.coq_word_label_1
+        word_id = row.coquery_invisible_corpus_id
+        if len(tags):
+            opening = tags[(tags.COQ_ID == word_id) &
+                           ((tags.COQ_TAG_TYPE == "open") |
+                            (tags.COQ_TAG_TYPE == "empty"))]
+            closing = tags[(tags.COQ_ID == word_id) &
+                           ((tags.COQ_TAG_TYPE == "close") |
+                            (tags.COQ_TAG_TYPE == "empty"))]
+        else:
+            opening = pd.DataFrame(columns=tags.columns)
+            closing = pd.DataFrame(columns=tags.columns)
+        lst = []
+        if len(opening):
+            lst.extend(list(opening.apply(lambda x: self.parse_tags(x, True),
+                                          axis="columns")))
+        token_style = "<span style='{};'>".format(
+            self.resource.render_token_style)
+        if word:
+            # highlight words that are in the results table:
+            if word_id in self.id_list:
+                lst.append(token_style)
+            # additional highlight if the word is the target word:
+            if token_id <= word_id < token_id + token_width:
+                lst.append("<b>")
+                lst.append(html_escape(word))
+                lst.append("</b>")
+            else:
+                lst.append(html_escape(word))
+            if word_id in self.id_list:
+                lst.append("</span>")
+        if len(closing):
+            lst.extend(list(closing.apply(lambda x: self.parse_tags(x, False),
+                                          axis="columns")))
+        return lst
+
+    def expand_row(self, x):
+        return list(range(int(x.coquery_invisible_corpus_id), int(x.end)))
+
+    def parse_df(self, df, tags, token_id, token_width):
+        df["COQ_FORMATTED"] = df["coq_word_label_1"].apply(lambda x: [x])
+
+        token_style = "<span style='{};'>".format(
+            self.resource.render_token_style)
+
+        mask = df["coquery_invisible_corpus_id"] == token_id
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: ["<b>"] + x)
+        mask = df["coquery_invisible_corpus_id"] == token_id + token_width - 1
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: x + ["</b>"])
+
+        mask = df["coquery_invisible_corpus_id"].isin(self.id_start_list)
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: [token_style] + x)
+        mask = df["coquery_invisible_corpus_id"].isin(self.id_end_list)
+        df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
+            lambda x: x + ["</span>"])
+
+        return [item for sublist in df["COQ_FORMATTED"] for item in sublist]
+
+    def get_rendered_context(self, token_id, source_id, token_width,
+                             context_width, widget):
         """
         Return a dictionary with the context data.
 
@@ -2645,62 +2765,14 @@ class CorpusClass(object):
         be displayed. The area in which the context is shown is a QLabel
         named widget.ui.context_area. """
 
-        def expand_row(x):
-            return list(range(int(x.coquery_invisible_corpus_id),
-                              int(x.end)))
-
-        def parse_row(row, tags):
-            word = row.coq_word_label_1
-            word_id = row.coquery_invisible_corpus_id
-            opening = tags[(tags.COQ_ID == word_id) &
-                           ((tags.COQ_TAG_TYPE == "open") |
-                            (tags.COQ_TAG_TYPE == "empty"))]
-            closing = tags[(tags.COQ_ID == word_id) &
-                           ((tags.COQ_TAG_TYPE == "close") |
-                            (tags.COQ_TAG_TYPE == "empty"))]
-            l = []
-            if len(opening):
-                l.extend(list(opening.apply(lambda x: parse_tags(x, True),
-                                            axis="columns")))
-            if word:
-                # highlight words that are in the results table:
-                if word_id in self.id_list:
-                    l.append("<span style='{};'>".format(
-                        self.resource.render_token_style))
-                # additional highlight if the word is the target word:
-                if token_id <= word_id < token_id + token_width:
-                    l.append("<b>")
-                    l.append(html_escape(word))
-                    l.append("</b>")
-                else:
-                    l.append(html_escape(word))
-                if word_id in self.id_list:
-                    l.append("</span>")
-            if len(closing):
-                l.extend(list(closing.apply(lambda x: parse_tags(x, False),
-                                            axis="columns")))
-            return l
-
-        def parse_tags(row, open=True):
-            if open:
-                s1 = "<{} {}>"
-                s2 = "<{}>"
-            else:
-                s1 = "</{} {}>"
-                s2 = "</{}>"
-            attr = row.COQ_ATTRIBUTE
-            tag = self.tag_to_html(row.COQ_TAG_TAG)
-            if attr:
-                attr = re.sub("=([^,]*)", r"='\g<1>'", attr)
-                return s1.format(tag, attr)
-            else:
-                return s2.format(tag)
-
         if not hasattr(self.resource, QUERY_ITEM_WORD):
             raise UnsupportedQueryItemError
 
+        time_lst = [(datetime.now().timestamp(), "start")]
+
         if not (token_id, source_id, token_width) in self._context_cache:
             self._read_context_for_renderer(token_id, source_id, token_width)
+        time_lst.append((datetime.now().timestamp(), "reading context"))
         df, tags = self._context_cache[(token_id, source_id, token_width)]
         df = df.reset_index(drop=True)
 
@@ -2709,6 +2781,7 @@ class CorpusClass(object):
         context_end = ix + token_width + context_width
 
         df = df[(df.index >= context_start) & (df.index < context_end)]
+        time_lst.append((datetime.now().timestamp(), "limiting rows"))
 
         # create a list of all token ids that are also listed in the results
         # table:
@@ -2717,27 +2790,37 @@ class CorpusClass(object):
                 template.format(lower=token_id - 1000,
                                 upper=token_id + 1000 + token_width))
 
-        tab["end"] = (tab[["coquery_invisible_corpus_id",
-                           "coquery_invisible_number_of_tokens"]].sum(axis=1))
+        time_lst.append((datetime.now().timestamp(), "retrieving ids"))
+        self.id_start_list = tab["coquery_invisible_corpus_id"]
+        self.id_end_list = (self.id_start_list +
+                            tab["coquery_invisible_number_of_tokens"] - 1)
 
-        # the method expand_row() has the side effect that it adds the
-        # token id range for each row to the list self.id_list
-        self.id_list = list(pd.np.hstack(tab.apply(expand_row, axis=1)))
+        time_lst.append((datetime.now().timestamp(), "creating id lists"))
+        context = self.parse_df(df, tags, token_id, token_width)
 
-        context = pd.np.hstack(df.apply(lambda x: parse_row(x, tags),
-                                        axis="columns"))
+        time_lst.append((datetime.now().timestamp(), "parsing dataframe"))
         s = collapse_words(context, self.resource.get_language())
+        time_lst.append((datetime.now().timestamp(), "collapsing words"))
         if s is None:
             s = ""
         else:
             s = s.replace("</p>", "</p>\n")
             s = s.replace("<br/>", "<br/>\n")
+        time_lst.append((datetime.now().timestamp(), "fixing breaks"))
+
+        lst = [(t1 - t2, stage) for ((t1, stage), (t2, _)) in
+               list(zip(time_lst[1:], time_lst[:-1]))]
+
+        Print("\n".join(
+            ["{}: {:6.1f} ms ({})".format(i, 1000 * x, stage)
+             for i, (x, stage) in enumerate(lst)]))
+        Print("Total: {:6.1f} ms".format(
+            1000 * (time_lst[-1][0] - time_lst[0][0])))
 
         audio = self.resource.audio_features != []
         start_time = None
         end_time = None
-        #df = df[(df.coquery_invisible_corpus_id >= context_start) &
-                #(df.coquery_invisible_corpus_id <= context_end)]
+
         if audio:
             try:
                 start_time = df.coq_word_starttime_1.min()

@@ -42,9 +42,9 @@ class BuilderClass(BaseCorpusBuilder):
         for i, label in enumerate(dtypes.index.values):
             if i in mapping.values():
                 query_type = dict(zip(mapping.values(), mapping.keys()))[i]
-                rc_feature = "corpus_{}".format(query_type)
+                rc_feature = f"corpus_{query_type}"
             else:
-                rc_feature = "corpus_x{}".format(i)
+                rc_feature = f"corpus_x{i}"
             if dtypes[i] == object:
                 # It would be nice to be able to determine the maximum length
                 # if string data columns from the data frame, like so:
@@ -53,7 +53,7 @@ class BuilderClass(BaseCorpusBuilder):
                 #
                 # But at this stage, the data frame is not available yet, so
                 # we have to use a fixed maximum string length:
-                dtype = "VARCHAR({})".format(self.MAX_VARCHAR_LENGTH)
+                dtype = f"VARCHAR({self.MAX_VARCHAR_LENGTH})"
             elif dtypes[i] == np.float64:
                 dtype = "REAL"
             elif dtypes[i] == np.int64:
@@ -73,9 +73,9 @@ class BuilderClass(BaseCorpusBuilder):
         for i, label in enumerate(dtypes.index.values):
             if i in mapping.values():
                 query_type = dict(zip(mapping.values(), mapping.keys()))[i]
-                rc_feature = "corpus_{}".format(query_type)
+                rc_feature = f"corpus_{query_type}"
             else:
-                rc_feature = "corpus_x{}".format(i)
+                rc_feature = f"corpus_x{i}"
             if dtypes[i] == object:
                 # It would be nice to be able to determine the maximum length
                 # if string data columns from the data frame, like so:
@@ -85,7 +85,7 @@ class BuilderClass(BaseCorpusBuilder):
                 # But at this stage, the data frame is not available yet, so
                 # we have to use a fixed maximum string length:
                 max_length = 128
-                dtype = "VARCHAR({})".format(max_length)
+                dtype = f"VARCHAR({max_length})"
             elif dtypes[i] == np.float64:
                 dtype = "REAL"
             elif dtypes[i] == np.int64:
@@ -110,13 +110,13 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.file_name, "VARCHAR(2048) NOT NULL"),
              Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
-        l = [Identifier(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
-             Link(self.corpus_file_id, self.file_table)]
+        lst = [Identifier(self.corpus_id, "BIGINT(20) UNSIGNED NOT NULL"),
+               Link(self.corpus_file_id, self.file_table)]
 
         for _, _, label, dtype in _columns:
-            l.append(Column(label, dtype))
+            lst.append(Column(label, dtype))
 
-        self.create_table_description(self.corpus_table, l)
+        self.create_table_description(self.corpus_table, lst)
 
     def create_description_text(self):
         desc_template = """<p>The table-based corpus '{name}' was created on
@@ -145,12 +145,12 @@ class BuilderClass(BaseCorpusBuilder):
         with capt:
             df = self._table_options.read_file(self.arguments.path)
         for x in capt:
-            s = "File {} – {}".format(self.arguments.path, x)
+            s = f"File {self.arguments.path} – {x}"
             logging.warning(s)
             print(s)
 
         if not self._table_options.header:
-            df.columns = ["X{}".format(x) for x in df.columns]
+            df.columns = [f"X{num}" for num in df.columns]
         else:
             df.columns = [re.sub("[^a-zA-Z0-9_]", "_", x) for x in df.columns]
         df[self.corpus_file_id] = 1
@@ -165,6 +165,7 @@ class BuilderClass(BaseCorpusBuilder):
 
 def main():
     BuilderClass().build()
+
 
 if __name__ == "__main__":
     main()

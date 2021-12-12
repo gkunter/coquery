@@ -15,6 +15,7 @@ import warnings
 import tempfile
 import argparse
 import pandas as pd
+import numpy as np
 from importlib.machinery import SourceFileLoader
 
 from coquery.coquery import options
@@ -23,6 +24,7 @@ from coquery.connections import SQLiteConnection
 from coquery.installer.coq_install_generic_table import BuilderClass
 from test.testcase import CoqTestCase, run_tests
 
+
 class TestGenericTable(CoqTestCase):
     def setUp(self):
         self.temp_name = "test_db"
@@ -30,7 +32,7 @@ class TestGenericTable(CoqTestCase):
             self.temp_path = tmp_dir
         os.mkdir(self.temp_path)
         self.module_path = os.path.join(self.temp_path,
-                                        "{}.py".format(self.temp_name))
+                                        f"{self.temp_name}.py")
 
         with tempfile.NamedTemporaryFile() as tmp:
             self.temp_file = tmp.name
@@ -49,9 +51,9 @@ class TestGenericTable(CoqTestCase):
         options.cfg.corpora_path = self.temp_path
         options.cfg.verbose = False
 
-        self.dtypes = pd.Series(data=[pd.np.dtype("O"),
-                                      pd.np.dtype("int64"),
-                                      pd.np.dtype("float64")],
+        self.dtypes = pd.Series(data=[np.dtype("O"),
+                                      np.dtype("int64"),
+                                      np.dtype("float64")],
                                 index=["Word", "Length", "LogFreq"])
         self.mapping = {'word': 0}
 
@@ -124,7 +126,6 @@ class TestGenericTable(CoqTestCase):
         self.assertEqual(getattr(res, "file_path"), "Path")
 
         self.assertEqual(getattr(res, "query_item_word"), "corpus_word")
-        self.assertEqual(getattr(res, "name"), self.installer.arguments.name)
 
     def test_database(self):
         self.installer.build()
@@ -152,7 +153,9 @@ class TestGenericTable(CoqTestCase):
                                       rd_files.sort_index(axis="columns"))
 
 
-provided_tests = [TestGenericTable]
+provided_tests = [
+    TestGenericTable,
+    ]
 
 
 def main():

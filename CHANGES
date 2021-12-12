@@ -10,6 +10,9 @@ Interface
 * The database paths of non-MySQL connections can now be changed
 * You can now browse through the contexts of the matches in the context viewer
 
+Syntax
+* Add syntax to search for IDs, example: =123
+
 Queries
 * Can restrict query files to a number of rows
 * Add an SQL query viewer
@@ -21,6 +24,8 @@ Corpora
 * Packaging: corpora can be packaged, and packaged corpora can be installed
 * New corpora: Old Bailey Corpus 2.0, Korpus Malti, GloWbE
 * Initial support for NIST SPH audio
+* Provide support for several database modules that can be used by corpus
+  installers
 
 Visualizations
 * Add Line Charts
@@ -40,11 +45,15 @@ Data management
 * New dialogs for Column, Group and Summary functions
 * Contexts are now retrieved faster
 
+Context viewer
+* Add Next and Prev buttons
+* Much better handling of context span changes
+
 Functions
 * Errors in functions don't cause the whole function list to fail anymore
 * More flexible handling of function arguments
-* New functions: NOT, IF, TRUE, FALSE, EMPTY, MISSING, Percentile,
-  Log, Replace
+* New functions: NOT, IF, IFANY, TRUE, FALSE, EMPTY, MISSING, MOD, Percentile,
+  Log, Replace, STTR, MI
 * Mathematical functions can now be applied column-wise
 
 EXPERIMENTAL features

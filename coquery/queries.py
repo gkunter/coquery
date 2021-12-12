@@ -17,6 +17,7 @@ import logging
 import os
 
 import pandas as pd
+import numpy as np
 
 from coquery.defines import (QUERY_ITEM_LEMMA, QUERY_ITEM_WORD,
                              CONTEXT_NONE)
@@ -295,7 +296,7 @@ class TokenQuery(object):
             if options.cfg.context_mode != CONTEXT_NONE:
                 col.append("coquery_invisible_corpus_id")
                 col.append("coquery_invisible_origin_id")
-            df = pd.DataFrame([[pd.np.nan] * len(col)], columns=col)
+            df = pd.DataFrame([[np.nan] * len(col)], columns=col)
             n = self._current_number_of_tokens
             df["coquery_invisible_number_of_tokens"] = n
             self.empty_query = True

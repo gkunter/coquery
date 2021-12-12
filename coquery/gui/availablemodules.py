@@ -2,7 +2,7 @@
 """
 availablemodules.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -44,14 +44,16 @@ class AvailableModulesDialog(QtWidgets.QDialog):
                 ("NLTK", options.use_nltk),
                 ("tgt", options.use_tgt),
                 ("chardet", options.use_chardet),
-                ("PDFMiner" if sys.version_info < (3, 0) else
-                 "pdfminer3k", options.use_pdfminer),
+                ("pdfminer3k", options.use_pdfminer),
                 ("python-docx", options.use_docx),
                 ("odfpy", options.use_odfpy),
                 ("BeautifulSoup", options.use_bs4),
                 ("xlrd", options.use_xlrd),
                 ("sphfile", options.use_sphfile),
                 ("sqlparse", options.use_sqlparse),
+                ("PyMongo", options.use_pymongo),
+                ("pyodbc", options.use_pyodbc),
+                ("meza", options.use_meza),
                 ]
         if sys.platform.startswith("linux"):
             modules.insert(0, ("alsaaudio", options.use_alsaaudio))
@@ -89,5 +91,5 @@ class AvailableModulesDialog(QtWidgets.QDialog):
 
     @staticmethod
     def view(parent=None):
-        dialog = AvailableModulesDialog(parent=None)
+        dialog = AvailableModulesDialog(parent=parent)
         dialog.exec_()

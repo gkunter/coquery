@@ -2,7 +2,7 @@
 """
 general.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -20,6 +20,7 @@ import os
 import tempfile
 import itertools
 import pandas as pd
+import numpy as np
 import io
 import ctypes
 import logging
@@ -98,11 +99,10 @@ class Collapser(object):
         value is identical to the input value.
         """
         if s in {"<b>", "<u>", "<s>", "<em>"} or s.startswith("<span"):
-            return "{}{}".format(cls.whitespace, s)
+            return f"{cls.whitespace}{s}"
         elif s in {"</b>", "</u>", "</s>", "</em>"} or s.startswith("</span"):
-            return "{}{}".format(s, cls.whitespace)
-        else:
-            return s
+            return f"{s}{cls.whitespace}"
+        return s
 
     @classmethod
     def _collapse_list(cls, word_list):
@@ -125,9 +125,14 @@ class Collapser(object):
 
 
 class EnglishCollapser(Collapser):
-    CLITICS = {"s", "re", "m", "ve", "d", "ll", "t"}
+    CLITICS = {"#s", "#re", "#m", "#ve", "#d", "#ll", "#t", "n#t"}
     CONTRACTION_PUNCTUATION = ("'", "\N{RIGHT SINGLE QUOTATION MARK}",
                                "\N{MODIFIER LETTER APOSTROPHE}")
+    CONTRACTIONS = []
+    for p in CONTRACTION_PUNCTUATION:
+        for c in CLITICS:
+            CONTRACTIONS.append(c.replace("#", p))
+
     NONSPACING_PUNCTUATION = (".", ",", ":", ";", "?", "!",
                               ")", "}", "]",
                               "%")
@@ -222,8 +227,7 @@ class EnglishCollapser(Collapser):
             ignore_openers = False
 
             # handle punctuation, contractions and clitics:
-            if (lw.startswith(cls.CONTRACTION_PUNCTUATION) and
-                    lw[1:] in cls.CLITICS):
+            if (lw in cls.CONTRACTIONS):
                 sep = ""
                 ignore_openers = True
             elif lw in cls.NONSPACING_PUNCTUATION:
@@ -346,8 +350,7 @@ def get_home_dir(create=True):
     elif sys.platform == "darwin":
         basepath = os.path.expanduser("~/Library/Application Support")
     else:
-        raise RuntimeError("Unsupported operating system: {}".format(
-            sys.platform))
+        raise RuntimeError(f"Unsupported operating system: {sys.platform}")
 
     coquery_home = os.path.join(basepath, "Coquery")
     connections_path = os.path.join(coquery_home, "connections")
@@ -374,6 +377,12 @@ class CoqObject(object):
         lst = [self.__class__.__name__]
         dir_super = dir(super(CoqObject, self))
         for x in sorted([x for x in dir(self) if x not in dir_super]):
+            _session_removed = False
+            if x == "kwargs":
+                if "session" in getattr(self, "kwargs"):
+                    session = getattr(self, "kwargs")["session"]
+                    _session_removed = True
+                    getattr(self, "kwargs").pop("session")
             if (not x.startswith("_") and
                     not hasattr(getattr(self, x), "__call__")):
                 attr = getattr(self, x)
@@ -387,11 +396,14 @@ class CoqObject(object):
                     for key in sorted(attr.keys()):
                         val = attr[key]
                         if isinstance(val, CoqObject):
-                            lst.append("{}{}".format(x, val.get_hash()))
+                            lst.append(f"{x}{val.get_hash()}")
                         else:
-                            lst.append("{}{}".format(x, str(val)))
+                            lst.append(f"{x}{str(val)}")
                 else:
                     lst.append(str(attr))
+            if _session_removed:
+                getattr(self, "kwargs")["session"] = session
+
         return hashlib.md5(u"".join(lst).encode()).hexdigest()
 
 
@@ -533,27 +545,27 @@ def pretty(vrange, n, endpoint=False):
     exp_min = None
 
     if vmin >= 0 and vmax <= 1:
-        exp = abs(pd.np.ceil(pd.np.log10(abs(vmax))) + 2)
+        exp = abs(np.ceil(np.log10(abs(vmax))) + 2)
 
-        niced_min = pd.np.floor(vmin * 10 ** exp) / 10 ** exp
-        niced_max = pd.np.ceil(vmax * 10 ** exp) / 10 ** exp
+        niced_min = np.floor(vmin * 10 ** exp) / 10 ** exp
+        niced_max = np.ceil(vmax * 10 ** exp) / 10 ** exp
     elif vmin != 0:
         # limit the exponent of the lower boundary so that it does not exceed
         # three, i.e. only the lowest three digits will be cleared (this may
         # need revision):
-        exp_min = min(pd.np.floor(pd.np.log10(abs(vmin))), 3)
+        exp_min = min(np.floor(np.log10(abs(vmin))), 3)
 
-        pretty_min = pd.np.floor(vmin / 10 ** exp_min) * 10 ** exp_min
-        exp_max = pd.np.ceil(pd.np.log10(abs(vmax - pretty_min)))
+        pretty_min = np.floor(vmin / 10 ** exp_min) * 10 ** exp_min
+        exp_max = np.ceil(np.log10(abs(vmax - pretty_min)))
         exp = exp_max - exp_min
 
-        pretty_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
+        pretty_min = np.floor(vmin / 10 ** exp) * 10 ** exp
         return pretty((0, vmax - pretty_min), n) + pretty_min
 
     else:
-        exp = pd.np.floor(pd.np.log10(abs(vmax)))
+        exp = np.floor(np.log10(abs(vmax)))
 
-        if pd.np.floor(10 ** exp) < vmax < pd.np.floor(1.5 * 10 ** exp):
+        if np.floor(10 ** exp) < vmax < np.floor(1.5 * 10 ** exp):
             # Special case for ranges such as (0, 125) or any multiple by
             # ten: use   (0, 150) as boundary
             # instead of (0, 200)
@@ -562,13 +574,10 @@ def pretty(vrange, n, endpoint=False):
             niced_min = fiver_offset if vmin > fiver_offset else 0
             niced_max = 1.5 * 10 ** exp
         else:
-            niced_min = pd.np.floor(vmin / 10 ** exp) * 10 ** exp
-            niced_max = pd.np.ceil(vmax / 10 ** exp) * 10 ** exp
+            niced_min = np.floor(vmin / 10 ** exp) * 10 ** exp
+            niced_max = np.ceil(vmax / 10 ** exp) * 10 ** exp
 
-    val = pd.np.linspace(niced_min,
-                         niced_max,
-                         n,
-                         endpoint=endpoint)
+    val = np.linspace(niced_min, niced_max, n, endpoint=endpoint)
     return val
 
 

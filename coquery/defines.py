@@ -2,7 +2,7 @@
 """
 defines.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -25,6 +25,7 @@ QUERY_ITEM_LEMMA = "query_item_lemma"
 QUERY_ITEM_TRANSCRIPT = "query_item_transcript"
 QUERY_ITEM_POS = "query_item_pos"
 QUERY_ITEM_GLOSS = "query_item_gloss"
+QUERY_ITEM_ID = "corpus_id"
 
 QUERY_MODE_TOKENS = "Do not transform"
 QUERY_MODE_TYPES = "Only distinct rows"
@@ -165,8 +166,6 @@ COLUMN_NAMES = {
     "statistics_types": "Types (=number of distinct matches)",
     "statistics_ttr": "Type-token ratio",
     "statistics_rank": "Rank",
-    #"statistics_passing_rows": "Passing rows",
-    #"statistics_filtered_rows": "Filtered rows",
     "statistics_column_total": "ALL",
 
     # Labels for reference corpus:
@@ -194,16 +193,22 @@ ROW_NAMES = {
     }
 
 FUNCTION_DESC = {
-    "statistics_passing_rows": "Count the number of rows that passed the filter",
-    "statistics_filtered_rows": "Count the number of rows that were removed by a filter",
+    "statistics_passing_rows":
+        "Count the number of rows that passed the filter",
+    "statistics_filtered_rows":
+        "Count the number of rows that were removed by a filter",
     "statistics_row_number": "Row number of the match",
     "statistics_corpus_size": "Size of the corpus in words",
     "statistics_subcorpus_size": "Size of the subcorpus in words",
     "statistics_entropy": "Calculate Shannon's entropy",
     "statistics_frequency": "Count the frequency of each match",
-    "statistics_frequency_normalized": "Count the frequency of each match, normalized by corpus size in words",
-    "statistics_frequency_ptw": "Calculate the average frequency of each match per thousand words",
-    "statistics_frequency_pmw": "Calculate the average frequency of each match per million words",
+    "statistics_frequency_normalized":
+        "Count the frequency of each match, normalized by corpus size in "
+        "words",
+    "statistics_frequency_ptw":
+        "Calculate the average frequency of each match per thousand words",
+    "statistics_frequency_pmw":
+        "Calculate the average frequency of each match per million words",
 
     "statistics_proportion": "Calculate the proportion for each match",
     "statistics_percent": "Calculate the percentage for each match",
@@ -211,25 +216,40 @@ FUNCTION_DESC = {
     "statistics_tokens": "Count the number of tokens",
     "statistics_types": "Count the number of unique matches",
     "statistics_ttr": "Calculate the type-token ratio",
-    "reference_frequency": "Count the frequeny of the match in the reference corpus",
-    "reference_frequency_ptw": "Calculate the frequency per million words in the reference corpus",
-    "reference_frequency_pmw": "Calculate the frequency per thousand words in the reference corpus",
-    "reference_ll_keyness": "Calculate the log-likelihood keyness relative to the reference corpus",
-    "reference_diff_keyness": "Calculate the %DIFF keyness relative to the reference corpus",
+    "STTR":
+        "Calculate the standardized type-token ratio (chunk size: 2500 words)",
+    "STTR250":
+        "Calculate the standardized type-token ratio (chunk size: 250 words)",
+    "reference_frequency":
+        "Count the frequeny of the match in the reference corpus",
+    "reference_frequency_ptw":
+        "Calculate the frequency per million words in the reference corpus",
+    "reference_frequency_pmw":
+        "Calculate the frequency per thousand words in the reference corpus",
+    "reference_ll_keyness":
+        "Calculate the log-likelihood keyness relative to the reference "
+        "corpus",
+    "reference_diff_keyness":
+        "Calculate the %DIFF keyness relative to the reference corpus",
 
     "LENGTH": "Count the number of characters",
     "CONCAT": "Concatenate the columns, separated by <i>Argument</i>",
     "COUNT": "Count the number of occurrences of <i>Argument</i> (regexp)",
     "MATCH": "Test whether the columns match <i>Argument</i> (regexp)",
-    "EXTRACT": "Extract from the columns the string that matches <i>Argument</i> (regexp)",
+    "EXTRACT":
+        "Extract from the columns the string that matches <i>Argument</i> "
+        "(regexp)",
     "UPPER": "Change the matches to upper-case",
     "LOWER": "Change the matches to lower-case",
-    "REPLACE": "Replace all occurrences of the 'Find:' string by the 'Replace:' string (regexp)",
+    "REPLACE":
+        "Replace all occurrences of the 'Find:' string by the 'Replace:' "
+        "string (regexp)",
 
 
     "EQUAL": "'yes' if values are equal, or 'false' otherwise",
     "GREATER": "'yes' if values are greater, or 'false' otherwise",
-    "GREATEREQUAL": "'yes' if values are greater or equal, or 'false' otherwise",
+    "GREATEREQUAL":
+        "'yes' if values are greater or equal, or 'false' otherwise",
     "LESS": "'yes' if values are less, or 'false' otherwise",
     "LESSEQUAL": "'yes' if values are less or equal, or 'false' otherwise",
     "NOTEQUAL": "'yes' if values are not equal, or 'false' otherwise",
@@ -237,13 +257,20 @@ FUNCTION_DESC = {
     "AND": "Combine the selected columns by logical AND",
     "OR": "Combine the selected columns by logical OR",
     "XOR": "Combine the selected columns by logical XOR",
-    "IF": "Return the first value if the values in the selected columns are logically true, or the second value otherwise",
-    "IFANY": "Return the first value if any value in the selected columns is logically true, or the second value otherwise",
+    "IF":
+        "Return the first value if the values in the selected columns are "
+        "logically true, or the second value otherwise",
+    "IFANY":
+        "Return the first value if any value in the selected columns is "
+        "logically true, or the second value otherwise",
 
     "ADD": "Add the selected column, or add the argument",
     "DIV": "Divide the selected columns (in order), or divide by the argument",
-    "MUL": "Multiply the selected columns (in order), or multiply by the argument",
-    "SUB": "Subtract the selected columns (in order), or subtract the argument",
+    "MUL":
+        "Multiply the selected columns (in order), or multiply by the "
+        "argument",
+    "SUB":
+        "Subtract the selected columns (in order), or subtract the argument",
 
     "IQR": "Calculate the row-wise interquartile range",
     "MAX": "Calculate the row-wise maximum",
@@ -252,8 +279,12 @@ FUNCTION_DESC = {
     "MIN": "Calculate the row-wise minimum",
     "SD": "Calculate the row-wise standard deviation",
 
-    "frequency_condprob": "Calculate the conditional probability of second column given first column",
-    "frequency_ext_condprob": "Calculate the conditional probability of second column given first column in the reference corpus",
+    "frequency_condprob":
+        "Calculate the conditional probability of second column given first "
+        "column",
+    "frequency_ext_condprob":
+        "Calculate the conditional probability of second column given first "
+        "column in the reference corpus",
 
         }
 
@@ -280,7 +311,7 @@ SQL_ENGINES = [SQL_MYSQL, SQL_SQLITE]
 # - URL
 MODULE_INFORMATION = {
     "matplotlib": ("Python 2D plotting library",
-                   "2.0.0",
+                   "2.2.0",
                    "required for visualizations",
                    "http://http://matplotlib.org/"),
     "PyQt5": ("A set of Python Qt bindings for the Qt toolkit",
@@ -292,10 +323,11 @@ MODULE_INFORMATION = {
                    "Use SQL databases for corpus storage",
                    "http://http://www.sqlalchemy.org/"),
     "Pandas": ("Python data analysis library",
-               "0.16",
+               "1.0",
                "Provides data structures to manage query result tables",
                "http://pandas.pydata.org/index.html"),
-    "SciPy": ("SciPy is open-source software for mathematics, science, and engineering",
+    "SciPy": ("SciPy is open-source software for mathematics, science, and "
+              "engineering",
               "0.13.0",
               "Offer tests like the log-likelihood test",
               "https://www.scipy.org/scipylib/index.html"),
@@ -304,55 +336,59 @@ MODULE_INFORMATION = {
              "Lemmatization and tagging when building your own corpora",
              "http://www.nltk.org"),
     "PyMySQL": ("A pure-Python MySQL client library",
-                "0.6.4",
+                "1.0",
                 "Connect to MySQL database servers",
                 "https://github.com/PyMySQL/PyMySQL/"),
-    "PDFMiner": ("PDF parser and analyzer (for Python 2.7)",
-                 "",
-                 "Build your own corpora from PDF files",
-                 "http://euske.github.io/pdfminer/index.html"),
-    "pdfminer3k": ("PDF parser and analyzer (for Python 3.x)",
+    "pdfminer3k": ("PDF parser and analyzer",
                    "1.3",
                    "Build your own corpora from PDF files",
                    "https://pypi.python.org/pypi/pdfminer3k"),
-    "python-docx": ("A Python library for creating and updating Microsoft Word (.docx) files",
-                    "0.3.0",
+    "python-docx": ("A Python library for creating and updating Microsoft "
+                    "Word (.docx) files",
+                    "0.8.0",
                     "Build your own corpora from Microsoft Word (.docx) files",
                     "https://python-docx.readthedocs.org/en/latest/"),
     "odfpy": ("API for OpenDocument in Python",
               "1.2.0",
               "Build your own corpora from OpenDocument Text (.odt) files",
               "https://github.com/eea/odfpy"),
-    "BeautifulSoup": ("A Python library for pulling data out of HTML and XML files",
+    "BeautifulSoup": ("A Python library for pulling data out of HTML and XML "
+                      "files",
                       "4.0",
                       "Build your own corpora from HTML files",
                       "http://www.crummy.com/software/BeautifulSoup/"),
     "tgt": ("TextGridTools - read, write, and manipulate Praat TextGrid files",
             "1.3.1",
-            "Create <a href='http://www.praat.org'>Praat TextGrid</a> files for corpus queries",
+            "Create <a href='http://www.praat.org'>Praat TextGrid</a> files "
+            "for corpus queries",
             "https://github.com/hbuschme/TextGridTools/"),
     "chardet": ("The universal character encoding detector",
-                "2.0.0",
-                "Detect the encoding of your text files when building a corpus",
+                "3.0.0",
+                "Detect the encoding of your text files when building a "
+                "corpus",
                 "https://github.com/chardet/chardet"),
     "Seaborn": ("A Python statistical data visualization library",
-                "0.7",
+                "0.11",
                 "Create visualizations of your query results",
                 "http://stanford.edu/~mwaskom/software/seaborn/"),
-    "squarify": ("squarify – Pure Python implementation of the squarify treemap layout algorithm",
+    "squarify": ("squarify – Pure Python implementation of the squarify "
+                 "treemap layout algorithm",
                  "0.3.0",
                  "Create treemap visualizations",
                  "https://github.com/laserson/squarify"),
-    "cachetools": ("cachetools — Extensible memoizing collections and decorators",
-                   "1.1.6",
+    "cachetools": ("cachetools — Extensible memoizing collections and "
+                   "decorators",
+                   "4.0",
                    "Remember query results to speed up queries",
                    "https://github.com/tkem/cachetools"),
-    "statsmodels": ("statsmodels — Statistical computations and models for use with SciPy",
-                    "0.7.0",
+    "statsmodels": ("statsmodels — Statistical computations and models for "
+                    "use with SciPy",
+                    "0.12.0",
                     "Plot estimated cumulative distributions",
                     "http://www.statsmodels.org/stable/"),
-    "alsaaudio": ("alsaaudio – A package containing wrappers for accessing the ALSA API from Python",
-                  "0.8.2",
+    "alsaaudio": ("alsaaudio – A package containing wrappers for accessing "
+                  "the ALSA API from Python",
+                  "0.9",
                   "Audio support under Linux",
                   "https://github.com/larsimmisch/pyalsaaudio/"),
     "sphfile": ("sphfile – Numpy-based NIST SPH audio-file reader",
@@ -368,14 +404,21 @@ MODULE_INFORMATION = {
                  "0.2.0",
                  "Show SQL queries well-formatted",
                  "https://github.com/andialbrecht/sqlparse"),
-
+    "PyMongo": ("Python driver for MongoDB",
+                "4.0",
+                "Allows corpus installers to read BSON files",
+                "https://github.com/mongodb/mongo-python-driver"),
+    "pyodbc": ("pyodbc is an open source Python module that makes accessing "
+               "ODBC databases simple.",
+               "4.0",
+               "Allows installers to access various ODBC-2.0 drivers",
+               "https://github.com/mkleehammer/pyodbc"),
+    "meza": ("Python library for reading and processing tabular data",
+             "0.43",
+             "Allows installers to access various database formats",
+             "https://github.com/reubano/meza"),
     }
 
-# Python 3 does not have unicode and long, so define them here:
-if not hasattr(__builtins__, "unicode"):
-    unicode = str
-if not hasattr(__builtins__, "long"):
-    long = int
 
 msg_sql_new_user_success = """
 The user named '{}' was successfully created on the MySQL server."""
@@ -457,7 +500,7 @@ msg_escapable_template = """
 <p><code>{{}}<br>{{}}</code></p>
 <p>{}</p>
 <p>If you want to query for the character that caused this error as a
-literal character, try to precede it by the backslash: <code>\</code><p>
+literal character, try to precede it by the backslash: <code>\\</code><p>
 """
 
 msg_unexpected_quantifier_start = msg_escapable_template.format("""

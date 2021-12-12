@@ -142,15 +142,15 @@ in your home directory.
     # Create an Anaconda environment with all required packages:
     conda create -n coquery python=3.6 pandas sqlalchemy scipy pyqt lxml
 
-    # Install additional packages required for visualizations:
+    # Install additional packages required for visualizations (optional):
     conda install -n coquery seaborn statsmodels
 
-    # Install packages required for full-featured text imports:
+    # Install packages required for full-featured text imports (optional):
     conda install -n coquery nltk chardet beautifulsoup4 xlrd
     conda install -n coquery -c conda-forge pdfminer3k python-docx odfpy
 
-    # Install package that extend SQL support:
-    conda install -n coquery pymysql sqlparse
+    # Install package that provide MySQL support (optional):
+    conda install -n coquery pymysql sqlparse pygments
 
     # Retrieve development version of Coquery (target: ~/sandbox/coquery)
     git clone https://github.com/gkunter/coquery.git ~/sandbox/coquery

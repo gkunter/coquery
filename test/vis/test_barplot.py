@@ -10,6 +10,7 @@ coquery$ python -m test.vis.test_barplot
 
 import unittest
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import scipy.stats as st
 import itertools
@@ -66,11 +67,12 @@ def map_to_pal(palette, levels, data):
 
 class CoqTestCase1(unittest.TestCase):
     def setUp(self):
-        pd.np.random.seed(123)
+        np.random.seed(123)
         self.df = pd.DataFrame({"X": list("AAAAAAAAAAAAAAAAAAABBBBBBBBBBB"),
                                 "Y": list("xxxxxxxxyyyyyyyyyyyxxxxxxxyyyy"),
                                 "Z": list("111122221111222211221122112222"),
-                                "NUM": pd.np.random.randint(0, 100, 30)
+                                "CONST": ["abc"] * 30,
+                                "NUM": np.random.randint(0, 100, 30)
                                 })
 
     def assertDictEqual(self, d1, d2):
@@ -92,7 +94,7 @@ class CoqTestCase1(unittest.TestCase):
             if isinstance(val, pd.DataFrame):
                 d_df2[key] = D2.pop(key)
 
-        super(CoqTestCase1, self).assertDictEqual(D1, D2)
+        super().assertDictEqual(D1, D2)
 
         for key in d_df1.keys():
             pd.testing.assert_frame_equal(d_df1[key], d_df2[key])
@@ -100,11 +102,12 @@ class CoqTestCase1(unittest.TestCase):
 
 class CoqTestCase2(CoqTestCase1):
     def setUp(self):
-        pd.np.random.seed(123)
+        np.random.seed(123)
         self.df = pd.DataFrame({"X": list("AAAAAAAAAAAAAAAAAAABBBB"),
                                 "Y": list("xxxxxxxxyyyyyyyyyyyyyyy"),
                                 "Z": list("11112222111122221122222"),
-                                "NUM": pd.np.random.randint(0, 100, 23)
+                                "CONST": ["abc"] * 23,
+                                "NUM": np.random.randint(0, 100, 23)
                                 })
 
 
@@ -478,6 +481,28 @@ class TestStackedPlotSimple(CoqTestCase1):
 
         self.assertDictEqual(args, target)
 
+    def test_prepare_argument_X_only_one_level(self):
+        vis = StackedBars(None, None)
+
+        category = "CONST"
+        numeric = NUM_COLUMN
+        levels = sorted(self.df[category].unique())
+        data = (self.df.groupby(category)
+                       .size()
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data[COL_COLUMN] = data[category]
+
+        target = {"x": category, "y": numeric,
+                  "levels": levels, "data": data}
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=category, y=None, z=None,
+                                     levels_x=levels, levels_y=None)
+
+        self.assertDictEqual(args, target)
+
     def test_prepare_argument_Y_only(self):
         """
         Basic test: only a single categorical variable on the `Y` axis
@@ -518,7 +543,7 @@ class TestStackedPlotSimple(CoqTestCase1):
                        .cumsum()
                        .reset_index()
                        .rename(columns={0: "COQ_NUM"}))
-        data.loc[len(data)] = {category: "C", numeric: pd.np.nan}
+        data.loc[len(data)] = {category: "C", numeric: np.nan}
 
         data[COL_COLUMN] = data[category]
 

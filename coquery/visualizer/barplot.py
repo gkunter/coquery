@@ -2,7 +2,7 @@
 """
 barplot.py is part of Coquery.
 
-Copyright (c) 2016–2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016–2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -75,7 +75,7 @@ class BarPlot(vis.Visualizer):
         """
         aggregator = vis.Aggregator()
 
-        if (x and y and (data[x].dtype != object or data[y].dtype != object)):
+        if x and y and (data[x].dtype != object or data[y].dtype != object):
             # one of the two given variable is numeric
             if data[x].dtype == object:
                 ax_cat, ax_num = "x", "y"
@@ -297,26 +297,33 @@ class StackedBars(BarPlot):
             # FIXME: I'm pretty sure that the code used below to calculate the
             # cumulative sums can be streamlined!
 
-            levels = args["hue_order"]
+            if args["hue"]:
+                levels = args["hue_order"]
+                data = args["data"].sort_values([category, args["hue"]])
+            else:
+                levels = args["order"]
+                data = args["data"].sort_values([category])
 
-            data = args["data"].sort_values([category, args["hue"]])
             data = data.reset_index(drop=True)
 
             if len(data[category].unique()) > 1:
-                df = (data.groupby(category)
+                df = (data.groupby(category, dropna=False)
                           .apply(self.group_transform, self.NUM_COLUMN)
                           .reset_index(0))
                 data[self.NUM_COLUMN] = df[self.NUM_COLUMN]
             else:
                 data[self.NUM_COLUMN] = self.transform(data[self.NUM_COLUMN])
 
-            expand = pd.DataFrame(
-                data=list(itertools.product(args["order"],
-                                            args["hue_order"])),
-                columns=[category, self.COL_COLUMN])
+            if args["hue_order"]:
+                expand = pd.DataFrame(
+                    data=list(itertools.product(args["order"],
+                                                args["hue_order"])),
+                    columns=[category, self.COL_COLUMN])
 
-            df = (data.merge(expand, how="right")
-                      .sort_values(by=[category]))
+                df = (data.merge(expand, how="right")
+                          .sort_values(by=[category]))
+            else:
+                df = data
         else:
             # If no subordinate category is given, or if the subordinate
             # category has just one value, the numeric variable is just the

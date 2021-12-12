@@ -2,7 +2,7 @@
 """
 functions.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -24,9 +24,10 @@ import numbers
 from scipy import stats
 
 from . import options
+# FIXME: Replace use of get_toplevel_window() to obtain a valid connection
+from .gui.pyqt_compat import get_toplevel_window
 from .defines import COLUMN_NAMES, QUERY_ITEM_WORD
 from .general import CoqObject, collapse_words
-from .gui.pyqt_compat import get_toplevel_window
 from .errors import RegularExpressionError
 
 # make sure reduce() is available
@@ -99,7 +100,7 @@ class Function(CoqObject):
         """
         if columns is None:
             columns = []
-        super(Function, self).__init__()
+        super().__init__()
         self.columns = columns
         self.alias = alias
         self.group = group
@@ -163,7 +164,7 @@ class Function(CoqObject):
     def set_label(self, label):
         self._label = label
 
-    def _func(self, series, *args, **kwargs):
+    def _func(self, series, *args, **kwargs) -> pd.Series:
         """
         Defines the function that is applied the columns in the data frame
         that is passed to this function.
@@ -182,12 +183,13 @@ class Function(CoqObject):
 
     def get_id(self):
         if self.alias:
-            return self.alias
+            self_id = self.alias
         else:
             if self.group:
-                return "func_{}_group_{}".format(self._name, self.get_hash())
+                self_id = f"func_{self._name}_group_{self.get_hash()}"
             else:
-                return "func_{}_{}".format(self._name, self.get_hash())
+                self_id = f"func_{self._name}_{self.get_hash()}"
+        return self_id
 
     def find_function(self, df, fun):
         fun_id = fun.get_id()
@@ -200,7 +202,7 @@ class Function(CoqObject):
         try:
             val = df[self.columns].apply(self._func)
         except (KeyError, ValueError):
-            val = self.constant(df, None)
+            val = self.constant(df, pd.NA)
 
         return val
 
@@ -208,7 +210,8 @@ class Function(CoqObject):
     def validate_input(cls, value):
         return bool(value) or cls.allow_null
 
-    def constant(self, df, value):
+    @staticmethod
+    def constant(df, value):
         """
         Return a Series with constant values.
         """
@@ -249,7 +252,7 @@ class ToCategory(ConversionFunction):
 
         for col in self.columns:
             d[col] = df[col].astype(str)
-            d[col][df[col].isnull()] = None
+            d[col][df[col].isnull()] = pd.NA
 
         return pd.DataFrame(d)
 
@@ -260,6 +263,7 @@ class ToNumeric(ConversionFunction):
     def evaluate(self, df, **kwargs):
         return pd.DataFrame({col: pd.to_numeric(df[col], errors="coerce")
                              for col in self.columns})
+
 
 class ToInteger(ConversionFunction):
     _name = "INTEGER"
@@ -301,11 +305,12 @@ class StringChain(StringFunction):
     arguments = {"string": [("sep", "Separator:", "-")]}
 
     def evaluate(self, df, **kwargs):
+        kwargs.pop("session")
+        sep = kwargs.get("sep", "")
         val = df[self.columns].apply(
-                    lambda x: (x.astype(str).str.cat(**kwargs)
-                               if x.dtype != object
-                               else x.str.cat(**kwargs)),
-                    axis="columns")
+            lambda x: sep.join(
+                [str(element) for element in x if pd.notna(element)]),
+            axis="columns")
         return val
 
 
@@ -326,9 +331,10 @@ class StringSeriesFunction(StringFunction):
         except KeyError:
             pass
 
+        pat = kwargs.get("pat")
+
         if self.str_func in ("replace", "contains", "extract", "count"):
             # ensure that regex functions use unicode:
-            pat = kwargs["pat"]
             if "(?u)" not in pat:
                 kwargs["pat"] = "(?u){}".format(pat)
 
@@ -388,7 +394,7 @@ class StringMatch(StringSeriesFunction):
                  "check": [("case", "Case-sensitive:", False)]}
 
     def evaluate(self, df, **kwargs):
-        val = super(StringMatch, self).evaluate(df, **kwargs)
+        val = super().evaluate(df, **kwargs)
         # replace empty strings (which may be caused if the column contains
         # a Null value) by False:
         val = val.replace("", self.fill_na)
@@ -398,6 +404,7 @@ class StringMatch(StringSeriesFunction):
 class StringExtract(StringSeriesFunction):
     _name = "EXTRACT"
     str_func = "extract"
+    fill_na = pd.NA
     validate_input = StringFunction.validate_regex
     arguments = {"string": [("pat", "Regular expression:", "")],
                  "check": [("case", "Case-sensitive:", False)]}
@@ -410,7 +417,7 @@ class StringExtract(StringSeriesFunction):
         kwargs["pat"] = pat
         kwargs["expand"] = True
 
-        return super(StringExtract, self).evaluate(df, **kwargs)
+        return super().evaluate(df, **kwargs)
 
 
 class StringReplace(StringSeriesFunction):
@@ -457,21 +464,20 @@ class NumFunction(Function):
         Coerce the function argument to the appropriate type depending on the
         values of the supplied data frame.
         """
-
-        column_dtypes = df[self.columns].dtypes
-
-        if all([dt in (int, float) for dt in column_dtypes]):
+        column_dtypes = [df[col].dropna().convert_dtypes().dtype
+                         for col in self.columns]
+        if all([pd.api.types.is_numeric_dtype(dt) for dt in column_dtypes]):
             # if all columns are numeric, the value is coerced to float
             return float(value)
-        elif any([dt == object for dt in column_dtypes]):
-            # if there is any string column, the value is coerced to a string:
-            return str(value)
-        elif any([dt == bool for dt in column_dtypes]):
+        elif any([pd.api.types.is_bool_dtype(dt) for dt in column_dtypes]):
             # if there is any bool column, the value is coerced to a bool:
             return bool(value)
+        elif any([pd.api.types.is_string_dtype(dt) for dt in column_dtypes]):
+            # if there is any string column, the value is coerced to a string:
+            return str(value)
         else:
             # undefined behavior
-            raise TypeError
+            raise TypeError("Undefined behavior")
 
 
 class CalcFunction(NumFunction):
@@ -486,20 +492,36 @@ class CalcFunction(NumFunction):
     def evaluate(self, df, **kwargs):
         parameter = kwargs.get("value", None)
         if len(self.columns) == 1 and not parameter:
-            val = reduce(self._func, df[self.columns[0]].values)
+            try:
+                val = reduce(self._func,
+                             df[self.columns[0]].fillna(np.nan).values)
+            except Exception as e:
+                print(e)
+                raise e
         else:
-            val = df[self.columns[0]].values
+            val = df[self.columns[0]].fillna(np.nan).values
             for x in self.columns[1:]:
-                val = self._func(val, df[x].values)
+                val = self._func(val, df[x].fillna(np.nan).values)
             if parameter:
-                const = self.coerce_value(df, parameter)
-                val = self._func(val, const)
+                try:
+                    const = self.coerce_value(df, parameter)
+                except Exception as e:
+                    print(e)
+                    raise e
+                try:
+                    val = self._func(val, const)
+                except Exception as e:
+                    print(e)
+                    raise e
             if not self._ignore_na:
-                nan_rows = np.any(pd.isnull(df[self.columns].values), axis=1)
+                nan_rows = np.any(
+                    pd.isnull(df[self.columns].fillna(np.nan).values),
+                    axis=1)
                 if nan_rows.any():
                     val = val.astype(object)
                     val[nan_rows] = None
-        return pd.Series(data=val, index=df.index)
+
+        return pd.Series(data=val, index=df.index).fillna(pd.NA)
 
 
 class OperatorFunction(CalcFunction):
@@ -568,8 +590,9 @@ class Binning(OperatorFunction):
     _description = ("Transforms a number to the bin value given the "
                     "argument")
 
-    def _func(self, val, bw):
+    def _func(self, val, bw, **kwargs):
         return (val // bw) * bw
+
 
 class StatisticalFunction(CalcFunction):
     """
@@ -717,7 +740,7 @@ class Not(LogicFunction):
     _func = np.logical_not
 
 
-class If(And):
+class If(LogicFunction):
     _name = "IF"
     arguments = {"string": [("value1", "Then:", ""),
                             ("value2", "Else:", "")]}
@@ -726,11 +749,9 @@ class If(And):
         then_val = kwargs.pop("value1")
         else_val = kwargs.pop("value2")
         kwargs["value"] = True
-        val = super(If, self).evaluate(df, **kwargs)
-
+        val = super().evaluate(df, **kwargs)
         # apply conditional replacement:
-        recode = np.where(val, then_val, else_val)
-
+        recode = np.where(val.fillna(np.nan), then_val, else_val)
         _null = pd.isnull(val)
         # replace NaN results by NaN (because np.nan AND True evaluates to
         # True, see e.g. https://stackoverflow.com/q/17273312/)
@@ -759,7 +780,7 @@ class IsFalse(IsTrue):
     parameters = 0
 
     def evaluate(self, df, **kwargs):
-        return ~super(IsFalse, self).evaluate(df, **kwargs)
+        return ~super().evaluate(df, **kwargs)
 
 
 class Missing(LogicFunction):
@@ -767,19 +788,18 @@ class Missing(LogicFunction):
     arguments = {}
 
     def evaluate(self, df, **kwargs):
-        val = ~df[self.columns].notnull()
+        val = df[self.columns].isna()
         return val
 
 
-class Empty(LogicFunction):
+class Empty(Missing):
     _name = "EMPTY"
     arguments = {}
 
     def evaluate(self, df, **kwargs):
-        val = (~df[self.columns].notnull() |
-               df[self.columns].apply(
-                   lambda x: ~x.index.isin(x.to_numpy().nonzero()[0])))
-        return val
+        missing = super().evaluate(df, **kwargs)
+        empty = df[self.columns] == ""
+        return missing | empty
 
 
 #############################################################################
@@ -798,6 +818,8 @@ class Freq(BaseFreq):
     _name = "statistics_frequency"
     no_column_labels = True
     drop_on_na = False
+
+    DUMMY_STR = np.array(list(string.ascii_uppercase + string.digits))
 
     def evaluate(self, df, **kwargs):
         """
@@ -831,6 +853,11 @@ class Freq(BaseFreq):
             val = self.constant(df, len(df))
             return val
 
+        # There was a bug in Pandas prior to 1.1.0 which made grouping
+        # unreliable if there were columns with missing values (see
+        # issue #3729, https://github.com/pandas-dev/pandas/issues/3729).
+        # Since Pandas 1.1.0, groupby() supports the 'dropna' argument to
+
         d = {x: "first"
              for x in [y for y in df.columns.values
                        if y not in columns and
@@ -850,14 +877,13 @@ class Freq(BaseFreq):
         return val
 
 
-
 class FreqPMW(Freq):
     _name = "statistics_frequency_pmw"
     words = 1000000
 
     def evaluate(self, df, **kwargs):
-        session = get_toplevel_window().Session
-        val = super(FreqPMW, self).evaluate(df, **kwargs)
+        session = kwargs.get("session")
+        val = super().evaluate(df, **kwargs)
         if len(val) > 0:
             corpus_size = session.Corpus.get_corpus_size()
         val = val.apply(lambda x: x / (corpus_size / self.words))
@@ -878,7 +904,7 @@ class FreqNorm(Freq):
     _name = "statistics_frequency_normalized"
 
     def evaluate(self, df, **kwargs):
-        val = super(FreqNorm, self).evaluate(df, **kwargs)
+        val = super().evaluate(df, **kwargs)
 
         if len(val) == 0:
             return pd.Series([], index=df.index)
@@ -940,25 +966,25 @@ class ReferenceCorpusFrequency(BaseReferenceCorpus):
     single_column = True
 
     def __init__(self, **kwargs):
-        super(ReferenceCorpusFrequency, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def evaluate(self, df, **kwargs):
-        session = get_toplevel_window().Session
+        session = kwargs.get("session")
 
         self._res = self.get_reference()
         engine = options.cfg.current_connection.get_engine(self._res.db_name)
         word_feature = getattr(session.Resource, QUERY_ITEM_WORD)
         word_columns = [x for x in df.columns if word_feature in x]
         # concatenate the word columns, separated by space
-        l = []
+        lst = []
         sep = self.constant(df, " ")
         for col in word_columns:
             val = (df[col].replace("{", "\\{", regex=True)
-                          .replace("\[", "\\[", regex=True)
-                          .replace("\*", "\\*", regex=True)
-                          .replace("\?", "\\?", regex=True))
-            l += [val, sep]
-        _s = pd.concat(l, axis=1).astype(str).sum(axis=1)
+                          .replace(r"\[", "\\[", regex=True)
+                          .replace(r"\*", "\\*", regex=True)
+                          .replace(r"\?", "\\?", regex=True))
+            lst += [val, sep]
+        _s = pd.concat(lst, axis=1).astype(str).sum(axis=1)
 
         # get the frequency from the reference corpus for the concatenated
         # columns:
@@ -973,7 +999,7 @@ class ReferenceCorpusFrequencyPMW(ReferenceCorpusFrequency):
     words = 1000000
 
     def evaluate(self, df, **kwargs):
-        val = super(ReferenceCorpusFrequencyPMW, self).evaluate(
+        val = super().evaluate(
             df, **kwargs)
 
         if len(val) > 0:
@@ -1014,7 +1040,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
         return tmp[0]
 
     def evaluate(self, df, **kwargs):
-        session = get_toplevel_window().Session
+        session = kwargs.get("session")
 
         self._res = self.get_reference()
 
@@ -1042,8 +1068,7 @@ class ReferenceCorpusLLKeyness(ReferenceCorpusFrequency):
             fun = CorpusSize(session=session)
         size = fun.evaluate(df, **kwargs)
 
-        ext_freq = super(ReferenceCorpusLLKeyness, self).evaluate(
-            df, **kwargs)
+        ext_freq = super().evaluate(df, **kwargs)
         if len(ext_freq) > 0:
             ext_size = self._res.corpus.get_corpus_size()
 
@@ -1143,12 +1168,45 @@ class TypeTokenRatio(Types):
     no_column_labels = True
 
     def evaluate(self, df, **kwargs):
-        types = super(TypeTokenRatio, self).evaluate(df, **kwargs)
+        types = super().evaluate(df, **kwargs)
         tokens = Tokens(group=self.group,
                         columns=self.columns).evaluate(df, **kwargs)
         val = pd.Series(data=types.values / tokens.values,
                         index=df.index)
         return val
+
+
+class StandardizedTypeTokenRatio(Types):
+    _name = "STTR"
+    no_column_labels = True
+
+    arguments = {"int": [("value", "Bandwidth:", 2500)]}
+
+    def evaluate(self, df, **kwargs):
+        parameter = kwargs.get("value", 2500)
+        tty_list = []
+        ix = df.sample(len(df)).index
+        for i in range(len(df) // parameter):
+            dsub = df.loc[ix].iloc[(i * parameter):(i + 1) * parameter]
+            types = super().evaluate(dsub, **kwargs)
+            tokens = Tokens(group=self.group,
+                            columns=self.columns).evaluate(dsub, **kwargs)
+            n_types = types.values[0]
+            n_tokens = tokens.values[0]
+            tty_list.append(n_types / n_tokens)
+
+        if tty_list:
+            val = self.constant(df, sum(tty_list) / len(tty_list))
+        else:
+            val = None
+        return val
+
+
+class StandardizedTypeTokenRatio250(StandardizedTypeTokenRatio):
+    _name = "STTR250"
+
+    def evaluate(self, df, **kwargs):
+        return super().evaluate(df, value=250)
 
 
 class Proportion(BaseProportion):
@@ -1179,7 +1237,7 @@ class Percent(Proportion):
     _name = "statistics_percent"
 
     def evaluate(self, df, **kwargs):
-        return 100 * super(Percent, self).evaluate(df, **kwargs)
+        return 100 * super().evaluate(df, **kwargs)
 
 
 class Entropy(Proportion):
@@ -1195,7 +1253,7 @@ class Entropy(Proportion):
 
     def evaluate(self, df, **kwargs):
         _df = df[self.columns]
-        _df["COQ_PROP"] = super(Entropy, self).evaluate(df, **kwargs)
+        _df["COQ_PROP"] = super().evaluate(df, **kwargs)
         _df = _df.drop_duplicates()
         props = _df["COQ_PROP"].values
         if len(_df) == 1:
@@ -1221,13 +1279,13 @@ class ConditionalProbability2(Proportion):
     maximum_columns = 2
 
     def get_resource(self, **kwargs):
-        session = get_toplevel_window().Session
+        session = kwargs.get("session")
         return session.Resource
 
     def evaluate(self, df, **kwargs):
         resource = self.get_resource(**kwargs)
         if resource is None:
-            return self.constant(df, None)
+            return self.constant(df, pd.NA)
 
         span = df[self.columns[0]] + " " + df[self.columns[1]]
         left = df[self.columns[0]]
@@ -1240,7 +1298,7 @@ class ConditionalProbability2(Proportion):
         except Exception as e:
             print(str(e))
             logging.error(str(e))
-            val = self.constant(df, None)
+            val = self.constant(df, pd.NA)
         else:
             val = freq_full / freq_part
         finally:
@@ -1278,33 +1336,47 @@ class ConditionalProbability(Proportion):
         return df[freq_cond] / df[freq_total]
 
 
-class MutualInformation(Proportion):
-    _name = "statistics_mutual_information"
-    """ Calculate the Mutual Information for two words. f_1 and f_2 are
-    the frequencies of the two words, f_coll is the frequency of
-    word 2 in the neighbourhood of word 1, size is the corpus size, and
-    span is the size of the neighbourhood in words to the left and right
-    of word 2.
+class MutualInformation(ConditionalProbability2):
+    """ Calculate the Mutual Information for the words in the first and the
+    second column using this formula (cf. Bezina 2018):
 
-    Following http://corpus.byu.edu/mutualinformation.asp, MI is
-    calculated as:
+    MI = log f(C1, C2) * N / (f(C1) * f(C2)),
 
-        MI = log ( (f_coll * size) / (f_1 * f_2 * span) ) / log (2)
+    where f(C1, C2) is the frequency of the bigram, N is the size of the
+    corpus, and f(C1) and f(C2) are the frequencies of the words,
+    respectively.
 
     """
 
-    def evaluate(self, df, f_1, f_2, f_coll, size, span, **kwargs):
+    _name = "Mutual Information"
+
+    def evaluate(self, df, **kwargs):
+        resource = self.get_resource(**kwargs)
+        if resource is None:
+            return self.constant(df, pd.NA)
+        span = df[self.columns[0]] + " " + df[self.columns[1]]
+        left = df[self.columns[0]]
+        right = df[self.columns[1]]
+        engine = options.cfg.current_connection.get_engine(resource.db_name)
         try:
-            val = (np.log((df[f_coll] * size) / (f_1 * df[f_2] * span)) /
-                   np.log(2))
-        except (ZeroDivisionError, TypeError, Exception) as e:
-            print(("Error while calculating mutual information:"
-                   "\nf1={} f2='{}' fcol='{}' size={} span={}").format(
-                       f_1, f_2, f_coll, size, span))
-            print(df.head())
-            print(e)
-            return None
-        return val
+            freq_full = span.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+            freq_left = left.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+            freq_right = right.apply(
+                lambda x: resource.corpus.get_frequency(x, engine))
+            size = resource.corpus.get_corpus_size()
+        except Exception as e:
+            print(str(e))
+            logging.error(str(e))
+            val = self.constant(df, pd.NA)
+        else:
+            val = np.log2(
+                (freq_full.fillna(np.nan) * size) /
+                (freq_left.fillna(np.nan) * freq_right.fillna(np.nan)))
+        finally:
+            engine.dispose()
+        return val.fillna(pd.NA)
 
 
 #############################################################################
@@ -1328,7 +1400,7 @@ class CorpusSize(BaseCorpusFunction):
         return "Corpus size functions"
 
     def evaluate(self, df, **kwargs):
-        session = get_toplevel_window().Session
+        session = kwargs.get("session")
         corpus_size = session.Corpus.get_corpus_size()
         val = self.constant(df, corpus_size)
         return val
@@ -1340,17 +1412,16 @@ class SubcorpusSize(CorpusSize):
 
     def evaluate(self, df, **kwargs):
         try:
-            session = get_toplevel_window().Session
+            session = kwargs.get("session")
             manager = session.get_manager(options.cfg.MODE)
             fun = SubcorpusSize(session=session,
                                 columns=self.columns, group=self.group)
+            if options.cfg.verbose:
+                print(self._name,
+                      f"using {self}" if self.find_function(df, fun)
+                      else "calculating(self)")
             if self.find_function(df, fun):
-                if options.cfg.verbose:
-                    print(self._name, "using {}".format(self))
                 return df[fun.get_id()]
-            else:
-                if options.cfg.verbose:
-                    print(self._name, "calculating {}".format(self))
             corpus_features = [x for x, _
                                in session.Resource.get_corpus_features()]
             column_list = [x for x in corpus_features
@@ -1372,11 +1443,11 @@ class SubcorpusRangeMin(CorpusSize):
     _name = "statistics_subcorpus_range_min"
 
     def _func(self, row, session):
-        min_r, max_r = session.Corpus.get_subcorpus_range(row)
+        min_r, _ = session.Corpus.get_subcorpus_range(row)
         return min_r
 
     def evaluate(self, df, *args, **kwargs):
-        session = get_toplevel_window().Session
+        session = kwargs.get("session")
 
         corpus_features = [x for x, _ in
                            session.Resource.get_corpus_features()]
@@ -1390,7 +1461,7 @@ class SubcorpusRangeMax(SubcorpusRangeMin):
     _name = "statistics_subcorpus_range_max"
 
     def _func(self, row, session):
-        min_r, max_r = session.Corpus.get_subcorpus_range(row)
+        _, max_r = session.Corpus.get_subcorpus_range(row)
         return max_r
 
 
@@ -1402,7 +1473,7 @@ class SentenceId(Function):
     _name = "coq_sentence_id"
 
     def evaluate(self, df, **kwargs):
-        session = get_toplevel_window().Session
+        session = kwargs.get("session")
         _df = pd.merge(df,
                        session.Resource.get_sentence_ids(
                            df["coquery_invisible_corpus_id"]),
@@ -1415,7 +1486,7 @@ class ContextColumns(Function):
     single_column = False
 
     def __init__(self, left=None, right=None, *args):
-        super(ContextColumns, self).__init__(*args)
+        super().__init__(*args)
         if left is None:
             self.left = options.cfg.context_left
         else:
@@ -1429,6 +1500,7 @@ class ContextColumns(Function):
                           for i in range(self.left)]
         self.right_cols = ["coq_context_rc{}".format(i + 1)
                            for i in range(self.right)]
+        self._sentence_column = None
 
     @staticmethod
     def get_group():
@@ -1440,7 +1512,7 @@ class ContextColumns(Function):
         return self._name
 
     def evaluate(self, df, **kwargs):
-        session = get_toplevel_window().Session
+        session = kwargs.get("session")
         resource = session.Resource
         with session.db_engine.connect() as db_connection:
             # check if df misses information needed to produce the context
@@ -1449,7 +1521,7 @@ class ContextColumns(Function):
                     "coquery_invisible_origin_id" not in df.columns or
                     "coquery_invisible_number_of_tokens" not in df.columns or
                     df["coquery_invisible_number_of_tokens"].isnull().any()):
-                val = self.constant(df, None)
+                val = self.constant(df, pd.NA)
                 val.name = "coquery_invisible_dummy"
                 return val
             else:
@@ -1526,7 +1598,7 @@ class ContextString(ContextColumns):
     single_column = True
 
     def __init__(self, *args):
-        super(ContextString, self).__init__(*args)
+        super().__init__(*args)
 
     def _func(self, row, session, connection):
         if self._sentence_column:

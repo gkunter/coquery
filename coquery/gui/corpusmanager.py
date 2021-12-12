@@ -201,7 +201,7 @@ class CoqAccordionEntry(QtWidgets.QWidget):
                 if self._stack:
                     self.button_remove.clicked.connect(
                         lambda: self._stack.removeCorpus.emit(self))
-
+            if installed:
                 self.button_dump = button_dump
                 self.button_dump.setParent(entry_widget)
                 self.widget_layout.addWidget(self.button_dump)

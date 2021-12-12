@@ -286,10 +286,11 @@ class Settings(QtWidgets.QDialog):
         except AttributeError:
             pass
 
+        auto_apply = (options.settings.value("settings_auto_apply") or
+                      [AUTO_APPLY_DEFAULT])
         for i in range(self.ui.list_auto_apply.count()):
             item = self.ui.list_auto_apply.item(i)
-            if i in options.settings.value("settings_auto_apply",
-                                           AUTO_APPLY_DEFAULT):
+            if i in auto_apply:
                 state = QtCore.Qt.Checked
             else:
                 state = QtCore.Qt.Unchecked
