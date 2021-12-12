@@ -12,14 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 from __future__ import unicode_literals
 
-try:
-    # Python 2.x: import ConfigParser as _configparser
-    from ConfigParser import ConfigParser as _configparser, RawConfigParser
-    from ConfigParser import NoOptionError, ParsingError, NoSectionError
-except ImportError:
-    # Python 3.x: import configparser as _configparser
-    from configparser import ConfigParser as _configparser, RawConfigParser
-    from configparser import NoOptionError, ParsingError, NoSectionError
+from configparser import ConfigParser, RawConfigParser
+from configparser import NoOptionError, ParsingError, NoSectionError
 
 import argparse
 import warnings
@@ -66,7 +60,7 @@ Command-line support may be altogether removed in a future release.
 """
 
 
-class CoqConfigParser(_configparser, object):
+class CoqConfigParser(ConfigParser, object):
     """
     A config parser with enhanced type methods
     """
@@ -467,16 +461,14 @@ class Options(object):
                         connection_dict[number][variable] = int(value)
                     except ValueError:
                         continue
-                elif variable in {"name", "host", "type", "user", "password",
-                                  "path"}:
+                elif variable in {"name", "host", "user", "password", "path",
+                                  "type"}:
+                    if variable == "type":
+                        variable = "dbtype"
                     connection_dict[number][variable] = value
 
-                    # for backward compatibility:
-                    if variable == "type":
-                        connection_dict[number]["dbtype"] = value
-
-        for i in connection_dict:
-            connection = get_connection(**connection_dict[i])
+        for dct in connection_dict.values():
+            connection = get_connection(**dct)
             self.args.connections[connection.name] = connection
 
         # select active SQL configuration, or use Default as fallback
