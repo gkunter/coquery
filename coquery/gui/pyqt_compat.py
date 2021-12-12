@@ -2,7 +2,7 @@
 """
 pyqt_compat.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -26,7 +26,7 @@ pyqt = False
 
 
 class CoqSettings(QtCore.QSettings):
-    def value(self, key, default=None):
+    def value(self, key, default=None, **kwargs):
         try:
             val = super(CoqSettings, self).value(key, default)
         except Exception as e:
@@ -36,11 +36,6 @@ class CoqSettings(QtCore.QSettings):
             warnings.warn(s)
             val = default
         return val
-
-
-def QWebView(*args, **kwargs):
-    import PyQt5.QtWebKit as QtWebKit
-    return QtWebKit.QWebView(*args, **kwargs)
 
 
 if sys.platform == 'win32':
@@ -55,7 +50,7 @@ def tr(*args, **kwargs):
     return QtWidgets.QApplication.instance().translate(*args, **kwargs)
 
 
-def get_toplevel_window(name="MainWindow"):
+def get_toplevel_window():
     """
     Retrieves the top-level widget with the given name. By default, retrieve
     the main window.
