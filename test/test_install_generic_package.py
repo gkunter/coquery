@@ -10,18 +10,14 @@ coquery$ python -m test.test_install_generic_package
 
 from __future__ import unicode_literals
 
-import unittest
 import os
-import sys
 import argparse
-import tempfile
-import zipfile
-import json
 from pathlib import Path
+import tempfile
 
 from coquery.coquery import options
 from coquery.installer.coq_install_generic_package import BuilderClass
-from coquery.connections import SQLiteConnection, MySQLConnection
+from coquery.connections import SQLiteConnection
 from coquery.corpus import SQLResource
 from test.testcase import CoqTestCase, run_tests
 
@@ -35,7 +31,6 @@ class CorpusResource(SQLResource):
 class TestGenericPackage(CoqTestCase):
     def create_package(self, name):
         raise NotImplementedError
-
 
     def setUp(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

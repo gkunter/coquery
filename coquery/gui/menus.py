@@ -2,7 +2,7 @@
 """
 menus.py is part of Coquery.
 
-Copyright (c) 2017, 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2021 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,16 +11,16 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 
-import logging
 import re
+import pandas as pd
 
 from coquery import options
-from coquery.defines import *
 from coquery.unicode import utf8
 from coquery import managers
 
 from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
 from . import classes
+
 
 class CoqResourceMenu(QtWidgets.QMenu):
     viewEntriesRequested = QtCore.Signal(classes.CoqTreeItem)
@@ -76,6 +76,7 @@ class CoqResourceMenu(QtWidgets.QMenu):
             unavailable.setDisabled(True)
             self.addAction(unavailable)
 
+
 class CoqColumnMenu(QtWidgets.QMenu):
     hideColumnRequested = QtCore.Signal(list)
     addFunctionRequested = QtCore.Signal(list)
@@ -96,8 +97,6 @@ class CoqColumnMenu(QtWidgets.QMenu):
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
 
         suffix = "s" if len(columns) > 1 else ""
-        all_columns_visible = all([x not in manager.hidden_columns for x in columns])
-        some_columns_visible = not all([x in manager.hidden_columns for x in columns])
 
         self.add_header(columns)
 
@@ -134,8 +133,9 @@ class CoqColumnMenu(QtWidgets.QMenu):
         check_is_manager_function = [x in [fnc.get_id() for fnc in
                                            manager.manager_functions]
                                      for x in columns]
-        if (all(check_is_func) and not any(check_is_group_function) and
-            not any(check_is_manager_function)):
+        if (all(check_is_func) and
+                not any(check_is_group_function) and
+                not any(check_is_manager_function)):
             if len(columns) == 1:
                 edit_function = QtWidgets.QAction("&Edit function...", parent)
                 edit_function.triggered.connect(lambda: self.editFunctionRequested.emit(columns[0]))
@@ -149,14 +149,17 @@ class CoqColumnMenu(QtWidgets.QMenu):
         # add sorting actions, but only if only one column is selected
         if len(columns) == 1:
             column = columns[0]
-            group = QtWidgets.QActionGroup(self, exclusive=True)
+            group = QtWidgets.QActionGroup(self)
+            group.setExclusive(True)
 
-            sort_none = group.addAction(QtWidgets.QAction("Do not sort", self, checkable=True))
-            sort_asc = group.addAction(QtWidgets.QAction("&Ascending", self, checkable=True))
-            sort_desc = group.addAction(QtWidgets.QAction("&Descending", self, checkable=True))
+            sort_none = group.addAction(
+                QtWidgets.QAction("Do not sort", self, checkable=True))
+            sort_asc = group.addAction(
+                QtWidgets.QAction("&Ascending", self, checkable=True))
+            sort_desc = group.addAction(
+                QtWidgets.QAction("&Descending", self, checkable=True))
             sort_asc.setIcon(parent.get_icon("Ascending Sorting"))
             sort_desc.setIcon(parent.get_icon("Descending Sorting"))
-
 
             sort_none.triggered.connect(lambda: self.changeSortingRequested.emit((column, None, None)))
             sort_asc.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, False)))
@@ -165,10 +168,14 @@ class CoqColumnMenu(QtWidgets.QMenu):
             self.addAction(sort_none)
             self.addAction(sort_asc)
             self.addAction(sort_desc)
-
-            if parent.table_model.content[[column]].dtypes[0] == "object":
-                sort_asc_rev = group.addAction(QtWidgets.QAction("&Ascending, reverse", self, checkable=True))
-                sort_desc_rev = group.addAction(QtWidgets.QAction("&Descending, reverse", self, checkable=True))
+            dtype = parent.table_model.content[[column]].dtypes[0]
+            if pd.api.types.is_string_dtype(dtype):
+                sort_asc_rev = group.addAction(
+                    QtWidgets.QAction("&Ascending, reverse",
+                                      self, checkable=True))
+                sort_desc_rev = group.addAction(
+                    QtWidgets.QAction("&Descending, reverse",
+                                      self, checkable=True))
                 sort_asc_rev.setIcon(parent.get_icon("Ascending Reverse Sorting"))
                 sort_desc_rev.setIcon(parent.get_icon("Descending Reverse Sorting"))
                 sort_asc_rev.triggered.connect(lambda: self.changeSortingRequested.emit((column, True, True)))

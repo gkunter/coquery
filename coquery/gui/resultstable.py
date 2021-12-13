@@ -10,6 +10,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 from __future__ import unicode_literals
 
+import pandas as pd
+
 from coquery import options
 from coquery.defines import COLUMN_NAMES, QUERY_MODE_CONTINGENCY
 from coquery import managers
@@ -76,8 +78,13 @@ class CoqResultCellDelegate(QtWidgets.QStyledItemDelegate):
         On mouse-over, the cell is rendered like a clickable link.
         """
         content = index.data(QtCore.Qt.DisplayRole)
+        if pd.isna(content):
+            print("pd.NA in paint() detected")
+            content = options.cfg.na_string
+
         if content == "" and not self.fill:
             return
+
         painter.save()
 
         # show content as a link on mouse-over:
