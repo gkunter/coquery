@@ -1336,7 +1336,6 @@ class SQLResource(BaseResource):
                 table_alias=table_alias, table_id=table_id,
                 parent=parent.upper(), parent_id=parent_id, N=n+1)
 
-
             join_type = getattr(cls, "join_type", "INNER")
             table_str = f"{join_type} JOIN {table_str} ON {where_str}"
             return [table_str], []
