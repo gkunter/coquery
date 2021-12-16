@@ -164,7 +164,7 @@ class Function(CoqObject):
     def set_label(self, label):
         self._label = label
 
-    def _func(self, series, *args, **kwargs) -> pd.Series:
+    def _func(self, series, *args, **kwargs)             :
         """
         Defines the function that is applied the columns in the data frame
         that is passed to this function.

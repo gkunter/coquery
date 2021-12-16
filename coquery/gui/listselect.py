@@ -309,7 +309,7 @@ class SelectionDialog(QtWidgets.QDialog):
         super(SelectionDialog, self).exec_()
 
     @staticmethod
-    def show(*args, **kwargs) -> Tuple[list, list]:
+    def show(*args, **kwargs)                     :
         dialog = SelectionDialog(*args, **kwargs)
         dialog.exec_()
         selected = [x.data(QtCore.Qt.UserRole)
