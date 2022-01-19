@@ -1316,28 +1316,26 @@ class SQLResource(BaseResource):
             Construct a partial SQL table statement that can be used as an
             argument for the feature joins.
             """
-            table_name = getattr(cls, "{}_table".format(table))
-            table_alias = "COQ_{}_{}".format(table.upper(), n+1)
-            table_id = getattr(cls, "{}_id".format(table))
-            parent_id = getattr(cls, "{}_{}_id".format(parent, table))
+            table_name = getattr(cls, f"{table}_table")
+            table_alias = f"COQ_{table.upper()}_{n+1}"
+            table_id = getattr(cls, f"{table}_id")
+            parent_id = getattr(cls, f"{parent}_{table}_id")
 
-            sql_template = "{table_name} AS {table_alias}"
-            table_str = sql_template.format(
-                table_name=table_name, table_alias=table_alias)
+            table_str = f"{table_name} AS {table_alias}"
 
             if cls.has_ngram():
                 n = n - first_item + 1
 
             if parent == "corpus":
                 sql_template = "{table_alias}.{table_id} = {parent_id}{N}"
+                where_str = f"{table_alias}.{table_id} = {parent_id}{n+1}"
             else:
                 sql_template = ("{table_alias}.{table_id} = "
                                 "COQ_{parent}_{N}.{parent_id}")
-            where_str = sql_template.format(
-                table_alias=table_alias, table_id=table_id,
-                parent=parent.upper(), parent_id=parent_id, N=n+1)
+                where_str = (f"{table_alias}.{table_id} = "
+                             f"COQ_{parent.upper()}_{n+1}.{parent_id}")
 
-            table_str = "INNER JOIN {} ON {}".format(table_str, where_str)
+            table_str = f"INNER JOIN {table_str} ON {where_str}"
             return [table_str], []
 
         def add_joins(n, parent, tup):
@@ -1429,19 +1427,18 @@ class SQLResource(BaseResource):
 
         if path:
             for table in path[1:]:
-                table_name = getattr(cls, "{}_table".format(table))
-                table_id = getattr(cls, "{}_id".format(table))
-                table_alias = "COQ_{}_{}".format(table.upper(), i+1)
+                table_name = getattr(cls, f"{table}_table")
+                table_id = getattr(cls, f"{table}_id")
+                table_alias = f"COQ_{table.upper()}_{i+1}"
 
-                prev_id = getattr(cls, "{}_{}_id".format(prev_tab, table))
+                prev_id = getattr(cls, f"{prev_tab}_{table}_id")
 
-                linking_condition = "{}.{} = {}.{}".format(
-                    table_alias, table_id,
-                    prev_alias, prev_id)
+                linking_condition = (
+                    f"{table_alias}.{table_id} = {prev_alias}.{prev_id}")
 
-                table_list.append("INNER JOIN {} AS {} ON {}".format(
-                    table_name, table_alias,
-                    linking_condition))
+                table_list.append(
+                    f"INNER JOIN {table_name} AS {table_alias} "
+                    f"ON {linking_condition}")
 
                 prev_alias = table_alias
 
@@ -1459,27 +1456,32 @@ class SQLResource(BaseResource):
             **kwargs)
         return S
 
+    @staticmethod
+    def _handle_case(s):
+        """
+        Expand an SQL query string so that case sensitivity is handled
+        properly.
+        """
+        db_type = options.cfg.current_connection.db_type()
+
+        # take care of case options:
+        if (options.cfg.query_case_sensitive):
+            if (db_type == SQL_MYSQL):
+                return f"BINARY {s}"
+            elif db_type == SQL_SQLITE:
+                return f"{s} COLLATE BINARY"
+        else:
+            if (db_type == SQL_MYSQL):
+                return s
+            elif db_type == SQL_SQLITE:
+                return f"{s} COLLATE NOCASE"
+
     @classmethod
     def get_token_conditions(cls, i, token):
         """
         Return a dictionary with required tables as names, and SQL
         conditions as values.
         """
-
-        def handle_case(s):
-            db_type = options.cfg.current_connection.db_type()
-
-            # take care of case options:
-            if (options.cfg.query_case_sensitive):
-                if (db_type == SQL_MYSQL):
-                    return "BINARY {}".format(s)
-                elif db_type == SQL_SQLITE:
-                    return "{} COLLATE BINARY".format(s)
-            else:
-                if (db_type == SQL_MYSQL):
-                    return s
-                elif db_type == SQL_SQLITE:
-                    return "{} COLLATE NOCASE".format(s)
 
         def get_operator(S):
             if options.cfg.regexp:
@@ -1532,17 +1534,14 @@ class SQLResource(BaseResource):
             _, tab, _ = cls.split_resource_feature(query_feature)
 
             if tab == "corpus":
-                template = "{name}{N}"
+                alias = f"{col}{i+1}"
             else:
-                template = "COQ_{table}_{N}.{name}"
+                alias = f"COQ_{tab.upper()}_{i+1}.{col}"
 
-            alias = template.format(table=tab.upper(),
-                                    name=col,
-                                    N=i+1)
             if (len(spec_list) == 1):
                 x = spec_list[0]
                 val = tokens.COCAToken.replace_wildcards(x)
-                format_str = handle_case("{alias} {op} '{val}'")
+                format_str = cls._handle_case("{alias} {op} '{val}'")
                 s = format_str.format(alias=alias,
                                       op=get_operator(x),
                                       val=(val if not reverse_str else
@@ -1557,9 +1556,8 @@ class SQLResource(BaseResource):
                         explicit.append(x)
 
                 if explicit:
-                    format_str = handle_case("{alias} IN ({val_list})")
-                    s_list = ", ".join(["'{}'".format(x) for x in explicit])
-                    s_exp = [format_str.format(alias=alias, val_list=s_list)]
+                    s_list = ", ".join([f"'{x}'" for x in explicit])
+                    s_exp = cls._handle_case(f"{alias} IN ({s_list})")
                 else:
                     s_exp = []
 
@@ -1584,8 +1582,8 @@ class SQLResource(BaseResource):
         if token.lemmatize:
             # rewrite token conditions so that the specifications are used to
             # obtain the matching lemmas in a subquery:
-            conditions = ["({})".format(x) for x in list(d.values())[0]]
             condition_template = cls.get_lemmatized_conditions(i, token)
+            conditions = [f"({x})" for x in list(d.values())[0]]
             d = {"word": [
                 condition_template.format(where=" AND ".join(conditions))]}
             if pos_spec:
