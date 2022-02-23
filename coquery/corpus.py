@@ -9,10 +9,6 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import warnings
 from collections import defaultdict
 import re
@@ -47,7 +43,6 @@ class LexiconClass():
 class BaseResource(CoqObject):
     """
     """
-    # add internal table that can be used to access frequency information:
     coquery_query_string = "Query string"
     coquery_query_token = "Query item"
 
@@ -70,6 +65,11 @@ class BaseResource(CoqObject):
         Return the corpus language as a string.
 
         Defaults to "en" (English).
+
+        Returns
+        -------
+        lang : str
+            The ISO language code.
         """
         return "en"
 
@@ -93,9 +93,9 @@ class BaseResource(CoqObject):
         N : int
             The maximum number of query items
 
-        Returns:
+        Returns
         --------
-        l : list
+        l : list[str]
             A list of header labels.
         """
         # special case for "coquery_query_token", which receives numbers like
@@ -1565,7 +1565,7 @@ class SQLResource(BaseResource):
                     operator = "REGEXP"
                 else:
                     operator = "LIKE"
-                format_str = handle_case("{alias} {op} '{val}'")
+                format_str = cls._handle_case("{alias} {op} '{val}'")
                 s_list = [format_str.format(
                             alias=alias,
                             op=operator,
@@ -1926,7 +1926,6 @@ class SQLResource(BaseResource):
                                         origin_id, sentence_id)
             results = db_connection.execute(S)
         word_lists = [[], [], []]
-
         for word, pos in results:
             word_lists[pos].append(word)
 
@@ -2625,7 +2624,6 @@ class CorpusClass(object):
                 "    AND {corpus}.{source_id} = '{current_source_id}'")
         S = format_string.format(**kwargs)
 
-        Print(S)
         engine = options.cfg.current_connection.get_engine(
             self.resource.db_name)
         df = pd.read_sql(S, engine)
@@ -2674,7 +2672,6 @@ class CorpusClass(object):
             return s2.format(tag)
 
     def parse_row(self, row, tags, token_id, token_width):
-        Print("parse_row", len(tags))
         word = row.coq_word_label_1
         word_id = row.coquery_invisible_corpus_id
         if len(tags):
@@ -2779,13 +2776,15 @@ class CorpusClass(object):
 
         df = df[(df.index >= context_start) & (df.index < context_end)]
         time_lst.append((datetime.now().timestamp(), "limiting rows"))
-
         # create a list of all token ids that are also listed in the results
         # table:
-        template = "{lower} < coquery_invisible_corpus_id < {upper}"
-        tab = options.cfg.main_window.Session.data_table.query(
-                template.format(lower=token_id - 1000,
-                                upper=token_id + 1000 + token_width))
+        template = (f"{token_id - 1000} < coquery_invisible_corpus_id "
+                    f"< {token_id + 1000 + token_width}")
+        try:
+            tab = options.cfg.main_window.Session.data_table.query(template)
+        except ValueError:
+            tab = options.cfg.main_window.Session.data_table.query(
+                template, engine="python")
 
         time_lst.append((datetime.now().timestamp(), "retrieving ids"))
         self.id_start_list = tab["coquery_invisible_corpus_id"]
