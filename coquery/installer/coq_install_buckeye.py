@@ -3,7 +3,7 @@
 """
 coq_install_buckeye.py is part of Coquery.
 
-Copyright (c) 2016–2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016–2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,7 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import unicode_literals
-import codecs
+import logging
 import zipfile
 import pandas as pd
 
@@ -479,7 +479,7 @@ class BuilderClass(BaseCorpusBuilder):
                     end_time, _, remain = row.partition(" ")
                     _, _, segment = remain.partition(" ")
                 except ValueError:
-                    logger.warn(".phones file {}: error in row partitioning ({})".format(filename, row))
+                    logging.warn(".phones file {}: error in row partitioning ({})".format(filename, row))
                     continue
                 end_time = float(end_time)
 
@@ -543,12 +543,12 @@ class BuilderClass(BaseCorpusBuilder):
                     self._value_corpus_time, _, remain = row.partition(" ")
                     _, _, value = remain.partition(" ")
                 except ValueError:
-                    logger.warn(".words file {}: error in row partitioning ({})".format(filename, row))
+                    logging.warning(".words file {}: error in row partitioning ({})".format(filename, row))
                     continue
                 try:
                     self._value_corpus_time = float(self._value_corpus_time)
                 except ValueError:
-                    logger.warn(".words file {}: error in float conversion ({})".format(filename, row))
+                    logging.warning(".words file {}: error in float conversion ({})".format(filename, row))
                     continue
 
                 split_values = [x.strip() for x in value.split("; ")]
