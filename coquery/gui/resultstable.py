@@ -2,19 +2,19 @@
 """
 resultstable.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets, QtGui
 
 from coquery import options
 from coquery.defines import COLUMN_NAMES, QUERY_MODE_CONTINGENCY
 from coquery import managers
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
-from . import classes
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui import classes
 
 _left_align = int(QtCore.Qt.AlignLeft) | int(QtCore.Qt.AlignVCenter)
 _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)

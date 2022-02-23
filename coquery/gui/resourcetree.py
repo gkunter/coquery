@@ -2,24 +2,20 @@
 """
 resourcetree.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-
 import warnings
-
+from PyQt5 import QtCore, QtWidgets
 
 from coquery import options
 from coquery.defines import VIEW_MODE_GROUPED, VIEW_MODE_TABLES
 from coquery.unicode import utf8
-
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
-from . import classes
+from coquery.gui import classes
+from coquery.gui.pyqt_compat import get_toplevel_window
 
 
 class CoqResourceTree(classes.CoqTreeWidget):
@@ -364,7 +360,7 @@ class CoqResourceTree(classes.CoqTreeWidget):
                     checked.update(traverse(child))
             return checked
 
-        l = set()
+        lst = set()
         for root in self.rootItems():
-            l.update(traverse(root))
-        return l
+            lst.update(traverse(root))
+        return lst

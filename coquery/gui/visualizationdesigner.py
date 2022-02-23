@@ -2,32 +2,22 @@
 """
 visualizationDesigner.py is part of Coquery.
 
-Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
-from __future__ import division
-
 import imp
 import logging
 import sys
 import os
 import glob
-
-from .. import options
-from coquery.unicode import utf8
-from coquery.defines import (PALETTE_BW,
-                             msg_visualization_error,
-                             msg_visualization_module_error)
-
-from .pyqt_compat import (QtWidgets, QtCore, QtGui, get_toplevel_window, tr)
+from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import pyqtSignal
 
 import matplotlib as mpl
-
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT)
@@ -36,13 +26,20 @@ from matplotlib.backends.backend_qt5 import SubplotToolQt
 import pandas as pd
 import seaborn as sns
 
-from ..visualizer.visualizer import get_grid_layout
+from coquery import options
+from coquery.unicode import utf8
+from coquery.defines import (PALETTE_BW,
+                             msg_visualization_error,
+                             msg_visualization_module_error)
+
+from coquery.gui.app import get_icon
+from coquery.gui.pyqt_compat import get_toplevel_window, tr
+from coquery.gui.ui.visualizationDesignerUi import Ui_VisualizationDesigner
+
+from coquery.visualizer.visualizer import get_grid_layout
 from coquery.visualizer.colorizer import (
     COQ_SINGLE, COQ_CUSTOM,
     Colorizer, ColorizeByFactor, ColorizeByNum)
-from .ui.visualizationDesignerUi import Ui_VisualizationDesigner
-from .threads import CoqThread
-from .app import get_icon
 
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
@@ -63,14 +60,15 @@ def uniques(S):
 
 
 def deleteItemsOfLayout(layout):
-     if layout is not None:
-         while layout.count():
-             item = layout.takeAt(0)
-             widget = item.widget()
-             if widget is not None:
-                 widget.setParent(None)
-             else:
-                 deleteItemsOfLayout(item.layout())
+    if layout is not None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+            else:
+                deleteItemsOfLayout(item.layout())
+
 
 class MyTool(SubplotToolQt):
     def __init__(self, *args, **kwargs):
@@ -128,9 +126,9 @@ class NavigationToolbar(NavigationToolbar2QT):
 
 
 class VisualizationDesigner(QtWidgets.QDialog):
-    moduleLoaded = QtCore.Signal(str, str, object)
-    allLoaded = QtCore.Signal()
-    dataRequested = QtCore.Signal()
+    moduleLoaded = pyqtSignal(str, str, object)
+    allLoaded = pyqtSignal()
+    dataRequested = pyqtSignal()
     visualizers = {}
 
     def __init__(self, session, parent=None):
@@ -293,11 +291,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.categorical = [col for col in self.df.columns
                             if self.df.dtypes[col] in (object, bool) and
                             col not in used and
-                            not col.startswith(("coquery_invisible"))]
+                            not col.startswith("coquery_invisible")]
         self.numerical = [col for col in self.df.columns
                           if self.df.dtypes[col] in (int, float) and
                           col not in used and
-                          not col.startswith(("coquery_invisible"))]
+                          not col.startswith("coquery_invisible")]
 
         for col in self.categorical:
             label = self.alias.get(col) or col
@@ -732,9 +730,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
             if self._color_number > len(self._custom_palette):
                 base_palette = sns.color_palette(self._custom_base,
                                                  self._color_number)
-                palette = (self._custom_palette +
-                                base_palette[len(self._custom_palette)
-                                             :self._color_number])
+                palette = (
+                        self._custom_palette
+                            + base_palette[
+                                len(self._custom_palette):self._color_number])
             else:
                 palette = self._custom_palette[:self._color_number]
         else:
@@ -768,7 +767,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def change_palette(self):
         x = self.get_palette_name()
         n = self.ui.spin_number.value()
-        if (x != self._palette_name or n != self._color_number):
+        if x != self._palette_name or n != self._color_number:
             self.show_palette()
             self.plot_figure()
 
