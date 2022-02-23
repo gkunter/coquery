@@ -8,10 +8,7 @@ Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-from __future__ import print_function
-
+from PyQt5 import QtCore, QtWidgets
 try:
     import squarify
 except ImportError:
@@ -26,8 +23,7 @@ from coquery.visualizer import visualizer as vis
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByFreq, ColorizeByNum)
 
-from coquery import options
-from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
+from coquery.gui.pyqt_compat import tr
 
 
 class TreeMap(vis.Visualizer):
