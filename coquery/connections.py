@@ -2,7 +2,7 @@
 """
 connections.py is part of Coquery.
 
-Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,9 +15,9 @@ import sqlalchemy
 import imp
 import logging
 
-from .defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
-from .general import CoqObject, get_home_dir
-from .unicode import utf8
+from coquery.defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
+from coquery.general import CoqObject, get_home_dir
+from coquery.unicode import utf8
 
 
 class Connection(CoqObject):
@@ -242,22 +242,15 @@ class MySQLConnection(Connection):
 
     def has_database(self, db_name):
         engine = self.get_engine(db_name)
-        S = """
-            SELECT SCHEMA_NAME
-            FROM INFORMATION_SCHEMA.SCHEMATA
-            WHERE SCHEMA_NAME = '{}'
-            """.format(db_name)
         try:
-            with engine.connect() as connection:
-                connection.execute(S)
-        except sqlalchemy.exc.InternalError as e:
+            engine.connect()
+        except sqlalchemy.exc.OperationalError as e:
+            db_exists = False
+        else:
+            db_exists = True
+        finally:
             engine.dispose()
-            return False
-        except Exception as e:
-            engine.dispose()
-            raise e
-        engine.dispose()
-        return True
+        return db_exists
 
     def get_database_size(self, db_name):
         engine = self.get_engine(db_name)
@@ -373,9 +366,9 @@ class SQLiteConnection(Connection):
 
     def test(self):
         if os.access(self.path, os.X_OK | os.R_OK):
-            return (True, None)
+            return True, None
         else:
-            return (False, IOError)
+            return False, IOError
 
     def create_database(self, db_name):
         pass
