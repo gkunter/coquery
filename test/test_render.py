@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from PyQt5 import QtGui
+import sys
 
 from coquery.corpus import collapse_words
 from coquery.installer.coq_install_ice_ng import Resource

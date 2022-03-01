@@ -2,29 +2,24 @@
 """
 orphanageddatabases.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-
 import os
 import glob
 import logging
 from datetime import datetime
+from PyQt5 import QtCore, QtWidgets
 
 from coquery import options
 from coquery.defines import SQL_SQLITE, msg_orphanaged_databases
+from coquery.gui import classes
+from coquery.gui.ui.orphanagedDatabasesUi import Ui_OrphanagedDatabases
 from coquery.general import format_file_size
 from coquery.unicode import utf8
-
-from . import classes
-
-from .pyqt_compat import QtCore, QtWidgets
-from .ui.orphanagedDatabasesUi import Ui_OrphanagedDatabases
 
 
 class OrphanagedDatabasesDialog(QtWidgets.QDialog):
@@ -100,12 +95,12 @@ class OrphanagedDatabasesDialog(QtWidgets.QDialog):
             path = options.cfg.current_connection.path
             name = options.cfg.current_connection.name
         except AttributeError:
-            l = []
+            lst = []
         else:
-            l = check_orphans(path)
+            lst = check_orphans(path)
 
-        if l:
-            dialog = OrphanagedDatabasesDialog(orphans=l, parent=None)
+        if lst:
+            dialog = OrphanagedDatabasesDialog(orphans=lst, parent=None)
             dialog.ui.label.setText(utf8(dialog.ui.label.text()).format(
                 path=path, name=name))
             result = dialog.exec_()
@@ -126,7 +121,7 @@ def check_orphans(path):
     Get a list of orphanaged databases in the database directory for the
     current connetion.
     """
-    l = []
+    lst = []
     if options.cfg.current_connection.db_type() == SQL_SQLITE:
         databases = glob.glob(os.path.join(path, "*.db"))
 
@@ -140,14 +135,13 @@ def check_orphans(path):
             resource = options.get_resource_of_database(file_name)
             if not resource:
                 size = os.path.getsize(x)
-                l.append((x, "?", date, size,
-                          "No corpus module found for database"))
+                lst.append((x, "?", date, size,
+                            "No corpus module found for database"))
             else:
                 size = os.path.getsize(x)
                 if size == 0:
-                    l.append((x, resource.name, date, size,
-                          "Database file is empty"))
-
+                    lst.append((x, resource.name, date, size,
+                                "Database file is empty"))
 
         # check for resources that have an issue with their databases:
         resources = options.cfg.current_connection.resources()
@@ -156,10 +150,10 @@ def check_orphans(path):
             db_name = os.path.join(path, "{}.db".format(resource.db_name))
             try:
                 db_size = os.path.getsize(db_name)
-            except Exception:
+            except os.error:
                 db_size = 0
 
-            if (db_name not in databases or db_size == 0):
+            if db_name not in databases or db_size == 0:
                 timestamp = os.path.getmtime(module_path)
                 date = (datetime.fromtimestamp(timestamp).strftime(
                     '%Y-%m-%d, %H:%M:%S'))
@@ -168,9 +162,8 @@ def check_orphans(path):
                     reason = "Database file '{}' not found in directory '{}'"
                 else:
                     reason = "Database file is empty"
-                l.append((module_path,
-                          name, date, size,
-                          reason.format("{}.db".format(resource.db_name),
-                                        path)))
+                lst.append((module_path,
+                            name, date, size,
+                            reason.format(f"{resource.db_name}.db", path)))
 
-    return sorted(l, key=lambda x: x[1])
+    return sorted(lst, key=lambda x: x[1])

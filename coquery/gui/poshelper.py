@@ -2,21 +2,19 @@
 """
 poshelper.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+from PyQt5 import QtCore, QtWidgets
 
-from __future__ import division
-
-from .pyqt_compat import (QtCore, QtWidgets, get_toplevel_window, STYLE_WARN)
-from .ui.posHelperDialogUi import Ui_PosHelperDialog
-from .widgets.coqwidgetfader import CoqWidgetFader
-
-from coquery.unicode import utf8
 from coquery import options
+from coquery.gui.pyqt_compat import get_toplevel_window, STYLE_WARN
+from coquery.gui.ui.posHelperDialogUi import Ui_PosHelperDialog
+from coquery.gui.widgets.coqwidgetfader import CoqWidgetFader
+from coquery.unicode import utf8
 
 tagsets = {"Penn Treebank": [
             ("CC", "Coordinating conjunction"),

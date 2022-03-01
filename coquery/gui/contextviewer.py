@@ -2,15 +2,12 @@
 """
 contextviewer.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-from __future__ import unicode_literals
 
 import os
 try:
@@ -19,12 +16,14 @@ try:
 except ImportError:
     use_tgt = False
 
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSlot
+
 from coquery import options
 from coquery.unicode import utf8
 from coquery.gui.threads import CoqWorker
 from coquery.gui.widgets.coqstaticbox import CoqStaticBox
-from coquery.gui.pyqt_compat import (QtCore, QtWidgets, QtGui,
-                                     get_toplevel_window)
+from coquery.gui.pyqt_compat import get_toplevel_window
 from coquery.gui.ui.contextViewerUi import Ui_ContextView
 from coquery.gui.ui.contextViewerAudioUi import Ui_ContextViewAudio
 from coquery.gui.app import get_icon
@@ -241,7 +240,7 @@ class ContextView(QtWidgets.QWidget):
         self.work.exceptionRaised.connect(self.progress_timer.stop)
         self.work.start()
 
-    @QtCore.pyqtSlot()
+    @pyqtSlot()
     def retrieve_context(self, next_value):
         try:
             context = self.corpus.get_rendered_context(
@@ -252,13 +251,14 @@ class ContextView(QtWidgets.QWidget):
         except Exception as e:
             print("Exception in retrieve_context(): ", e)
             raise e
+        print(context)
         self.context = context
 
     @classmethod
     def lookup_row(cls, token_id, df, offset):
         """
-        Look up that row that precedes or follows the row specified by token_id
-        in the given data frame by the stated offset.
+        Look up that row that precedes or follows the row specified by
+        token_id in the given data frame by the stated offset.
         """
         row = df[df["coquery_invisible_corpus_id"] == token_id]
         try:
@@ -266,7 +266,6 @@ class ContextView(QtWidgets.QWidget):
                 return None
             if offset > 0 and row.index.max() == df.index.max():
                 return None
-                offset = 0
             return df.loc[row.index + offset]
         except KeyError:
             return None
@@ -298,43 +297,7 @@ class ContextView(QtWidgets.QWidget):
 
     def finalize_context(self):
         font = options.cfg.context_font
-
-        if int(font.style()) == int(QtGui.QFont.StyleItalic):
-            style = "italic"
-        elif int(font.style()) == int(QtGui.QFont.StyleOblique):
-            style = "oblique"
-        else:
-            style = "normal"
-
-        if font.stretch() == int(QtGui.QFont.UltraCondensed):
-            stretch = "ultra-condensed"
-        elif font.stretch() == int(QtGui.QFont.ExtraCondensed):
-            stretch = "extra-condensed"
-        elif font.stretch() == int(QtGui.QFont.Condensed):
-            stretch = "condensed"
-        elif font.stretch() == int(QtGui.QFont.SemiCondensed):
-            stretch = "semi-condensed"
-        elif font.stretch() == int(QtGui.QFont.Unstretched):
-            stretch = "normal"
-        elif font.stretch() == int(QtGui.QFont.SemiExpanded):
-            stretch = "semi-expanded"
-        elif font.stretch() == int(QtGui.QFont.Expanded):
-            stretch = "expanded"
-        elif font.stretch() == int(QtGui.QFont.ExtraExpanded):
-            stretch = "extra-expanded"
-        elif font.stretch() == int(QtGui.QFont.UltraExpanded):
-            stretch = "ultra-expanded"
-        else:
-            stretch = "normal"
-
-        weight = int(font.weight()) * 10
-
-        styles = ["line-height: {}px".format(font.pointSize() * 1.85),
-                  'font-family: "{}", Times, Serif'.format(font.family()),
-                  "font-size: {}px".format(font.pointSize() * 1.25),
-                  "font-style: {}".format(style),
-                  "font-weight: {}".format(weight),
-                  "font-strech: {}".format(stretch)]
+        styles = self.get_style(font)
 
         text = self.context["text"]
 
@@ -350,7 +313,36 @@ class ContextView(QtWidgets.QWidget):
         self.ui.button_prev.setEnabled(has_prev is not None)
         self.ui.button_next.setEnabled(has_next is not None)
 
-    def prepare_textgrid(self, df, offset):
+    @staticmethod
+    def get_style(font):
+        style = {int(QtGui.QFont.StyleItalic): "italic",
+                 int(QtGui.QFont.StyleOblique): "oblique"
+                 }.get(font.style(),
+                       "normal")
+
+        stretch = {int(QtGui.QFont.UltraCondensed): "ultra-condensed",
+                   int(QtGui.QFont.ExtraCondensed): "extra-condensed",
+                   int(QtGui.QFont.Condensed): "condensed",
+                   int(QtGui.QFont.SemiCondensed): "semi-condensed",
+                   int(QtGui.QFont.Unstretched): "normal",
+                   int(QtGui.QFont.SemiExpanded): "semi-expanded",
+                   int(QtGui.QFont.Expanded): "expanded",
+                   int(QtGui.QFont.ExtraExpanded): "extra-expanded",
+                   int(QtGui.QFont.UltraExpanded): "ultra-expanded"
+                   }.get(font.stretch(),
+                         "normal")
+
+        weight = int(font.weight()) * 10
+        styles = [f"line-height: {font.pointSize() * 1.85}px",
+                  f'font-family: "{font.family()}", Times, Serif',
+                  f"font-size: {font.pointSize() * 1.25}px",
+                  f"font-style: {style}",
+                  f"font-weight: {weight}",
+                  f"font-strech: {stretch}"]
+        return styles
+
+    @staticmethod
+    def prepare_textgrid(df, offset):
         if not use_tgt:
             return None
         grid = tgt.TextGrid()
@@ -406,4 +398,5 @@ class ContextViewAudio(ContextView):
             else:
                 self.ui.textgrid_area.setSound(audio)
                 self.ui.textgrid_area.setTextgrid(textgrid)
-                self.ui.textgrid_area.display(offset=self.context["start_time"])
+                self.ui.textgrid_area.display(
+                    offset=self.context["start_time"])

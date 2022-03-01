@@ -2,7 +2,7 @@
 """
 visualizer.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -22,8 +22,8 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
+from PyQt5 import QtCore
 
-from coquery.gui.pyqt_compat import QtCore
 from coquery.defines import PALETTE_BW
 
 from coquery.visualizer.colorizer import (

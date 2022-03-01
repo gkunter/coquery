@@ -2,21 +2,22 @@
 """
 listwidget.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSignal
 
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
-from .ui.buttonListUi import Ui_ButtonList
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui.ui.buttonListUi import Ui_ButtonList
 
 
 class CoqButtonList(QtWidgets.QWidget):
-    listOrderChanged = QtCore.Signal()
+    listOrderChanged = pyqtSignal()
 
     def __init__(self, remove=False, parent=None):
         super(CoqButtonList, self).__init__(parent)

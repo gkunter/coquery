@@ -2,21 +2,19 @@
 """
 coqtagbox.py is part of Coquery.
 
-Copyright (c) 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
+from PyQt5 import QtCore, QtGui, QtWidgets
 import random
 
-from coquery.unicode import utf8
 from coquery import options
-
-from coquery.gui.pyqt_compat import (QtCore, QtGui, QtWidgets,
-                                     get_toplevel_window)
-from .coqflowlayout import CoqFlowLayout
+from coquery.unicode import utf8
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui.widgets.coqflowlayout import CoqFlowLayout
 
 
 class CoqTagEdit(QtWidgets.QLineEdit):

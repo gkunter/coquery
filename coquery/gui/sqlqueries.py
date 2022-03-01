@@ -2,19 +2,16 @@
 """
 sqlqueries.py is part of Coquery.
 
-Copyright (c) 2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2019-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-
 import warnings
+from PyQt5 import QtCore, QtWidgets, QtGui
 
 from coquery import options
-from coquery.gui.pyqt_compat import QtCore, QtWidgets, QtGui
 
 try:
     import sqlparse

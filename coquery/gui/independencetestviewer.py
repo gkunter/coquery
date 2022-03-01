@@ -2,26 +2,22 @@
 """
 independencetestviewer.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-from __future__ import unicode_literals
-
 import math
 import numpy as np
 import scipy
+from PyQt5 import QtWidgets, QtCore, QtGui
 
 from coquery import options
 from coquery.unicode import utf8
-
-from .pyqt_compat import QtWidgets, QtCore, QtGui, get_toplevel_window
-from .ui.independenceTestViewerUi import Ui_IndependenceTestViewer
-from .widgets.coqwidgetfader import CoqWidgetFader
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui.ui.independenceTestViewerUi import Ui_IndependenceTestViewer
+from coquery.gui.widgets.coqwidgetfader import CoqWidgetFader
 
 
 class IndependenceTestViewer(QtWidgets.QDialog):

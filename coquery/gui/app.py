@@ -2,16 +2,12 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
 
 import sys
 import os
@@ -20,6 +16,9 @@ import pandas as pd
 import datetime
 import re
 import warnings
+
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSignal
 
 from coquery import managers
 from coquery import NAME, __version__
@@ -50,15 +49,16 @@ from coquery.errors import (
 from coquery.unicode import utf8
 from coquery.links import get_by_hash
 
-from . import classes
-from . import errorbox
-from .widgets.coqstaticbox import CoqStaticBox
-from .pyqt_compat import QtCore, QtWidgets, QtGui, tr
-from .ui import coqueryUi
-from .threads import CoqThread
-from .resourcetree import CoqResourceTree
-from .menus import CoqResourceMenu, CoqColumnMenu, CoqHiddenColumnMenu
-from .orphanageddatabases import OrphanagedDatabasesDialog
+from coquery.gui import classes
+from coquery.gui import errorbox
+from coquery.gui.widgets.coqstaticbox import CoqStaticBox
+from coquery.gui.pyqt_compat import tr
+from coquery.gui.ui import coqueryUi
+from coquery.gui.threads import CoqThread
+from coquery.gui.resourcetree import CoqResourceTree
+from coquery.gui.menus import (CoqResourceMenu, CoqColumnMenu,
+                               CoqHiddenColumnMenu)
+from coquery.gui.orphanageddatabases import OrphanagedDatabasesDialog
 
 
 critical_box = QtWidgets.QMessageBox.critical
@@ -82,6 +82,9 @@ def get_icon(s, small_n_flat=True, size="24x24"):
         True if the icon is from the 'small-n-flat' icon set. False if it
         is artwork provided by Coquery (in the icons/artwork/
         subdirectory).
+    size : str
+        A string with the shape 'SIZExSIZE' that specifies the size subfolder
+        for the icons.
     """
     icon = QtGui.QIcon()
     if small_n_flat:
@@ -108,7 +111,7 @@ class focusFilter(QtCore.QObject):
     Define an event filter that emits a focus signal whenever the widget
     receives focus.
     """
-    focus = QtCore.Signal()
+    focus = pyqtSignal()
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.FocusIn:
@@ -121,7 +124,7 @@ class clickFilter(QtCore.QObject):
     Define an event filter that emits a CLICKED signal whenever a mouse
     button is released within the widget.
     """
-    clicked = QtCore.Signal()
+    clicked = pyqtSignal()
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonRelease:
@@ -134,7 +137,7 @@ class keyFilter(QtCore.QObject):
     Define an event filter that emits a keyPressed signal whenever one of the
     specified keys is pressed from within the widget.
     """
-    keyPressed = QtCore.Signal()
+    keyPressed = pyqtSignal()
 
     def __init__(self, k, *args, **kwargs):
         super(keyFilter, self).__init__(*args, **kwargs)
@@ -153,18 +156,18 @@ class keyFilter(QtCore.QObject):
 class CoqMainWindow(QtWidgets.QMainWindow):
     """ Coquery as standalone application. """
 
-    corpusListUpdated = QtCore.Signal()
-    columnVisibilityChanged = QtCore.Signal()
-    rowVisibilityChanged = QtCore.Signal()
-    updateMultiProgress = QtCore.Signal(int)
-    updateStatusMessage = QtCore.Signal(str)
-    abortRequested = QtCore.Signal()
-    useContextConnection = QtCore.Signal(object)
-    closeContextConnection = QtCore.Signal(object)
-    dataChanged = QtCore.Signal()
-    updatePackStage = QtCore.Signal(tuple)
-    updateFileChunk = QtCore.Signal(tuple)
-    customInstallerPathChanged = QtCore.Signal()
+    corpusListUpdated = pyqtSignal()
+    columnVisibilityChanged = pyqtSignal()
+    rowVisibilityChanged = pyqtSignal()
+    updateMultiProgress = pyqtSignal(int)
+    updateStatusMessage = pyqtSignal(str)
+    abortRequested = pyqtSignal()
+    useContextConnection = pyqtSignal(object)
+    closeContextConnection = pyqtSignal(object)
+    dataChanged = pyqtSignal()
+    updatePackStage = pyqtSignal(tuple)
+    updateFileChunk = pyqtSignal(tuple)
+    customInstallerPathChanged = pyqtSignal()
 
     def __init__(self, session, parent=None):
         """ Initialize the main window. This sets up any widget that needs
@@ -244,9 +247,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # https://stackoverflow.com/questions/1551605#1552105
         if sys.platform == "win32":
             import ctypes
-            CoqId = 'Coquery.Coquery.{}'.format(__version__)
+            coq_id = 'Coquery.Coquery.{}'.format(__version__)
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                CoqId)
+                coq_id)
 
     def setup_app(self):
         """ Initialize all widgets with suitable data """
@@ -650,7 +653,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         #self.rowVisibilityChanged.connect(self.update_row_visibility)
 
     def keyPressEvent(self, e):
-        if (e.key() == QtCore.Qt.Key_Escape and self.reaggregating):
+        if e.key() != QtCore.Qt.Key_Escape or not self.reaggregating:
+            pass
+        else:
             self.abortRequested.emit()
 
         mask = int(QtCore.Qt.AltModifier) + int(QtCore.Qt.ShiftModifier)
@@ -1114,6 +1119,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # immediately afterwards so that the settings file always contains
         # an up-to-date property set
 
+        properties = {}
         try:
             properties = options.settings.value("column_properties", {})
         finally:
@@ -2692,7 +2698,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             connected = False
             print(e)
-            warnings.warn(e)
+            warnings.warn(str(e))
 
         builder = InstallerGui(builder_class, self)
         try:

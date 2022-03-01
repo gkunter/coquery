@@ -2,7 +2,7 @@
 """
 densityplot.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,9 +13,10 @@ from __future__ import division
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+from PyQt5 import QtWidgets, QtCore
 
 from coquery.visualizer import visualizer as vis
-from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
+from coquery.gui.pyqt_compat import tr
 
 from coquery.visualizer.colorizer import Colorizer
 

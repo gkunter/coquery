@@ -2,21 +2,20 @@
 """
 corpusmanager.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-from __future__ import division
-
 import sys
 import fnmatch
 import os
 import imp
 import logging
+
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSignal
 
 from coquery import options
 from coquery import corpusbuilder
@@ -38,11 +37,10 @@ from coquery.defines import (INSTALLER_ADHOC, INSTALLER_CUSTOM,
                              )
 from coquery.unicode import utf8
 
-from . import classes
-from .pyqt_compat import (QtCore, QtWidgets, QtGui, frameShadow, frameShape,
-                          get_toplevel_window)
-from .ui.corpusManagerUi import Ui_corpusManager
-from .app import get_icon
+from coquery.gui import classes
+from coquery.gui.app import get_icon
+from coquery.gui.pyqt_compat import frameShadow, frameShape, get_toplevel_window
+from coquery.gui.ui.corpusManagerUi import Ui_corpusManager
 
 
 translate = options.cfg.app.translate
@@ -104,10 +102,10 @@ class CoqAccordionEntry(QtWidgets.QWidget):
 
         self.validation_label = QtWidgets.QLabel("")
         self.button_layout.addWidget(self.validation_label)
-        spacerItem = QtWidgets.QSpacerItem(40, 20,
-                                           QtWidgets.QSizePolicy.Expanding,
-                                           QtWidgets.QSizePolicy.Minimum)
-        self.button_layout.addItem(spacerItem)
+        spacer_item = QtWidgets.QSpacerItem(40, 20,
+                                            QtWidgets.QSizePolicy.Expanding,
+                                            QtWidgets.QSizePolicy.Minimum)
+        self.button_layout.addItem(spacer_item)
         self.verticalLayout_3.addLayout(self.button_layout)
 
         self.verticalLayout_2.addWidget(self.corpus_description_frame)
@@ -398,12 +396,12 @@ class TableEntry(CoqAccordionEntry):
 
 
 class CorpusManager(QtWidgets.QDialog):
-    removeCorpus = QtCore.Signal(object)
-    installCorpus = QtCore.Signal(object)
-    buildCorpus = QtCore.Signal(object)
-    buildCorpusFromTable = QtCore.Signal(object)
-    dumpCorpus = QtCore.Signal(object)
-    launchBuilder = QtCore.Signal(object)
+    removeCorpus = pyqtSignal(object)
+    installCorpus = pyqtSignal(object)
+    buildCorpus = pyqtSignal(object)
+    buildCorpusFromTable = pyqtSignal(object)
+    dumpCorpus = pyqtSignal(object)
+    launchBuilder = pyqtSignal(object)
 
     def __init__(self, parent=None):
         super(CorpusManager, self).__init__(parent)

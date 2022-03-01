@@ -168,11 +168,7 @@ class SqlDB(object):
             pass
 
     def set_variable(self, variable, value):
-        try:
-            string_classes = (str, unicode)
-        except NameError:
-            string_classes = (str)
-        if isinstance(value, string_classes):
+        if isinstance(value, str):
             self.connection.execute("SET {} '{}'".format(variable, value))
         else:
             self.connection.execute("SET {}={}".format(variable, value))

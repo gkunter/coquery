@@ -2,7 +2,7 @@
 """
 threads.py is part of Coquery.
 
-Copyright (c) 2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,10 +11,10 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import sys
+from PyQt5 import QtCore
 
 from coquery import options
 from coquery import general
-from .pyqt_compat import QtCore
 
 
 class CoqWorker(QtCore.QObject):
@@ -26,9 +26,9 @@ class CoqWorker(QtCore.QObject):
     `exceptionRaised` is raised.
     """
 
-    started = QtCore.Signal()
-    finished = QtCore.Signal()
-    exceptionRaised = QtCore.Signal(Exception)
+    started = QtCore.pyqtSignal()
+    finished = QtCore.pyqtSignal()
+    exceptionRaised = QtCore.pyqtSignal(Exception)
 
     def __init__(self, activity, *args, **kwargs):
         super(CoqWorker, self).__init__(parent=None)
@@ -39,7 +39,7 @@ class CoqWorker(QtCore.QObject):
         self.moveToThread(self._thread)
         self._thread.started.connect(self._perform_activity)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def _perform_activity(self):
         try:
             self._activity(*self._args, **self._kwargs)
@@ -54,13 +54,14 @@ class CoqWorker(QtCore.QObject):
 
 
 class CoqThread(QtCore.QThread):
-    taskStarted = QtCore.Signal()
-    taskFinished = QtCore.Signal()
-    taskException = QtCore.Signal(Exception)
-    taskAbort = QtCore.Signal()
+    taskStarted = QtCore.pyqtSignal()
+    taskFinished = QtCore.pyqtSignal()
+    taskException = QtCore.pyqtSignal(Exception)
+    taskAbort = QtCore.pyqtSignal()
 
     def __init__(self, FUN, parent=None, *args, **kwargs):
         super(CoqThread, self).__init__(parent)
+        self.INTERRUPT_FUN = None
         self.FUN = FUN
         self.exiting = False
         self.args = args
@@ -79,7 +80,7 @@ class CoqThread(QtCore.QThread):
 
     def quit(self):
         self.quitted = True
-        if hasattr(self, "INTERRUPT_FUN"):
+        if self.INTERRUPT_FUN:
             self.INTERRUPT_FUN()
         super(CoqThread, self).quit()
 

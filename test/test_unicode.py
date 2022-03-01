@@ -4,7 +4,6 @@
 from __future__ import print_function
 
 from coquery.unicode import utf8
-from coquery.gui.pyqt_compat import QtCore
 from test.testcase import CoqTestCase, run_tests
 
 
@@ -31,30 +30,18 @@ class TestUnicodeModuleMethods(CoqTestCase):
         self.assertEqual(type(utf8(s4)), type(u""))
         self.assertEqual(type(utf8(s5)), type(u""))
 
-    def test_qstring(self):
-        s2 = 'unaccented text for testing'
-        s4 = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
-        s6 = QtCore.QString(s2)
-        s7 = QtCore.QString(s4)
-        self.assertEqual(type(utf8(s6)), type(u""))
-        self.assertEqual(type(utf8(s7)), type(u""))
-
     def test_utf8_content(self):
         s1a = 'unaccented text for testing'
-        s1b = QtCore.QString(s1a)
-        s1c = b'unaccented text for testing'
+        s1b = b'unaccented text for testing'
         s1u = u'unaccented text for testing'
 
         s2a = 'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
-        s2b = QtCore.QString(s2a)
         s2u = u'ȧƈƈḗƞŧḗḓ ŧḗẋŧ ƒǿř ŧḗşŧīƞɠ'
 
         # test content:
         self.assertEqual(utf8(s1a), s1u)
         self.assertEqual(utf8(s1b), s1u)
-        self.assertEqual(utf8(s1c), s1u)
         self.assertEqual(utf8(s2a), s2u)
-        self.assertEqual(utf8(s2b), s2u)
 
 
 provided_tests = [TestUnicodeModuleMethods]

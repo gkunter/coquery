@@ -2,20 +2,19 @@
 """
 mysql_guide.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-
 import sys
+from PyQt5 import QtCore, QtWidgets
 
 from coquery import options
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
-from .ui.mysql_guideUi import Ui_mysql_guide
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui.ui.mysql_guideUi import Ui_mysql_guide
+
 
 class MySqlGuide(QtWidgets.QWizard):
     def __init__(self, parent=None):

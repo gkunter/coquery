@@ -2,19 +2,16 @@
 """
 addfilter.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets
 
 from coquery import options
-from .pyqt_compat import QtCore, QtWidgets
-from .ui.filterDialogUi import Ui_FilterDialog
+from coquery.gui.ui.filterDialogUi import Ui_FilterDialog
 
 
 class FilterDialog(QtWidgets.QDialog):

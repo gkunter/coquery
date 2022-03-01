@@ -2,21 +2,21 @@
 """
 grouptree.py is part of Coquery.
 
-Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSignal
 
 from coquery.managers import Group
-
-from .pyqt_compat import QtWidgets, QtCore, get_toplevel_window
-from .ui.groupWidgetUi import Ui_GroupWidget
-from .editfilters import format_filter
-from .groups import GroupDialog
+from coquery.gui.editfilters import format_filter
+from coquery.gui.groups import GroupDialog
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui.ui.groupWidgetUi import Ui_GroupWidget
 
 
 class CoqGroupTreeItem(QtWidgets.QTreeWidgetItem):
@@ -72,9 +72,9 @@ class CoqGroupTreeItem(QtWidgets.QTreeWidgetItem):
 
 
 class CoqGroupTree(QtWidgets.QWidget):
-    groupAdded = QtCore.Signal(object)
-    groupRemoved = QtCore.Signal(object)
-    groupModified = QtCore.Signal(object)
+    groupAdded = pyqtSignal(object)
+    groupRemoved = pyqtSignal(object)
+    groupModified = pyqtSignal(object)
 
     def __init__(self, *args, **kwargs):
         CoqGroupTree.group_label = "{} {{}}".format(

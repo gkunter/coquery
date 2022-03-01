@@ -2,7 +2,7 @@
 """
 csvoptions.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,7 +13,7 @@ import codecs
 import os
 import re
 import pandas as pd
-import logging
+from PyQt5 import QtWidgets, QtGui, QtCore
 
 from coquery import options
 from coquery.options import CSVOptions
@@ -21,9 +21,8 @@ from coquery.unicode import utf8
 from coquery.defines import (msg_csv_encoding_error,
                              msg_csv_file_error,
                              CHARACTER_ENCODINGS)
-from .pyqt_compat import QtWidgets, QtGui, QtCore
-from .ui.csvOptionsUi import Ui_FileOptions
-from .app import get_icon
+from coquery.gui.app import get_icon
+from coquery.gui.ui.csvOptionsUi import Ui_FileOptions
 
 
 class MyTableModel(QtCore.QAbstractTableModel):
@@ -271,7 +270,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
                         nrows=nrows,
                         error_bad_lines=False,
                         encoding=encoding)
-            except (ValueError, pd.parser.CParserError) as e:
+            except (ValueError, pd.errors.ParserError) as e:
                 # this is most likely due to an encoding error.
 
                 if not hasattr(self, "_last_encoding"):
@@ -305,7 +304,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
                                 nrows=100,
                                 error_bad_lines=False,
                                 encoding=encoding)
-                    except (ValueError, pd.parser.CParserError) as e:
+                    except (ValueError, pd.errors.ParserError) as e:
                         # the table could still not be read. Raise an error.
                         QtWidgets.QMessageBox.critical(
                             self.parent(), "Query file error",

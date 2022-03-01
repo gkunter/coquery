@@ -2,7 +2,7 @@
 """
 stopwords.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,6 +12,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import codecs
 import pandas as pd
 import os
+from PyQt5 import QtCore, QtWidgets, QtGui
 
 from coquery import options
 from coquery.defines import (msg_clear_stopwords, msg_disk_error,
@@ -19,9 +20,8 @@ from coquery.defines import (msg_clear_stopwords, msg_disk_error,
 from coquery.general import (is_language_code, language_by_code,
                              code_by_language)
 from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, QtGui
-from .ui.stopwordsUi import Ui_Stopwords
-from .app import get_icon
+from coquery.gui.app import get_icon
+from coquery.gui.ui.stopwordsUi import Ui_Stopwords
 
 
 class CoqStopWord(QtWidgets.QListWidgetItem):

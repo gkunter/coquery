@@ -2,19 +2,18 @@
 """
 cite.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets
 
 from coquery import __version__, DATE
-from .pyqt_compat import QtCore, QtWidgets
-from .ui.citeUi import Ui_CiteDialog
-from .widgets.coqwidgetfader import CoqWidgetFader
+from coquery.gui.ui.citeUi import Ui_CiteDialog
+from coquery.gui.widgets.coqwidgetfader import CoqWidgetFader
 
 
 class CiteDialog(QtWidgets.QDialog):
@@ -25,6 +24,8 @@ class CiteDialog(QtWidgets.QDialog):
         super(CiteDialog, self).__init__(parent)
         self.ui = Ui_CiteDialog()
         self.ui.setupUi(self)
+        self._widget = None
+        self.mime = None
 
         year = DATE.split(",")[-1].strip()
 
@@ -53,7 +54,6 @@ class CiteDialog(QtWidgets.QDialog):
         if event.type() == QtCore.QEvent.FocusIn:
             # select text in new widget
             self.last_select = widget
-            cursor = widget.textCursor()
             widget.selectAll()
             widget.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
             selected = bytes(widget.toPlainText() + "\n", "utf-8")

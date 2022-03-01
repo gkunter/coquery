@@ -2,16 +2,17 @@
 """
 groups.py is part of Coquery.
 
-Copyright (c) 2017-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import division
-
 import re
+
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSignal
 
 from coquery.defines import FUNCTION_DESC
 from coquery.unicode import utf8
@@ -37,9 +38,9 @@ from coquery.functions import (
                     StandardizedTypeTokenRatio, StandardizedTypeTokenRatio250,
                     CorpusSize, SubcorpusSize)
 
-from .pyqt_compat import QtWidgets, QtGui, QtCore, get_toplevel_window
-from .listselect import SelectionDialog
-from .ui import groupFunctionWidgetUi
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui.listselect import SelectionDialog
+from coquery.gui.ui import groupFunctionWidgetUi
 
 
 class GroupFunctionWidget(QtWidgets.QWidget):
@@ -48,9 +49,9 @@ class GroupFunctionWidget(QtWidgets.QWidget):
 
     It stores a check state, a function class type, and a list of columns.
     """
-    dataChanged = QtCore.Signal()
-    columnsClicked = QtCore.Signal()
-    lostFocus = QtCore.Signal()
+    dataChanged = pyqtSignal()
+    columnsClicked = pyqtSignal()
+    lostFocus = pyqtSignal()
 
     def __init__(self, cls, *args, **kwargs):
         super(GroupFunctionWidget, self).__init__(*args, **kwargs)

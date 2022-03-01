@@ -2,17 +2,16 @@
 """
 linkedlists.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSignal
 
-from __future__ import unicode_literals
-
-from .pyqt_compat import QtCore, QtWidgets, QtGui
-from .ui import coqLinkedListsUi
+from coquery.gui.ui import coqLinkedListsUi
 
 
 class CoqLinkedLists(QtWidgets.QAbstractItemView):
@@ -20,8 +19,8 @@ class CoqLinkedLists(QtWidgets.QAbstractItemView):
     A QWidget that presents two hierarchical lists. The entries in the left
     list represent the higher order of the entries in the right list.
     """
-    itemSelectionChanged = QtCore.Signal()
-    currentItemChanged = QtCore.Signal(object)
+    itemSelectionChanged = pyqtSignal()
+    currentItemChanged = pyqtSignal(object)
 
     def __init__(self, *args, **kwargs):
         super(CoqLinkedLists, self).__init__(*args, **kwargs)
@@ -97,71 +96,3 @@ class CoqLinkedLists(QtWidgets.QAbstractItemView):
         if ev.type() == ev.UpdateRequest:
             self.ui.list_functions.update()
         return super(CoqLinkedLists, self).event(ev, *args, **kwargs)
-
-
-def main():
-    import sys
-    from .groups import GroupFunctionDelegate
-
-    from ..functions import (
-                        Min, Max, Mean, Median, StandardDeviation,
-                        InterquartileRange,
-                        Freq, FreqNorm,
-                        FreqPTW, FreqPMW,
-                        ReferenceCorpusSize,
-                        ReferenceCorpusFrequency,
-                        ReferenceCorpusFrequencyPTW,
-                        ReferenceCorpusFrequencyPMW,
-                        ReferenceCorpusLLKeyness,
-                        ReferenceCorpusDiffKeyness,
-                        Tokens, Types,
-                        TypeTokenRatio,
-                        CorpusSize, SubcorpusSize)
-
-    x = (("Corpus", [CorpusSize, SubcorpusSize]),
-         ("Distribution", [
-             Freq, FreqNorm, FreqPTW, FreqPMW,
-             Tokens, Types, TypeTokenRatio]),
-         ("Statistics", [
-             Min, Max, Mean, Median, StandardDeviation,
-             InterquartileRange]),
-         ("Reference corpus", [
-             ReferenceCorpusSize,
-             ReferenceCorpusFrequency,
-             ReferenceCorpusFrequencyPTW,
-             ReferenceCorpusFrequencyPMW,
-             ReferenceCorpusDiffKeyness,
-             ReferenceCorpusLLKeyness]),
-         )
-
-    app = QtWidgets.QApplication(sys.argv)
-
-    l = CoqLinkedLists()
-    l.setEditTriggers(l.CurrentChanged)
-    l.setAlternatingRowColors(True)
-    delegate = GroupFunctionDelegate()
-    l.setListDelegate(delegate)
-
-    for grp, lst in x:
-        group_item = QtWidgets.QListWidgetItem(grp)
-        function_items = []
-        for fnc in lst:
-            list_item = QtGui.QStandardItem(str(fnc))
-            list_item.setData([fnc, ["abcdefg"] * 10, [], False],
-                              QtCore.Qt.UserRole)
-            function_items.append(list_item)
-
-        l.addList(group_item, function_items)
-
-    l.show()
-    app.exec_()
-
-    for i in range(l.listCount()):
-        sublist = l.list_(i)
-        for row in range(sublist.rowCount()):
-            item = sublist.item(row, 0)
-            print(item.data(QtCore.Qt.UserRole))
-
-
-if __name__ == "__main__":
-    main()
