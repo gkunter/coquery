@@ -10,6 +10,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import re
+import pandas as pd
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import pyqtSignal
 
@@ -103,11 +104,6 @@ class CoqColumnMenu(QtWidgets.QMenu):
         manager = managers.get_manager(options.cfg.MODE, session.Resource.name)
 
         suffix = "s" if len(columns) > 1 else ""
-        all_columns_visible = all(
-            [x not in manager.hidden_columns for x in columns])
-        some_columns_visible = not all(
-            [x in manager.hidden_columns for x in columns])
-
         self.add_header(columns)
 
         column_properties = QtWidgets.QAction("&Properties...", parent)
@@ -166,14 +162,15 @@ class CoqColumnMenu(QtWidgets.QMenu):
         # add sorting actions, but only if only one column is selected
         if len(columns) == 1:
             column = columns[0]
-            group = QtWidgets.QActionGroup(self, exclusive=True)
+            group = QtWidgets.QActionGroup(self)
+            group.setExclusive(True)
 
-            sort_none = group.addAction(QtWidgets.QAction(
-                "Do not sort", self, checkable=True))
-            sort_asc = group.addAction(QtWidgets.QAction(
-                "&Ascending", self, checkable=True))
-            sort_desc = group.addAction(QtWidgets.QAction(
-                "&Descending", self, checkable=True))
+            sort_none = group.addAction(
+                QtWidgets.QAction("Do not sort", self, checkable=True))
+            sort_asc = group.addAction(
+                QtWidgets.QAction("&Ascending", self, checkable=True))
+            sort_desc = group.addAction(
+                QtWidgets.QAction("&Descending", self, checkable=True))
             sort_asc.setIcon(parent.get_icon("Ascending Sorting"))
             sort_desc.setIcon(parent.get_icon("Descending Sorting"))
 
@@ -184,11 +181,14 @@ class CoqColumnMenu(QtWidgets.QMenu):
                     lambda: self.changeSortingRequested.emit(data))
                 self.addAction(action)
 
-            if parent.table_model.content[[column]].dtypes[0] == "object":
-                sort_asc_rev = group.addAction(QtWidgets.QAction(
-                    "&Ascending, reverse", self, checkable=True))
-                sort_desc_rev = group.addAction(QtWidgets.QAction(
-                    "&Descending, reverse", self, checkable=True))
+            dtype = parent.table_model.content[[column]].dtypes[0]
+            if pd.api.types.is_string_dtype(dtype):
+                sort_asc_rev = group.addAction(
+                    QtWidgets.QAction("&Ascending, reverse",
+                                      self, checkable=True))
+                sort_desc_rev = group.addAction(
+                    QtWidgets.QAction("&Descending, reverse",
+                                      self, checkable=True))
                 sort_asc_rev.setIcon(
                     parent.get_icon("Ascending Reverse Sorting"))
                 sort_desc_rev.setIcon(

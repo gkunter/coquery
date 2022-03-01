@@ -12,6 +12,8 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import pyqtSignal
 
+from typing import Tuple
+
 from coquery.unicode import utf8
 from coquery.gui.pyqt_compat import get_toplevel_window
 
@@ -308,7 +310,7 @@ class SelectionDialog(QtWidgets.QDialog):
         super(SelectionDialog, self).exec_()
 
     @staticmethod
-    def show(*args, **kwargs):
+    def show(*args, **kwargs) -> Tuple[list, list]:
         dialog = SelectionDialog(*args, **kwargs)
         dialog.exec_()
         selected = [x.data(QtCore.Qt.UserRole)

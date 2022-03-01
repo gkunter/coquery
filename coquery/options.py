@@ -457,16 +457,14 @@ class Options(object):
                         connection_dict[number][variable] = int(value)
                     except ValueError:
                         continue
-                elif variable in {"name", "host", "type", "user", "password",
-                                  "path"}:
+                elif variable in {"name", "host", "user", "password", "path",
+                                  "type"}:
+                    if variable == "type":
+                        variable = "dbtype"
                     connection_dict[number][variable] = value
 
-                    # for backward compatibility:
-                    if variable == "type":
-                        connection_dict[number]["dbtype"] = value
-
-        for i in connection_dict:
-            connection = get_connection(**connection_dict[i])
+        for dct in connection_dict.values():
+            connection = get_connection(**dct)
             self.args.connections[connection.name] = connection
 
         # select active SQL configuration, or use Default as fallback

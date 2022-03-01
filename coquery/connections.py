@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import glob
+
 import sqlalchemy
 import imp
 import logging
@@ -62,7 +63,7 @@ class Connection(CoqObject):
                 try:
                     tup = (module.Resource, module.Corpus, module_name)
                     self._resources[module.Resource.name] = tup
-                except AttributeError as e:
+                except AttributeError:
                     full_path = module_name
                     s = "{} does not appear to be a valid corpus module."
                     logging.warning(s.format(full_path))
@@ -128,10 +129,10 @@ class Connection(CoqObject):
     def get_engine(self, database=None):
         try:
             return sqlalchemy.create_engine(self.url(database))
-        except (ModuleNotFoundError):
+        except ModuleNotFoundError:
             return None
 
-    def url(self, database=None):
+    def url(self, db_name=None):
         return None
 
     def __repr__(self):
@@ -161,7 +162,7 @@ class MySQLConnection(Connection):
         port : int
             The port that the MySQL server listens to
         user : str
-            The user name that will be used to authenticate the MySQL
+            The username that will be used to authenticate the MySQL
             connection
         password : str
             The password that will be used to authenticate the MySQL
@@ -172,7 +173,10 @@ class MySQLConnection(Connection):
             Default: ["charset=utf8mb4", "local_infile=1"]
         """
         super(MySQLConnection, self).__init__(name, SQL_MYSQL)
-        if (host is None or port is None or user is None or password is None):
+        if (host is None or
+                port is None
+                or user is None or
+                password is None):
             raise TypeError
         self.host = host or "127.0.0.1"
         self.port = port
@@ -188,16 +192,16 @@ class MySQLConnection(Connection):
         else:
             self.enabled = True
 
-    def url(self, database=None):
+    def url(self, db_name=None):
         template = ("mysql+pymysql://{user}:{password}@{host}:{port}"
                     "{database}{params}")
         kwargs = dict(self.__dict__)
 
-        if database:
-            kwargs["database"] = "/{}".format(database)
+        if db_name:
+            kwargs["database"] = "/{}".format(db_name)
         else:
             kwargs["database"] = ""
-        if database and self.params:
+        if db_name and self.params:
             kwargs["params"] = "?{}".format("&".join(self.params))
         else:
             kwargs["params"] = ""
@@ -224,27 +228,27 @@ class MySQLConnection(Connection):
 
     def create_database(self, db_name):
         engine = self.get_engine()
-        S = """
+        sql_str = """
             CREATE DATABASE {}
             CHARACTER SET utf8mb4
             COLLATE utf8mb4_unicode_ci
             """.format(db_name.split()[0])
         with engine.connect() as connection:
-            connection.execute(S)
+            connection.execute(sql_str)
         engine.dispose()
 
     def remove_database(self, db_name):
         engine = self.get_engine(db_name)
-        S = "DROP DATABASE {}".format(db_name)
+        sql_template = f"DROP DATABASE {db_name}"
         with engine.connect() as connection:
-            connection.execute(S)
+            connection.execute(sql_template)
         engine.dispose()
 
     def has_database(self, db_name):
         engine = self.get_engine(db_name)
         try:
             engine.connect()
-        except sqlalchemy.exc.OperationalError as e:
+        except sqlalchemy.exc.OperationalError:
             db_exists = False
         else:
             db_exists = True
@@ -254,12 +258,12 @@ class MySQLConnection(Connection):
 
     def get_database_size(self, db_name):
         engine = self.get_engine(db_name)
-        S = """
+        sql_template = """
             SELECT data_length+index_length
             FROM information_schema.tables
             WHERE table_schema = '{}'""".format(db_name)
         with engine.connect() as connection:
-            size = connection.execute(S).fetchone()[0]
+            size = connection.execute(sql_template).fetchone()[0]
         engine.dispose()
         return size
 
@@ -268,13 +272,14 @@ class MySQLConnection(Connection):
         Checks if the user specified by the argument exists on the current
         host.
 
-        This method assumes that the user account for which the connection has been created is privileged to query the currently existing users.
+        This method assumes that the user account for which the connection has
+        been created is privileged to query the currently existing users.
         """
-        QUERY_USERS = "SELECT User, Host from mysql.user"
+        sql_template = "SELECT User, Host from mysql.user"
 
         engine = self.get_engine()
         with engine.connect() as connection:
-            results = connection.execute(QUERY_USERS)
+            results = connection.execute(sql_template)
         engine.dispose()
 
         local_hosts = ["127.0.0.1", "localhost"]
@@ -284,7 +289,6 @@ class MySQLConnection(Connection):
         else:
             hosts = [self.host]
 
-
         for existing_user, host in results:
             if user == existing_user and host in hosts:
                 return True
@@ -292,44 +296,34 @@ class MySQLConnection(Connection):
             return False
 
     def create_user(self, user, pwd):
-        NEW_USER = "CREATE USER {user}@{host} IDENTIFIED BY {pwd}"
-        GRANT_PRIV = "GRANT ALL PRIVILEGES ON * . * TO {user}@{host}"
-        FLUSH_PRIV = "FLUSH PRIVILEGES"
+        sql_new_user = f"CREATE USER {user}@{self.host} IDENTIFIED BY {pwd}"
+        sql_privileges = f"GRANT ALL PRIVILEGES ON * . * TO {user}@{self.host}"
+        sql_flush = "FLUSH PRIVILEGES"
 
         engine = self.get_engine()
         try:
             with engine.connect() as connection:
-                connection.execute(
-                    NEW_USER.format(
-                        user="'{}'".format(user),
-                        host="'{}'".format(self.host),
-                        pwd="'{}'".format(pwd)))
+                connection.execute(sql_new_user)
 
             # now that the user has been created, grant it all privileges
             # it needs:
             try:
                 with engine.connect() as connection:
-                    connection.execute(
-                        GRANT_PRIV.format(
-                            user="'{}'".format(user),
-                            host="'{}'".format(self.host)))
-                    connection.execute(FLUSH_PRIV)
+                    connection.execute(sql_privileges)
+                    connection.execute(sql_flush)
             except Exception as e:
                 self.drop_user(user)
-                raise RuntimeError("User not created:\n{}".format(str(e)))
+                raise RuntimeError(f"User not created:\n{str(e)}")
         finally:
             engine.dispose()
 
     def drop_user(self, user):
-        REMOVE_USER = "DROP USER {user}@{host}"
+        sql_remove_user = f"DROP USER '{user}'@'{self.host}'"
 
         engine = self.get_engine()
         try:
             with engine.connect() as connection:
-                connection.execute(
-                    REMOVE_USER.format(
-                        user="'{}'".format(user),
-                        host="'{}'".format(self.host)))
+                connection.execute(sql_remove_user)
         finally:
             engine.dispose()
 
@@ -360,7 +354,7 @@ class SQLiteConnection(Connection):
     def db_path(self, db_name):
         return os.path.join(self.path, "{}.db".format(db_name))
 
-    def url(self, db_name):
+    def url(self, db_name=None):
         template = "sqlite+pysqlite:///{path}"
         return template.format(path=self.db_path(db_name))
 
@@ -383,9 +377,9 @@ class SQLiteConnection(Connection):
         return os.path.getsize(self.db_path(db_name))
 
 
-def get_connection(name, dbtype,
+def get_connection(name, dbtype=None,
                    host=None, port=None, user=None, password=None,
-                   path=None, **kwargs):
+                   path=None):
     """
     Returns a valid connection based on the dbtype.
 

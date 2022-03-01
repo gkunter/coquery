@@ -19,40 +19,6 @@ from coquery.gui.pyqt_compat import tr
 from coquery import options
 
 
-def _annotate_heatmap(self, ax, mesh):
-    """
-    This function monkey-patches an issue with annotations in heatmaps in
-    seaborn versions earlier than 0.7.0.
-    """
-    import colorsys
-
-    """Add textual labels with the value in each cell."""
-    try:
-
-        mesh.update_scalarmappable()
-        height, width = self.annot_data.shape
-        xpos, ypos = np.meshgrid(np.arange(width) + 0.5,
-                                 np.arange(height) + 0.5)
-        for x, y, m, color, val in zip(xpos.flat, ypos.flat,
-                                       mesh.get_array(),
-                                       mesh.get_facecolors(),
-                                       self.annot_data.flat):
-            if m is not np.ma.masked:
-                _, l, _ = colorsys.rgb_to_hls(*color[:3])
-                text_color = ".15" if l > .408 else "w"
-                annotation = ("{:" + self.fmt + "}").format(val)
-                text_kwargs = dict(color=text_color, ha="center", va="center")
-                text_kwargs.update(self.annot_kws)
-                ax.text(x, y, annotation, **text_kwargs)
-    except Exception as e:
-        print(e)
-        raise e
-
-
-if sns.__version__ < "0.7.0" or True:
-    sns.matrix._HeatMapper._annotate_heatmap = _annotate_heatmap
-
-
 class Heatmap(vis.Visualizer):
     name = "Heatmap"
     icon = "Heatmap"
@@ -140,15 +106,15 @@ class Heatmap(vis.Visualizer):
         ix = int(self.combo_normalize.currentIndex())
         self.normalization = self.NORMALIZATIONS[ix]
 
-    def plot_facet(self, data, color, **kwargs):
-        def get_crosstab(data, row_fact, col_fact, row_names, col_names):
-            ct = pd.crosstab(data[row_fact], data[col_fact])
-            ct = ct.reindex(row_names, axis="index")
-            ct = ct.reindex(col_names, axis="columns")
-            if self.fill is not None:
-                ct = ct.fillna(self.fill)
-            return ct
+    def get_crosstab(self, data, row_fact, col_fact, row_names, col_names):
+        ct = pd.crosstab(data[row_fact], data[col_fact])
+        ct = ct.reindex(row_names, axis="index")
+        ct = ct.reindex(col_names, axis="columns")
+        if self.fill is not None:
+            ct = ct.fillna(self.fill)
+        return ct
 
+    def plot_facet(self, data, color, **kwargs):
         x = kwargs.get("x")
         y = kwargs.get("y")
         z = kwargs.get("z")
@@ -170,7 +136,7 @@ class Heatmap(vis.Visualizer):
                 levels_y = levels_z
             else:
                 numeric = z
-            ct = (data[[x, y, numeric]].groupby([x, y])
+            ct = (data[[x, y, numeric]].groupby([x, y], dropna=False)
                                        .agg("mean")
                                        .reset_index()
                                        .pivot(x, y, numeric)
@@ -182,7 +148,6 @@ class Heatmap(vis.Visualizer):
 
         elif param_count == 2:
             numeric = None
-            cat = []
             if x:
                 if data[x].dtype in (int, float):
                     numeric = x
@@ -197,14 +162,14 @@ class Heatmap(vis.Visualizer):
                     z = None
             if numeric:
                 cat = [fact for fact in [x, y, z] if fact][0]
-                ct = (data[[cat, numeric]].groupby(cat)
+                ct = (data[[cat, numeric]].groupby(cat, dropna=False)
                                           .agg("mean"))
                 if cat == x or cat == z:
                     ct = ct.reindex(levels_x).T
                 else:
                     ct = ct.reindex(levels_y)
             else:
-                ct = get_crosstab(data, x, y, levels_x, levels_y).T
+                ct = self.get_crosstab(data, x, y, levels_x, levels_y).T
             self._xlab = x
             self._ylab = y
         elif x:
@@ -213,7 +178,7 @@ class Heatmap(vis.Visualizer):
             ct = ct.reindex(levels_x, axis=1)
             self._xlab = x
             self._ylab = "Frequency"
-        elif y:
+        else:
             ct = pd.crosstab(pd.Series([""] * len(data[y]), name=""),
                              data[y]).T
             ct = ct.reindex(levels_y, axis=0)
@@ -274,6 +239,10 @@ class Heatmap(vis.Visualizer):
                     cmap=cmap,
                     fmt=fmt,
                     linewidths=1)
+
+    def set_titles(self):
+        self._xlab = self.x or ""
+        self._ylab = self.y or ""
 
     @staticmethod
     def validate_data(data_x, data_y, data_z, df, session):

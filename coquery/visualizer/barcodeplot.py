@@ -67,20 +67,20 @@ class BarcodePlot(vis.Visualizer):
 
     def prepare_arguments(self, data, x, y, z, levels_x, levels_y, **kwargs):
         if x or y:
-            levels = levels_x if x else levels_y[::-1]
-            val = data[x or y].apply(lambda val: levels.index(val))
+            levels = [lvl for lvl in (levels_x if x else levels_y[::-1])]
+            dct = {val: n for n, val in enumerate(levels)}
+            col = data[x or y]
+            val = col.map(dct)
+
         else:
             # neither x nor y is specified, plot default
             val = pd.Series([0] * len(data), index=data.index)
-            levels = [None]
-
         if self._id_column:
             values = data[self._id_column]
         else:
             values = pd.Series(data.index)
 
         kwargs = {"values": values, "pos": val}
-
         if x and not y:
             kwargs["horizontal"] = True
             kwargs["func"] = plt.hlines
@@ -96,7 +96,6 @@ class BarcodePlot(vis.Visualizer):
             else:
                 kwargs["horizontal"] = True
                 kwargs["func"] = plt.hlines
-
         return kwargs
 
     def prepare_colors(self, data, x, y, z, levels_x, levels_y, **kwargs):
@@ -106,11 +105,13 @@ class BarcodePlot(vis.Visualizer):
             if x:
                 levels = levels_x
                 rgb = self.colorizer.get_hues(levels)
-                cols = data[x].apply(lambda val: rgb[levels.index(val)])
+                dct = dict(zip(levels, rgb))
+                cols = data[x].map(dct)
             elif y:
                 levels = levels_y[::-1]
                 rgb = self.colorizer.get_hues(levels)
-                cols = data[y].apply(lambda val: rgb[levels.index(val)])
+                dct = dict(zip(levels, rgb))
+                cols = data[y].map(dct)
             else:
                 rgb = self.colorizer.get_palette()
                 cols = [rgb[0]] * len(data)
@@ -123,11 +124,11 @@ class BarcodePlot(vis.Visualizer):
         In a barcode plot, each token is represented by a line drawn at the
         location of the corresponding corpus id.
         """
-        params = self.prepare_arguments(data, **kwargs)
+        params = self.prepare_arguments(data.dropna(), **kwargs)
         _func = params["func"]
         self.horizontal = params["horizontal"]
 
-        cols = self.prepare_colors(data, **kwargs)
+        cols = self.prepare_colors(data.dropna(), **kwargs)
 
         if rug:
             if "top" in rug:
@@ -144,7 +145,7 @@ class BarcodePlot(vis.Visualizer):
                   cols)
 
         ax = kwargs.get("ax", plt.gca())
-        ax_kwargs = self.prepare_ax_kwargs(data, **kwargs)
+        ax_kwargs = self.prepare_ax_kwargs(data.dropna(), **kwargs)
         ax.set(**ax_kwargs)
 
     def suggest_legend(self):
@@ -217,7 +218,7 @@ class HeatbarPlot(BarcodePlot):
         normalize_text = tr("HeatbarPlot", "Normalize within groups", None)
 
         self.check_bandwidth = QtWidgets.QCheckBox(bandwidth_text)
-        self.spin_bandwidth = QtWidgets.QSpinBox(self.bandwidth)
+        self.spin_bandwidth = QtWidgets.QSpinBox()
         self.spin_bandwidth.setDisabled(True)
         self.spin_bandwidth.setSuffix(suffix_text)
         self.spin_bandwidth.setMaximum(99999999)
@@ -318,9 +319,9 @@ class HeatbarPlot(BarcodePlot):
             bins[target_bin] += 1.5 - pct_in_bin
 
         if target_bin > 0:
-            bins[target_bin - 1] += max(0, 0.5 - pct_in_bin)
+            bins[target_bin - 1] += max(0.0, 0.5 - pct_in_bin)
         if target_bin < len(bins) - 1:
-            bins[target_bin + 1] += max(0, pct_in_bin - 0.5)
+            bins[target_bin + 1] += max(0.0, pct_in_bin - 0.5)
 
         return bins
 
@@ -340,7 +341,6 @@ class HeatbarPlot(BarcodePlot):
         In addition, the argument `M` is produced, which is a list of arrays
         that contain the image data used by plt.imshow().
         """
-
         kwargs = {"aspect": "auto", "interpolation": "gaussian"}
 
         M = []
@@ -349,6 +349,8 @@ class HeatbarPlot(BarcodePlot):
             num_column = data[self._id_column]
         else:
             num_column = pd.Series(data.index)
+
+        self.horizontal = True
 
         if x or y:
             self.horizontal = bool(x)
@@ -381,6 +383,7 @@ class HeatbarPlot(BarcodePlot):
             kwargs["extent"] = (None, None, 0, width)
 
         kwargs["M"] = np.array(M)
+
         return kwargs
 
     def set_bandwidth(self, bw):
@@ -396,7 +399,6 @@ class HeatbarPlot(BarcodePlot):
         A heatbar plot is like a barcode plot, only that there is also a
         heat map plotted under the lines.
         """
-
         size = self.session.Corpus.get_corpus_size()
         if not self.bandwidth:
             self.set_bandwidth(max(size / 250, 5))
@@ -420,7 +422,7 @@ class HeatbarPlot(BarcodePlot):
                 param["extent"] = (left, right, i, i+1)
                 x = np.array([x])
 
-            plt.imshow(x, vmax=M.max(), **param)
+            plt.imshow(x, vmax=M.max(initial=None), **param)
 
         if self.plot_rug:
             super().plot_facet(data, color, rug=("top", "bottom"), **kwargs)

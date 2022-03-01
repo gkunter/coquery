@@ -164,7 +164,7 @@ class Function(CoqObject):
     def set_label(self, label):
         self._label = label
 
-    def _func(self, series, *args, **kwargs):
+    def _func(self, series, *args, **kwargs) -> pd.Series:
         """
         Defines the function that is applied the columns in the data frame
         that is passed to this function.
@@ -331,9 +331,10 @@ class StringSeriesFunction(StringFunction):
         except KeyError:
             pass
 
+        pat = kwargs.get("pat")
+
         if self.str_func in ("replace", "contains", "extract", "count"):
             # ensure that regex functions use unicode:
-            pat = kwargs["pat"]
             if "(?u)" not in pat:
                 kwargs["pat"] = "(?u){}".format(pat)
 
@@ -403,6 +404,7 @@ class StringMatch(StringSeriesFunction):
 class StringExtract(StringSeriesFunction):
     _name = "EXTRACT"
     str_func = "extract"
+    fill_na = pd.NA
     validate_input = StringFunction.validate_regex
     arguments = {"string": [("pat", "Regular expression:", "")],
                  "check": [("case", "Case-sensitive:", False)]}
@@ -500,7 +502,6 @@ class CalcFunction(NumFunction):
             val = df[self.columns[0]].fillna(np.nan).values
             for x in self.columns[1:]:
                 val = self._func(val, df[x].fillna(np.nan).values)
-                print(123)
             if parameter:
                 try:
                     const = self.coerce_value(df, parameter)
@@ -589,7 +590,7 @@ class Binning(OperatorFunction):
     _description = ("Transforms a number to the bin value given the "
                     "argument")
 
-    def _func(self, val, bw):
+    def _func(self, val, bw, **kwargs):
         return (val // bw) * bw
 
 
@@ -852,43 +853,10 @@ class Freq(BaseFreq):
             val = self.constant(df, len(df))
             return val
 
-        # There is an ugly, ugly bug/feature in Pandas up to at least 0.18.0
-        # which makes grouping unreliable if there are columns with missing
-        # values.
-        # Reference:
-        # https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#na-values-in-groupby
-        # This is considered rather a bug in this Github issue:
-        # https://github.com/pydata/pandas/issues/3729
-
-        # The replacement workaround based on this post:
-        # https://stackoverflow.com/a/18431417
-        #
-        # What the workaround does is this:
-        # 1. Try to find a replacement value that doesn't occur as a valid
-        #    value in the involved columns
-        # 2. Replace the missing values in that column by the replacement value
-        # 3. Calculate the frequencies of each valid value in the selected
-        #    columns
-        # 4. Replace the replacement value by NaN
-
-        replace_dict = {}
-        for x in columns:
-            if df[x].isnull().any():
-                while True:
-                    if df[x].dtype == object:
-                        repl = "".join(np.random.choice(Freq.DUMMY_STR, 20))
-                    elif df[x].dtype == int:
-                        repl = random.randint(-sys.maxsize, +sys.maxsize)
-                    elif df[x].dtype == float:
-                        repl = random.random()
-                    elif df[x].dtype == bool:
-                        raise TypeError
-
-                    if (df[x] != repl).all():
-                        replace_dict[x] = repl
-                        break
-
-                df[x] = df[x].fillna(replace_dict[x])
+        # There was a bug in Pandas prior to 1.1.0 which made grouping
+        # unreliable if there were columns with missing values (see
+        # issue #3729, https://github.com/pandas-dev/pandas/issues/3729).
+        # Since Pandas 1.1.0, groupby() supports the 'dropna' argument to
 
         d = {x: "first"
              for x in [y for y in df.columns.values
@@ -905,9 +873,6 @@ class Freq(BaseFreq):
         val.apply(lambda x: int(x) if x is not None else x)
         if "coquery_invisible_dummy" in df.columns:
             val[df["coquery_invisible_dummy"].isnull()] = 0
-
-        for x in replace_dict:
-            df[x] = df[x].replace(replace_dict[x], np.nan)
 
         return val
 

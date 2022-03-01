@@ -504,6 +504,13 @@ class CoqGroupBox(QtWidgets.QGroupBox):
 
     toggled = pyqtSignal(QtWidgets.QWidget)
 
+    def __init__(self, *args, **kwargs):
+        super(CoqGroupBox, self).__init__(*args, **kwargs)
+        self._text = ""
+        self._alternative = None
+        self.clicked.connect(self.setChecked)
+        self.setStyleSheet(self.style_opened)
+
     def set_style(self, **kwargs):
         if self.isChecked():
             s = self.style_opened
@@ -533,13 +540,6 @@ class CoqGroupBox(QtWidgets.QGroupBox):
                      focus=palette.color(QtGui.QPalette.Highlight).name(),
                      **kwargs)
         self.setStyleSheet(s)
-
-    def __init__(self, *args, **kwargs):
-        super(CoqGroupBox, self).__init__(*args, **kwargs)
-        self._text = ""
-        self._alternative = None
-        self.clicked.connect(self.setChecked)
-        self.setStyleSheet(self.style_opened)
 
     def setTitle(self, text, *args, **kwargs):
         super(CoqGroupBox, self).setTitle(text, *args, **kwargs)

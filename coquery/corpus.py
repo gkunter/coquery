@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -36,7 +36,7 @@ from . import options
 from .links import get_by_hash
 
 
-class LexiconClass():
+class LexiconClass:
     pass
 
 
@@ -74,7 +74,7 @@ class BaseResource(CoqObject):
         return "en"
 
     @classmethod
-    def format_resource_feature(cls, rc_feature, N):
+    def format_resource_feature(cls, rc_feature, n):
         """
         Return a list of formatted feature labels as they occur in the query
         table as headers.
@@ -90,7 +90,7 @@ class BaseResource(CoqObject):
         ----------
         rc_feature : str
             The name of the resource feature
-        N : int
+        n : int
             The maximum number of query items
 
         Returns
@@ -101,7 +101,7 @@ class BaseResource(CoqObject):
         # special case for "coquery_query_token", which receives numbers like
         # a query item resource:
         if rc_feature == "coquery_query_token":
-            return ["coquery_query_token_{}".format(x + 1) for x in range(N)]
+            return ["coquery_query_token_{}".format(x + 1) for x in range(n)]
 
         # handle resources from one of the special tables:
         if rc_feature.startswith(tuple(cls.special_table_list)):
@@ -112,13 +112,13 @@ class BaseResource(CoqObject):
         hashed, table, feature = cls.split_resource_feature(rc_feature)
         if hashed is not None:
             link, res = get_by_hash(hashed)
-            lst = res.format_resource_feature(f"{table}_{feature}", N)
+            lst = res.format_resource_feature(f"{table}_{feature}", n)
             return [f"db_{res.db_name}_{x}" for x in lst]
 
         # handle lexicon features:
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
-            return [f"coq_{rc_feature}_{x+1}" for x in range(N)]
+            return [f"coq_{rc_feature}_{x+1}" for x in range(n)]
         # handle remaining features
         else:
             return [f"coq_{rc_feature}_1"]
@@ -668,7 +668,6 @@ class SQLResource(BaseResource):
         self._word_cache = {}
         self.corpus = corpus
         self.attach_list = []
-        self._context_string_template = self.get_context_string_template()
         self._sentence_feature = (
             getattr(self, "corpus_sentence", None) or
             getattr(self, "corpus_sentence_id", None) or
@@ -1327,15 +1326,13 @@ class SQLResource(BaseResource):
                 n = n - first_item + 1
 
             if parent == "corpus":
-                sql_template = "{table_alias}.{table_id} = {parent_id}{N}"
                 where_str = f"{table_alias}.{table_id} = {parent_id}{n+1}"
             else:
-                sql_template = ("{table_alias}.{table_id} = "
-                                "COQ_{parent}_{N}.{parent_id}")
                 where_str = (f"{table_alias}.{table_id} = "
                              f"COQ_{parent.upper()}_{n+1}.{parent_id}")
 
-            table_str = f"INNER JOIN {table_str} ON {where_str}"
+            join_type = getattr(cls, "join_type", "INNER")
+            table_str = f"{join_type} JOIN {table_str} ON {where_str}"
             return [table_str], []
 
         def add_joins(n, parent, tup):

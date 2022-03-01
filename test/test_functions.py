@@ -812,19 +812,29 @@ class TestStringFunctions(FncTestCase):
                            "b": [""] * 10 + ["yyannxzzz"] * 5})
         func = StringExtract(columns=["a"], pat="(a).*(x)")
         val = FunctionList([func]).lapply(df, session=None)
-        self.assertListEqual(
-            val.iloc[:, -2].values.ravel().tolist(), ["a"] * 5 + [""] * 10)
-        self.assertListEqual(
-            val.iloc[:, -1].values.ravel().tolist(), ["x"] * 5 + [""] * 10)
+
+        result = val.iloc[:, -2]
+        target = pd.Series(["a"] * 5 + [pd.NA] * 10)
+        self.assertEqual(len(val.iloc[:, -2].compare(target)), 0)
+
+        target = pd.Series(["x"] * 5 + [pd.NA] * 10)
+        self.assertEqual(len(val.iloc[:, -1].compare(target)), 0)
 
     def test_extract_groups_and_compare(self):
-        df = pd.DataFrame({"word": ["win-win", "self-destruct"]})
+        df = pd.DataFrame({"word": ["win-win",
+                                    "lose-win",
+                                    "self-destruct",
+                                    "abcde"]})
 
         func1 = StringExtract(columns=["word"], pat="(.*)-(.*)")
         df = FunctionList([func1]).lapply(df, session=None)
         func2 = Equal(columns=df.columns[-2:])
         val = FunctionList([func2]).lapply(df, session=None)
-        self.skipTest("Test not implemented")
+        pd.testing.assert_series_equal(
+            val[func2.get_id()],
+            pd.Series([True, False, False, False]),
+            check_names=False,
+            check_dtype=False)
 
     def test_extract_with_illegal_regexp(self):
         """
@@ -1326,6 +1336,7 @@ class TestLogicalFunctions(FncTestCase):
                       **kwargs):
         func = func_class(columns=columns, value=value, **kwargs)
         result = FunctionList([func]).lapply(df, session=None)
+        val = result[func.get_id()]
         pd.testing.assert_series_equal(
             result[func.get_id()],
             pd.Series(expected),
@@ -1344,9 +1355,21 @@ class TestLogicalFunctions(FncTestCase):
         func = Equal
         self.assert_result(func, self.df, columns, expected, value=2)
 
-    def test_equal_none(self):
+    def test_equal_one_has_na(self):
         columns = ["column_1", "column_3"]
         expected = [True, False, True, False, False, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_equal_both_have_na1(self):
+        columns = ["column_3", "column_3"]
+        expected = [True, False, True, False, True, False]
+        func = Equal
+        self.assert_result(func, self.df, columns, expected)
+
+    def test_equal_both_have_na2(self):
+        columns = ["column_6", "column_3"]
+        expected = [False, False, False, False, False, False]
         func = Equal
         self.assert_result(func, self.df, columns, expected)
 
