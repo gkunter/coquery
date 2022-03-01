@@ -2,26 +2,29 @@
 """
 addfunction.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSignal
+
+import pandas as pd
 
 from coquery import options
 from coquery import functions
 from coquery.defines import FUNCTION_DESC
 from coquery.unicode import utf8
-from .classes import CoqFloatEdit, CoqIntEdit
-from .pyqt_compat import QtCore, QtWidgets, QtGui, get_toplevel_window
-from .listselect import SelectionDialog
+from coquery.gui.classes import CoqFloatEdit, CoqIntEdit
+from coquery.gui.listselect import SelectionDialog
+from coquery.gui.pyqt_compat import get_toplevel_window
 
 
 class Argument(QtWidgets.QWidget):
-    valueChanged = QtCore.Signal()
+    valueChanged = pyqtSignal()
 
     def __init__(self, wtype, tup, parent):
         super(Argument, self).__init__(parent=parent)
@@ -90,7 +93,7 @@ class Argument(QtWidgets.QWidget):
 
 
 class FunctionWidget(QtWidgets.QWidget):
-    argumentsChanged = QtCore.Signal()
+    argumentsChanged = pyqtSignal()
 
     def __init__(self, func, checkable=True, is_checked=False,
                  *args, **kwargs):
@@ -167,7 +170,7 @@ class FunctionWidget(QtWidgets.QWidget):
 
     def checkState(self, *args, **kwargs):
         if self.checkable:
-            return self.checkbox.checkState(*args, **kwargs)
+            return self.checkbox.checkState()
         else:
             return False
 
@@ -215,7 +218,7 @@ class FunctionWidget(QtWidgets.QWidget):
 
 
 class FunctionList(QtWidgets.QListWidget):
-    contentChanged = QtCore.Signal()
+    contentChanged = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(FunctionList, self).__init__(*args, **kwargs)
@@ -361,14 +364,18 @@ class FunctionDialog(QtWidgets.QDialog):
                     self.ui.list_functions.setCurrentItem(item)
 
     def get_function_groups(self):
-        if all([x == object for x in self.df[self.columns].dtypes]):
+        # check if ALL selected columns are strings:
+        if all([pd.api.types.is_string_dtype(x)
+                for x in self.df[self.columns].dtypes]):
             function_groups = (functions.StringFunction,
                                functions.Comparison,
                                functions.BaseProportion,
                                functions.BaseFreq,
                                functions.LogicFunction,
                                functions.ConversionFunction)
-        elif all([x != object for x in self.df[self.columns].dtypes]):
+        # check if NONE of the selected columns is string:
+        elif all([not pd.api.types.is_string_dtype(x)
+                  for x in self.df[self.columns].dtypes]):
             function_groups = (functions.OperatorFunction,
                                functions.StatisticalFunction,
                                functions.Comparison,
@@ -412,7 +419,7 @@ class FunctionDialog(QtWidgets.QDialog):
 
             fun_list = []
             for fun in all_functions:
-                if (issubclass(fun, fun_class) and fun != fun_class):
+                if issubclass(fun, fun_class) and fun != fun_class:
                     fun_list.append(fun)
 
             self.available_functions[i] = sorted(fun_list,
@@ -457,7 +464,7 @@ class FunctionDialog(QtWidgets.QDialog):
         if result == QtWidgets.QDialog.Accepted:
             func, values = self.get_function_values()
             columns = self.columns
-            return (func, columns, values)
+            return func, columns, values
         else:
             return None
 

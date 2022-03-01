@@ -2,29 +2,24 @@
 """
 visualizer.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import math
 import collections
 import logging
+
+from PyQt5 import QtCore
 
 import scipy.stats as st
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-from coquery.gui.pyqt_compat import QtCore
-from coquery.defines import PALETTE_BW
 
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByNum)
@@ -57,9 +52,9 @@ class Aggregator(QtCore.QObject):
         # aggregation samples the first ID
         if self._id_column not in df.columns:
             if self._id_column in self._aggs_dict:
-                self._aggs_dict.remove(self._id_column)
+                self._aggs_dict.pop(self._id_column)
             if self._id_column in self._names_dict:
-                self._names_dict.remove(self._id_column)
+                self._names_dict.pop(self._id_column)
         else:
             self.add(self._id_column, "first")
 

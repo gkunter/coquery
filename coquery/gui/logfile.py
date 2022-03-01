@@ -2,19 +2,17 @@
 """
 logfile.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets
 
 from coquery import options
-from .classes import LogTableModel, LogProxyModel
-from .pyqt_compat import QtCore, QtWidgets
-from .ui.logfileUi import Ui_logfileDialog
+from coquery.gui.classes import LogTableModel, LogProxyModel
+from coquery.gui.ui.logfileUi import Ui_logfileDialog
 
 BUTTON_MAP = {"ERROR": "check_errors",
               "WARNING": "check_warnings",

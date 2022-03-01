@@ -9,9 +9,6 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import print_function
 
 import math
 import hashlib
@@ -237,7 +234,7 @@ class EnglishCollapser(Collapser):
             elif lw.startswith(cls.CONJOINING_PUNCTUATION):
                 sep = ""
                 next_sep = ""
-                if lst[-1] == cls.whitespace:
+                if lst and lst[-1] == cls.whitespace:
                     lst[-1] = ""
 
             # check if the current element ends in an element which may be a
@@ -462,6 +459,7 @@ def get_chunk(iterable, chunk_size=250000):
                 itertools.islice(iterable, chunk_size - 1))
         except StopIteration:
             return
+
 
 def get_directory_size(path):
     total_size = 0

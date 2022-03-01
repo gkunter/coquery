@@ -2,20 +2,18 @@
 """
 colorizer.py is part of Coquery.
 
-Copyright (c) 2018–2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018–2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import division
-from __future__ import unicode_literals
+from PyQt5 import QtCore
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from coquery.gui.pyqt_compat import QtCore
 from coquery.general import pretty, recycle
 from coquery import options
 

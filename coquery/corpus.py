@@ -2,16 +2,12 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
 
 import warnings
 from collections import defaultdict
@@ -40,14 +36,13 @@ from . import options
 from .links import get_by_hash
 
 
-class LexiconClass():
+class LexiconClass:
     pass
 
 
 class BaseResource(CoqObject):
     """
     """
-    # add internal table that can be used to access frequency information:
     coquery_query_string = "Query string"
     coquery_query_token = "Query item"
 
@@ -70,11 +65,16 @@ class BaseResource(CoqObject):
         Return the corpus language as a string.
 
         Defaults to "en" (English).
+
+        Returns
+        -------
+        lang : str
+            The ISO language code.
         """
         return "en"
 
     @classmethod
-    def format_resource_feature(cls, rc_feature, N):
+    def format_resource_feature(cls, rc_feature, n):
         """
         Return a list of formatted feature labels as they occur in the query
         table as headers.
@@ -90,18 +90,18 @@ class BaseResource(CoqObject):
         ----------
         rc_feature : str
             The name of the resource feature
-        N : int
+        n : int
             The maximum number of query items
 
-        Returns:
+        Returns
         --------
-        l : list
+        l : list[str]
             A list of header labels.
         """
         # special case for "coquery_query_token", which receives numbers like
         # a query item resource:
         if rc_feature == "coquery_query_token":
-            return ["coquery_query_token_{}".format(x + 1) for x in range(N)]
+            return ["coquery_query_token_{}".format(x + 1) for x in range(n)]
 
         # handle resources from one of the special tables:
         if rc_feature.startswith(tuple(cls.special_table_list)):
@@ -112,13 +112,13 @@ class BaseResource(CoqObject):
         hashed, table, feature = cls.split_resource_feature(rc_feature)
         if hashed is not None:
             link, res = get_by_hash(hashed)
-            lst = res.format_resource_feature(f"{table}_{feature}", N)
+            lst = res.format_resource_feature(f"{table}_{feature}", n)
             return [f"db_{res.db_name}_{x}" for x in lst]
 
         # handle lexicon features:
         lexicon_features = [x for x, _ in cls.get_lexicon_features()]
         if rc_feature in lexicon_features or cls.is_tokenized(rc_feature):
-            return [f"coq_{rc_feature}_{x+1}" for x in range(N)]
+            return [f"coq_{rc_feature}_{x+1}" for x in range(n)]
         # handle remaining features
         else:
             return [f"coq_{rc_feature}_1"]
@@ -1315,27 +1315,21 @@ class SQLResource(BaseResource):
             Construct a partial SQL table statement that can be used as an
             argument for the feature joins.
             """
-            table_name = getattr(cls, "{}_table".format(table))
-            table_alias = "COQ_{}_{}".format(table.upper(), n+1)
-            table_id = getattr(cls, "{}_id".format(table))
-            parent_id = getattr(cls, "{}_{}_id".format(parent, table))
+            table_name = getattr(cls, f"{table}_table")
+            table_alias = f"COQ_{table.upper()}_{n+1}"
+            table_id = getattr(cls, f"{table}_id")
+            parent_id = getattr(cls, f"{parent}_{table}_id")
 
-            sql_template = "{table_name} AS {table_alias}"
-            table_str = sql_template.format(
-                table_name=table_name, table_alias=table_alias)
+            table_str = f"{table_name} AS {table_alias}"
 
             if cls.has_ngram():
                 n = n - first_item + 1
 
             if parent == "corpus":
-                sql_template = "{table_alias}.{table_id} = {parent_id}{N}"
+                where_str = f"{table_alias}.{table_id} = {parent_id}{n+1}"
             else:
-                sql_template = ("{table_alias}.{table_id} = "
-                                "COQ_{parent}_{N}.{parent_id}")
-            where_str = sql_template.format(
-                table_alias=table_alias, table_id=table_id,
-                parent=parent.upper(), parent_id=parent_id, N=n+1)
-
+                where_str = (f"{table_alias}.{table_id} = "
+                             f"COQ_{parent.upper()}_{n+1}.{parent_id}")
 
             join_type = getattr(cls, "join_type", "INNER")
             table_str = f"{join_type} JOIN {table_str} ON {where_str}"
@@ -1430,19 +1424,18 @@ class SQLResource(BaseResource):
 
         if path:
             for table in path[1:]:
-                table_name = getattr(cls, "{}_table".format(table))
-                table_id = getattr(cls, "{}_id".format(table))
-                table_alias = "COQ_{}_{}".format(table.upper(), i+1)
+                table_name = getattr(cls, f"{table}_table")
+                table_id = getattr(cls, f"{table}_id")
+                table_alias = f"COQ_{table.upper()}_{i+1}"
 
-                prev_id = getattr(cls, "{}_{}_id".format(prev_tab, table))
+                prev_id = getattr(cls, f"{prev_tab}_{table}_id")
 
-                linking_condition = "{}.{} = {}.{}".format(
-                    table_alias, table_id,
-                    prev_alias, prev_id)
+                linking_condition = (
+                    f"{table_alias}.{table_id} = {prev_alias}.{prev_id}")
 
-                table_list.append("INNER JOIN {} AS {} ON {}".format(
-                    table_name, table_alias,
-                    linking_condition))
+                table_list.append(
+                    f"INNER JOIN {table_name} AS {table_alias} "
+                    f"ON {linking_condition}")
 
                 prev_alias = table_alias
 
@@ -1460,27 +1453,32 @@ class SQLResource(BaseResource):
             **kwargs)
         return S
 
+    @staticmethod
+    def _handle_case(s):
+        """
+        Expand an SQL query string so that case sensitivity is handled
+        properly.
+        """
+        db_type = options.cfg.current_connection.db_type()
+
+        # take care of case options:
+        if (options.cfg.query_case_sensitive):
+            if (db_type == SQL_MYSQL):
+                return f"BINARY {s}"
+            elif db_type == SQL_SQLITE:
+                return f"{s} COLLATE BINARY"
+        else:
+            if (db_type == SQL_MYSQL):
+                return s
+            elif db_type == SQL_SQLITE:
+                return f"{s} COLLATE NOCASE"
+
     @classmethod
     def get_token_conditions(cls, i, token):
         """
         Return a dictionary with required tables as names, and SQL
         conditions as values.
         """
-
-        def handle_case(s):
-            db_type = options.cfg.current_connection.db_type()
-
-            # take care of case options:
-            if (options.cfg.query_case_sensitive):
-                if (db_type == SQL_MYSQL):
-                    return "BINARY {}".format(s)
-                elif db_type == SQL_SQLITE:
-                    return "{} COLLATE BINARY".format(s)
-            else:
-                if (db_type == SQL_MYSQL):
-                    return s
-                elif db_type == SQL_SQLITE:
-                    return "{} COLLATE NOCASE".format(s)
 
         def get_operator(S):
             if options.cfg.regexp:
@@ -1533,17 +1531,14 @@ class SQLResource(BaseResource):
             _, tab, _ = cls.split_resource_feature(query_feature)
 
             if tab == "corpus":
-                template = "{name}{N}"
+                alias = f"{col}{i+1}"
             else:
-                template = "COQ_{table}_{N}.{name}"
+                alias = f"COQ_{tab.upper()}_{i+1}.{col}"
 
-            alias = template.format(table=tab.upper(),
-                                    name=col,
-                                    N=i+1)
             if (len(spec_list) == 1):
                 x = spec_list[0]
                 val = tokens.COCAToken.replace_wildcards(x)
-                format_str = handle_case("{alias} {op} '{val}'")
+                format_str = cls._handle_case("{alias} {op} '{val}'")
                 s = format_str.format(alias=alias,
                                       op=get_operator(x),
                                       val=(val if not reverse_str else
@@ -1558,9 +1553,8 @@ class SQLResource(BaseResource):
                         explicit.append(x)
 
                 if explicit:
-                    format_str = handle_case("{alias} IN ({val_list})")
-                    s_list = ", ".join(["'{}'".format(x) for x in explicit])
-                    s_exp = [format_str.format(alias=alias, val_list=s_list)]
+                    s_list = ", ".join([f"'{x}'" for x in explicit])
+                    s_exp = cls._handle_case(f"{alias} IN ({s_list})")
                 else:
                     s_exp = []
 
@@ -1568,7 +1562,7 @@ class SQLResource(BaseResource):
                     operator = "REGEXP"
                 else:
                     operator = "LIKE"
-                format_str = handle_case("{alias} {op} '{val}'")
+                format_str = cls._handle_case("{alias} {op} '{val}'")
                 s_list = [format_str.format(
                             alias=alias,
                             op=operator,
@@ -1585,8 +1579,8 @@ class SQLResource(BaseResource):
         if token.lemmatize:
             # rewrite token conditions so that the specifications are used to
             # obtain the matching lemmas in a subquery:
-            conditions = ["({})".format(x) for x in list(d.values())[0]]
             condition_template = cls.get_lemmatized_conditions(i, token)
+            conditions = [f"({x})" for x in list(d.values())[0]]
             d = {"word": [
                 condition_template.format(where=" AND ".join(conditions))]}
             if pos_spec:
@@ -1929,7 +1923,6 @@ class SQLResource(BaseResource):
                                         origin_id, sentence_id)
             results = db_connection.execute(S)
         word_lists = [[], [], []]
-
         for word, pos in results:
             word_lists[pos].append(word)
 
@@ -2628,7 +2621,6 @@ class CorpusClass(object):
                 "    AND {corpus}.{source_id} = '{current_source_id}'")
         S = format_string.format(**kwargs)
 
-        Print(S)
         engine = options.cfg.current_connection.get_engine(
             self.resource.db_name)
         df = pd.read_sql(S, engine)
@@ -2677,7 +2669,6 @@ class CorpusClass(object):
             return s2.format(tag)
 
     def parse_row(self, row, tags, token_id, token_width):
-        Print("parse_row", len(tags))
         word = row.coq_word_label_1
         word_id = row.coquery_invisible_corpus_id
         if len(tags):
@@ -2782,13 +2773,15 @@ class CorpusClass(object):
 
         df = df[(df.index >= context_start) & (df.index < context_end)]
         time_lst.append((datetime.now().timestamp(), "limiting rows"))
-
         # create a list of all token ids that are also listed in the results
         # table:
-        template = "{lower} < coquery_invisible_corpus_id < {upper}"
-        tab = options.cfg.main_window.Session.data_table.query(
-                template.format(lower=token_id - 1000,
-                                upper=token_id + 1000 + token_width))
+        template = (f"{token_id - 1000} < coquery_invisible_corpus_id "
+                    f"< {token_id + 1000 + token_width}")
+        try:
+            tab = options.cfg.main_window.Session.data_table.query(template)
+        except ValueError:
+            tab = options.cfg.main_window.Session.data_table.query(
+                template, engine="python")
 
         time_lst.append((datetime.now().timestamp(), "retrieving ids"))
         self.id_start_list = tab["coquery_invisible_corpus_id"]

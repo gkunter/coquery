@@ -2,17 +2,16 @@
 """
 editfilter.py is part of Coquery.
 
-Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import division
-from __future__ import unicode_literals
-
 import pandas as pd
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSignal
 
 from coquery.defines import (
     FILTER_STAGE_BEFORE_TRANSFORM, FILTER_STAGE_FINAL,
@@ -23,10 +22,10 @@ from coquery.defines import (
     OP_EQ, OP_NE, OP_GT, OP_GE, OP_LT, OP_LE, OP_MATCH, OP_NMATCH,
     OPERATOR_LABELS,
     )
-from coquery.unicode import utf8
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window, STYLE_WARN
-from .classes import CoqTableItem
 from coquery.filters import Filter
+from coquery.unicode import utf8
+from coquery.gui.classes import CoqTableItem
+from coquery.gui.pyqt_compat import get_toplevel_window, STYLE_WARN
 
 FeatureRole = QtCore.Qt.UserRole
 DtypeRole = QtCore.Qt.UserRole + 1
@@ -47,7 +46,7 @@ def format_filter(filt):
 
 
 class CoqEditFilters(QtWidgets.QWidget):
-    listChanged = QtCore.Signal()
+    listChanged = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         from .ui import coqEditFiltersUi

@@ -2,33 +2,32 @@
 """
 nltkdatafiles.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
-
 import os
 import zipfile
 import shutil
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.Qt import pyqtSignal
 
 from coquery import options
 from coquery.unicode import utf8
-from . import errorbox
-from .threads import CoqThread
-from .pyqt_compat import QtCore, QtWidgets
-from .ui.nltkDatafilesUi import Ui_NLTKDatafiles
+from coquery.gui import errorbox
+from coquery.gui.threads import CoqThread
+from coquery.gui.ui.nltkDatafilesUi import Ui_NLTKDatafiles
 
 _NLTK_dir = None
 
 
 class NLTKDatafiles(QtWidgets.QDialog):
-    updateLabel = QtCore.Signal(str)
-    progressTheBar = QtCore.Signal()
-    packagesInstalled = QtCore.Signal()
+    updateLabel = pyqtSignal(str)
+    progressTheBar = pyqtSignal()
+    packagesInstalled = pyqtSignal()
 
     def __init__(self, missing, parent=None):
 

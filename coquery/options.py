@@ -2,16 +2,12 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from configparser import ConfigParser, RawConfigParser
 from configparser import NoOptionError, ParsingError, NoSectionError
 
@@ -1152,7 +1148,8 @@ def process_options(use_file=True):
     global settings
     if use_qt:
         try:
-            from .gui.pyqt_compat import QtCore, CoqSettings
+            from PyQt5 import QtCore
+            from coquery.gui.pyqt_compat import CoqSettings
             settings = CoqSettings(
                         os.path.join(general.get_home_dir(), "coquery.ini"),
                         QtCore.QSettings.IniFormat)

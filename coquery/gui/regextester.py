@@ -2,20 +2,18 @@
 """
 regextester.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-
 import re
+from PyQt5 import QtWidgets
 
-from .pyqt_compat import QtWidgets, get_toplevel_window
-from .ui.regexTesterUi import Ui_RegexDialog
-from .widgets.coqwidgetfader import CoqWidgetFader
+from coquery.gui.pyqt_compat import get_toplevel_window
+from coquery.gui.ui.regexTesterUi import Ui_RegexDialog
+from coquery.gui.widgets.coqwidgetfader import CoqWidgetFader
 
 from coquery.unicode import utf8
 

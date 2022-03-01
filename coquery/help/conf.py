@@ -12,11 +12,6 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
-import os
-import shlex
-import sphinx_bootstrap_theme
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -26,6 +21,7 @@ import sphinx_bootstrap_theme
 #sys.path.insert(1, os.path.abspath("../../installer"))
 #sys.path.insert(2, os.path.abspath("../../visualizations"))
 
+import sphinx_bootstrap_theme
 
 # -- General configuration ------------------------------------------------
 
@@ -57,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Coquery'
-copyright = u'2016, 2017 Gero Kunter'
+copyright = u'2016–2022 Gero Kunter'
 author = u'Gero Kunter'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -125,7 +121,6 @@ html_theme_options = {
     'headercolor2': '#020202',
     'headerbg': '#fcfcfc',
     'bgcolor': '#fcfcfc',
-    'headerbg': '#0e0e0e',
     'footerbg': '#0e0e0e',
     'linkcolor': '#dc963c',
     'headerlinkcolor': '#020202',

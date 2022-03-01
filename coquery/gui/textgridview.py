@@ -2,18 +2,14 @@
 """
 textgridview.py is part of Coquery.
 
-Copyright (c) 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-
-import types
 import numpy as np
-import sys
+from PyQt5 import QtWidgets, QtCore, QtGui
 
 import matplotlib as mpl
 mpl.use("Qt5Agg")
@@ -26,10 +22,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-import seaborn as sns
 from scipy import signal
-
-from .pyqt_compat import QtWidgets, QtCore, QtGui
 
 
 class LockedAxes(mpl.axes.Axes):

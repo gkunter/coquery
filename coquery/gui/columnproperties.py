@@ -2,22 +2,18 @@
 """
 columnproperties.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-
-import collections
+from PyQt5 import QtCore, QtWidgets, QtGui
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import (QtCore, QtWidgets, QtGui, get_toplevel_window,
-                          COLOR_NAMES)
-from .ui.columnPropertiesUi import Ui_ColumnProperties
+from coquery.gui.pyqt_compat import get_toplevel_window, COLOR_NAMES
+from coquery.gui.ui.columnPropertiesUi import Ui_ColumnProperties
 
 
 class ColumnPropertiesDialog(QtWidgets.QDialog):
@@ -78,7 +74,6 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         raise TypeError
 
     def exec_(self, *args, **kwargs):
-        session = get_toplevel_window().Session
         result = super(ColumnPropertiesDialog, self).exec_(*args, **kwargs)
         if result == QtWidgets.QDialog.Accepted:
             d = {}
@@ -151,13 +146,16 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         self.ui.edit_column_name.textChanged.connect(self.change_alias)
         self.ui.table_substitutions.cellChanged.connect(
             self.change_substitution)
-        button = self.ui.buttonbox_label.button(QtWidgets.QDialogButtonBox.Reset)
+        button = self.ui.buttonbox_label.button(
+            QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_alias)
         self.ui.button_change_color.clicked.connect(self.set_color)
         self.ui.label_example.clicked.connect(self.set_color)
-        button = self.ui.buttonbox_color.button(QtWidgets.QDialogButtonBox.Reset)
+        button = self.ui.buttonbox_color.button(
+            QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_color)
-        button = self.ui.buttonbox_substitution.button(QtWidgets.QDialogButtonBox.Reset)
+        button = self.ui.buttonbox_substitution.button(
+            QtWidgets.QDialogButtonBox.Reset)
         button.clicked.connect(self.reset_substitution)
 
     def reset_alias(self):
@@ -208,7 +206,8 @@ class ColumnPropertiesDialog(QtWidgets.QDialog):
         current_item = self.ui.widget_selection.currentItem()
         column = current_item.data(QtCore.Qt.UserRole)
         try:
-            color = QtWidgets.QColorDialog.getColor(QtGui.QColor(self.colors[column]))
+            color = QtWidgets.QColorDialog.getColor(
+                QtGui.QColor(self.colors[column]))
         except KeyError:
             color = QtWidgets.QColorDialog.getColor()
 

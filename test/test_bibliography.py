@@ -1,19 +1,9 @@
 # -*- coding: utf-8 -*-
 """ This module tests the bibliography module."""
-
-from __future__ import unicode_literals
-
 from coquery.bibliography import (
     Reference, Article, Book, InCollection,
     Person, PersonList, EditorList)
 from test.testcase import CoqTestCase, run_tests
-
-# Create a tuple containing the available string types
-# (Python 3 has no unicode):
-try:
-    string_types = (unicode, str)
-except NameError:
-    string_types = (str, )
 
 
 class TestPerson(CoqTestCase):
@@ -32,9 +22,9 @@ class TestPerson(CoqTestCase):
         self.assertEqual(name.last, "Münster")
 
         name = Person(first="Jürgen", middle="M.", last="Münster")
-        self.assertTrue(isinstance(name.first, string_types))
+        self.assertTrue(isinstance(name.first, str))
         self.assertTrue(isinstance(name.middle, list))
-        self.assertTrue(isinstance(name.last, string_types))
+        self.assertTrue(isinstance(name.last, str))
 
     def test_repr(self):
         name = Person(first="Jürgen", middle=["Otto", "Emil"],

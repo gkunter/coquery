@@ -2,15 +2,12 @@
 """
 Connectionconfiguration.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-from __future__ import unicode_literals
 
 import socket
 import re
@@ -19,6 +16,9 @@ import os
 import shutil
 import sys
 import logging
+
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSignal
 
 from coquery.general import (utf8,
                              get_available_space, format_file_size)
@@ -32,12 +32,12 @@ from coquery.defines import (
 from coquery.connections import (get_connection,
                                  MySQLConnection, SQLiteConnection)
 
-from .pyqt_compat import (QtCore, QtWidgets, QtGui, STYLE_WARN)
-from . import errorbox
-from .classes import CoqProgressDialog
-from .threads import CoqThread
-from .ui.connectionConfigurationUi import Ui_ConnectionConfig
-from .app import get_icon
+from coquery.gui import errorbox
+from coquery.gui.app import get_icon
+from coquery.gui.classes import CoqProgressDialog
+from coquery.gui.pyqt_compat import STYLE_WARN
+from coquery.gui.threads import CoqThread
+from coquery.gui.ui.connectionConfigurationUi import Ui_ConnectionConfig
 
 
 def check_valid_host(s):
@@ -91,7 +91,7 @@ def check_valid_host(s):
         if s.endswith("."):
             # strip exactly one dot from the right, if present
             s = s[:-1]
-        allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+        allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
         return all(allowed.match(x) for x in s.split("."))
 
     if is_valid_ipv6_address(s):
@@ -104,10 +104,10 @@ def check_valid_host(s):
 
 
 class ConnectionConfiguration(QtWidgets.QDialog):
-    noConnection = QtCore.Signal(Exception)
-    accessDenied = QtCore.Signal(Exception)
-    configurationError = QtCore.Signal(Exception)
-    connected = QtCore.Signal(str)
+    noConnection = pyqtSignal(Exception)
+    accessDenied = pyqtSignal(Exception)
+    configurationError = pyqtSignal(Exception)
+    connected = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(ConnectionConfiguration, self).__init__(parent)
@@ -796,7 +796,7 @@ class ConnectionConfiguration(QtWidgets.QDialog):
                     shutil.copy(source_file, target_file)
                 except Exception as e:
                     for copied_file in copied:
-                        os.remove(copied)
+                        os.remove(copied_file)
                     raise e
                 else:
                     copied.append(target_file)

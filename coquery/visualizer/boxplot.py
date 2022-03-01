@@ -2,19 +2,21 @@
 """
 boxplot.py is part of Coquery.
 
-Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from matplotlib import pyplot as plt
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
+
+from PyQt5 import QtCore, QtWidgets
 
 from coquery.visualizer import visualizer as vis
-from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
+from coquery.gui.pyqt_compat import tr
 
 
 class BoxPlot(vis.Visualizer):
@@ -27,7 +29,7 @@ class BoxPlot(vis.Visualizer):
 
     def get_custom_widgets(self, *args, **kwargs):
         if not hasattr(sns, "boxenplot"):
-            return ([], [], [])
+            return [], [], []
         label = tr("BoxPlot", "Draw multiple boxes", None)
 
         self.check_horizontal = QtWidgets.QCheckBox(label)

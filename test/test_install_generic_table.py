@@ -12,7 +12,6 @@ from __future__ import unicode_literals
 
 import os
 import warnings
-import tempfile
 import argparse
 import pandas as pd
 import numpy as np
@@ -22,20 +21,18 @@ from coquery.coquery import options
 from coquery.options import CSVOptions
 from coquery.connections import SQLiteConnection
 from coquery.installer.coq_install_generic_table import BuilderClass
-from test.testcase import CoqTestCase, run_tests
+from test.testcase import CoqTestCase, run_tests, tmp_path, tmp_filename
 
 
 class TestGenericTable(CoqTestCase):
     def setUp(self):
         self.temp_name = "test_db"
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            self.temp_path = tmp_dir
+        self.temp_path = tmp_path()
         os.mkdir(self.temp_path)
         self.module_path = os.path.join(self.temp_path,
                                         f"{self.temp_name}.py")
 
-        with tempfile.NamedTemporaryFile() as tmp:
-            self.temp_file = tmp.name
+        self.temp_file = tmp_filename()
 
         self.df = pd.DataFrame(
             data=[("tree", 4, 3.632),
@@ -111,6 +108,8 @@ class TestGenericTable(CoqTestCase):
         self.installer.build()
         loader = SourceFileLoader(self.installer.arguments.db_name,
                                   self.module_path)
+        with open(self.module_path) as input_file:
+            lines = [s.strip("\n") for s in input_file.readlines()]
         res = loader.load_module().Resource
 
         self.assertEqual(getattr(res, "corpus_table"), "Corpus")
@@ -135,7 +134,6 @@ class TestGenericTable(CoqTestCase):
         tg_corpus["FileId"] = [1] * len(tg_corpus)
 
         path, file_name = os.path.split(self.temp_file)
-        tg_files = pd.read_csv(self.installer.arguments.path)
         tg_files = pd.DataFrame(
             {"FileId": [1],
              "Filename": [file_name],

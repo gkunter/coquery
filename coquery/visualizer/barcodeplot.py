@@ -2,21 +2,21 @@
 """
 barcodeplot.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
+from PyQt5 import QtWidgets, QtCore
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
 from coquery.visualizer import visualizer as vis
-from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
+from coquery.gui.pyqt_compat import tr
 
 
 class BarcodePlot(vis.Visualizer):
@@ -85,25 +85,25 @@ class BarcodePlot(vis.Visualizer):
         data = data.sort_values(by=self._id_column).reset_index(drop=True)
         values = self.get_id_values(data)
         if x and not y:
-            X, Y, Ord = data[x], values, levels_x
+            var_x, var_y, var_order = data[x], values, levels_x
         elif y and not x:
-            X, Y, Ord = values, data[y], levels_y
+            var_x, var_y, var_order = values, data[y], levels_y
         else:
             # see https://github.com/mwaskom/seaborn/issues/1343 for the
             # rationale behind using a dummy variable
             grouping = pd.Series([""] * len(data))
             if self.force_horizontal:
-                X, Y, Ord = values, grouping, None
+                var_x, var_y, var_order = values, grouping, None
             else:
-                X, Y, Ord = grouping, values, None
+                var_x, var_y, var_order = grouping, values, None
         if z:
-            Z = data[z]
+            var_z = data[z]
         else:
-            Z = None
+            var_z = None
 
-        horizontal = values.equals(X)
-        dct = {"x": X, "y": Y, "z": Z,
-               "order": Ord, "horizontal": horizontal}
+        horizontal = values.equals(var_x)
+        dct = {"x": var_x, "y": var_y, "z": var_z,
+               "order": var_order, "horizontal": horizontal}
         return dct
 
     def plot_facet(self, **kwargs):

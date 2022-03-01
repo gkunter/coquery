@@ -2,15 +2,13 @@
 """
 treemap.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import division
-from __future__ import print_function
+from PyQt5 import QtCore, QtWidgets
 
 # if squarify is not available, the TreeMap visualization will not be included
 # in provided_visualizations (see end of this file)
@@ -21,7 +19,6 @@ except ImportError:
 else:
     squarify_available = True
 
-
 from matplotlib.patches import Rectangle
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -30,7 +27,7 @@ from coquery.visualizer import visualizer as vis
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByFreq, ColorizeByNum)
 
-from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
+from coquery.gui.pyqt_compat import tr
 
 
 class TreeMap(vis.Visualizer):

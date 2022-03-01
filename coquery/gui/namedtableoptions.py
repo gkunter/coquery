@@ -2,7 +2,7 @@
 """
 namedtableoptions.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -10,13 +10,13 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
+from PyQt5 import QtWidgets
 
 from coquery import options
 from coquery.unicode import utf8
-from .pyqt_compat import QtWidgets
 
-from .csvoptions import quote_chars, CSVOptionDialog, CSVOptions
-from .ui.namedTableOptionsUi import Ui_NamedTableOptions
+from coquery.gui.csvoptions import quote_chars, CSVOptionDialog, CSVOptions
+from coquery.gui.ui.namedTableOptionsUi import Ui_NamedTableOptions
 
 
 class NamedTableOptionsDialog(CSVOptionDialog):

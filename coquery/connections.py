@@ -2,7 +2,7 @@
 """
 connections.py is part of Coquery.
 
-Copyright (c) 2017-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -16,9 +16,9 @@ import sqlalchemy
 import imp
 import logging
 
-from .defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
-from .general import CoqObject, get_home_dir
-from .unicode import utf8
+from coquery.defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
+from coquery.general import CoqObject, get_home_dir
+from coquery.unicode import utf8
 
 
 class Connection(CoqObject):
@@ -246,24 +246,15 @@ class MySQLConnection(Connection):
 
     def has_database(self, db_name):
         engine = self.get_engine(db_name)
-        sql_template = """
-            SELECT SCHEMA_NAME
-            FROM INFORMATION_SCHEMA.SCHEMATA
-            WHERE SCHEMA_NAME = '{}'
-            """.format(db_name)
         try:
-            with engine.connect() as connection:
-                connection.execute(sql_template)
-        except (sqlalchemy.exc.InternalError,
-                sqlalchemy.exc.OperationalError):
+            engine.connect()
+        except sqlalchemy.exc.OperationalError:
+            db_exists = False
+        else:
+            db_exists = True
+        finally:
             engine.dispose()
-            return False
-        except Exception as e:
-            print(type(e))
-            engine.dispose()
-            raise e
-        engine.dispose()
-        return True
+        return db_exists
 
     def get_database_size(self, db_name):
         engine = self.get_engine(db_name)
@@ -281,7 +272,8 @@ class MySQLConnection(Connection):
         Checks if the user specified by the argument exists on the current
         host.
 
-        This method assumes that the user account for which the connection has been created is privileged to query the currently existing users.
+        This method assumes that the user account for which the connection has
+        been created is privileged to query the currently existing users.
         """
         sql_template = "SELECT User, Host from mysql.user"
 

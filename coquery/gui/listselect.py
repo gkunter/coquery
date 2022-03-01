@@ -2,18 +2,20 @@
 """
 listselect.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-from __future__ import unicode_literals
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSignal
+
+from typing import Tuple
 
 from coquery.unicode import utf8
-
-from .pyqt_compat import QtCore, QtWidgets, get_toplevel_window
+from coquery.gui.pyqt_compat import get_toplevel_window
 
 
 class CoqListSelect(QtWidgets.QWidget):
@@ -21,8 +23,8 @@ class CoqListSelect(QtWidgets.QWidget):
     A QWidget that presents two exclusive list (a list of available and a
     list of selected items), with controls to move between the two.
     """
-    itemSelectionChanged = QtCore.Signal(list)
-    currentItemChanged = QtCore.Signal(object)
+    itemSelectionChanged = pyqtSignal(list)
+    currentItemChanged = pyqtSignal(object)
 
     def __init__(self, *args, **kwargs):
         from .ui import coqListSelectUi
@@ -50,7 +52,8 @@ class CoqListSelect(QtWidgets.QWidget):
         self.ui.list_selected.itemSelectionChanged.connect(self.check_buttons)
         self.ui.list_selected.itemSelectionChanged.connect(
             lambda: self.currentItemChanged.emit(self.currentItem()))
-        self.ui.list_available.itemSelectionChanged.connect(self.check_buttons)
+        self.ui.list_available.itemSelectionChanged.connect(
+            self.check_buttons)
 
         self._minimum = 0
         self._move_available = True
@@ -61,8 +64,8 @@ class CoqListSelect(QtWidgets.QWidget):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
     @staticmethod
-    def _fill_list_widget(w, l, translate, *args, **kwargs):
-        for x in l:
+    def _fill_list_widget(w, lst, translate, *args, **kwargs):
+        for x in lst:
             if translate is not None:
                 if not isinstance(x, QtWidgets.QListWidgetItem):
                     item = QtWidgets.QListWidgetItem(
@@ -130,12 +133,12 @@ class CoqListSelect(QtWidgets.QWidget):
         return [self.ui.list_available.item(i) for i
                 in range(self.ui.list_available.count())]
 
-    def setAvailableList(self, l, translate=None, *args, **kwargs):
-        self._fill_list_widget(self.ui.list_available, l,
+    def setAvailableList(self, lst, translate=None, *args, **kwargs):
+        self._fill_list_widget(self.ui.list_available, lst,
                                translate, *args, **kwargs)
 
-    def setSelectedList(self, l, translate=None, *args, **kwargs):
-        self._fill_list_widget(self.ui.list_selected, l,
+    def setSelectedList(self, lst, translate=None, *args, **kwargs):
+        self._fill_list_widget(self.ui.list_selected, lst,
                                translate, *args, **kwargs)
 
     def add_selected(self):
@@ -307,7 +310,7 @@ class SelectionDialog(QtWidgets.QDialog):
         super(SelectionDialog, self).exec_()
 
     @staticmethod
-    def show(*args, **kwargs):
+    def show(*args, **kwargs) -> Tuple[list, list]:
         dialog = SelectionDialog(*args, **kwargs)
         dialog.exec_()
         selected = [x.data(QtCore.Qt.UserRole)

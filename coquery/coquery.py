@@ -91,7 +91,7 @@ def check_system():
         missing_str = msg_missing_modules.format(
             "<br/>".join(options.missing_modules))
         if options.use_qt:
-            from .gui.pyqt_compat import QtWidgets
+            from PyQt5 import QtWidgets
             app = QtWidgets.QApplication(sys.argv)
             QtWidgets.QMessageBox.critical(
                 None, "Missing dependencies – Coquery", missing_str)
@@ -165,8 +165,8 @@ def main():
 
     # Run the Application GUI?
     if options.cfg.gui and options.use_qt:
-        from .gui.pyqt_compat import (
-            QtWidgets, QtGui, close_toplevel_widgets, QtCore)
+        from PyQt5 import QtCore, QtWidgets, QtGui
+        from coquery.gui.pyqt_compat import close_toplevel_widgets
 
         options.cfg.app = CoqApplication(sys.argv)
         translator = QtCore.QTranslator()

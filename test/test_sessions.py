@@ -351,9 +351,53 @@ class MockQuery2b(TokenQuery):
         return df
 
 
+class MockQuery3(TokenQuery):
+    """
+    This query mocks a search for the search string ALAB* in a
+    dictionary-like resource. Calling run() and insert_static_data()
+    yields the following data frame:
+
+                                              0          1         2
+    coq_corpus_word_1                   ALABAMA  ALABAMANS  ALABAMAS
+    coq_corpus_x14_1                         ''         ''        ''
+    coq_corpus_x3_1                        5243          6         1
+    coq_corpus_x32_1                          7          9        ''
+    coq_corpus_x31_1               %a.l@.b"a.m@ %al@bam@nz        ''
+    coquery_invisible_corpus_id           78241      78242     38625
+    coquery_invisible_origin_id               1          1         1
+    coquery_invisible_number_of_tokens        1          1         1
+    coquery_invisible_dummy                   0          0         0
+    coquery_invisible_query_id                1          1         1
+
+    '' is an empty string; the corresponding column is of mixed type (as
+    produced by SQLite).
+    """
+
+    def __init__(self, session):
+        super().__init__("ALAB*", session)
+
+    @staticmethod
+    def run(*args, **kwargs):
+        df = pd.DataFrame(
+            {"coq_corpus_word_1": ["ALABAMA", "ALABAMANS", "ALABAMAS"],
+             "coq_corpus_x14_1": ["", "", ""],
+             "coq_corpus_x3_1": [5243, 6, 1],
+             "coq_corpus_x31_1": ["%a.l@.b""a.m@", "%al@b""am@nz", ""],
+             "coq_corpus_x32_1": [7, 9, ""],
+             "coquery_invisible_corpus_id": [78241, 78242, 38625]})
+        return df
+
+    @staticmethod
+    def insert_static_data(df):
+        df['coquery_invisible_origin_id'] = pd.Series([1, 1, 1])
+        df['coquery_invisible_number_of_tokens'] = pd.Series([1, 1, 1])
+        df['coquery_invisible_dummy'] = pd.Series([0, 0, 0])
+        df['coquery_invisible_query_id'] = pd.Series([1, 1, 1])
+        return df
+
+
 class TestSessionQueries(CoqTestCase):
     def setUp(self):
-
         options.cfg = argparse.Namespace()
         options.cfg.current_connection = MockConnection()
         options.cfg.query_list = []
@@ -397,11 +441,31 @@ class TestSessionQueries(CoqTestCase):
 
         pd.testing.assert_frame_equal(df1, df2)
 
+    # def test_finalize_table(self):
+    #     """
+    #     This test asserts that a data table containing mixed-type columns (as
+    #     apparently produced from SQLite tables in case of missing values, which
+    #     is represented as an empty string) is properly fixed.
+    #     """
+    #
+    #     session = SessionCommandLine()
+    #     session.db_engine = options.cfg.current_connection.get_engine("dummy")
+    #     session.Resource = MockResource
+    #
+    #     query = MockQuery3(session)
+    #     df1 = query.run()
+    #     df2 = session.finalize_table()
+    #
+    #     print(df1)
+    #     print("\n")
+    #     print(df2)
+    #     print("\n")
+
 
 provided_tests = [
-                  TestSessionInputFile,
-                  TestSessionMethods,
-                  TestSessionQueries]
+    TestSessionInputFile,
+    TestSessionMethods,
+    TestSessionQueries]
 
 
 def main():

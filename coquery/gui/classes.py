@@ -2,15 +2,12 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import (unicode_literals, print_function,
-                        absolute_import, division)
 
 import logging
 import os
@@ -18,13 +15,15 @@ import pandas as pd
 import numpy as np
 from collections import deque
 
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import pyqtSignal
+
 from coquery import options
 from coquery import managers
 from coquery.unicode import utf8
 
-from coquery.gui.pyqt_compat import (QtCore, QtGui, QtWidgets,
-                                     frameShadow, frameShape,
-                                     get_toplevel_window)
+from coquery.gui.pyqt_compat import (
+    frameShadow, frameShape, get_toplevel_window)
 
 from xml.sax.saxutils import escape
 
@@ -34,7 +33,7 @@ _right_align = int(QtCore.Qt.AlignRight) | int(QtCore.Qt.AlignVCenter)
 
 
 class inputFocusFilter(QtCore.QObject):
-    focusIn = QtCore.Signal(object)
+    focusIn = pyqtSignal(object)
 
     def eventFilter(self, widget, event):
         input_widgets = (QtWidgets.QTextEdit, QtWidgets.QLineEdit)
@@ -76,10 +75,10 @@ class CoqVerticalHeader(QtWidgets.QHeaderView):
 
 
 class CoqHorizontalHeader(QtWidgets.QHeaderView):
-    sectionFinallyResized = QtCore.Signal(int, int, int)
-    addedToSelection = QtCore.Signal(int)
-    removedFromSelection = QtCore.Signal(int)
-    alteredSelection = QtCore.Signal(tuple)
+    sectionFinallyResized = pyqtSignal(int, int, int)
+    addedToSelection = pyqtSignal(int)
+    removedFromSelection = pyqtSignal(int)
+    alteredSelection = pyqtSignal(tuple)
 
     def __init__(self, *args, **kwargs):
         super(CoqHorizontalHeader, self).__init__(*args, **kwargs)
@@ -150,7 +149,7 @@ class CoqHelpBrowser(QtWidgets.QTextBrowser):
 
 
 class CoqFeatureList(QtWidgets.QListWidget):
-    featureAdded = QtCore.Signal(object)
+    featureAdded = pyqtSignal(object)
 
     def __init__(self, parent=None):
         super(CoqFeatureList, self).__init__(parent)
@@ -193,7 +192,6 @@ class CoqFeatureList(QtWidgets.QListWidget):
 
     def padding(self):
         return 4 * self.frameWidth()
-        return 0
 
 
 class CoqFeatureTray(CoqFeatureList):
@@ -202,8 +200,8 @@ class CoqFeatureTray(CoqFeatureList):
 
     It never shows scrollbars or headers.
     """
-    featureChanged = QtCore.Signal(object)
-    featureCleared = QtCore.Signal()
+    featureChanged = pyqtSignal(object)
+    featureCleared = pyqtSignal()
 
     def __init__(self, parent=None):
         super(CoqFeatureTray, self).__init__(parent)
@@ -348,8 +346,8 @@ class CoqRotatedButton(QtWidgets.QPushButton):
 
 
 class CoqInfoLabel(QtWidgets.QLabel):
-    entered = QtCore.Signal()
-    left = QtCore.Signal()
+    entered = pyqtSignal()
+    left = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(CoqInfoLabel, self).__init__(*args, **kwargs)
@@ -362,8 +360,8 @@ class CoqInfoLabel(QtWidgets.QLabel):
 
 
 class CoqClickableLabel(QtWidgets.QLabel):
-    clicked = QtCore.Signal()
-    textChanged = QtCore.Signal()
+    clicked = pyqtSignal()
+    textChanged = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(CoqClickableLabel, self).__init__(*args, **kwargs)
@@ -504,7 +502,14 @@ class CoqGroupBox(QtWidgets.QGroupBox):
             image: url({path}/{sign_up});
         }}"""
 
-    toggled = QtCore.Signal(QtWidgets.QWidget)
+    toggled = pyqtSignal(QtWidgets.QWidget)
+
+    def __init__(self, *args, **kwargs):
+        super(CoqGroupBox, self).__init__(*args, **kwargs)
+        self._text = ""
+        self._alternative = None
+        self.clicked.connect(self.setChecked)
+        self.setStyleSheet(self.style_opened)
 
     def set_style(self, **kwargs):
         if self.isChecked():
@@ -535,13 +540,6 @@ class CoqGroupBox(QtWidgets.QGroupBox):
                      focus=palette.color(QtGui.QPalette.Highlight).name(),
                      **kwargs)
         self.setStyleSheet(s)
-
-    def __init__(self, *args, **kwargs):
-        super(CoqGroupBox, self).__init__(*args, **kwargs)
-        self._text = ""
-        self._alternative = None
-        self.clicked.connect(self.setChecked)
-        self.setStyleSheet(self.style_opened)
 
     def setTitle(self, text, *args, **kwargs):
         super(CoqGroupBox, self).setTitle(text, *args, **kwargs)
@@ -621,9 +619,9 @@ class CoqDetailBox(QtWidgets.QWidget):
     header, and a QFrame 'box' which can show any content in an exapnding box
     below the button.
     """
-    clicked = QtCore.Signal(QtWidgets.QWidget)
-    expanded = QtCore.Signal()
-    collapsed = QtCore.Signal()
+    clicked = pyqtSignal(QtWidgets.QWidget)
+    expanded = pyqtSignal()
+    collapsed = pyqtSignal()
 
     def __init__(self, text="", box=None, alternative=None, *args, **kwargs):
         if isinstance(text, QtWidgets.QWidget):
@@ -1290,9 +1288,9 @@ class CoqTextEdit(QtWidgets.QTextEdit):
 
 
 class CoqListWidget(QtWidgets.QListWidget):
-    itemDropped = QtCore.Signal(QtWidgets.QListWidgetItem)
-    featureAdded = QtCore.Signal(str)
-    featureRemoved = QtCore.Signal(str)
+    itemDropped = pyqtSignal(QtWidgets.QListWidgetItem)
+    featureAdded = pyqtSignal(str)
+    featureRemoved = pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
         super(CoqListWidget, self).__init__(*args, **kwargs)
@@ -1342,7 +1340,7 @@ class CoqFloatEdit(QtWidgets.QLineEdit):
     The backspace character '\b' is also allowed.
     """
     allowed_characters = "0123456789-"
-    valueChanged = QtCore.Signal()
+    valueChanged = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(CoqFloatEdit, self).__init__(*args, **kwargs)
@@ -1440,7 +1438,7 @@ class CoqIntEdit(CoqFloatEdit):
 
 
 class CoqTableView(QtWidgets.QTableView):
-    resizeRow = QtCore.Signal(int, int)
+    resizeRow = pyqtSignal(int, int)
 
     def __init__(self, *args, **kwargs):
         super(CoqTableView, self).__init__(*args, **kwargs)
@@ -1543,16 +1541,13 @@ class CoqTableModel(QtCore.QAbstractTableModel):
 
             # set right alignment for reverse sort, numeric data types, or
             # the right-hand context:
-            if ((sorter and sorter.reverse) or
-                    pd.api.types.is_numeric_dtype(dtype) or
-                    col == "coq_context_left"):
-                self._align.append(_right_align)
-                self._align.append(_right_align)
+            if ((sorter and sorter.reverse)
+                    or pd.api.types.is_numeric_dtype(dtype)
+                    or col == "coq_context_left"):
                 self._align.append(_right_align)
             else:
                 # otherwise, left-align:
                 self._align.append(_left_align)
-
         self.formatted = self.format_content(self.content)
 
     def flags(self, index):

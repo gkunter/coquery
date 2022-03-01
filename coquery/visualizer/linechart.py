@@ -2,16 +2,16 @@
 """
 linechart.py is part of Coquery.
 
-Copyright (c) 2017-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from coquery.visualizer import visualizer as vis
 import seaborn as sns
 import pandas as pd
+
+from coquery.visualizer import visualizer as vis
 
 
 class LineChart(vis.Visualizer):

@@ -2,15 +2,12 @@
 """
 corpusbuilder_interface.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-from __future__ import print_function
 
 import argparse
 import codecs
@@ -18,6 +15,9 @@ import re
 import os
 import sys
 import zipfile
+
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import pyqtSignal
 
 from coquery import options
 from coquery.options import CSVOptions
@@ -27,25 +27,24 @@ from coquery.defines import (msg_install_abort,
 from coquery.errors import DependencyError
 from coquery.unicode import utf8
 
-from . import classes
-from . import errorbox
-from . import csvoptions
-from .threads import CoqThread
-from .pyqt_compat import QtCore, QtWidgets, QtGui, STYLE_WARN
-from .ui.corpusInstallerUi import Ui_CorpusInstaller
-from .ui.corpusTableUi import Ui_CorpusTable
-from .ui.readPackageUi import Ui_PackageInstaller
-from .namedtableoptions import NamedTableOptionsDialog
+from coquery.gui import classes
+from coquery.gui import errorbox
+from coquery.gui.threads import CoqThread
+from coquery.gui.pyqt_compat import STYLE_WARN
+from coquery.gui.ui.corpusInstallerUi import Ui_CorpusInstaller
+from coquery.gui.ui.corpusTableUi import Ui_CorpusTable
+from coquery.gui.ui.readPackageUi import Ui_PackageInstaller
+from coquery.gui.namedtableoptions import NamedTableOptionsDialog
 
 
 class MetaGui(QtWidgets.QDialog):
     button_label = "&Install"
 
-    progressSet = QtCore.Signal(int, str)
-    labelSet = QtCore.Signal(str)
-    progressUpdate = QtCore.Signal(int)
-    generalUpdate = QtCore.Signal(int)
-    installStarted = QtCore.Signal()
+    progressSet = pyqtSignal(int, str)
+    labelSet = pyqtSignal(str)
+    progressUpdate = pyqtSignal(int)
+    generalUpdate = pyqtSignal(int)
+    installStarted = pyqtSignal()
 
     def __init__(self, builder_class, gui=None, parent=None):
         super(MetaGui, self).__init__(parent)
@@ -324,7 +323,7 @@ class MetaGui(QtWidgets.QDialog):
 class InstallerGui(MetaGui):
     window_title = "Corpus installer – Coquery"
 
-    showNLTKDownloader = QtCore.Signal(str)
+    showNLTKDownloader = pyqtSignal(str)
 
     def __init__(self, builder_class, parent=None):
         super(InstallerGui, self).__init__(
@@ -956,8 +955,8 @@ class BuilderGui(InstallerGui):
 class PackageGui(BuilderGui):
     button_label = "Read package"
 
-    chunkProgress = QtCore.Signal(int, int)
-    fileProgress = QtCore.Signal(str, str)
+    chunkProgress = pyqtSignal(int, int)
+    fileProgress = pyqtSignal(str, str)
 
     def __init__(self, builder_class, parent=None):
         QtWidgets.QDialog.__init__(self, parent)
