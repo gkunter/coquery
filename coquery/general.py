@@ -2,7 +2,7 @@
 """
 general.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -629,3 +629,14 @@ try:
 except Exception as e:
     def summarize_memory(msg=str(e)):
         print("summarize_memory: {}".format(msg))
+
+
+def uniques(S):
+    """
+    Get unique levels of Series by discarding NAs and then sorting
+    the unique values.
+
+    This function is much more efficient (but less transparent) than
+    the equivalent sorted(S.dropna().unique().values()).
+    """
+    return sorted(set(S.values[~pd.isnull(S.values)]))

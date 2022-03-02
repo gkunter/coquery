@@ -25,14 +25,15 @@ from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT)
 from matplotlib.backends.backend_qt5 import SubplotToolQt
 
+
 mpl.use("Qt5Agg")
 mpl.rcParams["backend"] = "Qt5Agg"
 logging.getLogger("matplotlib.font_manager").disabled = True
 
-import pandas as pd
 import seaborn as sns
 
 from coquery import options
+from coquery.general import uniques
 from coquery.unicode import utf8
 from coquery.defines import (PALETTE_BW,
                              msg_visualization_error,
@@ -40,26 +41,13 @@ from coquery.defines import (PALETTE_BW,
 
 
 from coquery.gui.app import get_icon
-from coquery.gui.pyqt_compat import get_toplevel_window, tr
+from coquery.gui.pyqt_compat import tr
 from coquery.gui.ui.visualizationDesignerUi import Ui_VisualizationDesigner
 
 from coquery.visualizer.visualizer import get_grid_layout
 from coquery.visualizer.colorizer import (
     COQ_SINGLE, COQ_CUSTOM,
     Colorizer, ColorizeByFactor, ColorizeByNum)
-
-app = get_toplevel_window()
-
-
-def uniques(S):
-    """
-    Get unique levels of Series by discarding NAs and then sorting
-    the unique values.
-
-    This function is much more efficient (but less transparent) than
-    the equivalent sorted(S.dropna().unique().values()).
-    """
-    return sorted(set(S.values[~pd.isnull(S.values)]))
 
 
 def deleteItemsOfLayout(layout):
@@ -232,6 +220,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
         """
         self.ui.list_figures.setDragEnabled(False)
         self.ui.list_figures.setDragDropMode(self.ui.list_figures.NoDragDrop)
+        app = QtWidgets.QApplication.instance()
         w = app.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent)
         self.ui.list_figures.setMinimumWidth(180 + w)
         self.ui.list_figures.setMaximumWidth(180 + w)
