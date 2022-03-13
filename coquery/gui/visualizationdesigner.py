@@ -286,13 +286,14 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 if x in d and d[x]]
 
         self.categorical = [col for col in self.df.columns
-                            if self.df.dtypes[col] in (object, bool) and
-                            col not in used and
-                            not col.startswith("coquery_invisible")]
+                            if (pd.api.types.is_bool(self.df[col]) or
+                                pd.api.types.is_object_dtype(self.df[col]))
+                            and col not in used
+                            and not col.startswith("coquery_invisible")]
         self.numerical = [col for col in self.df.columns
-                          if self.df.dtypes[col] in (int, float) and
-                          col not in used and
-                          not col.startswith("coquery_invisible")]
+                          if pd.api.types.is_numeric_dtype(self.df[col])
+                          and col not in used
+                          and not col.startswith("coquery_invisible")]
 
         for col in self.categorical:
             label = self.alias.get(col) or col
