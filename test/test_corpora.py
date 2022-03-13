@@ -675,6 +675,14 @@ class TestCorpus(CoqTestCase):
             {"word": ["COQ_WORD_1.Word LIKE 'a%'",
                       "COQ_WORD_1.POS LIKE 'n%'"]})
 
+    def test_get_token_conditions_OR_1(self):
+        token = COCAToken("alice|queen")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(
+            d,
+            {"word": ["COQ_WORD_1.Word IN ('alice', 'queen')"]}
+        )
+
     def test_get_token_conditions_5(self):
         token = COCAToken("*'ll")
         d = self.resource.get_token_conditions(0, token)

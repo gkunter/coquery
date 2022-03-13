@@ -1554,7 +1554,7 @@ class SQLResource(BaseResource):
 
                 if explicit:
                     s_list = ", ".join([f"'{x}'" for x in explicit])
-                    s_exp = cls._handle_case(f"{alias} IN ({s_list})")
+                    s_exp = [cls._handle_case(f"{alias} IN ({s_list})")]
                 else:
                     s_exp = []
 
