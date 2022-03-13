@@ -1666,7 +1666,7 @@ class CoqTableModel(QtCore.QAbstractTableModel):
             # The UserRole is used when clicking on a cell in the results
             # table. It is handled differently depending on the query type
             # that produced the table.
-            manager = self._session.get_manager()
+            manager = self._session.get_manager(options.cfg.MODE)
             if isinstance(manager, managers.ContrastMatrix):
                 return manager.get_cell_content(
                     index,
