@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'availableModules.ui'
 #
-# Created by: PyQt5 UI code generator 5.7.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -16,7 +16,13 @@ class Ui_AvailableModules(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.table_modules = QtWidgets.QTableWidget(AvailableModules)
+        self.table_modules.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table_modules.setTabKeyNavigation(False)
         self.table_modules.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        self.table_modules.setTextElideMode(QtCore.Qt.ElideRight)
+        self.table_modules.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.table_modules.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.table_modules.setWordWrap(False)
         self.table_modules.setCornerButtonEnabled(True)
         self.table_modules.setRowCount(0)
         self.table_modules.setColumnCount(3)
@@ -32,5 +38,4 @@ class Ui_AvailableModules(object):
     def retranslateUi(self, AvailableModules):
         _translate = QtCore.QCoreApplication.translate
         AvailableModules.setWindowTitle(_translate("AvailableModules", "Available modules – Coquery"))
-
 
