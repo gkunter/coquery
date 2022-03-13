@@ -37,6 +37,7 @@ class AvailableModulesDialog(QtWidgets.QDialog):
         modules = [
                 ("cachetools", options.use_cachetools),
                 ("PyMySQL", options.use_mysql),
+                ("sqlparse", options.use_sqlparse),
                 ("Seaborn", options.use_seaborn),
                 ("squarify", options.use_squarify),
                 ("statsmodels", options.use_statsmodels),
@@ -49,7 +50,6 @@ class AvailableModulesDialog(QtWidgets.QDialog):
                 ("BeautifulSoup", options.use_bs4),
                 ("xlrd", options.use_xlrd),
                 ("sphfile", options.use_sphfile),
-                ("sqlparse", options.use_sqlparse),
                 ("PyMongo", options.use_pymongo),
                 ("pyodbc", options.use_pyodbc),
                 ("meza", options.use_meza),
@@ -67,6 +67,8 @@ class AvailableModulesDialog(QtWidgets.QDialog):
             desc_item = QtWidgets.QTableWidgetItem(
                 re.sub("<[^<]+?>", "", description))
             self._links[id(name_item)] = url
+            self._links[id(desc_item)] = url
+            self._links[id(status_item)] = url
 
             if flag:
                 status_item.setIcon(get_icon("Checkmark"))
@@ -78,7 +80,7 @@ class AvailableModulesDialog(QtWidgets.QDialog):
             self.ui.table_modules.setItem(i, 2, desc_item)
 
         self.ui.table_modules.setWordWrap(True)
-        self.ui.table_modules.resizeRowsToContents()
+        self.ui.table_modules.resizeColumnsToContents()
         self.ui.table_modules.itemClicked.connect(self.open_url)
 
     def open_url(self, item):
