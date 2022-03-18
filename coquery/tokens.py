@@ -3,7 +3,7 @@
 """
 tokens.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -21,6 +21,9 @@ from .defines import (
     msg_missing_pos_spec)
 from .errors import TokenParseError
 from .unicode import utf8
+
+
+PUNCTUATION = list(".,;!:-+'()") + ['"'] + ["''"] + ["``"] + ["--"] + [r"\?"]
 
 
 class QueryToken(object):
@@ -56,10 +59,10 @@ class QueryToken(object):
     wildcard_characters = ["*", "?"]
 
     @classmethod
-    def _check_pos_list(cls, l):
-        return [False] * len(l)
+    def _check_pos_list(cls, lst):
+        return [False] * len(lst)
 
-    def __init__(self, S=None):
+    def __init__(self, s=None):
         self.word_specifiers = []
         self.class_specifiers = []
         self.lemma_specifiers = []
@@ -69,20 +72,20 @@ class QueryToken(object):
         self.negated = None
         self.wildcards = None
         self.lemmatize = None
-        if S is not None:
-            self.S = utf8(S).strip()
+        if s is not None:
+            self.S = utf8(s).strip()
             self.parse()
         else:
-            self.S = S
+            self.S = s
 
-    def __eq__(self, S):
-        return self.S == S
+    def __eq__(self, s):
+        return self.S == s
 
-    def __ne__(self, S):
-        return self.S != S
+    def __ne__(self, s):
+        return self.S != s
 
     def __repr__(self):
-        return "{}(S='{}')".format(self.__class__.__name__, self.S)
+        return "{}(s='{}')".format(self.__class__.__name__, self.S)
 
     @classmethod
     def set_pos_check_function(cls, fnc):
@@ -369,7 +372,7 @@ class ParseState(Enum):
     POS_SEPARATOR = "POS"
 
 
-def parse_query_string(S, token_type):
+def parse_query_string(s, token_type):
     """
     Split a string into query items, making sure that bracketing and
     quotations are valid. Escaping is allowed.
@@ -378,11 +381,11 @@ def parse_query_string(S, token_type):
     closed, a TokenParseError is raised.
     """
 
-    def add(S, ch):
-        return "{}{}".format(S, ch)
+    def add(working, ch):
+        return f"{working}{ch}"
 
     try:
-        S = S.decode("utf-8")
+        s = s.decode("utf-8")
     except UnicodeEncodeError:
         # already a unicode string
         pass
@@ -401,11 +404,11 @@ def parse_query_string(S, token_type):
     state = ParseState.NORMAL
 
     # main loop
-    for char_pos, current_char in enumerate(S):
+    for char_pos, current_char in enumerate(s):
         # this string is used to mark the position of syntax errors
-        pos_string = ("." * (char_pos) +
+        pos_string = ("." * char_pos +
                       "↥" +
-                      "." * (len(S) - char_pos - 1))
+                      "." * (len(s) - char_pos - 1))
 
         if escaping:
             current_word = add(current_word, f"\\{current_char}")
@@ -438,16 +441,16 @@ def parse_query_string(S, token_type):
                                         token_type.pos_separator]:
                     # Raise exception if another character follows other than
                     # the character opening a quantification:
-                    S = ("{}: expected a quantifier starting with <code "
+                    s = ("{}: expected a quantifier starting with <code "
                          "style='color: #aa0000'>{}</code> or a "
                          "part-of-speech specifier of the form <code "
                          "style='color: #aa0000'>{}{}POS{}</code>").format(
-                            S,
+                            s,
                             token_type.quantification_open,
                             token_type.pos_separator,
                             token_type.bracket_open,
                             token_type.bracket_close)
-                    raise TokenParseError(S)
+                    raise TokenParseError(s)
                 if current_char == token_type.pos_separator:
                     state = ParseState.POS_SEPARATOR
                     token_closed = False
@@ -479,7 +482,7 @@ def parse_query_string(S, token_type):
                     if current_char == token_type.quantification_open:
                         raise TokenParseError(
                             msg_unexpected_quantifier_start.format(
-                                S, pos_string,
+                                s, pos_string,
                                 token_type.quantification_open))
 
             current_char = current_char.strip()
@@ -494,10 +497,10 @@ def parse_query_string(S, token_type):
                 state = ParseState.IN_BRACKET
                 token_closed = False
             else:
-                S = ("{}: illegal character after full stop, expected <code "
+                s = ("{}: illegal character after full stop, expected <code "
                      "style='color: #aa0000'>{}</code>").format(
-                    S, token_type.bracket_open)
-                raise TokenParseError(S)
+                    s, token_type.bracket_open)
+                raise TokenParseError(s)
 
         # bracket state?
         elif state == ParseState.IN_BRACKET:
@@ -532,15 +535,15 @@ def parse_query_string(S, token_type):
                         # raise an exception if a comma immediately follows
                         # an opening bracket:
                         if current_word[-1] == token_type.quantification_open:
-                            S = "{}: {}".format(
-                                S, "no lower range in the quantification")
-                            raise TokenParseError(S)
+                            s = "{}: {}".format(
+                                s, "no lower range in the quantification")
+                            raise TokenParseError(s)
                         # raise exception if a comma has already been added:
                         if comma_added:
-                            S = "{}: {}".format(
-                                S, ("only one comma is allowed within a "
+                            s = "{}: {}".format(
+                                s, ("only one comma is allowed within a "
                                     "quantification"))
-                            raise TokenParseError(S)
+                            raise TokenParseError(s)
                         else:
                             comma_added = True
                     if current_char == token_type.quantification_close:
@@ -548,28 +551,28 @@ def parse_query_string(S, token_type):
                         # immediately after a comma or the opening bracket:
                         if (current_word[-1]
                                 in [",", token_type.quantification_open]):
-                            S = "{}: {}".format(
-                                S, "no upper range in quantification")
-                            raise TokenParseError(S)
+                            s = "{}: {}".format(
+                                s, "no upper range in quantification")
+                            raise TokenParseError(s)
                         state = ParseState.NORMAL
                         token_closed = True
 
                     current_word = add(current_word, current_char)
             else:
-                S = ("{}: Illegal character <code style='color: #aa0000'>{}"
+                s = ("{}: Illegal character <code style='color: #aa0000'>{}"
                      "</code> within the quantification").format(
-                         S, current_char)
-                raise TokenParseError(S)
+                         s, current_char)
+                raise TokenParseError(s)
 
     if escaping:
-        S = (f"{S}: Escape sequence starting with <code style='color: "
+        s = (f"{s}: Escape sequence starting with <code style='color: "
              "#aa0000'>\\</code> not followed by another character.")
-        raise TokenParseError(S)
+        raise TokenParseError(s)
 
     if state != ParseState.NORMAL:
         if state == ParseState.POS_SEPARATOR:
             raise TokenParseError(msg_missing_pos_spec.format(
-                S, pos_string, token_type.pos_separator))
+                s, pos_string, token_type.pos_separator))
         if state == ParseState.IN_BRACKET:
             op = token_type.bracket_open
             cl = token_type.bracket_close
@@ -585,15 +588,15 @@ def parse_query_string(S, token_type):
         else:
             op = "?"
             cl = "?"
-        S = msg_token_dangling_open.format(S, pos_string, cl, op)
-        raise TokenParseError(S)
+        s = msg_token_dangling_open.format(s, pos_string, cl, op)
+        raise TokenParseError(s)
 
     if current_word:
         tokens.append(current_word)
     return tokens
 
 
-def get_quantifiers(S):
+def get_quantifiers(s):
     """
     Analyze the upper and lower quantification in the token string.
 
@@ -611,7 +614,7 @@ def get_quantifiers(S):
 
     Parameters
     ----------
-    S : string
+    s : string
         A query token string
 
     Returns
@@ -621,7 +624,7 @@ def get_quantifiers(S):
         the lower and upper number of repetions (in order)
     """
     regexp = r"(?P<token>.*)({\s*(?P<start>\d+)(,\s*(?P<end>\d+))?\s*})+"
-    match = re.match(regexp, S)
+    match = re.match(regexp, s)
     if match:
         start = int(match.groupdict()["start"])
         try:
@@ -631,12 +634,12 @@ def get_quantifiers(S):
         token = match.groupdict()["token"]
         return (token, start, end)
     else:
-        return (S, 1, 1)
+        return (s, 1, 1)
 
 
-def preprocess_query(S, literal=False):
+def preprocess_query(s, literal=False):
     """
-    Analyze the quantification in S, and return a list of strings so that
+    Analyze the quantification in s, and return a list of strings so that
     all permutations are included.
 
     This function splits the string, analyzes the quantification of each
@@ -644,8 +647,9 @@ def preprocess_query(S, literal=False):
 
     Parameters
     ----------
-    S : string
+    s : string
         A string that could be used as a query string
+
     literal : bool
         True if the query string should be queried as is, or False otherwise.
         In other words, if `literal` is True, a query string such as `[?]`
@@ -661,9 +665,9 @@ def preprocess_query(S, literal=False):
     """
 
     if not literal:
-        tokens = parse_query_string(S, COCAToken)
+        tokens = parse_query_string(s, COCAToken)
     else:
-        tokens = [x.strip() for x in S.split() if x.strip()]
+        tokens = [x.strip() for x in s.split() if x.strip()]
 
     outer = []
     current_pos = 1
@@ -675,8 +679,7 @@ def preprocess_query(S, literal=False):
             val = None
         elif re.match("~?_PUNCT", val):
             neg = val.startswith("~")
-            val = "|".join(list(".,;!:-+") + ["\\?"])
-            # FIXME: negation doesn't work
+            val = "|".join(PUNCTUATION)
             if neg:
                 val = "~{}".format(val)
         inner = []

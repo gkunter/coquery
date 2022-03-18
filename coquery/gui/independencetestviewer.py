@@ -105,7 +105,7 @@ class IndependenceTestViewer(QtWidgets.QDialog):
 
         super(IndependenceTestViewer, self).__init__(parent)
         session = get_toplevel_window().Session
-        manager = session.get_manager()
+        manager = session.get_manager(options.cfg.MODE)
         self.parent = parent
         self.ui = Ui_IndependenceTestViewer()
         self.ui.setupUi(self)

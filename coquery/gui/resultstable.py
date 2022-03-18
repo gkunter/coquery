@@ -123,8 +123,8 @@ class CoqTotalDelegate(CoqResultCellDelegate):
 
     def __init__(self, *args, **kwargs):
         super(CoqTotalDelegate, self).__init__(*args, **kwargs)
-        self.fg_color = self._app.palette().color(QtGui.QPalette.ButtonText)
-        self.bg_color = self._app.palette().color(QtGui.QPalette.Button)
+        self.fg_color = self._app.palette().color(QtGui.QPalette.BrightText)
+        self.bg_color = self._app.palette().color(QtGui.QPalette.Dark)
 
 
 class CoqProbabilityDelegate(CoqResultCellDelegate):
