@@ -2,7 +2,7 @@
 """
 bubbleplot.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -17,6 +17,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
+from coquery.visualizer.aggregator import Aggregator
 from coquery.visualizer import visualizer as vis
 from coquery.visualizer.treemap import TreeMap
 
@@ -230,7 +231,7 @@ class BubblePlot(TreeMap):
             else:
                 grouping.append(feature)
 
-        aggregator = vis.Aggregator()
+        aggregator = Aggregator()
 
         if z:
             z_statistic = ("mode" if data[z].dtype == object else
@@ -240,7 +241,7 @@ class BubblePlot(TreeMap):
         if numerical:
             aggregator.add(numerical, "mean", self.NUM_COLUMN)
         else:
-            aggregator.add(self.get_default_index(), "count", self.NUM_COLUMN)
+            aggregator.add(self.default_index, "count", self.NUM_COLUMN)
 
         df = aggregator.process(data, grouping)
 
