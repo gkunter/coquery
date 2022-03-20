@@ -24,6 +24,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 
 from coquery.visualizer import visualizer as vis
+from coquery.visualizer.aggregator import Aggregator
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByFreq, ColorizeByNum)
 
@@ -171,7 +172,7 @@ class TreeMap(vis.Visualizer):
         numeric = None
         second_category = None
 
-        aggregator = vis.Aggregator()
+        aggregator = Aggregator()
 
         if (x and data[x].dtype == object and
                 y and data[y].dtype == object):
@@ -263,7 +264,7 @@ class TreeMap(vis.Visualizer):
                 dx = rect["dx"]
                 dy = rect["dy"]
 
-                sub_agg = vis.Aggregator()
+                sub_agg = Aggregator()
                 sub_agg.add(numeric, "sum", name=numeric2)
 
                 dsub = sub_agg.process(df[df[x] == xval], y)
