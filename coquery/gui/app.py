@@ -62,10 +62,6 @@ from coquery.gui.orphanageddatabases import OrphanagedDatabasesDialog
 
 critical_box = QtWidgets.QMessageBox.critical
 
-# add path required for visualizers:
-if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
-    sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
-
 def get_icon(s, small_n_flat=True, size="24x24"):
     """
     Return an icon that matches the given string.
