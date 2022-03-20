@@ -263,127 +263,37 @@ class TestBarcodePlot(_MetaTestCase):
         self.assertFalse(invalid6)
 
 
-class TestBarcodePlotColorize(CoqQtTestCase):
-    """
-    Test the colorize_elements() method.
-    """
-
-
 class TestBarcodePlotWidgets(CoqQtTestCase):
     def setUp(self):
-        super(TestBarcodePlotWidgets, self).setUp()
+        super().setUp()
         self.vis = BarcodePlot(None, None)
         self.df = self.get_default_df()
 
     def test_custom_widgets(self):
         tup = self.vis.get_custom_widgets()
         widgets, activate_signals, update_signals = tup
-        expected = [QtWidgets.QCheckBox()]
+        expected_classes = [QtWidgets.QCheckBox, QtWidgets.QCheckBox]
 
         self.assertListEqual([type(x) for x in widgets],
-                             [type(y) for y in expected])
+                             expected_classes)
 
-        self.assertTrue(len(activate_signals) == 1)
+        self.assertTrue(len(activate_signals) == 2)
         self.assertListEqual(update_signals, [])
 
 
-class TestBarcodePlotRandomized(_MetaTestCase):
+class TestBarcodePlotRandomized(TestBarcodePlot):
+    """
+    Run the same tests as TestBarcodePlot but with a randomized dataframe.
+    """
     def setUp(self):
-        super(TestBarcodePlotRandomized, self).setUp()
+        super().setUp()
         self.df = self.df.sample(frac=1).reset_index(drop=True)
-
-
-class TestBarcodePlotAxisArguments(_MetaTestCase):
-    def test_horizontal_no_subgroup(self):
-        """
-        Basic test: only a single numerical variable along the `X` axis
-        """
-        self.vis.x = "ID"
-        self.vis.y = None
-        self.vis.levels_y = None
-        self.vis.horizontal = True
-        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
-
-        ax_args = self.vis._get_axis_params()
-        target = {"yticks": np.array([0.5]),
-                  "yticklabels": [""],
-                  "ylim": (0, 1),
-                  "xlim": (0, 1000),
-                  }
-        self.assertDictEqual(ax_args, target)
-
-    def test_vertical_no_subgroup(self):
-        """
-        Basic test: only a single numerical variable along the `Y` axis
-        """
-        self.vis.x = None
-        self.vis.y = "ID"
-        self.vis.levels_x = None
-        self.vis.levels_y = None
-        self.vis.horizontal = False
-        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
-
-        ax_args = self.vis._get_axis_params()
-        target = {"xticklabels": [""],
-                  "xticks": np.array([0.5]),
-                  "xlim": (0, 1),
-                  "ylim": (0, 1000),
-                  }
-        self.assertDictEqual(ax_args, target)
-
-    def test_horizontal_subgroup(self):
-        """
-        Numerical variable along `Y` with grouping variable along `X`
-        """
-        category = "X"
-        levels = sorted(self.df[category].unique())
-
-        self.vis.x = category
-        self.vis.y = "ID"
-        self.vis.levels_x = levels
-        self.vis.levels_y = None
-        self.vis.horizontal = False
-        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
-
-        ax_args = self.vis._get_axis_params()
-        target = {"xticklabels": levels,
-                  "xticks": np.array([0.5, 1.5]),
-                  "xlim": (0, 2),
-                  "ylim": (0, 1000),
-                  }
-
-        self.assertDictEqual(ax_args, target)
-
-    def test_vertical_subgroup(self):
-        """
-        Numerical variable along `X` with grouping variable along `Y`
-        """
-        category = "X"
-        levels = sorted(self.df[category].unique())
-
-        self.vis.x = "ID"
-        self.vis.y = category
-        self.vis.levels_x = None
-        self.vis.levels_y = levels
-        self.vis.horizontal = True
-        self.vis._limiter_fnc = lambda x, y, z: (0, 1000)
-
-        ax_args = self.vis._get_axis_params()
-        target = {"yticklabels": levels,
-                  "yticks": np.array([0.5, 1.5]),
-                  "ylim": (0, 2),
-                  "xlim": (0, 1000),
-                  }
-
-        self.assertDictEqual(ax_args, target)
 
 
 provided_tests = (
     TestBarcodePlot,
-    TestBarcodePlotColorize,
-    TestBarcodePlotWidgets,
     TestBarcodePlotRandomized,
-    TestBarcodePlotAxisArguments,
+    TestBarcodePlotWidgets,
     )
 
 
