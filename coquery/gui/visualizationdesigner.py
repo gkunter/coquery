@@ -8,7 +8,7 @@ Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-import importlib.util
+import importlib
 import logging
 import os
 import glob
@@ -130,6 +130,10 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.dialog_layout = QtWidgets.QVBoxLayout(self.figure_widget)
         self.dialog_layout.setContentsMargins(0, 0, 0, 0)
         self.dialog_layout.setSpacing(0)
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.hide()
+        self.dialog_layout.addWidget(self.progress_bar)
         self.figure_widget.resize(self.viewer_size)
         self.figure_widget.setWindowTitle("<no figure> – Coquery")
         self.figure_widget.setWindowIcon(get_icon(
@@ -255,9 +259,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
                "Visualization module error – Coquery",
                None),
             MODULE_ERROR.format(
-                module=exception._module_name,
+                module=getattr(exception, "_module_name", "&lt;unknown&gt;"),
                 type=type(exception).__name__,
-                file=exception._module_name,
+                file=getattr(exception, "_module_name", "&ls;unknown&gt;"),
                 code=exc_obj,
                 line=exc_tb.tb_lineno))
 
@@ -1119,14 +1123,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def start_plot(self):
         logging.info("VIS: start_plot()")
-        try:
-            self.progress_bar = QtWidgets.QProgressBar()
-            self.progress_bar.setRange(0, 0)
-            self.progress_bar.show()
-            self.dialog_layout.addWidget(self.progress_bar)
-        except Exception as e:
-            logging.error(f"VIS: start_plot(), exception {str(e)}")
-            raise e
+        self.progress_bar.show()
         logging.info("VIS: start_plot() done")
 
     def run_plot(self, **kwargs):
@@ -1146,13 +1143,6 @@ class VisualizationDesigner(QtWidgets.QDialog):
         try:
             values = self.get_gui_values()
             figure_title = values["figure_type"].text()
-
-            try:
-                self.dialog_layout.removeWidget(self.progress_bar)
-                self.progress_bar.hide()
-                del self.progress_bar
-            except AttributeError:
-                pass
 
             self.add_annotations()
             self.set_limits()
@@ -1186,10 +1176,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
         except Exception as e:
             logging.error("VIS: finalize_plot(), exception {}".format(str(e)))
             raise e
+        finally:
+            self.progress_bar.hide()
         logging.info("VIS: finalize_plot() done")
 
     def exception_plot(self, e):
         logging.error(e)
+        self.progress_bar.hide()
         QtWidgets.QMessageBox.critical(
             self,
             "Error while plotting – Coquery",
@@ -1397,8 +1390,12 @@ class VisualizationDesigner(QtWidgets.QDialog):
 def get_visualizer_module(name):
     # try to import the specified visualization module:
     visualizer_path = os.path.join(options.cfg.base_path, "visualizer")
+    loader_details = (
+        importlib.machinery.SourceFileLoader,
+        importlib.machinery.all_suffixes())
+    finder = importlib.machinery.FileFinder(visualizer_path, loader_details)
     try:
-        spec = importlib.util.find_spec(name)
+        spec = finder.find_spec(name)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     except Exception as e:
