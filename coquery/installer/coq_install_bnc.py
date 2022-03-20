@@ -1106,7 +1106,7 @@ class BuilderClass(BaseCorpusBuilder):
 
         Returns
         -------
-        l : list
+        lst : list
             A list containing (in order) the ID, the age, and the sex of the
             person. If the age or the sex are not given, the respective
             strings are empty.

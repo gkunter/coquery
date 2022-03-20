@@ -439,7 +439,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
         Returns
         -------
-        l : list
+        lst : list
             A list of strings, each representing a file name
 
         """
@@ -1685,7 +1685,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
         Returns
         -------
-        l : list of tuples
+        lst : list of tuples
             A list of tuples describing the Python modules that are required
             by this module. Each tuple consists of the module name, the
             package name, and the URL for this package.

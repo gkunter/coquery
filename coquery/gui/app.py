@@ -3013,7 +3013,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         Returns
         -------
-        l : list
+        lst : list
             A list of tuples. The first element of each tuple is a Link object
             (defined in linkselect.py), and the second element is a string
             specifying the resource feature that establishes the link.

@@ -95,7 +95,7 @@ class BaseResource(CoqObject):
 
         Returns
         --------
-        l : list[str]
+        lst : list[str]
             A list of header labels.
         """
         # special case for "coquery_query_token", which receives numbers like
@@ -202,7 +202,7 @@ class BaseResource(CoqObject):
 
         Returns
         -------
-        l : list
+        lst : list
             List of strings containing the resource feature names
         """
         # create a list with all split resources:
@@ -301,7 +301,7 @@ class BaseResource(CoqObject):
 
         Returns
         -------
-        l : list or None
+        lst : list or None
             A list of the resource table names that lead from resource
             feature 'start' to resource feature 'end'. The list contains
             start and end as the first and the last element if such a path
@@ -384,7 +384,7 @@ class BaseResource(CoqObject):
 
         Returns
         -------
-        l : list
+        lst : list
             A list of strings, each representing a resource feature that has
             the same display name as 'name'.
         """
@@ -2024,7 +2024,7 @@ class SQLResource(BaseResource):
 
         Returns
         -------
-        l : list
+        lst : list
             A list of tuples. Each tuple consists of the resource name of the
             source table, and a dictionary with resource features as keys and
             the matching field content as values.
