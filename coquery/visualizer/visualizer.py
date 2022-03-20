@@ -80,7 +80,7 @@ class Visualizer:
         self.experimental = False
 
     @property
-    def get_default_index(self):
+    def default_index(self):
         return self._id_column
 
     def get_id_values(self, data):
