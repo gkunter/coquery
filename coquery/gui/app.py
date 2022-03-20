@@ -2511,21 +2511,19 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             return
 
         if self._first_visualization_call:
-            self._first_visualization_call = False
             title = "Loading visualization modules – Coquery"
             content = "Loading the visualization modules. Please wait..."
             msg_box = CoqStaticBox(title, content)
-        else:
-            msg_box = None
 
-        from . import visualizationdesigner
+        from coquery.gui.visualizationdesigner import VisualizationDesigner
 
-        if msg_box:
+        if self._first_visualization_call:
             msg_box.hide()
             msg_box.close()
             del msg_box
+            self._first_visualization_call = False
 
-        dialog = visualizationdesigner.VisualizationDesigner(self.Session)
+        dialog = VisualizationDesigner(self.Session)
         dialog.dataRequested.connect(lambda: set_data(dialog))
         dialog.connectDataAvailableSignal(self.dataChanged)
         set_data(dialog)
