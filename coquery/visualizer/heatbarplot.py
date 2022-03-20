@@ -2,7 +2,7 @@
 """
 heatbarplot.py is part of Coquery.
 
-Copyright (c) 2018-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 import math
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from coquery.visualizer import barcodeplot
@@ -36,6 +37,15 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
     plot_rug = False
     normalize = False
 
+    def __init__(self, df, session, id_column=None, limiter_fnc=None):
+        super().__init__(df, session, id_column, limiter_fnc)
+        self.layout_bandwidth = None
+        self.spin_bandwidth = None
+        self.check_bandwidth = None
+        self.check_normalize = None
+        self.check_horizontal = None
+        self.check_rug = None
+
     def get_custom_widgets(self, *args, **kwargs):
         label = tr("HeatbarPlot", "Plot horizontal by default", None)
         bandwidth_text = tr("HeatbarPlot", "Use custom bandwidth:", None)
@@ -44,27 +54,30 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         normalize_text = tr("HeatbarPlot", "Normalize within groups", None)
 
         self.check_bandwidth = QtWidgets.QCheckBox(bandwidth_text)
-        self.spin_bandwidth = QtWidgets.QSpinBox(self.bandwidth)
+        self.spin_bandwidth = QtWidgets.QSpinBox()
+        self.layout_bandwidth = QtWidgets.QHBoxLayout()
+        self.check_normalize = QtWidgets.QCheckBox(normalize_text)
+        self.check_rug = QtWidgets.QCheckBox(rug_text)
+        self.check_horizontal = QtWidgets.QCheckBox(label)
+
+        self.spin_bandwidth.setValue(self.bandwidth)
         self.spin_bandwidth.setDisabled(True)
         self.spin_bandwidth.setSuffix(suffix_text)
         self.spin_bandwidth.setMaximum(99999999)
         self.spin_bandwidth.setMinimum(5)
         self.spin_bandwidth.setSingleStep(1)
-        self.layout_bandwidth = QtWidgets.QHBoxLayout()
+
         self.layout_bandwidth.addWidget(self.check_bandwidth)
         self.layout_bandwidth.addWidget(self.spin_bandwidth)
 
-        self.check_normalize = QtWidgets.QCheckBox(normalize_text)
         self.check_normalize.setCheckState(
             QtCore.Qt.Checked if self.normalize else
             QtCore.Qt.Unchecked)
 
-        self.check_rug = QtWidgets.QCheckBox(rug_text)
         self.check_rug.setCheckState(
             QtCore.Qt.Checked if self.plot_rug else
             QtCore.Qt.Unchecked)
 
-        self.check_horizontal = QtWidgets.QCheckBox(label)
         self.check_horizontal.setCheckState(
             QtCore.Qt.Checked if self.force_horizontal else
             QtCore.Qt.Unchecked)
@@ -110,7 +123,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         located at the right edge of the target bin.
 
         The columns B(-1), B(0), B(+1) give the increments for the target bin
-        B(0), the bin preceding the target bin B(-1) and the bin folloowing
+        B(0), the bin preceding the target bin B(-1) and the bin following
         the target bin B(+1).
 
         The largest increment is added when p=0.5, i.e. when the token is
@@ -145,9 +158,9 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
             bins[target_bin] += 1.5 - pct_in_bin
 
         if target_bin > 0:
-            bins[target_bin - 1] += max(0, 0.5 - pct_in_bin)
+            bins[target_bin - 1] += max(0.0, 0.5 - pct_in_bin)
         if target_bin < len(bins) - 1:
-            bins[target_bin + 1] += max(0, pct_in_bin - 0.5)
+            bins[target_bin + 1] += max(0.0, pct_in_bin - 0.5)
 
         return bins
 
@@ -168,7 +181,8 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         """
         kwargs = {"aspect": "auto", "interpolation": "gaussian"}
 
-        M = []
+        m = []
+        binned = []
 
         if self._id_column:
             num_column = data[self._id_column]
@@ -179,21 +193,21 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
             self.horizontal = bool(y)
 
             for val in levels_x or levels_y:
-                binned = pd.np.zeros(1 + (size // bw))
+                binned = np.zeros(1 + (size // bw))
                 values = (num_column[data[x or y] == val]).values
                 for i in values:
                     binned = self.increment_bins(binned, i, bw)
 
-                M.append(pd.np.array(binned))
+                m.append(np.array(binned))
         else:
             self.horizontal = self.force_horizontal
 
-            binned = pd.np.zeros(1 + (size // bw))
+            binned = np.zeros(1 + (size // bw))
             values = num_column.values
             for i in values:
                 binned = self.increment_bins(binned, i, bw)
 
-            M.append(pd.np.array(binned))
+            m.append(np.array(binned))
 
         width = len(binned) * bw - 1
         if x:
@@ -205,7 +219,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         else:
             kwargs["extent"] = (None, None, 0, width)
 
-        kwargs["M"] = pd.np.array(M)
+        kwargs["M"] = np.array(m)
         return kwargs
 
     def set_bandwidth(self, bw):
@@ -236,25 +250,25 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         heat map plotted under the lines.
         """
         param = kwargs["img"]
-        M = kwargs["M"]
+        m = kwargs["M"]
 
         left, right, bottom, top = param["extent"]
 
         if self.normalize:
-            M = pd.np.array([[val / max(X) for val in X] for X in M])
+            m = np.array([[val / max(X) for val in X] for X in m])
 
         if self.y:
-            M = M[::-1]
+            m = m[::-1]
 
-        for i, x in enumerate(M):
+        for i, x in enumerate(m):
             if left is None and right is None:
                 param["extent"] = (i, i+1, bottom, top)
-                x = pd.np.array([x[::-1]]).T
+                x = np.array([x[::-1]]).T
             else:
                 param["extent"] = (left, right, i, i+1)
-                x = pd.np.array([x])
+                x = np.array([x])
 
-            plt.imshow(x, vmax=M.max(), **param)
+            plt.imshow(x, vmax=m.max(initial=None), **param)
 
         if self.plot_rug:
             elements = super(HeatbarPlot, self).plot_facet(rug=True, **kwargs)
@@ -264,4 +278,5 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         return elements
 
 
+updated_to_new_interface = True
 provided_visualizations = [HeatbarPlot]
