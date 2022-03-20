@@ -8,9 +8,8 @@ Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
+import logging
 import sys
-import warnings
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -23,7 +22,7 @@ class CoqSettings(QtCore.QSettings):
             s = "Exception when requesting setting key '{}': {}".format(
                 key, e)
             print(s)
-            warnings.warn(s)
+            logging.warning(s)
             val = default
         return val
 
@@ -37,7 +36,8 @@ else:
 
 
 def tr(*args, **kwargs):
-    return QtWidgets.QApplication.instance().translate(*args, **kwargs)
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    return app.translate(*args, **kwargs)
 
 
 def get_toplevel_window(name="MainWindow"):
