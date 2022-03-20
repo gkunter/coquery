@@ -127,7 +127,10 @@ class ExceptionBox(QtWidgets.QDialog):
 
 
 def catch_exceptions(cls, exception, tb):
-    ExceptionBox(cls, exception, tb).exec_()
-
+    app = QtWidgets.QApplication.instance()
+    if app:
+        ExceptionBox(cls, exception, tb).exec_()
+    else:
+        raise exception
 
 sys.excepthook = catch_exceptions
