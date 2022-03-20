@@ -14,7 +14,7 @@ import os
 import glob
 
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import pyqtSignal, QCoreApplication
+from PyQt5.QtCore import pyqtSignal
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import (
@@ -24,7 +24,6 @@ import pandas as pd
 import seaborn as sns
 
 from coquery import options
-
 from coquery.gui.app import get_icon
 from coquery.gui.threads import CoqThread
 from coquery.gui.ui.visualizationDesignerUi import Ui_VisualizationDesigner
@@ -38,8 +37,9 @@ from coquery.visualizer.colorizer import (
 logging.getLogger("matplotlib.font_manager").disabled = True
 
 
-def tr(context, text, disambiguation=None):
-    return QCoreApplication.instance().translate(context, text, disambiguation)
+def tr(*args, **kwargs):
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    return app.translate(*args, **kwargs)
 
 
 _MARGIN_LABELS = ["top", "bottom", "left", "right", "wspace", "hspace"]
