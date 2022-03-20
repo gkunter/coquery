@@ -10,74 +10,19 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import math
-import collections
 import logging
 
-from PyQt5 import QtCore
-
-import scipy.stats as st
+import numpy as np
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from coquery.visualizer.aggregator import Aggregator
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByNum)
 
-mpl.use("Qt5Agg")
-mpl.rcParams["backend"] = "Qt5Agg"
 
-
-class Aggregator(QtCore.QObject):
-    def __init__(self, id_column=None):
-        super(Aggregator, self).__init__()
-        self.reset()
-        self._id_column = id_column or "coquery_invisible_corpus_id"
-
-    def reset(self):
-        self._aggs_dict = collections.defaultdict(list)
-        self._names_dict = collections.defaultdict(list)
-
-    def add(self, column, fnc, name=None):
-        if fnc == "mode":
-            fnc = self._get_most_frequent
-        elif fnc == "ci":
-            fnc = self._get_interval
-        self._aggs_dict[column].append(fnc)
-        self._names_dict[column].append(name or column)
-
-    def process(self, df, grouping):
-
-        # if there is an id column in the data frame, make sure that the
-        # aggregation samples the first ID
-        if self._id_column not in df.columns:
-            if self._id_column in self._aggs_dict:
-                self._aggs_dict.pop(self._id_column)
-            if self._id_column in self._names_dict:
-                self._names_dict.pop(self._id_column)
-        else:
-            self.add(self._id_column, "first")
-
-        df = df.groupby(grouping).agg(self._aggs_dict)
-        agg_columns = []
-        for names in [self._names_dict[x] for x in df.columns.levels[0]]:
-            agg_columns += names
-        df.columns = agg_columns
-        df = df.reset_index()
-        return df
-
-    @staticmethod
-    def _get_most_frequent(x):
-        counts = x.value_counts()
-        val = counts[counts == counts.max()].sort_index().index[0]
-        return val
-
-    @staticmethod
-    def _get_interval(x):
-        return x.sem() * st.t.ppf(1 - 0.025, len(x))
-
-
-class Visualizer(QtCore.QObject):
+class Visualizer:
     """
     Define a Visualizer class that can be used by the visualization designer.
 
@@ -102,7 +47,24 @@ class Visualizer(QtCore.QObject):
     DEFAULT_YLABEL = "Y"
 
     def __init__(self, df, session, id_column=None, limiter_fnc=None):
-        super(Visualizer, self).__init__()
+        """
+        Initalize the Visualizer instance.
+
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame that will be used for the visualization
+        session : Session
+            The session that this visualization will be associated with
+        id_column : str
+            The name of the column in the data frame that will be treated as
+            containing the unique identifying numbers
+        limiter_fnc : function
+            A function that will be used to determine the correct limits for
+            the visualizer
+        """
+        super().__init__()
+        self.colors = None
         self.df = df
         self.session = session
         self.legend_levels = None
@@ -117,6 +79,7 @@ class Visualizer(QtCore.QObject):
         self._limiter_fnc = limiter_fnc
         self.experimental = False
 
+    @property
     def get_default_index(self):
         return self._id_column
 
@@ -140,7 +103,7 @@ class Visualizer(QtCore.QObject):
         (3) a list of signals that will update the widgets by calling
             update_widgets()
         """
-        return ([], [], [])
+        return [], [], []
 
     def update_values(self):
         """
@@ -186,11 +149,11 @@ class Visualizer(QtCore.QObject):
         Visualizers that need legends to be drawn under other condtions will
         have to override this method.
         """
-        return (self.x and self.y)
+        return self.x and self.y
 
     def get_legend(self, z):
         if not self.suggest_legend():
-            return (None, [], None)
+            return None, [], None
 
         if z:
             legend_title = self.colorizer.legend_title(z)
@@ -202,7 +165,7 @@ class Visualizer(QtCore.QObject):
         legend_palette = self.colorizer.get_palette(
             n=len(legend_levels or []))
 
-        return (legend_title, legend_levels, legend_palette)
+        return legend_title, legend_levels, legend_palette
 
     def add_legend(self, grid, title=None, palette=None, levels=None,
                    loc="lower left", **kwargs):
@@ -379,7 +342,7 @@ class Visualizer(QtCore.QObject):
                 # the time being, only a few functions are included by the
                 # designer, and all of them are in fact numerical, but this
                 # might change at some point.
-                return pd.np.float64
+                return np.float64
             try:
                 return df.dtypes[feature]
             except KeyError:
@@ -426,8 +389,8 @@ class Visualizer(QtCore.QObject):
 
     @staticmethod
     def count_parameters(data_x, data_y, df, session):
-        num_cols = df.select_dtypes(include=[pd.np.number]).columns
-        cat_cols = df.select_dtypes(exclude=[pd.np.number]).columns
+        num_cols = df.select_dtypes(include=[np.number]).columns
+        cat_cols = df.select_dtypes(exclude=[np.number]).columns
         categorical = [x for x in (data_x, data_y) if x in cat_cols]
         numeric = [x for x in (data_x, data_y) if x in num_cols]
         empty = [x for x in (data_x, data_y) if x is None]
@@ -438,7 +401,7 @@ class Visualizer(QtCore.QObject):
     def get_colorizer(data, palette, color_number,
                       z, levels_z=None, range_z=None):
         if z:
-            if data[z].dtype == object:
+            if pd.api.types.is_object_dtype(data[z]):
                 c = ColorizeByFactor(palette, color_number, levels_z)
             else:
                 c = ColorizeByNum(palette, color_number, data[z],
@@ -491,12 +454,12 @@ def get_grid_layout(n):
     This function is an adaption of the R function n2mfrow. """
 
     if n <= 3:
-        return (n, 1)
+        return n, 1
     elif n <= 6:
-        return ((n + 1) // 2, 2)
+        return (n + 1) // 2, 2
     elif n <= 12:
-        return ((n + 2) // 3, 3)
+        return (n + 2) // 3, 3
     else:
         nrows = int(math.sqrt(n)) + 1
         ncols = int(n / nrows) + 1
-        return (nrows, ncols)
+        return nrows, ncols
