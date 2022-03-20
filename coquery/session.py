@@ -309,7 +309,7 @@ class Session(object):
 
     def set_preferred_order(self, lst):
         """
-        Arrange the column names in l so that they occur in the preferred
+        Arrange the column names in lst so that they occur in the preferred
         order.
 
         Columns not in the preferred order follow in an unspecified order.
