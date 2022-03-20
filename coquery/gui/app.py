@@ -60,14 +60,11 @@ from coquery.gui.menus import (CoqResourceMenu, CoqColumnMenu,
                                CoqHiddenColumnMenu)
 from coquery.gui.orphanageddatabases import OrphanagedDatabasesDialog
 
-
 critical_box = QtWidgets.QMessageBox.critical
 
-
-# add path required for visualizers::
+# add path required for visualizers:
 if not os.path.join(options.cfg.base_path, "visualizer") in sys.path:
     sys.path.append(os.path.join(options.cfg.base_path, "visualizer"))
-
 
 def get_icon(s, small_n_flat=True, size="24x24"):
     """
@@ -395,7 +392,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         statusbar.addWidget(self.ui.multi_query_progress, 2)
         statusbar.addWidget(self.ui.status_progress, 3)
 
-        label = _translate("MainWindow", "Connection: ", None)
+        label = tr("MainWindow", "Connection: ", None)
         frame = QtWidgets.QFrame()
         layout = QtWidgets.QHBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1190,8 +1187,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             return
 
         if not self.ui.aggregate_radio_list[0].isChecked():
-            critical_box(self, "User data unavailable",
-                         msg_userdata_unavailable)
+            critical_box(self,
+                         tr("MainWindow", "User data unavailable"),
+                         tr("MainWindow", msg_userdata_unavailable))
             return
 
         max_user_column = 0
@@ -1244,7 +1242,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def set_reference_corpus(self):
         from . import linkselect
-        #title = _translate("MainWindow", "Select reference corpus – Coquery", None)
+        #title = tr("MainWindow", "Select reference corpus – Coquery", None)
         current_connection = options.cfg.current_connection.name
         title = "Select reference corpus"
         subtitle = "&Available corpora"
@@ -1329,7 +1327,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     token_width = meta_data[
                         "coquery_invisible_number_of_tokens"]
             except (AttributeError, KeyError, IndexError):
-                critical_box(self, "Context error", msg_no_context_available)
+                critical_box(self,
+                             tr("MainWindow", "Context error"),
+                             tr("MainWindow", msg_no_context_available))
                 return
 
             # do not show contexts if the user clicks on user data columns
@@ -1434,7 +1434,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for func_name, exc, exc_info in manager._exceptions:
             if isinstance(exc, RegularExpressionError):
                 critical_box(self,
-                             "Regular expression error – Coquery",
+                             tr("MainWindow",
+                                "Regular expression error – Coquery"),
                              str(exc))
             else:
                 errorbox.ErrorBox.show(exc_info, exc, message=func_name)
@@ -1802,15 +1803,22 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                       index=False,
                       encoding=options.cfg.output_encoding)
         except IOError:
-            critical_box(self, "Disk error", msg_disk_error)
+            critical_box(self,
+                         tr("MainWindow", "Disk error – Coquery"),
+                         tr("MainWindow", msg_disk_error))
         except (UnicodeEncodeError, UnicodeDecodeError):
-            critical_box(self, "Encoding error", msg_encoding_error)
+            critical_box(self,
+                         tr("MainWindow", "Encoding error – Coquery"),
+                         tr("MainWindow", msg_encoding_error))
         else:
-            if not sel_only:
+            if sel_only:
+                data_source = tr("MainWindow", "Selection")
+            else:
                 self.last_results_saved = True
-            msg = "{data} saved to file {filename}.".format(
-                data="Selection" if sel_only else "Results table",
-                filename=name)
+                data_source = tr("MainWindow", "Results table")
+            msg = tr("MainWindow",
+                     "{data} saved to file {filename}.").format(
+                data=data_source, filename=name)
             self.showMessage(msg)
 
     def save_selection(self):
@@ -1832,14 +1840,20 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                           header=header,
                           encoding=options.cfg.output_encoding)
         except (UnicodeEncodeError, UnicodeDecodeError):
-            critical_box(self, "Encoding error", msg_encoding_error)
+            critical_box(self,
+                         tr("MainWindow", "Encoding error – Coquery"),
+                         tr("MainWindow", msg_encoding_error))
         else:
             cb = QtWidgets.QApplication.clipboard()
             cb.clear(mode=cb.Clipboard)
             cb.setText(s, mode=cb.Clipboard)
 
-            msg = "{} copied to clipboard.".format(
-                "Selection" if sel_only else "Results table")
+            if sel_only:
+                data_source = tr("MainWindow", "Selection")
+            else:
+                data_source = tr("MainWindow", "Results table")
+            msg = tr("MainWindow", "{data} copied to clipboard.").format(
+                data=data_source)
             self.showMessage(msg)
 
     def create_textgrids(self):
@@ -1907,21 +1921,20 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def exception_during_query(self):
         if not self.terminating:
             if isinstance(self.exception, RuntimeError):
-                critical_box(
-                    self,
-                    "Error during execution – Coquery",
-                    str(self.exception),
-                    QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                critical_box(self,
+                             tr("MainWindow",
+                                "Error during execution – Coquery"),
+                             str(self.exception))
             elif isinstance(self.exception, UnsupportedQueryItemError):
-                critical_box(
-                    self,
-                    "Error in query string – Coquery", str(self.exception),
-                    QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                critical_box(self,
+                             tr("MainWindow",
+                                "Error in query string – Coquery"),
+                             str(self.exception))
             else:
                 errorbox.ErrorBox.show(self.exc_info, self.exception)
-            self.showMessage("Query failed.")
+            self.showMessage(tr("MainWindow", "Query failed."))
         else:
-            self.showMessage("Aborted.")
+            self.showMessage(tr("MainWindow", "Aborted."))
         self.enable_query_button(True)
         self.set_stop_button(False)
         self.stop_progress_indicator()
@@ -2401,11 +2414,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.new_session = SessionInputFile(
                     summary_groups=options.cfg.summary_groups)
                 if not self.verify_file_name():
-                    QtWidgets.QMessageBox.critical(self, "Invalid file name – Coquery", msg_filename_error, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                    critical_box(self,
+                                 tr("MainWindow",
+                                    "Invalid file name – Coquery"),
+                                 tr("MainWindow", msg_filename_error))
                     return
 
-                s = "Reading query strings from <br><br><code>{}</code><br><br>Please wait...".format(options.cfg.input_path)
-                title = "Reading input file – Coquery"
+                s = tr("MainWindow",
+                       ("Reading query strings from <br><br>"
+                        "<code>{}</code><br><br>Please wait...")).format(
+                    options.cfg.input_path)
+
+                title = tr("MainWindow", "Reading input file – Coquery")
                 msg_box = CoqStaticBox(title, s)
                 try:
                     self.new_session.prepare_queries()
@@ -2418,25 +2438,28 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 del msg_box
         except TokenParseError as e:
             critical_box(self,
-                         "Query string parsing error – Coquery", e.par,
-                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                         tr("MainWindow",
+                            "Query string parsing error – Coquery"),
+                         e.par)
         except SQLNoConfigurationError as e:
             critical_box(self,
-                         "Database configuration error – Coquery", str(e),
-                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                         tr("MainWindow",
+                            "Database configuration error – Coquery"),
+                         tr("MainWindow", str(e)))
         except SQLInitializationError as e:
             critical_box(self,
-                         "Database initialization error – Coquery",
-                         msg_initialization_error.format(code=e),
-                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                         tr("MainWindow",
+                            "Database initialization error – Coquery"),
+                         tr("MainWindow", msg_initialization_error).format(
+                             code=e))
         except CollocationNoContextError as e:
             critical_box(self,
-                         "Collocation error – Coquery", str(e),
-                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                         tr("MainWindow", "Collocation error – Coquery"),
+                         tr("MainWindow", str(e)))
         except RuntimeError as e:
             critical_box(self,
-                         "Runtime error – Coquery", str(e),
-                         QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                         tr("MainWindow", "Runtime error – Coquery"),
+                         tr("MainWindow", str(e)))
         except Exception as e:
             errorbox.ErrorBox.show(sys.exc_info(), e)
         else:
@@ -2542,11 +2565,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             try:
                 url = res.url
             except AttributeError:
-                critical_box(
-                    None,
-                    "Documentation error – Coquery",
-                    msg_corpus_no_documentation.format(corpus=corpus),
-                    QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                msg = tr("MainWindow", msg_corpus_no_documentation)
+                critical_box(self,
+                             tr("MainWindow", "Documentation error – Coquery"),
+                             msg.format(corpus=corpus))
             else:
                 import webbrowser
                 webbrowser.open(url)
@@ -3152,11 +3174,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         def get_str(l):
             return (" ({})".format(len(l)) if l else "")
 
-        label_summary_functions = _translate(
+        label_summary_functions = tr(
             "MainWindow", "Summary &functions{}...", None)
-        label_summary_filters = _translate(
+        label_summary_filters = tr(
             "MainWindow", "Result fi&lters{}...", None)
-        label_stopwords = _translate(
+        label_stopwords = tr(
             "MainWindow", "Active stop words: {}", None)
 
         # summary button labels:
@@ -3251,7 +3273,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def remove_functions(self, columns):
         for col in columns:
             # is this a multicolumn function?
-            match = re.search("(func_[^_]*_[^_]*)_\d+_\d+", col)
+            match = re.search(r"(func_[^_]*_[^_]*)_\d+_\d+", col)
             if match:
                 col = match.group(1)
 
@@ -3264,7 +3286,3 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 pass
 
         self.update_columns()
-
-
-def _translate(x, text, y):
-    return utf8(options.cfg.app.translate(x, text, y))
