@@ -113,8 +113,14 @@ def main():
         from test.test_unicode import provided_tests
         test_list += provided_tests
 
+    if not args or "visualitationdesigner" in args:
+        from test.test_visualizationdesigner import provided_tests
+        test_list += provided_tests
+
     if not args or "visualizer" in args:
         from test.vis.barcodeplot import provided_tests
+        test_list += provided_tests
+        from test.vis.heatbarplot import provided_tests
         test_list += provided_tests
         from test.vis.test_barplot import provided_tests
         test_list += provided_tests
@@ -124,7 +130,6 @@ def main():
         test_list += provided_tests
         from test.vis.test_bubbleplot import provided_tests
         test_list += provided_tests
-        from test.vis.heatbarplot import provided_tests
 
     suite = unittest.TestSuite(
         [unittest.TestLoader().loadTestsFromTestCase(x)
