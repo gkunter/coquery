@@ -2,7 +2,7 @@
 """
 testcase.py is part of Coquery.
 
-Copyright (c) 2018-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2018-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -30,23 +30,30 @@ def tmp_filename():
 class CoqTestCase(unittest.TestCase):
     @staticmethod
     def get_default_df():
-        pd.np.random.seed(123)
+        np.random.seed(123)
         return pd.DataFrame({"X": list("AAAAAAAAAAAAAAAAAAABBBBBBBBBBB"),
-                            "Y": list("xxxxxxxxyyyyyyyyyyyxxxxxxxyyyy"),
-                            "Z": list("111122221111222211221122112222"),
-                            "ID": sorted(pd.np.random.choice(
-                                pd.np.arange(1, 100), 30, replace=False)),
-                            "NUM": pd.np.random.randint(0, 100, 30)})
+                             "Y": list("xxxxxxxxyyyyyyyyyyyxxxxxxxyyyy"),
+                             "Z": list("111122221111222211221122112222"),
+                             "ID": sorted(np.random.choice(np.arange(1, 100),
+                                                           30,
+                                                           replace=False)),
+                             "NUM": np.random.randint(0, 100, 30)})
 
-    def assertDictEqual(self, d1, d2):
+    def assertDictEqual(self, d1, d2, **kwargs):
         """
         This overrides assertDictEqual so that any Series or DataFrame value
         of the dictionaries is asserted using a Pandas test, and Numpy arrays
         are asserted using a Numpy test.
+
+        Parameters
+        ----------
+        d1 : dict
+        d2 : dict
+        **kwargs
         """
 
-        D1 = d1.copy()
-        D2 = d2.copy()
+        test1 = d1.copy()
+        test2 = d2.copy()
 
         d_df1 = {}
         d_df2 = {}
@@ -68,16 +75,16 @@ class CoqTestCase(unittest.TestCase):
         for key, val in d1.items():
             for dtype, dct1, _ in map_dtypes:
                 if isinstance(val, dtype):
-                    dct1[key] = D1.pop(key)
+                    dct1[key] = test1.pop(key)
                     break
 
         for key, val in d2.items():
             for dtype, _, dct2 in map_dtypes:
                 if isinstance(val, dtype):
-                    dct2[key] = D2.pop(key)
+                    dct2[key] = test2.pop(key)
                     break
 
-        super().assertDictEqual(D1, D2)
+        super().assertDictEqual(test1, test2, **kwargs)
 
         try:
             self.assertEqual(sorted(d_df1.keys()), sorted(d_df2.keys()))
@@ -125,10 +132,11 @@ class SignalReceiver(object):
     Adopted from https://stackoverflow.com/a/48128768/5215507 (user zalavari)
     """
     def __init__(self, test, signal, *args):
+        self.actual_args = None
+        self.expected_args = args
         self.test = test
         self.signal = signal
         self.called = False
-        self.expected_args = args
 
     def slot(self, *args):
         self.actual_args = args
@@ -150,7 +158,7 @@ def run_tests(test_list):
     """
     This function is used to call the test cases from the list `test_list`.
 
-    It's supposed to be used by a test module inside of its main() function.
+    It's supposed to be used in the main() function of a test module.
     """
     suite = unittest.TestSuite(
         [unittest.TestLoader().loadTestsFromTestCase(x)
