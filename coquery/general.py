@@ -529,7 +529,7 @@ def pretty(vrange, n, endpoint=False):
 
     Returns
     -------
-    l : list
+    lst : list
         A list with n equidistant values ranging from a prettified floor to a
         prettified ceiling
     """
