@@ -23,7 +23,7 @@ import seaborn as sns
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByNum,
     COQ_SINGLE)
-from coquery.defines import PALETTE_BW
+from visualizationdesigner import PALETTE_BW
 from test.testcase import CoqTestCase, run_tests
 
 
