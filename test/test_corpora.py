@@ -65,7 +65,7 @@ class CorpusResource(SQLResource):
 
     annotations = {"segment": "word"}
 
-    def dump_table(self, path, rc_table):
+    def dump_table(self, path, rc_table, **kwargs):
         with open(path, "w") as dump_file:
             dump_file.write(rc_table)
 
@@ -155,8 +155,8 @@ class TestCorpus(CoqTestCase):
     flat_resource = FlatResource
 
     @classmethod
-    def pos_check_function(cls, l):
-        return [x.lower().startswith(("n", "v")) for x in l]
+    def pos_check_function(cls, lst):
+        return [x.lower().startswith(("n", "v")) for x in lst]
 
     def setUp(self):
         self.resource = CorpusResource(None, None)
@@ -375,7 +375,7 @@ class TestCorpus(CoqTestCase):
     def test_get_origin_rc(self):
         self.assertEqual(self.resource.get_origin_rc(), "corpus_source_id")
 
-    ## TEST CORPUS JOINS
+    # TEST CORPUS JOINS
 
     def test_corpus_joins_one_item(self):
         query = TokenQuery("*", self.Session)
@@ -545,9 +545,9 @@ class TestCorpus(CoqTestCase):
                        ON ID4 = ID2 + 2""")])
 
     def test_lemmatized_corpus_joins_1(self):
-        S = "#abc.[n*]"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = "#abc.[n*]"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
             lst,
@@ -559,7 +559,7 @@ class TestCorpus(CoqTestCase):
                               WordId AS WordId1
                        FROM   Corpus) AS COQ_CORPUS_1""")])
 
-    ### FEATURE JOINS
+    # FEATURE JOINS
 
     def test_feature_joins_1(self):
         l1, l2 = self.resource.get_feature_joins(0, ["word_label"])
@@ -638,13 +638,6 @@ class TestCorpus(CoqTestCase):
         self.assertListEqual(l1, [])
         self.assertListEqual(l2, [])
 
-    #def test_feature_joins_8(self):
-        ## words and segments
-        ## this test is still not operational
-        #l1, l2 = self.resource.get_feature_joins(
-        #   0, ["word_label", "segment_label"])
-        #print(l1, l2)
-
     def test_get_token_conditions_1(self):
         token = COCAToken("a*")
         d = self.resource.get_token_conditions(0, token)
@@ -652,113 +645,97 @@ class TestCorpus(CoqTestCase):
 
     def test_get_token_conditions_2(self):
         token = COCAToken("a*|b*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"word": [("COQ_WORD_1.Word LIKE 'a%' OR "
-                       "COQ_WORD_1.Word LIKE 'b%'"),
-                      "COQ_WORD_1.POS LIKE 'n%'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"word": [("COQ_WORD_1.Word LIKE 'a%' OR "
+                                             "COQ_WORD_1.Word LIKE 'b%'"),
+                                            "COQ_WORD_1.POS LIKE 'n%'"]})
 
     def test_get_token_conditions_3(self):
         token = COCAToken("[a*|b*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR "
-                       "COQ_LEMMA_1.Lemma LIKE 'b%'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"lemma": ["COQ_LEMMA_1.Lemma LIKE 'a%' OR "
+                                             "COQ_LEMMA_1.Lemma LIKE 'b%'"]})
 
     def test_get_token_conditions_4(self):
         token = COCAToken("a*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"word": ["COQ_WORD_1.Word LIKE 'a%'",
-                      "COQ_WORD_1.POS LIKE 'n%'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word LIKE 'a%'",
+                                            "COQ_WORD_1.POS LIKE 'n%'"]})
 
     def test_get_token_conditions_OR_1(self):
         token = COCAToken("alice|queen")
-        d = self.resource.get_token_conditions(0, token)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(
-            d,
-            {"word": ["COQ_WORD_1.Word IN ('alice', 'queen')"]}
-        )
+            dct,
+            {"word": ["COQ_WORD_1.Word IN ('alice', 'queen')"]})
 
     def test_get_token_conditions_5(self):
         token = COCAToken("*'ll")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word LIKE '%''ll'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word LIKE '%''ll'"]})
 
     def test_get_token_conditions_negated_1(self):
         token = COCAToken("~a*")
-        d = self.resource.get_token_conditions(0, token)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertTrue(token.negated)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
 
     def test_get_token_conditions_negated_2(self):
         token = COCAToken("~*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertTrue(token.negated)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
 
     def test_get_token_conditions_negated_3(self):
         token = COCAToken("~a*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertTrue(token.negated)
-        self.assertDictEqual(
-            d,
-            {"word": ["COQ_WORD_1.Word LIKE 'a%'",
-                      "COQ_WORD_1.POS LIKE 'n%'"]})
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word LIKE 'a%'",
+                                            "COQ_WORD_1.POS LIKE 'n%'"]})
 
     def test_get_token_conditions_quote_char_1(self):
         token = COCAToken("'ll")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word = '''ll'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word = '''ll'"]})
 
     def test_get_token_conditions_quote_char_2(self):
         token = COCAToken("'ll|ll")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct,
+                             {"word": ["COQ_WORD_1.Word IN ('''ll', 'll')"]})
 
     def test_get_token_conditions_initial_wildcard_rev(self):
         token = COCAToken("*ing")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word LIKE '%ing'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word LIKE '%ing'"]})
 
     def test_token_condition_empty_1(self):
         token = COCAToken("*")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(d, {})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {})
 
     def test_token_condition_empty_2(self):
         token = COCAToken("*.[*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(d, {})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {})
 
     def test_token_condition_empty_3(self):
         token = COCAToken("*.[n*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.POS LIKE 'n%'"]})
 
     def test_token_condition_empty_4(self):
         token = COCAToken("a*.[*]")
-        d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
 
     def test_token_conditions_lemmatized_flat_1(self):
         self.Session.Resource = self.flat_resource
-        S = "#abc"
-        token = COCAToken(S)
-        d = self.flat_resource.get_token_conditions(0, token)
+        s = "#abc"
+        token = COCAToken(s)
+        dct = self.flat_resource.get_token_conditions(0, token)
         self.assertEqual(
-            simple(d["word"][0]),
+            simple(dct["word"][0]),
             simple("""
                 COQ_WORD_1.Lemma IN
                     (SELECT DISTINCT Lemma
@@ -768,28 +745,27 @@ class TestCorpus(CoqTestCase):
 
     def test_token_conditions_lemmatized_flat_pos(self):
         self.Session.Resource = self.flat_resource
-        S = "#a*.[n*]"
-        token = COCAToken(S)
-        d = self.flat_resource.get_token_conditions(0, token)
+        s = "#a*.[n*]"
+        token = COCAToken(s)
+        dct = self.flat_resource.get_token_conditions(0, token)
         self.assertEqual(
-            simple(d["word"][0]),
+            simple(dct["word"][0]),
             simple("""
                 COQ_WORD_1.Lemma IN
                     (SELECT DISTINCT Lemma
                      FROM       Lexicon AS COQ_WORD_1
                      WHERE (COQ_WORD_1.Word LIKE 'a%') AND
                            (COQ_WORD_1.POS LIKE 'n%'))"""))
-        self.assertEqual(
-            simple(d["word"][1]),
-            simple("COQ_WORD_1.POS LIKE 'n%'"))
+        self.assertEqual(simple(dct["word"][1]),
+                         simple("COQ_WORD_1.POS LIKE 'n%'"))
         self.Session.Resource = self.resource
 
     def test_token_conditions_lemmatized_deep_1(self):
-        S = "#abc"
-        token = COCAToken(S)
-        d = self.resource.get_token_conditions(0, token)
+        s = "#abc"
+        token = COCAToken(s)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertEqual(
-            simple(d["word"][0]),
+            simple(dct["word"][0]),
             simple("""
                 COQ_LEMMA_1.Lemma IN
                     (SELECT DISTINCT Lemma
@@ -799,11 +775,11 @@ class TestCorpus(CoqTestCase):
                      WHERE (COQ_WORD_1.Word = 'abc'))"""))
 
     def test_token_conditions_lemmatized_deep_2(self):
-        S = "#/a*/"
-        token = COCAToken(S)
-        d = self.resource.get_token_conditions(0, token)
+        s = "#/a*/"
+        token = COCAToken(s)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertEqual(
-            simple(d["word"][0]),
+            simple(dct["word"][0]),
             simple("""
                 COQ_LEMMA_1.Lemma IN
                     (SELECT DISTINCT Lemma
@@ -813,11 +789,11 @@ class TestCorpus(CoqTestCase):
                      WHERE (COQ_WORD_1.Transcript LIKE 'a%'))"""))
 
     def test_token_conditions_lemmatized_deep_3(self):
-        S = "#a*.[n*]"
-        token = COCAToken(S)
-        d = self.resource.get_token_conditions(0, token)
+        s = "#a*.[n*]"
+        token = COCAToken(s)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertEqual(
-            simple(d["word"][0]),
+            simple(dct["word"][0]),
             simple("""
                 COQ_LEMMA_1.Lemma IN
                     (SELECT DISTINCT Lemma
@@ -827,7 +803,7 @@ class TestCorpus(CoqTestCase):
                      WHERE (COQ_WORD_1.Word LIKE 'a%') AND
                            (COQ_WORD_1.POS LIKE 'n%'))"""))
         self.assertEqual(
-            simple(d["word"][1]),
+            simple(dct["word"][1]),
             simple("COQ_WORD_1.POS LIKE 'n%'"))
 
     def test_token_conditions_lemmatized_deep_4(self):
@@ -835,9 +811,9 @@ class TestCorpus(CoqTestCase):
         Tests issue #296.
         """
         token = COCAToken("#?ome")
-        d = self.resource.get_token_conditions(0, token)
+        dct = self.resource.get_token_conditions(0, token)
         self.assertEqual(
-            simple(d["word"][0]),
+            simple(dct["word"][0]),
             simple("""
                 COQ_LEMMA_1.Lemma IN
                     (SELECT DISTINCT Lemma
@@ -847,14 +823,13 @@ class TestCorpus(CoqTestCase):
                      WHERE (COQ_WORD_1.Word LIKE '_ome'))"""))
 
     def test_token_conditions_id_query_1(self):
-        S = "=123"
-        token = COCAToken(S)
-        d = self.resource.get_token_conditions(0, token)
-        self.assertEqual(
-            simple(d["corpus"][0]),
-            simple("""ID1 = '123'"""))
+        s = "=123"
+        token = COCAToken(s)
+        dct = self.resource.get_token_conditions(0, token)
+        self.assertEqual(simple(dct["corpus"][0]),
+                         simple("""ID1 = '123'"""))
 
-    ### SELECT COLUMNS
+    # SELECT COLUMNS
 
     def test_get_required_columns_1(self):
         query = TokenQuery("*", self.Session)
@@ -920,18 +895,16 @@ class TestCorpus(CoqTestCase):
              "FileId1 AS coquery_invisible_origin_id"])
 
     def test_get_token_offset_1(self):
-        S = "a*"
-        query = TokenQuery(S, self.Session)
-        self.assertEqual(
-            self.resource.get_token_offset(query.query_list[0]),
-            0)
+        s = "a*"
+        query = TokenQuery(s, self.Session)
+        self.assertEqual(self.resource.get_token_offset(query.query_list[0]),
+                         0)
 
     def test_get_token_offset_2(self):
-        S = "_NULL a*"
-        query = TokenQuery(S, self.Session)
-        self.assertEqual(
-            self.resource.get_token_offset(query.query_list[0]),
-            1)
+        s = "_NULL a*"
+        query = TokenQuery(s, self.Session)
+        self.assertEqual(self.resource.get_token_offset(query.query_list[0]),
+                         1)
 
     def test_get_required_columns_NULL_1(self):
         # tests issue #256
@@ -969,7 +942,7 @@ class TestCorpus(CoqTestCase):
              ON COQ_SOURCE_2.FileId = FileId2""")])
         self.assertListEqual(l2, [])
 
-    ### QUERY STRINGS
+    # QUERY STRINGS
 
     def test_query_string_blank(self):
         query = TokenQuery("*", self.Session)
@@ -1341,8 +1314,8 @@ class TestCorpus(CoqTestCase):
 
 class TestRevCorpus(CoqTestCase):
     @classmethod
-    def pos_check_function(cls, l):
-        return [x.lower().startswith(("n", "v")) for x in l]
+    def pos_check_function(cls, lst):
+        return [x.lower().startswith(("n", "v")) for x in lst]
 
     def setUp(self):
         self.resource = CorpusResourceRevWord(None, None)
@@ -1367,14 +1340,12 @@ class TestRevCorpus(CoqTestCase):
     def test_get_token_conditions_5(self):
         token = COCAToken("*'ll")
         d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.WordRev LIKE 'll''%'"]})
+        self.assertDictEqual(d, {"word": ["COQ_WORD_1.WordRev LIKE 'll''%'"]})
 
     def test_get_token_conditions_initial_wildcard_rev(self):
         token = COCAToken("*ing")
         d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"word": ["COQ_WORD_1.WordRev LIKE 'gni%'"]})
+        self.assertDictEqual(d, {"word": ["COQ_WORD_1.WordRev LIKE 'gni%'"]})
 
     def test_query_string_initial_wildcard(self):
         query = TokenQuery("*ing", self.Session)
@@ -1503,16 +1474,13 @@ class TestSuperFlat(CoqTestCase):
     def test_get_token_conditions_2(self):
         token = COCAToken("a*|b*.[n*]")
         d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d,
-            {"corpus": ["Word1 LIKE 'a%' OR Word1 LIKE 'b%'",
-                        "POS1 LIKE 'n%'"]})
+        self.assertDictEqual(d, {"corpus": ["Word1 LIKE 'a%' OR Word1 LIKE 'b%'",
+                                            "POS1 LIKE 'n%'"]})
 
     def test_get_token_conditions_3(self):
         token = COCAToken("[a*|b*]")
         d = self.resource.get_token_conditions(0, token)
-        self.assertDictEqual(
-            d, {"corpus": ["Lemma1 LIKE 'a%' OR Lemma1 LIKE 'b%'"]})
+        self.assertDictEqual(d, {"corpus": ["Lemma1 LIKE 'a%' OR Lemma1 LIKE 'b%'"]})
 
     def test_where_conditions_1(self):
         query = TokenQuery("a* b*", self.Session)
@@ -1668,10 +1636,6 @@ class TestCorpusWithExternal(CoqTestCase):
         query = TokenQuery(s, self.Session)
         self.assertTrue(len(query.query_list) == 2)
 
-        lst = self.resource.get_corpus_joins(query.query_list[0])
-        # 1     2    3
-        # happy {to} [n*]
-
         lst = self.resource.get_required_columns(
             query.query_list[0], ["word_label", ext_feature])
         self.assertListEqual(
@@ -1722,9 +1686,9 @@ class TestNGramCorpus(CoqTestCase):
         self.assertEqual(self.resource.get_origin_rc(), "corpus_source_id")
 
     def test_corpus_joins_one_item(self):
-        S = "*"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = "*"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(lst,
                              [simple("FROM (SELECT End AS End1,"
@@ -1735,16 +1699,16 @@ class TestNGramCorpus(CoqTestCase):
                                      "      FROM   Corpus) AS COQ_CORPUS_1")])
 
     def test_corpus_joins_three_items(self):
-        S = "* * *"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = "* * *"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(lst, ["FROM CorpusNgram"])
 
     def test_corpus_joins_four_items(self):
-        S = "* * * *"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = "* * * *"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
             lst,
@@ -1759,9 +1723,9 @@ class TestNGramCorpus(CoqTestCase):
                     "       ON     ID4 = ID1 + 3")])
 
     def test_corpus_joins_four_items_ref(self):
-        S = ". the end *"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = ". the end *"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
             lst,
@@ -1776,9 +1740,9 @@ class TestNGramCorpus(CoqTestCase):
                     "       ON     ID4 = ID1 + 3")])
 
     def test_corpus_joins_ref_outside_1(self):
-        S = ". . . the"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = ". . . the"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
             lst,
@@ -1792,9 +1756,9 @@ class TestNGramCorpus(CoqTestCase):
              simple("INNER JOIN CorpusNgram ON ID1 = ID4 - 3")])
 
     def test_corpus_joins_ref_outside_2(self):
-        S = ". . . the ."
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = ". . . the ."
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
             lst,
@@ -1816,9 +1780,9 @@ class TestNGramCorpus(CoqTestCase):
                     "       ON ID5 = ID4 + 1")])
 
     def test_corpus_joins_ref_outside_3(self):
-        S = ". . . the great"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = ". . . the great"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
         self.assertListEqual(
             lst,
@@ -1840,15 +1804,15 @@ class TestNGramCorpus(CoqTestCase):
              simple("INNER JOIN CorpusNgram ON ID1 = ID5 - 4")])
 
     def test_get_token_offset(self):
-        S = "_NULL a*"
-        query = TokenQuery(S, self.Session)
+        s = "_NULL a*"
+        query = TokenQuery(s, self.Session)
         self.assertEqual(
             self.resource.get_token_offset(query.query_list[0]),
             0)
 
     def test_corpus_required_columns_initial_null_placeholder(self):
-        S = "_NULL a*"
-        query = TokenQuery(S, self.Session)
+        s = "_NULL a*"
+        query = TokenQuery(s, self.Session)
         lst = self.resource.get_required_columns(query.query_list[0],
                                                  ["word_label"])
         self.assertListEqual(
@@ -1938,9 +1902,9 @@ class TestBigramCorpus(CoqTestCase):
         options.cfg.current_connection = default_connection
 
     def test_working_1(self):
-        S = "* * xxx"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = "* * xxx"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
 
         target = [
@@ -1957,9 +1921,9 @@ class TestBigramCorpus(CoqTestCase):
         self.assertListEqual(lst, target)
 
     def test_working_2(self):
-        S = "* xxx xxx"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = "* xxx xxx"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
 
         target = [
@@ -1976,9 +1940,9 @@ class TestBigramCorpus(CoqTestCase):
         self.assertListEqual(lst, target)
 
     def test_issue(self):
-        S = "* *.[v*] xxx"
-        query = TokenQuery(S, self.Session)
-        lst = [simple(s) for s
+        s = "* *.[v*] xxx"
+        query = TokenQuery(s, self.Session)
+        lst = [simple(join) for join
                in self.resource.get_corpus_joins(query.query_list[0])]
 
         target = [
@@ -2283,7 +2247,7 @@ provided_tests = [
                   TestNGramCorpus,
                   TestBigramCorpus,
 
-                  #TestRenderedContext,
+                  # TestRenderedContext,
                   ]
 
 
