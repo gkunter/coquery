@@ -8,13 +8,12 @@ coquery$ python -m test.test_general
 
 """
 
-from __future__ import print_function
 import sys
 import os
 import numpy as np
 
-from coquery.general import (
-    check_fs_case_sensitive, has_module, pretty, collapse_words)
+from coquery.general import (check_fs_case_sensitive, has_module, pretty,
+                             collapse_words, recycle)
 from test.testcase import CoqTestCase, run_tests
 
 
@@ -34,7 +33,7 @@ class TestGeneral(CoqTestCase):
 
 
 class TestPretty(CoqTestCase):
-    def assertListEqual(self, l1, l2):
+    def assertListEqual(self, l1, l2, msg=None):
         if (any([type(x) == object for x in l1]) or
                 any([type(x) == object for x in l2])):
             return super(TestPretty, self).assertListEqual(l1, l2)
@@ -212,7 +211,6 @@ class TestRecycle(CoqTestCase):
         """
         data = [0, 1, 2, 3, 4]
         target = [0, 1]
-        requested_data_length = len(data)
         requested_length = len(target)
         value = recycle(data, requested_length)
         self.assertListEqual(value, target)
@@ -404,7 +402,7 @@ class TestEnglishCollapseWords(CoqTestCase):
                "no",
                "\N{ACUTE ACCENT}",
                "to", "me", "."]
-        target = ("he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me.")
+        target = "he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me."
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
@@ -417,7 +415,7 @@ class TestEnglishCollapseWords(CoqTestCase):
                "\N{GRAVE ACCENT}no",
                "\N{ACUTE ACCENT}",
                "to", "me", "."]
-        target = ("he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me.")
+        target = "he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me."
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
@@ -430,7 +428,7 @@ class TestEnglishCollapseWords(CoqTestCase):
                "\N{GRAVE ACCENT}",
                "no\N{ACUTE ACCENT}",
                "to", "me", "."]
-        target = ("he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me.")
+        target = "he said \N{GRAVE ACCENT}no\N{ACUTE ACCENT} to me."
         value = collapse_words(lst, "en")
         self.assertEqual(target, value)
 
@@ -593,7 +591,8 @@ class TestFailing(CoqTestCase):
 
 
 provided_tests = [
-                  TestGeneral, TestPretty,
+                  TestGeneral,
+                  TestPretty,
                   TestCollapseWords,
                   TestEnglishCollapseWords,
                   TestFailing,
