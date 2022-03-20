@@ -288,8 +288,6 @@ FUNCTION_DESC = {
 
         }
 
-PALETTE_BW = "Black and white"
-
 PREFERRED_ORDER = ["corpus_word", "word_label",
                    "corpus_pos", "word_pos", "pos_label",
                    "corpus_transcript", "word_transcript", "transcript_label",
@@ -653,21 +651,6 @@ Without this module, the following function is not available:</p>
 <a href="http://coquery.org/download/index.html#optional-python-modules">
 Coquery website</a> or the module website for installation instructions:
 <a href="{url}">{url}</a>.</p>"""
-msg_visualization_error = """
-<p><b>An error occurred while plotting.</b></p>
-<p>While plotting the visualization, the following error was encountered:</p>
-<p><code>{}</code></p>
-<p>The visualization may be incorrect. Please contact the Coquery maintainers.
-</p>"""
-msg_visualization_module_error = """
-<p><b>Could not the load visualization module '{module}'</b></p>
-<p>The following error occurred when attempting to open the visualization
-module '{module}':</p>
-<p><span style='color: darkred'><code>{msg}</code></span></p>
-If you have downloaded this module from an external source, you may want to
-see if an updated version is available. Otherwise, either contact the author
-of the module, or report this error on the Coquery bug tracker.</p>
-"""
 
 msg_no_lemma_information = """
 <p><b>The current resource does not provide lemma information.</b></p>

@@ -263,6 +263,12 @@ class TestBarcodePlot(_MetaTestCase):
         self.assertFalse(invalid6)
 
 
+class TestBarcodePlotColorize(CoqQtTestCase):
+    """
+    Test the colorize_elements() method.
+    """
+
+
 class TestBarcodePlotWidgets(CoqQtTestCase):
     def setUp(self):
         super(TestBarcodePlotWidgets, self).setUp()
@@ -374,6 +380,7 @@ class TestBarcodePlotAxisArguments(_MetaTestCase):
 
 provided_tests = (
     TestBarcodePlot,
+    TestBarcodePlotColorize,
     TestBarcodePlotWidgets,
     TestBarcodePlotRandomized,
     TestBarcodePlotAxisArguments,

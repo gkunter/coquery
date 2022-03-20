@@ -13,20 +13,8 @@
   <property name="windowTitle">
    <string>Visualization designer – Coquery</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_4">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
-   <item>
+  <layout class="QGridLayout" name="gridLayout_12">
+   <item row="0" column="0">
     <widget class="QTabWidget" name="tab_widget">
      <property name="currentIndex">
       <number>0</number>
@@ -48,239 +36,6 @@
        <property name="bottomMargin">
         <number>4</number>
        </property>
-       <item row="0" column="0" rowspan="4">
-        <widget class="QGroupBox" name="group_variables">
-         <property name="title">
-          <string>Data</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_11">
-          <property name="spacing">
-           <number>8</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_dimensions">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="button_refresh_data">
-            <property name="text">
-             <string>&amp;Refresh data</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_2">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label_3">
-              <property name="text">
-               <string>&amp;Categorical:</string>
-              </property>
-              <property name="buddy">
-               <cstring>table_categorical</cstring>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="CoqFeatureList" name="table_categorical">
-              <property name="alternatingRowColors">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_10">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label_5">
-              <property name="text">
-               <string>&amp;Numeric:</string>
-              </property>
-              <property name="buddy">
-               <cstring>table_numerical</cstring>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="CoqFeatureList" name="table_numerical">
-              <property name="alternatingRowColors">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QGroupBox" name="group_data">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="title">
-          <string>Dimensions</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
-           <layout class="QGridLayout" name="gridLayout_3">
-            <property name="horizontalSpacing">
-             <number>4</number>
-            </property>
-            <property name="verticalSpacing">
-             <number>2</number>
-            </property>
-            <item row="0" column="1" rowspan="3">
-             <widget class="CoqFeatureTray" name="tray_data_x">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_7">
-              <property name="text">
-               <string>X axis</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="2">
-             <widget class="QToolButton" name="button_clear_z">
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="2">
-             <widget class="QToolButton" name="button_clear_y">
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_8">
-              <property name="text">
-               <string>Color</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_6">
-              <property name="text">
-               <string>Y axis</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1" rowspan="3">
-             <widget class="CoqFeatureTray" name="tray_data_z">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1" rowspan="3">
-             <widget class="CoqFeatureTray" name="tray_data_y">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QToolButton" name="button_clear_x">
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="2" rowspan="4">
-        <widget class="QGroupBox" name="group_figures">
-         <property name="title">
-          <string>&amp;Figure types</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <widget class="QListWidget" name="list_figures">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>200</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="horizontalScrollBarPolicy">
-             <enum>Qt::ScrollBarAlwaysOff</enum>
-            </property>
-            <property name="editTriggers">
-             <set>QAbstractItemView::NoEditTriggers</set>
-            </property>
-            <property name="showDropIndicator" stdset="0">
-             <bool>false</bool>
-            </property>
-            <property name="verticalScrollMode">
-             <enum>QAbstractItemView::ScrollPerPixel</enum>
-            </property>
-            <property name="viewMode">
-             <enum>QListView::IconMode</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="check_hide_unavailable">
-            <property name="text">
-             <string>Hide &amp;unavailable</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item row="1" column="1">
         <widget class="QGroupBox" name="group_layout">
          <property name="title">
@@ -445,15 +200,236 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QGroupBox" name="group_custom">
-         <property name="title">
-          <string>Figure &amp;options</string>
+       <item row="0" column="1">
+        <widget class="QGroupBox" name="group_data">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
-         <layout class="QVBoxLayout" name="layout_custom">
+         <property name="title">
+          <string>Dimensions</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <item>
+           <layout class="QGridLayout" name="gridLayout_3">
+            <property name="horizontalSpacing">
+             <number>4</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>2</number>
+            </property>
+            <item row="0" column="1" rowspan="3">
+             <widget class="CoqFeatureTray" name="tray_data_x">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_7">
+              <property name="text">
+               <string>X axis</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="2">
+             <widget class="QToolButton" name="button_clear_z">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="2">
+             <widget class="QToolButton" name="button_clear_y">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="label_8">
+              <property name="text">
+               <string>Color</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_6">
+              <property name="text">
+               <string>Y axis</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1" rowspan="3">
+             <widget class="CoqFeatureTray" name="tray_data_z">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1" rowspan="3">
+             <widget class="CoqFeatureTray" name="tray_data_y">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QToolButton" name="button_clear_x">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="2" rowspan="4">
+        <widget class="QGroupBox" name="group_figures">
+         <property name="title">
+          <string>&amp;Figure types</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QListWidget" name="list_figures">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="horizontalScrollBarPolicy">
+             <enum>Qt::ScrollBarAlwaysOff</enum>
+            </property>
+            <property name="editTriggers">
+             <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="showDropIndicator" stdset="0">
+             <bool>false</bool>
+            </property>
+            <property name="verticalScrollMode">
+             <enum>QAbstractItemView::ScrollPerPixel</enum>
+            </property>
+            <property name="viewMode">
+             <enum>QListView::IconMode</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="check_hide_unavailable">
+            <property name="text">
+             <string>Hide &amp;unavailable</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="0" rowspan="4">
+        <widget class="QGroupBox" name="group_variables">
+         <property name="title">
+          <string>Data</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_11">
           <property name="spacing">
-           <number>2</number>
+           <number>8</number>
           </property>
+          <item>
+           <widget class="QLabel" name="label_dimensions">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="button_refresh_data">
+            <property name="text">
+             <string>&amp;Refresh data</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>&amp;Categorical:</string>
+              </property>
+              <property name="buddy">
+               <cstring>table_categorical</cstring>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="CoqFeatureList" name="table_categorical">
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_10">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="label_5">
+              <property name="text">
+               <string>&amp;Numeric:</string>
+              </property>
+              <property name="buddy">
+               <cstring>table_numerical</cstring>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="CoqFeatureList" name="table_numerical">
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
          </layout>
         </widget>
        </item>
@@ -466,6 +442,38 @@
           <size>
            <width>20</width>
            <height>154</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_options">
+      <attribute name="title">
+       <string>Options</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_6">
+       <item>
+        <widget class="QGroupBox" name="group_custom">
+         <property name="title">
+          <string>Figure &amp;options</string>
+         </property>
+         <layout class="QVBoxLayout" name="layout_custom">
+          <property name="spacing">
+           <number>2</number>
+          </property>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
           </size>
          </property>
         </spacer>
@@ -942,7 +950,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Sequential</string>
+               <string>Sequen&amp;tial</string>
               </property>
              </widget>
             </item>
@@ -1264,41 +1272,327 @@
       <attribute name="title">
        <string>&amp;Margins</string>
       </attribute>
-      <layout class="QVBoxLayout" name="layout_margins">
-       <property name="leftMargin">
-        <number>4</number>
-       </property>
-       <property name="topMargin">
-        <number>4</number>
-       </property>
-       <property name="rightMargin">
-        <number>4</number>
-       </property>
-       <property name="bottomMargin">
-        <number>4</number>
-       </property>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
-        <widget class="QLabel" name="label_15">
-         <property name="text">
-          <string>Plot a figure first.</string>
+        <widget class="QWidget" name="widget_margins" native="true">
+         <property name="enabled">
+          <bool>false</bool>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
+         <layout class="QGridLayout" name="gridLayout_11">
+          <item row="0" column="0">
+           <widget class="QGroupBox" name="group_borders">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="title">
+             <string>Borders</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_9">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_top">
+               <property name="text">
+                <string>&amp;Top</string>
+               </property>
+               <property name="buddy">
+                <cstring>spin_top</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSlider" name="slide_top">
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QDoubleSpinBox" name="spin_top">
+               <property name="keyboardTracking">
+                <bool>false</bool>
+               </property>
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.050000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_bottom">
+               <property name="text">
+                <string>&amp;Bottom</string>
+               </property>
+               <property name="buddy">
+                <cstring>spin_bottom</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QDoubleSpinBox" name="spin_bottom">
+               <property name="keyboardTracking">
+                <bool>false</bool>
+               </property>
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.005000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_left">
+               <property name="text">
+                <string>&amp;Left</string>
+               </property>
+               <property name="buddy">
+                <cstring>spin_left</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QSlider" name="slide_left">
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="2">
+              <widget class="QDoubleSpinBox" name="spin_left">
+               <property name="keyboardTracking">
+                <bool>false</bool>
+               </property>
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.005000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="label_right">
+               <property name="text">
+                <string>&amp;Right</string>
+               </property>
+               <property name="buddy">
+                <cstring>spin_right</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QSlider" name="slide_right">
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="invertedAppearance">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="2">
+              <widget class="QDoubleSpinBox" name="spin_right">
+               <property name="keyboardTracking">
+                <bool>false</bool>
+               </property>
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.005000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QSlider" name="slide_bottom">
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="invertedAppearance">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QGroupBox" name="group_spacing">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="title">
+             <string>Grid spacing</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_10">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_vertical">
+               <property name="text">
+                <string>&amp;Vertical</string>
+               </property>
+               <property name="buddy">
+                <cstring>spin_vertical</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSlider" name="slide_vertical">
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QDoubleSpinBox" name="spin_vertical">
+               <property name="keyboardTracking">
+                <bool>false</bool>
+               </property>
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.005000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <spacer name="verticalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>85</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="1" column="2">
+              <widget class="QDoubleSpinBox" name="spin_horizontal">
+               <property name="keyboardTracking">
+                <bool>false</bool>
+               </property>
+               <property name="decimals">
+                <number>3</number>
+               </property>
+               <property name="maximum">
+                <double>1.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.005000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_horizontal">
+               <property name="text">
+                <string>&amp;Horizontal</string>
+               </property>
+               <property name="buddy">
+                <cstring>spin_horizontal</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QSlider" name="slide_horizontal">
+               <property name="maximum">
+                <number>100</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <spacer name="horizontalSpacer_3">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_tight_layout">
+              <property name="text">
+               <string>&amp;Optimize margins</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="0">
+           <spacer name="verticalSpacer_12">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>17</width>
+              <height>229</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_12">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>
@@ -1319,7 +1613,6 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>tab_widget</tabstop>
   <tabstop>button_refresh_data</tabstop>
   <tabstop>table_categorical</tabstop>
   <tabstop>table_numerical</tabstop>
@@ -1366,5 +1659,219 @@
   <tabstop>spin_number</tabstop>
  </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>spin_top</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_spin_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>376</x>
+     <y>119</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spin_bottom</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_spin_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>376</x>
+     <y>166</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spin_right</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_spin_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>376</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spin_left</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_spin_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>376</x>
+     <y>213</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spin_horizontal</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_spin_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>787</x>
+     <y>119</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spin_vertical</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_spin_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>787</x>
+     <y>166</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slide_bottom</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_slider_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>165</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>button_tight_layout</sender>
+   <signal>clicked()</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>use_tight_layout()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>430</x>
+     <y>317</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slide_top</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_slider_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>118</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slide_right</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_slider_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>259</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slide_left</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_slider_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>212</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slide_horizontal</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_slider_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>639</x>
+     <y>118</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>slide_vertical</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>VisualizationDesigner</receiver>
+   <slot>update_slider_margins()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>639</x>
+     <y>165</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>430</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>update_slider_margins()</slot>
+  <slot>use_tight_layout()</slot>
+  <slot>update_spin_margins()</slot>
+ </slots>
 </ui>

@@ -21,7 +21,7 @@ from coquery.visualizer.heatbarplot import HeatbarPlot
 from coquery.visualizer.colorizer import (
     Colorizer, ColorizeByFactor, ColorizeByNum)
 
-from test.vis.test_barcodeplot import TestBarcodePlot
+from test.vis.barcodeplot import TestBarcodePlot
 from test.testcase import CoqTestCase
 
 class TestHeatbarPlotArguments(CoqTestCase):

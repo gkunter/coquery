@@ -631,12 +631,3 @@ except Exception as e:
         print("summarize_memory: {}".format(msg))
 
 
-def uniques(S):
-    """
-    Get unique levels of Series by discarding NAs and then sorting
-    the unique values.
-
-    This function is much more efficient (but less transparent) than
-    the equivalent sorted(S.dropna().unique().values()).
-    """
-    return sorted(set(S.values[~pd.isnull(S.values)]))
