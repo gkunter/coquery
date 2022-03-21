@@ -2199,7 +2199,7 @@ class CorpusClass(object):
             # FIXME: remove code replication with get_subcorpus_range()
             if len(values) == 1:
                 if type(values[0]) is str:
-                    val = f"'{values[0]}'"
+                    val = "'{}'".format(values[0].replace("'", "''"))
                 else:
                     val = values[0]
                 s = "{}.{} = {}".format(
@@ -2208,7 +2208,7 @@ class CorpusClass(object):
                     val)
             else:
                 if any([type(x) is str for x in values]):
-                    lst = [f"'{x}'" for x in values]
+                    lst = ["'{}'".format(str(x).replace("'", "''")) for x in values]
                 else:
                     lst = values
                 s = "{}.{} IN ({})".format(
