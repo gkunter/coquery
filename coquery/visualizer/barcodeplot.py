@@ -127,7 +127,7 @@ class BarcodePlot(vis.Visualizer):
         for collection, cols in zip(elements, colors):
             collection.set_color(cols)
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         self.check_horizontal = QtWidgets.QCheckBox(LABEL_HORIZONTAL)
         self.check_horizontal.setCheckState(
             QtCore.Qt.Checked if self.force_horizontal else
@@ -143,7 +143,7 @@ class BarcodePlot(vis.Visualizer):
                  self.check_adjust_to_subcorpus.stateChanged],
                 [])
 
-    def update_values(self):
+    def update_widget_values(self):
         self.force_horizontal = self.check_horizontal.isChecked()
         self.adjust_to_subcorpus = self.check_adjust_to_subcorpus.isChecked()
 
@@ -211,13 +211,17 @@ class BarcodePlot(vis.Visualizer):
         return dict(zip(keys,
                         (0.5 + np.arange(len(order)), order)))
 
-    def set_limits(self, grid, values):
+    def _determine_limits(self):
         if self.horizontal:
             keys = ("ylim", "xlim")
             lim = (0, len(self.levels_y or [""]))
         else:
             keys = ("xlim", "ylim")
             lim = (0, len(self.levels_x or [""]))
+        return keys, lim
+
+    def set_limits(self, grid, values):
+        keys, lim = self._determine_limits()
         grid.set(**dict(
             zip(keys, (lim, self._limiter_fnc(self.df, None, None)))))
 
