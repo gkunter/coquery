@@ -643,7 +643,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def add_custom_widgets(self, vis):
         clear_layout(self.ui.layout_custom)
 
-        tup = vis.get_custom_widgets(**self.get_gui_values())
+        tup = vis.get_widgets(**self.get_gui_values())
         items, apply_signals, update_signals = tup
 
         if items:
@@ -693,8 +693,9 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def update_figure(self):
         logging.info("VIS: update_figure()")
-        self.vis.update_values()
-        self.plot_figure()
+        if self.vis:
+            self.vis.update_widget_values()
+            self.plot_figure()
         logging.info("VIS: update_figure() done")
 
     def recolorize(self):
