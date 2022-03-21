@@ -34,7 +34,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
     COLOR = "Black"
 
     bandwidth = None
-    plot_rug = False
+    plot_rug = True
     normalize = False
 
     def __init__(self, df, session, id_column=None, limiter_fnc=None):
@@ -46,7 +46,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         self.check_horizontal = None
         self.check_rug = None
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         label = tr("HeatbarPlot", "Plot horizontal by default", None)
         bandwidth_text = tr("HeatbarPlot", "Use custom bandwidth:", None)
         suffix_text = tr("HeatbarPlot", " words", None)
@@ -60,7 +60,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         self.check_rug = QtWidgets.QCheckBox(rug_text)
         self.check_horizontal = QtWidgets.QCheckBox(label)
 
-        self.spin_bandwidth.setValue(self.bandwidth)
+        self.spin_bandwidth.setValue(self.bandwidth or 0)
         self.spin_bandwidth.setDisabled(True)
         self.spin_bandwidth.setSuffix(suffix_text)
         self.spin_bandwidth.setMaximum(99999999)
@@ -96,7 +96,7 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
     def update_widgets(self):
         self.spin_bandwidth.setEnabled(self.check_bandwidth.isChecked())
 
-    def update_values(self):
+    def update_widget_values(self):
         if self.check_bandwidth.isChecked():
             self.bandwidth = int(self.spin_bandwidth.value())
         else:
@@ -267,11 +267,10 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
             else:
                 param["extent"] = (left, right, i, i+1)
                 x = np.array([x])
-
             plt.imshow(x, vmax=m.max(initial=None), **param)
 
         if self.plot_rug:
-            elements = super(HeatbarPlot, self).plot_facet(rug=True, **kwargs)
+            elements = super().plot_facet(rug=True, **kwargs)
         else:
             elements = []
 
