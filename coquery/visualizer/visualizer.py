@@ -18,8 +18,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from coquery.visualizer.aggregator import Aggregator
-from coquery.visualizer.colorizer import (
-    Colorizer, ColorizeByFactor, ColorizeByNum)
+from coquery.visualizer.colorizer import Colorizer
 
 
 class Visualizer:
@@ -64,6 +63,14 @@ class Visualizer:
             the visualizer
         """
         super().__init__()
+        self.x = None
+        self.y = None
+        self.z = None
+        self.levels_x = None
+        self.levels_y = None
+        self.levels_z = None
+        self.elements = None
+        self.params = None
         self.colors = None
         self.df = df
         self.session = session
@@ -90,7 +97,7 @@ class Visualizer:
             values = pd.Series(data.index)
         return values
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         """
         Return a tuple containing a description of the custom widgets for
         this visualizer.
@@ -105,7 +112,7 @@ class Visualizer:
         """
         return [], [], []
 
-    def update_values(self):
+    def update_widget_values(self):
         """
         Update the visualizer-specific variables with values obtained from
         custom widgets.
@@ -271,7 +278,8 @@ class Visualizer:
         self.set_titles(**self.params)
         self.colorize()
 
-    def rotate_annotations(self, grid):
+    @staticmethod
+    def rotate_annotations(grid):
         x_overlap = False
         y_overlap = False
 
@@ -396,19 +404,6 @@ class Visualizer:
         empty = [x for x in (data_x, data_y) if x is None]
 
         return categorical, numeric, empty
-
-    @staticmethod
-    def get_colorizer(data, palette, color_number,
-                      z, levels_z=None, range_z=None):
-        if z:
-            if pd.api.types.is_object_dtype(data[z]):
-                c = ColorizeByFactor(palette, color_number, levels_z)
-            else:
-                c = ColorizeByNum(palette, color_number, data[z],
-                                  vrange=range_z)
-        else:
-            c = Colorizer(palette, color_number)
-        return c
 
     def get_subordinated(self, x, y):
         """
