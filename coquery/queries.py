@@ -2,16 +2,12 @@
 """
 queries.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import unicode_literals
-from __future__ import print_function
-
 import hashlib
 import logging
 import os
@@ -21,6 +17,7 @@ import numpy as np
 
 from coquery.defines import (QUERY_ITEM_LEMMA, QUERY_ITEM_WORD,
                              CONTEXT_NONE)
+from coquery.errors import SQLQueryCancelled
 
 from . import tokens
 from . import options
@@ -171,12 +168,22 @@ class TokenQuery(object):
                                    .execute(query_string.replace("%", "%%")))
                     except Exception as e:
                         print(query_string)
-                        print(e)
                         raise e
 
-                    df = pd.DataFrame(results, columns=results.keys())
+                    try:
+                        df = pd.DataFrame(results, columns=results.keys())
+                    except Exception as e:
+                        if not self.Session._query_connection:
+                            raise SQLQueryCancelled
+                        raise e
+
                     if len(df) == 0:
-                        df = pd.DataFrame(columns=results.keys())
+                        try:
+                            df = pd.DataFrame(columns=results.keys())
+                        except Exception as e:
+                            if not self.Session._query_connection:
+                                raise SQLQueryCancelled
+                            raise e
 
                     del results
 

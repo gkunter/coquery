@@ -2,15 +2,12 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
-
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import sys
 import time
@@ -23,11 +20,13 @@ import re
 
 import pandas as pd
 import numpy as np
+import sqlalchemy.engine
 
 from . import options
-from .errors import (
+from coquery.errors import (
     TokenParseError, IllegalArgumentError, SQLNoConnectorError,
-    EmptyInputFileError, CorpusUnavailableQueryTypeError)
+    EmptyInputFileError, CorpusUnavailableQueryTypeError,
+    SQLQueryCancelled)
 from .defines import SQL_SQLITE, COLUMN_NAMES
 from .general import Print
 from coquery.queries import StatisticsQuery, TokenQuery
@@ -40,6 +39,7 @@ class Session(object):
     query_id = 0
 
     def __init__(self, summary_groups=None):
+        self.query_cancelled = False
         self.header = None
         self.max_number_of_input_columns = 0
         self.query_list = []
@@ -47,6 +47,7 @@ class Session(object):
         self.sql_queries = []
         self.groups = []
         self.to_file = False
+        self._query_connection = None
         options.cfg.query_label = ""
 
         available_resources = options.cfg.current_connection.resources()
@@ -154,7 +155,7 @@ class Session(object):
         output_file.flush()
         self._first_saved_dataframe = False
 
-    def connect_to_db(self):
+    def connect_to_db(self) -> sqlalchemy.engine.Connection:
         def _sqlite_regexp(expr, item):
             """
             Function which adds regular expressions to SQLite
@@ -215,8 +216,8 @@ class Session(object):
 
         self.sql_queries = []
 
-        db_connection = self.connect_to_db()
-
+        self._query_connection = self.connect_to_db()
+        self.query_cancelled = False
         try:
             for i, current_query in enumerate(self.query_list):
                 if current_query.query_string in _queried and not to_file:
@@ -241,8 +242,16 @@ class Session(object):
                 else:
                     info = f"Start query: '{current_query.query_string}'"
                 logging.info(info)
-                df = current_query.run(
-                    connection=db_connection, to_file=to_file, **kwargs)
+
+                # check if current query has been cancelled:
+                try:
+                    df = current_query.run(
+                        connection=self._query_connection,
+                        to_file=to_file, **kwargs)
+                except SQLQueryCancelled:
+                    self.query_cancelled = True
+                    raise SQLQueryCancelled
+
                 self.sql_queries.append(current_query.sql_list)
                 raw_length = len(df)
 
@@ -267,7 +276,9 @@ class Session(object):
                 logging.info(
                     "Query executed ({})".format(", ".join(s_list)))
         finally:
-            db_connection.close()
+            if self._query_connection:
+                self._query_connection.close()
+                self._query_connection = None
 
         self.finalize_table()
 
