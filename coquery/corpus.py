@@ -1535,7 +1535,7 @@ class SQLResource(BaseResource):
             else:
                 alias = f"COQ_{tab.upper()}_{i+1}.{col}"
 
-            if (len(spec_list) == 1):
+            if len(spec_list) == 1:
                 x = spec_list[0]
                 val = tokens.COCAToken.replace_wildcards(x)
                 format_str = cls._handle_case("{alias} {op} '{val}'")
@@ -1552,9 +1552,11 @@ class SQLResource(BaseResource):
                     else:
                         explicit.append(x)
 
+                # a query string is considered 'explicit' if it doesn't contain
+                # any wildcards
                 if explicit:
                     s_list = ", ".join([f"'{x}'" for x in explicit])
-                    s_exp = cls._handle_case(f"{alias} IN ({s_list})")
+                    s_exp = [cls._handle_case(f"{alias} IN ({s_list})")]
                 else:
                     s_exp = []
 
