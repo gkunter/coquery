@@ -467,7 +467,7 @@ class Table(object):
         # integer data types:
         elif col.base_type.endswith("INT"):
             sql_str = (f"SELECT MIN({col.name}), MAX({col.name}) "
-                       f"FROM {self.name} WHERE {self.name} IS NOT NULL")
+                       f"FROM {self.name} WHERE {col.name} IS NOT NULL")
             with self._DB.engine.connect() as connection:
                 v_min, v_max = connection.execute(sql_str).fetchone()
 
@@ -504,7 +504,7 @@ class Table(object):
                 dt_type = col.data_type
 
             sql_str = (f"SELECT MIN({col.name}), MAX({col.name}) "
-                       f"FROM {self.name} WHERE {self.name} IS NOT NULL")
+                       f"FROM {self.name} WHERE {col.name} IS NOT NULL")
             with self._DB.engine.connect() as connection:
                 v_min, _ = connection.execute(sql_str).fetchone()
 
