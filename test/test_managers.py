@@ -5,15 +5,16 @@ import argparse
 import warnings
 
 import pandas as pd
+import pandas.testing as pdt
 import numpy as np
 
 from coquery.coquery import options
 from coquery.session import Session
 from coquery.defines import (QUERY_MODE_TOKENS, CONTEXT_NONE,
-                             DEFAULT_CONFIGURATION)
+                             DEFAULT_CONFIGURATION, ROW_NAMES)
 from coquery.connections import SQLiteConnection
 from coquery.corpus import BaseResource
-from coquery.managers import Manager, Group, Summary
+from coquery.managers import Manager, ContingencyTable, Group, Summary
 from coquery.functions import Freq, Tokens
 from test.testcase import CoqTestCase, run_tests
 
@@ -29,7 +30,7 @@ class ManagerResource(BaseResource):
     query_item_word = "word_label"
 
 
-class TestManager(CoqTestCase):
+class TestMeta(CoqTestCase):
     df = pd.DataFrame(
         {"coq_word_label_1": list("aaaaaabbbb"),
          "coq_word_label_2": list("yyyyxxxxxx"),
@@ -60,6 +61,10 @@ class TestManager(CoqTestCase):
 
         self.Session.Resource = ManagerResource()
 
+
+class TestManager(TestMeta):
+    def setUp(self):
+        super().setUp()
         self.manager = Manager()
 
     def test_manager_basic_1(self):
@@ -140,7 +145,92 @@ class TestManager(CoqTestCase):
             [1] + [1] + [2] * 2 + [2] * 2 + [2] * 2 + [2] * 2)
 
 
-provided_tests = [TestManager]
+class TestContingency(TestMeta):
+    def setUp(self):
+        def _get_manager(*args, **kwargs):
+            return self
+        super().setUp()
+        self.df["coquery_invisible_origin_id"] = [1, 1, 1, 2, 2, 2, 3, 3, 3, 3]
+        self.manager = ContingencyTable()
+        options.cfg.column_names = []
+        self.Session.get_manager = _get_manager
+        self.Session.translate_header = lambda x: x
+
+    # def test_get_cat_cols(self):
+    #     val = self.manager._get_cat_cols(self.df, self.Session)
+    #     target = ["coq_word_label_1", "coq_word_label_2", "coq_word_label_3"]
+    #     self.assertCountEqual(val, target)
+    #
+    # def test_get_num_cols(self):
+    #     val = self.manager._get_num_cols(self.df, self.Session)
+    #     target = ["coquery_invisible_corpus_id",
+    #               "coquery_invisible_number_of_tokens",
+    #               "coquery_invisible_origin_id"]
+    #     self.assertCountEqual(val, target)
+    #
+    # def test_get_agg_fnc(self):
+    #     val = self.manager._get_agg_fnc(self.df, self.Session)
+    #     target = {k: self.manager._get_first
+    #               for k in self.manager._get_num_cols(self.df, self.Session)}
+    #     self.assertDictEqual(val, target)
+
+    # def test_get_pivot_table(self):
+    #     val = self.manager._get_pivot_table(self.df, self.Session)
+    #     print(val)
+
+    def test_process_1(self):
+        val = self.manager.process(self.df, session=self.Session)
+        row_total = pd.Series([ROW_NAMES["row_total"], "", 5, 5, 10])
+        col_total = pd.Series([2, 4, 4, 10])
+        pdt.assert_series_equal(val.iloc[-1].reset_index(drop=True),
+                                row_total.reset_index(drop=True),
+                                check_names=False,
+                                check_series_type=False)
+        pdt.assert_series_equal(val.iloc[:, -1],
+                                col_total,
+                                check_names=False,
+                                check_series_type=False)
+
+    def test_process_2(self):
+        columns = ["coq_word_label_1", "coq_word_label_2"]
+        val = self.manager.process(self.df[columns], session=self.Session)
+        row_total = pd.Series([ROW_NAMES["row_total"], 6, 4, 10])
+        col_total = pd.Series([6, 4, 10])
+        pdt.assert_series_equal(val.iloc[-1].reset_index(drop=True),
+                                row_total.reset_index(drop=True),
+                                check_names=False)
+        pdt.assert_series_equal(val.iloc[:, -1], col_total,
+                                check_names=False)
+
+    def test_process_3(self):
+        columns = ["coq_word_label_1"]
+        val = self.manager.process(self.df[columns], session=self.Session)
+        row_total = pd.Series([ROW_NAMES["row_total"], 10])
+        col_total = pd.Series([6, 4, 10])
+        pdt.assert_series_equal(val.iloc[-1].reset_index(drop=True),
+                                row_total.reset_index(drop=True),
+                                check_names=False)
+        pdt.assert_series_equal(val.iloc[:, -1], col_total,
+                                check_names=False)
+
+    def test_process_4(self):
+        columns = []
+        val = self.manager.process(self.df[columns], session=self.Session)
+        row_total = pd.Series([10])
+        col_total = pd.Series([10])
+        pdt.assert_series_equal(val.iloc[-1].reset_index(drop=True),
+                                row_total.reset_index(drop=True),
+                                check_names=False)
+        pdt.assert_series_equal(val.iloc[:, -1], col_total,
+                                check_names=False)
+
+
+
+
+provided_tests = [
+    TestManager,
+    TestContingency,
+    ]
 
 
 def main():
