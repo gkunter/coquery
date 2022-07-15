@@ -13,8 +13,8 @@ import itertools
 import pandas as pd
 import seaborn as sns
 
-from barplot import BarPlot
-from visualizer import VisualizerStatus
+from coquery.visualizer.visualizer import VisualizerStatus
+from coquery.visualizer.barplot import BarPlot
 
 
 class StackedBars(BarPlot):
@@ -224,6 +224,6 @@ class PercentBars(StackedBars):
     def group_transform(grp, numeric):
         return (grp[numeric] * 100 / grp[numeric].sum()).cumsum()
 
-dsfsdfs
+
 updated_to_new_interface = VisualizerStatus.Incomplete
 provided_visualizations = [StackedBars, PercentBars]
