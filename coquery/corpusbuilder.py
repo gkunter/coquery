@@ -384,7 +384,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
         Returns
         -------
-        table : object
+        table : Table or None
             A Table object, or None if there is no table of the given name
         """
         try:
