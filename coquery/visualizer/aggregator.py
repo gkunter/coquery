@@ -64,4 +64,3 @@ class Aggregator(QtCore.QObject):
     @staticmethod
     def _get_interval(x):
         return x.sem() * st.t.ppf(1 - 0.025, len(x))
-    
