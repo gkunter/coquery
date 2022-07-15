@@ -45,6 +45,7 @@ from coquery.defines import (
 from coquery.errors import (
     CollocationNoContextError, SQLInitializationError,
     RegularExpressionError,
+    SQLQueryCancelled,
     SQLNoConfigurationError, TokenParseError, UnsupportedQueryItemError)
 from coquery.unicode import utf8
 from coquery.links import get_by_hash
@@ -1906,6 +1907,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def exception_during_query(self):
         if not self.terminating:
+            self.showMessage("Query failed.")
             if isinstance(self.exception, RuntimeError):
                 critical_box(
                     self,
@@ -1917,9 +1919,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                     self,
                     "Error in query string – Coquery", str(self.exception),
                     QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            elif isinstance(self.exception, SQLQueryCancelled):
+                self.showMessage("Last query stopped before completion.")
             else:
                 errorbox.ErrorBox.show(self.exc_info, self.exception)
-            self.showMessage("Query failed.")
         else:
             self.showMessage("Aborted.")
         self.enable_query_button(True)
@@ -1956,7 +1959,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.query_thread = None
         if to_file:
-            self.showMessage("Query results written to {}.".format(options.cfg.output_path))
+            self.showMessage(
+                f"Query results written to {options.cfg.output_path}.")
             self.enable_query_button(True)
             self.set_stop_button(False)
             self.stop_progress_indicator()
@@ -1966,16 +1970,16 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.Session.db_engine.dispose()
             except Exception as e:
                 print(e)
-            self.Session = self.new_session
+            if not self.new_session.query_cancelled:
+                self.Session = self.new_session
+                self.user_columns = False
+                self.reaggregate()
+                if self.Session.is_statistics_session():
+                    self.ui.tool_widget.widget(TOOLBOX_GROUPING).setDisabled(True)
+                else:
+                    self.ui.tool_widget.widget(TOOLBOX_GROUPING).setEnabled(True)
             del self.new_session
-            self.user_columns = False
             self.set_stop_button(False)
-            self.reaggregate()
-
-            if self.Session.is_statistics_session():
-                self.ui.tool_widget.widget(TOOLBOX_GROUPING).setDisabled(True)
-            else:
-                self.ui.tool_widget.widget(TOOLBOX_GROUPING).setEnabled(True)
 
         # Create an alert in the system taskbar to indicate that the query has
         # completed:
@@ -2336,23 +2340,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                                                  QtWidgets.QMessageBox.Yes,
                                                  QtWidgets.QMessageBox.No)
         if response == QtWidgets.QMessageBox.Yes:
-            # FIXME: This isn't working well at all. A possible solution
-            # using SQLAlchemy may be found here:
-            # http://stackoverflow.com/questions/9437498
-
-            logging.warning("Last query is incomplete.")
-            self.showMessage("Terminating query...")
             try:
-                self.Session.Corpus.resource.DB.kill_connection()
-            except Exception:
+                self.new_session._query_connection.invalidate()
+                self.new_session._query_connection = None
+                self.new_session.query_cancelled = True
+            except Exception as e:
+                print(str(e))
                 pass
-            if self.query_thread:
-                self.query_thread.terminate()
-                self.query_thread.wait()
-            self.showMessage("Last query interrupted.")
-            self.enable_query_button(True)
-            self.set_stop_button(False)
-            self.stop_progress_indicator()
 
     def run_query(self, to_file=False):
         from coquery.session import SessionCommandLine, SessionInputFile
