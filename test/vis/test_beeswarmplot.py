@@ -9,10 +9,9 @@ coquery$ python -m test.vis.test_beeswarmplot
 """
 
 import unittest
-import matplotlib.pyplot as plt
 
 from coquery.visualizer.beeswarmplot import BeeswarmPlot
-from test.vis.test_barcodeplot import TestBarcodePlot
+from test.vis.barcodeplot import TestBarcodePlot
 
 
 class TestBeeswarmPlot(TestBarcodePlot):

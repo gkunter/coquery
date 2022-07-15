@@ -10,7 +10,7 @@ coquery$ python -m test.test_visualizationdesigner
 import pandas as pd
 
 from test.testcase import CoqTestCase
-from visualizationdesigner import uniques
+from coquery.gui.visualizationdesigner import uniques
 
 
 class TestUniques(CoqTestCase):

@@ -11,11 +11,12 @@ coquery$ python -m test.vis.test_barplot
 import unittest
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import scipy.stats as st
 import itertools
 
-from coquery.visualizer.barplot import BarPlot, StackedBars
+from coquery.visualizer.barplot import BarPlot, sns
+from stackedbarplot import StackedBars
+from coquery.visualizer.colorizer import ColorizeByFactor
 
 
 NUM_COLUMN = BarPlot.NUM_COLUMN
@@ -480,6 +481,33 @@ class TestStackedPlotSimple(CoqTestCase1):
                                      levels_x=levels, levels_y=None)
 
         self.assertDictEqual(args, target)
+
+    def test_get_colors_X_with_hue(self):
+        """
+        Test a single categorical variable on the `X` axis and the same
+        variable as a hue variable.
+        Returns
+        -------
+        None
+        """
+        vis = StackedBars(None, None)
+        category = "X"
+        levels = sorted(self.df[category].unique())
+        data = (self.df.groupby(category)
+                       .size()
+                       .cumsum()
+                       .reset_index()
+                       .rename(columns={0: "COQ_NUM"}))
+        data[COL_COLUMN] = data[category]
+
+        args = vis.prepare_arguments(data=self.df,
+                                     x=category, y=None, z=None,
+                                     levels_x=levels, levels_y=None)
+
+        colors = vis.get_colors(ColorizeByFactor, [])
+
+        self.assertDictEqual(args, target)
+
 
     def test_prepare_argument_X_only_one_level(self):
         vis = StackedBars(None, None)

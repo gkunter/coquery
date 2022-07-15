@@ -41,7 +41,7 @@ class TestBoxPlot(CoqTestCase):
         target = {"x": values,
                   "y": None,
                   "order": None}
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
     def test_vertical_no_subgroup(self):
         """
@@ -55,7 +55,7 @@ class TestBoxPlot(CoqTestCase):
         target = {"x": None,
                   "y": values,
                   "order": None}
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
     def test_horizontal_subgroup(self):
         """
@@ -70,7 +70,7 @@ class TestBoxPlot(CoqTestCase):
         target = {"x": self.df[numerical],
                   "y": self.df[category],
                   "order": levels}
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
     def test_vertical_subgroup(self):
         """
@@ -85,7 +85,7 @@ class TestBoxPlot(CoqTestCase):
         target = {"x": self.df[category],
                   "y": self.df[numerical],
                   "order": levels}
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
     def test_horizontal_no_subgroup_get_colors(self):
         numerical = "NUM"
@@ -95,7 +95,7 @@ class TestBoxPlot(CoqTestCase):
         palette = sns.color_palette("Paired", 6)
         colorizer = Colorizer(palette)
         elements = self.vis.plot_facet(**args)
-        colors = self.vis.get_colors(colorizer, elements, **args)
+        colors = self.vis.get_colors(colorizer, [], **args)
         target = [colorizer.mpt_to_hex(palette[:1])]
         np.testing.assert_array_equal(colors, target)
 
@@ -109,7 +109,7 @@ class TestBoxPlot(CoqTestCase):
         palette = sns.color_palette("Paired", 6)
         colorizer = Colorizer(palette)
         elements = self.vis.plot_facet(**args)
-        colors = self.vis.get_colors(colorizer, elements, **args)
+        colors = self.vis.get_colors(colorizer, [], **args)
         target = [colorizer.mpt_to_hex([col]) for col in palette[:2]]
         np.testing.assert_array_equal(colors, target)
 
@@ -121,7 +121,7 @@ class TestBoxPlot(CoqTestCase):
         palette = sns.color_palette("Paired", 6)
         colorizer = Colorizer(palette)
         elements = self.vis.plot_facet(**args)
-        colors = self.vis.get_colors(colorizer, elements, **args)
+        colors = self.vis.get_colors(colorizer, [], **args)
         self.vis.colorize_elements(elements, colors)
         self.assertEqual(elements[0].get_facecolor()[:3],
                          palette[0][:3])
@@ -136,7 +136,7 @@ class TestBoxPlot(CoqTestCase):
         palette = sns.color_palette("Paired", 6)
         colorizer = Colorizer(palette)
         elements = self.vis.plot_facet(**args)
-        colors = self.vis.get_colors(colorizer, elements, **args)
+        colors = self.vis.get_colors(colorizer, [], **args)
         self.vis.colorize_elements(elements, colors)
         np.testing.assert_almost_equal(
             elements[0].get_facecolor()[:3],

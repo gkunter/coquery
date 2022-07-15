@@ -134,7 +134,7 @@ class TestBarcodePlot(_MetaTestCase):
         colorizer = Colorizer(palette)
 
         elements = self.vis.plot_facet(**params)
-        colors = self.vis.get_colors(colorizer, elements, **params)
+        colors = self.vis.get_colors(colorizer, [], **params)
         target = [colorizer.mpt_to_hex([palette[0]] * len(self.df))]
 
         np.testing.assert_array_equal(colors, target)
@@ -152,7 +152,7 @@ class TestBarcodePlot(_MetaTestCase):
         colorizer = ColorizeByFactor(palette, fact_levels)
 
         elements = self.vis.plot_facet(**params)
-        colors = self.vis.get_colors(colorizer, elements, **params)
+        colors = self.vis.get_colors(colorizer, [], **params)
 
         self.df = self.df.sort_values(by=self.vis._id_column)
         self.df["COQ_COLOR"] = colorizer.mpt_to_hex(
@@ -181,7 +181,7 @@ class TestBarcodePlot(_MetaTestCase):
         colorizer = ColorizeByFactor(palette, fact_levels)
 
         elements = self.vis.plot_facet(**params)
-        colors = self.vis.get_colors(colorizer, elements, **params)
+        colors = self.vis.get_colors(colorizer, [], **params)
 
         self.df = self.df.sort_values(by=self.vis._id_column)
         self.df["COQ_COLOR"] = colorizer.mpt_to_hex(
@@ -208,7 +208,7 @@ class TestBarcodePlot(_MetaTestCase):
         colorizer = ColorizeByFactor(palette, fact_levels)
 
         elements = self.vis.plot_facet(**params)
-        colors = self.vis.get_colors(colorizer, elements, **params)
+        colors = self.vis.get_colors(colorizer, [], **params)
 
         self.df = self.df.sort_values(by=self.vis._id_column)
         self.df["COQ_COLOR"] = colorizer.mpt_to_hex(
@@ -232,7 +232,7 @@ class TestBarcodePlot(_MetaTestCase):
         colorizer = ColorizeByNum(palette, vrange=(0, 100))
 
         elements = self.vis.plot_facet(**params)
-        colors = self.vis.get_colors(colorizer, elements, **params)
+        colors = self.vis.get_colors(colorizer, [], **params)
 
         target = [colorizer.mpt_to_hex(
             [palette[val // 20] for val
@@ -270,7 +270,7 @@ class TestBarcodePlotWidgets(CoqQtTestCase):
         self.df = self.get_default_df()
 
     def test_custom_widgets(self):
-        tup = self.vis.get_custom_widgets()
+        tup = self.vis.get_widgets()
         widgets, activate_signals, update_signals = tup
         expected_classes = [QtWidgets.QCheckBox, QtWidgets.QCheckBox]
 

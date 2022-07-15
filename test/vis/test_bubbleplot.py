@@ -271,7 +271,7 @@ class TestBubblePlotAlgorithm(TestBubblePlotMethods):
                            (p2, r2, l2)],
                   "cix": aggr.index}
 
-        self.assertDictEqual(target, value)
+        self.assertDictEqual(target, value, )
 
     def test_place_circles1(self):
         self.vis.x = "X"

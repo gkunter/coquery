@@ -9,6 +9,7 @@ coquery$ python -m test.vis.test_heatbarplot
 """
 
 import unittest
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import scipy.stats as st
@@ -90,14 +91,14 @@ class TestHeatbarPlotArguments(CoqTestCase):
                       [0.0, 0.7, 0.3],
                       [0.0, 0.6, 0.4]]
 
-        for i, p in enumerate(pd.np.arange(0, 1, 0.1)):
+        for i, p in enumerate(np.arange(0, 1, 0.1)):
             bins = [0, 0, 0]
-            pd.np.testing.assert_array_almost_equal(
+            np.testing.assert_array_almost_equal(
                 increments[i],
                 self.vis.increment_bins(bins, 5 + p * 5, 5))
 
     def test_horizontal_no_subgroup(self):
-        binned = pd.np.zeros(10)
+        binned = np.zeros(10)
 
         for i in self.df[self.NUM_COLUMN]:
             binned = self.vis.increment_bins(binned, i, 5)
@@ -110,14 +111,14 @@ class TestHeatbarPlotArguments(CoqTestCase):
         target = {"aspect": "auto",
                   "interpolation": "gaussian",
                   "extent": (0, 49, None, None),
-                  "M": pd.np.array([binned])}
+                  "M": np.array([binned])}
 
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
     def test_vertical_no_subgroup(self):
         self.vis.force_horizontal = False
 
-        binned = pd.np.zeros(10)
+        binned = np.zeros(10)
 
         for i in self.df[self.NUM_COLUMN]:
             binned = self.vis.increment_bins(binned, i, 5)
@@ -130,12 +131,12 @@ class TestHeatbarPlotArguments(CoqTestCase):
         target = {"aspect": "auto",
                   "interpolation": "gaussian",
                   "extent": (None, None, 0, 49),
-                  "M": pd.np.array([binned])}
+                  "M": np.array([binned])}
 
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
     def test_horizontal_subgroup(self):
-        M = pd.np.array(pd.np.zeros((2, 10)))
+        M = np.array(np.zeros((2, 10)))
 
         for ix in self.df.index:
             row = 0 if self.df.iloc[ix]["X"] == "A" else 1
@@ -152,14 +153,14 @@ class TestHeatbarPlotArguments(CoqTestCase):
                   "extent": (0, 49, None, None),
                   "M": M}
 
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
     def test_vertical_subgroup(self):
         """
         Test vertical subgroups. Group counts are the same as in
         test_horizontal_subgroup(), but the `extent` argument differs.
         """
-        M = pd.np.array(pd.np.zeros((2, 10)))
+        M = np.array(np.zeros((2, 10)))
 
         for ix in self.df.index:
             row = 0 if self.df.iloc[ix]["X"] == "A" else 1
@@ -176,7 +177,7 @@ class TestHeatbarPlotArguments(CoqTestCase):
                   "extent": (None, None, 0, 49, ),
                   "M": M}
 
-        self.assertDictEqual(args, target)
+        self.assertDictEqual(args, target, )
 
 
 provided_tests = (
