@@ -2,7 +2,7 @@
 """
 managers.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,11 +13,9 @@ from __future__ import unicode_literals
 
 import logging
 import itertools
-import collections
 import pandas as pd
 import numpy as np
-import re
-import scipy
+import scipy.stats
 
 from .defines import (QUERY_MODE_TYPES, QUERY_MODE_FREQUENCIES,
                       QUERY_MODE_CONTINGENCY, QUERY_MODE_COLLOCATIONS,
@@ -58,13 +56,13 @@ class Group(CoqObject):
         self.unfiltered_rows = None
 
     def __repr__(self):
-        S = ("Group(name='{}', columns=[{}], functions=[{}], "
-             "filters=[{}], distinct={})")
-        return S.format(
+        frm_str = ("Group(name='{}', columns=[{}], functions=[{}], "
+                   "filters=[{}], distinct={})")
+        return frm_str.format(
             self.name,
-            ", ".join(["'{}'".format(x) for x in self.columns]),
-            ", ".join(["'{}'".format(x) for x in self.functions]),
-            ", ".join(["'{}'".format(x) for x in self.filters]),
+            ", ".join([f"'{x}'" for x in self.columns]),
+            ", ".join([f"'{x}'" for x in self.functions]),
+            ", ".join([f"'{x}'" for x in self.filters]),
             self.show_distinct)
 
     def process(self, df, session, manager):
@@ -72,12 +70,13 @@ class Group(CoqObject):
             function_list = FunctionList(self.get_functions())
             df = (df.groupby(self.columns, as_index=False)
                     .apply(function_list.lapply,
-                           session=session, manager=manager))
+                           session=session,
+                           manager=manager))
             manager._exceptions += function_list.exceptions()
         return df
 
     def apply_filters(self, df, session):
-        if (len(df) == 0 or not self.filters):
+        if len(df) == 0 or not self.filters:
             return df
 
         self.unfiltered_rows = len(df)
@@ -123,16 +122,16 @@ class Summary(Group):
             self.total_rows = len(df)
             df = df.drop_duplicates()
             columns = [x for x in df.columns if
-                       not x.startswith(("coquery_invisible"))]
+                       not x.startswith("coquery_invisible")]
             df = df.drop_duplicates(columns)
 
         return df
 
     def __repr__(self):
-        S = ("Summary(name='{}', functions=[{}], distinct={})")
-        return S.format(
+        frm_str = "Summary(name='{}', functions=[{}], distinct={})"
+        return frm_str.format(
             self.name,
-            ", ".join(["'{}'".format(x) for x in self.functions]),
+            ", ".join([f"'{x}'" for x in self.functions]),
             self.show_distinct)
 
 
@@ -184,12 +183,36 @@ class Manager(CoqObject):
     def is_hidden_column(self, column):
         return column in self.hidden_columns
 
-    def get_function(self, id):
+    def get_visible_columns(self, df):
+        """
+        Return a list with column names from the data frame.
+
+        Internal columns, i.e. those whose name starts with the string
+        'coquery_invisible', are never returned. The parameter 'hidden' controls
+        if columns hidden by the data manager are included.
+
+        Parameters
+        ----------
+        df : DataFrame
+            The data frame to work on
+
+        Returns
+        -------
+
+        lst : list of str
+
+        """
+        lst = [x for x in list(df.columns.values)
+               if (not x.startswith("coquery_invisible_")
+                   and x not in self.hidden_columns)]
+        return lst
+
+    def get_function(self, fnc_id):
         for fun in self._functions:
             if type(fun) == type:
-                logging.warning("Function {} not found in manager".format(fun))
+                logging.warning(f"Function {fun} not found in manager")
                 return None
-            if fun.get_id() == id:
+            if fun.get_id() == fnc_id:
                 return fun
 
     def get_functions(self):
@@ -207,15 +230,15 @@ class Manager(CoqObject):
     def get_column_substitutions(self, d):
         return self._subst
 
-    def set_column_order(self, l):
-        self._column_order = l
+    def set_column_order(self, lst):
+        self._column_order = lst
 
     def _get_main_functions(self, df, session):
         """
         Returns a list of functions that are provided by this manager.
         They will be executed after user functions.
         """
-        l = []
+        lst = []
 
         if options.cfg.context_mode != CONTEXT_NONE:
             # the context columns are only retrieved if there is no cached
@@ -225,13 +248,13 @@ class Manager(CoqObject):
                 self._last_query_id = session.query_id
 
             if options.cfg.context_mode == CONTEXT_COLUMNS:
-                l.append(ContextColumns())
+                lst.append(ContextColumns())
             elif options.cfg.context_mode == CONTEXT_KWIC:
-                l.append(ContextKWIC())
+                lst.append(ContextKWIC())
             elif options.cfg.context_mode == CONTEXT_STRING:
-                l.append(ContextString())
+                lst.append(ContextString())
 
-        return l
+        return lst
 
     @staticmethod
     def _apply_function(df, fun, session):
@@ -253,8 +276,8 @@ class Manager(CoqObject):
         if not self._groups:
             return df
 
-        Print("\tmutate_groups({}), {} rows, columns: {}".format(
-            self._groups, len(df), df.columns))
+        Print(f"\tmutate_groups({self._groups}), "
+              f"{len(df)} rows, columns: {df.columns}")
 
         for group in self._groups:
             df = group.process(df, session=session, manager=self)
@@ -273,8 +296,8 @@ class Manager(CoqObject):
         if len(df) == 0:
             return df
 
-        Print("\tmutate(stage='{}'), {} rows, columns: {}".format(
-            stage, len(df), df.columns))
+        Print(f"\tmutate(stage='{stage}'), {len(df)} rows, "
+              f"columns: {df.columns}")
 
         # separate general functions from context functions:
         fnc_all = self._get_main_functions(df, session)
@@ -309,7 +332,7 @@ class Manager(CoqObject):
                                               session=session, manager=self)
                 self._exceptions += context_functions.exceptions()
                 context_columns = [x for x in df.columns
-                                   if x.startswith(("coq_context"))]
+                                   if x.startswith("coq_context")]
                 # and store context in cache
                 self._context_cache[context_key] = df[context_columns]
 
@@ -338,7 +361,7 @@ class Manager(CoqObject):
 
         df = df.reset_index(drop=True)
 
-        Print("\t\tdone, {} rows, columns: {}".format(len(df), df.columns))
+        Print(f"\t\tdone, {len(df)} rows, columns: {df.columns}")
 
         return df
 
@@ -350,7 +373,7 @@ class Manager(CoqObject):
                 values = column
                 print("substitute():", column.head())
             to_bool = values.astype(bool)
-            if (to_bool == values).all():
+            if pd.Series(to_bool == values).all():
                 return to_bool
             else:
                 return values
@@ -402,8 +425,7 @@ class Manager(CoqObject):
         if len(df) == 0 or len(self._groups) == 0:
             return df
 
-        Print("\tarrange_groups(), {} rows, columns: {}".format(
-            len(df), df.columns))
+        Print(f"\tarrange_groups(), {len(df)} rows, columns: {df.columns}")
 
         for group in self._groups:
             columns = list(group.columns)
@@ -420,7 +442,7 @@ class Manager(CoqObject):
                                     axis="index")
 
         df = df.reset_index(drop=True)
-        Print("\t\tdone, {} rows".format(len(df)))
+        Print(f"\t\tdone, {len(df)} rows")
 
         return df
 
@@ -429,7 +451,7 @@ class Manager(CoqObject):
             print("exit arrange")
             return df
 
-        Print("\tarrange(), {} rows".format(len(df)))
+        Print(f"\tarrange(), {len(df)} rows")
 
         original_columns = df.columns
         columns = []
@@ -487,15 +509,15 @@ class Manager(CoqObject):
             df = pd.concat([df_data, df_totals])
         else:
             df = df_data
-        Print("\t\tdone, {} rows".format(len(df)))
+        Print(f"\t\tdone, {len(df)} rows")
 
         df = df[[x for x in df.columns if not x.endswith("__rev")]]
         return df
 
     def summarize(self, df, session):
-        Print("\tsummarize(), {} rows".format(len(df)))
+        Print(f"\tsummarize(), {len(df)} rows")
 
-        vis_cols = get_visible_columns(df, manager=self, session=session)
+        vis_cols = self.get_visible_columns(df)
 
         df = self.manager_functions.lapply(df, session=session, manager=self)
         self._exceptions += self.manager_functions.exceptions()
@@ -511,12 +533,12 @@ class Manager(CoqObject):
                               .index)
             self.dropped_na_count = len(df) - len(ix)
             df = df.loc[ix]
-        Print("\t\tdone, {} rows".format(len(df)))
+        Print(f"\t\tdone, {len(df)} rows")
 
         return df
 
     def distinct(self, df, session):
-        vis_cols = get_visible_columns(df, manager=self, session=session)
+        vis_cols = self.get_visible_columns(df)
         try:
             df = df.drop_duplicates(subset=vis_cols)
         except ValueError:
@@ -525,16 +547,16 @@ class Manager(CoqObject):
         return df.reset_index(drop=True)
 
     def filter(self, df, session, stage):
-        if (len(df) == 0 or not self._filters):
+        if len(df) == 0 or not self._filters:
             return df
 
         self.reset_group_filter_statistics()
         self._len_pre_filter = len(df)
-        Print("\tfilter(), {} rows".format(len(df)))
+        Print(f"\tfilter(), {len(df)} rows")
         for filt in self._filters:
             if filt.stage == stage:
                 df = filt.apply(df).reset_index(drop=True)
-        Print("\t\tdone, {} rows".format(len(df)))
+        Print(f"\t\tdone, {len(df)} rows")
 
         self._len_post_filter = len(df)
         return df
@@ -551,6 +573,7 @@ class Manager(CoqObject):
         self._len_post_group_filter = {}
 
     def filter_groups(self, df, session):
+        logging.warning("filter_groups() not implemented yet.")
         return df
 
         if (len(df) == 0 or
@@ -558,7 +581,7 @@ class Manager(CoqObject):
                 len(options.cfg.group_filter_list) == 0):
             return df
 
-        Print("\tfilter_groups(), {} rows".format(df))
+        Print(f"\tfilter_groups(), {len(df)} rows")
         self.reset_group_filter_statistics()
 
         columns = self.get_group_columns(df, session)
@@ -577,7 +600,7 @@ class Manager(CoqObject):
         df = pd.concat(sub_list, axis=0)
         df = df.reset_index(drop=True)
 
-        Print("\t\tdone, {} rows".format(len(df)))
+        Print(f"\t\tdone, {len(df)} rows")
 
         return df
 
@@ -586,15 +609,14 @@ class Manager(CoqObject):
         Select the columns that will appear in the final output. Also, put
         them into the preferred order.
         """
-        Print("\tselect(), {} rows".format(len(df)))
+        Print(f"\tselect(), {len(df)} rows")
 
         columns = list(df.columns)
 
         # align context columns around word columns:
         first_word_pos = -1
         last_word_pos = -1
-        word_column = "coq_{}_".format(
-            getattr(session.Resource, QUERY_ITEM_WORD))
+        word_column = f"coq_{getattr(session.Resource, QUERY_ITEM_WORD)}_"
         left_context_columns = []
         right_context_columns = []
         # find word columns as well as context columns:
@@ -624,33 +646,37 @@ class Manager(CoqObject):
         except ValueError:
             pass
         df = df[columns]
-        Print("\t\tdone, {} rows".format(len(df)))
+        Print(f"\t\tdone, {len(df)} rows")
 
         return df
 
     def filter_stopwords(self, df, session):
+        def _is_stopword(x):
+            return x.str.lower().isin(stopwords)
+
         self.stopwords_failed = False
 
         if not options.cfg.stopword_list:
             return df
 
-        Print("\tfilter_stopwords({})".format(options.cfg.stopword_list))
+        Print(f"\tfilter_stopwords({options.cfg.stopword_list})")
         word_id_column = getattr(session.Resource, QUERY_ITEM_WORD)
         columns = []
         for col in df.columns:
             if col.startswith("coq_{}_".format(word_id_column)):
                 columns.append(col)
-        if columns == []:
+        if not columns:
             self.stopwords_failed = True
             return df
 
         stopwords = [x.lower() for x in options.cfg.stopword_list]
-        valid = ~(df[columns].apply(lambda x: x.str.lower()
-                                                   .isin(stopwords))
+        valid = ~(df[columns].apply(_is_stopword)
                              .any(axis=1))
-        Print("\t\tdone, {} rows".format(len(df)))
+        df = df[valid]
 
-        return df[valid]
+        Print(f"\t\tdone, {len(df)} rows")
+
+        return df
 
     def process(self, df, session, recalculate=True):
         """
@@ -698,7 +724,7 @@ class Manager(CoqObject):
         """
         self._exceptions = []
 
-        Print("process(), {} rows".format(len(df)))
+        Print(f"process(), {len(df)} rows")
 
         df = df.reset_index(drop=True)
         if len(self._column_order):
@@ -780,7 +806,10 @@ class FrequencyList(Manager):
     name = "FREQUENCY"
 
     def summarize(self, df, session):
-        vis_cols = get_visible_columns(df, manager=self, session=session)
+        def _identity(x):
+            return x
+
+        vis_cols = self.get_visible_columns(df)
         freq_function = Freq(columns=vis_cols)
         freq_exists = False
         for fnc, col in session.summary_group.functions:
@@ -789,9 +818,9 @@ class FrequencyList(Manager):
                 existing_func = fnc
                 break
         else:
-            existing_func = lambda x: x
+            existing_func = _identity
         if not freq_exists:
-            #FIXME: add test that this actually works
+            # FIXME: add test that this actually works
             self.manager_functions = FunctionList([freq_function])
         else:
             self.manager_functions = FunctionList([existing_func])
@@ -800,129 +829,232 @@ class FrequencyList(Manager):
 
 
 class ContingencyTable(FrequencyList):
-    name = "CONTINGENCY"
+    def _get_cat_cols(self, df):
+        vis_cols = self.get_visible_columns(df)
+        return (df[vis_cols].select_dtypes(include=[object])
+                            .columns
+                            .values
+                            .tolist())
 
-    def select(self, df, session):
-        l = list(super(ContingencyTable, self).select(df, session).columns)
-        for col in [x for x in df.columns
-                    if x != "coquery_invisible_dummy"]:
-            if col not in l:
-                l.append(col)
+    def _get_num_cols(self, df):
+        vis_cols = self.get_visible_columns(df)
+        DEFAULT = ["coquery_invisible_number_of_tokens",
+                   "coquery_invisible_corpus_id",
+                   "coquery_invisible_origin_id"]
+        return (df[vis_cols].select_dtypes(include=[np.number])
+                            .columns
+                            .values
+                            .tolist()) + DEFAULT
 
-        # make sure that the frequency column is shown last:
-        freq = self.manager_functions.get_list()[0].get_id()
-        l.remove(freq)
-        l.append(freq)
-        df = df[l]
-        l[-1] = "statistics_column_total"
-        df.columns = l
+    # def _get_agg_fnc(self, df, session):
+    #     # determine appropriate aggregation functions:
+    #     # - internal columns that are needed for context look-up take
+    #     #   the first value (so clicking on a cell in the contingency
+    #     #   table returns the first matching context)
+    #     # - frequency functions return the sum
+    #     # - all other numeric columns return the mean
+    #     num_col = self._get_num_cols(df)
+    #     agg_fnc = {}
+    #     for col in num_col:
+    #         if col.startswith("coquery_invisible"):
+    #             agg_fnc[col] = self._get_first
+    #         elif col.startswith("func_statistics_frequency_"):
+    #             agg_fnc[col] = sum
+    #         else:
+    #             agg_fnc[col] = np.mean
+    #     return agg_fnc
+
+    def _add_column_totals(self, df, categoricals):
+        val = df.iloc[:, (len(categoricals)-1):].sum(axis="columns")
+        val.index = df.index
+        df["statistics_column_total"] = val
+        return df
+
+    def _add_row_totals(self, df, categoricals):
+        val = pd.Series(
+            data=[ROW_NAMES["row_total"]] +
+                 [""] * (len(categoricals) - 2) +
+                 (df.sum()
+                    .values
+                    .tolist()[(len(categoricals) - 1):]),
+            name=ROW_NAMES["row_total"],
+            index=df.columns)
+        df = df.append(val)
         return df
 
     def summarize(self, df, session):
-        def _get_column_label(row):
-            if row[1] == "All":
-                if agg_fnc[row[0]] == sum:
-                    s = "{}(TOTAL)"
-                elif agg_fnc[row[0]] == np.mean:
-                    s = "{}(MEAN)"
-                else:
-                    s = "{}({}=ANY)"
-                return s.format(row[0], row.index[1])
-            elif row[1]:
-                return "{}({}='{}')".format(
-                    row[0],
-                    session.translate_header(row.index[1]),
-                    row[1].replace("'", "''"))
-            else:
-                return row[0]
-
-        df = super(ContingencyTable, self).summarize(df, session)
-
-        vis_cols = get_visible_columns(df, manager=self, session=session)
-
-        cat_col = list(df[vis_cols]
-                       .select_dtypes(include=[object]).columns.values)
-        num_col = (list(df[vis_cols]
-                        .select_dtypes(include=[np.number])
-                        .columns.values) +
-                   ["coquery_invisible_number_of_tokens",
-                    "coquery_invisible_corpus_id",
-                    "coquery_invisible_origin_id"])
-
-        # determine appropriate aggregation functions:
-        # - internal columns that are needed for context look-up take
-        #   the first value (so clicking on a cell in the contingency
-        #   table returns the first matching context)
-        # - frequency functions return the sum
-        # - all other numeric columns return the mean
-        agg_fnc = {}
-        for col in num_col:
-            if col.startswith(("coquery_invisible")):
-                agg_fnc[col] = lambda x: int(x.values[0])
-            elif col.startswith(("func_statistics_frequency_")):
-                agg_fnc[col] = sum
-            else:
-                agg_fnc[col] = np.mean
-
-        if len(cat_col) > 1:
-            # Create pivot table:
-            piv = df.pivot_table(index=cat_col[:-1],
-                                 columns=[cat_col[-1]],
-                                 values=num_col,
-                                 aggfunc=agg_fnc,
-                                 fill_value=0)
-            piv = piv.reset_index()
-
-            # handle the multi-index that pivot_table() creates:
-            l1 = pd.Series(piv.columns.levels[-2][piv.columns.labels[-2]])
-            l2 = pd.Series(piv.columns.levels[-1][piv.columns.labels[-1]])
-
-            piv.columns = pd.concat([l1, l2], axis=1).apply(
-                _get_column_label, axis="columns")
+        categoricals = self._get_cat_cols(df)
+        if not categoricals:
+            ct = pd.DataFrame(data=[len(df)],
+                              columns=["statistics_column_total"])
         else:
-            piv = df
-
-        # Ensure that the pivot columns have the same dtype as the original
-        # column:
-        for x in piv.columns:
-            match = re.search("(.*)\(.*\)", x)
-            if match:
-                name = match.group(1)
+            freq = df.groupby(categoricals).size()
+            if len(categoricals) > 1:
+                ct = freq.unstack(fill_value=0).reset_index()
+                grouper = session.translate_header(categoricals[-1])
+                group_names = [f"{grouper}='{x}'"
+                               for x in ct.columns[(len(categoricals) - 1):]]
+                ct.columns = categoricals[:-1] + group_names
+                ct = self._add_column_totals(ct, categoricals)
+                ct = self._add_row_totals(ct, categoricals)
             else:
-                name = x
-            if piv.dtypes[x] != df.dtypes[name]:
-                piv[x] = piv[x].astype(df.dtypes[name])
+                ct = freq.reset_index(name="statistics_column_total")
+                row_total = pd.Series(
+                    data=[ROW_NAMES["row_total"],
+                          ct["statistics_column_total"].sum()],
+                    name="row_total",
+                    index=ct.columns)
+                ct = ct.append(row_total)
+        return ct
 
-        if len(cat_col) > 1:
-            # Sort the pivot table
-            try:
-                # pandas <= 0.16.2:
-                piv = piv.sort(columns=cat_col[:-1], axis="index")
-            except AttributeError:
-                # pandas >= 0.17.0
-                piv = piv.sort_values(by=cat_col[:-1], axis="index")
-
-        bundles = collections.defaultdict(list)
-        d = {}
-
-        # row-wise apply the aggregate function
-        for x in piv.columns[(len(cat_col)-1):]:
-            col = x.rpartition("(")[0]
-            if col:
-                bundles[col].append(x)
-        for col in bundles:
-            piv[col] = piv[bundles[col]].apply(agg_fnc[col], axis="columns")
-        # add summary row:
-        for x in piv.columns[(len(cat_col)-1):]:
-            rc_feature = x.partition("(")[0]
-            if rc_feature in agg_fnc:
-                fnc = agg_fnc[rc_feature]
-                d[x] = fnc(piv[x])
-        row_total = pd.DataFrame([pd.Series(d)],
-                                 columns=piv.columns,
-                                 index=[ROW_NAMES["row_total"]]).fillna("")
-        piv = piv.append(row_total)
-        return piv
+# class ContingencyTable(FrequencyList):
+#     name = "CONTINGENCY"
+#
+#     def select(self, df, session):
+#         lst = list(super().select(df, session).columns)
+#         for col in [x for x in df.columns
+#                     if x != "coquery_invisible_dummy"]:
+#             if col not in lst:
+#                 lst.append(col)
+#
+#         # make sure that the frequency column is shown last:
+#         freq = self.manager_functions.get_list()[0].get_id()
+#         lst.remove(freq)
+#         lst.append(freq)
+#         df = df[lst]
+#         lst[-1] = "statistics_column_total"
+#         df.columns = lst
+#         return df
+#
+#     def _get_cat_cols(self, df, session):
+#         vis_cols = get_visible_columns(df, manager=self, session=session)
+#         return (df[vis_cols].select_dtypes(include=[object])
+#                             .columns
+#                             .values
+#                             .tolist())
+#
+#     def _get_num_cols(self, df, session):
+#         vis_cols = get_visible_columns(df, manager=self, session=session)
+#         DEFAULT = ["coquery_invisible_number_of_tokens",
+#                    "coquery_invisible_corpus_id",
+#                    "coquery_invisible_origin_id"]
+#         return (df[vis_cols].select_dtypes(include=[np.number])
+#                             .columns
+#                             .values
+#                             .tolist()) + DEFAULT
+#
+#     @staticmethod
+#     def _get_first(x):
+#         return int(x.values[0])
+#
+#     def _get_agg_fnc(self, df, session):
+#         # determine appropriate aggregation functions:
+#         # - internal columns that are needed for context look-up take
+#         #   the first value (so clicking on a cell in the contingency
+#         #   table returns the first matching context)
+#         # - frequency functions return the sum
+#         # - all other numeric columns return the mean
+#         num_col = self._get_num_cols(df, session)
+#         agg_fnc = {}
+#         for col in num_col:
+#             if col.startswith("coquery_invisible"):
+#                 agg_fnc[col] = self._get_first
+#             elif col.startswith("func_statistics_frequency_"):
+#                 agg_fnc[col] = sum
+#             else:
+#                 agg_fnc[col] = np.mean
+#         return agg_fnc
+#
+#     def _get_pivot_table(self, df, session):
+#         cat_col = self._get_cat_cols(df, session)
+#         num_col = self._get_num_cols(df, session)
+#         agg_fnc = self._get_agg_fnc(df, session)
+#
+#         if len(cat_col) > 1:
+#
+#             # Create pivot table:
+#             piv = df.pivot_table(index=cat_col[:-1],
+#                                  columns=[cat_col[-1]],
+#                                  values=num_col,
+#                                  aggfunc=agg_fnc,
+#                                  fill_value=0)
+#             piv = piv.reset_index()
+#
+#             # handle the multi-index that pivot_table() creates:
+#             l1 = pd.Series(piv.columns.levels[-2])
+#             l2 = pd.Series(piv.columns.levels[-1])
+#             lst = pd.concat([l1, l2], axis=1).apply(
+#                 lambda x: self._get_column_label(x, agg_fnc), axis="columns")
+#             print(lst)
+#             print(piv)
+#             # piv.columns = lst
+#         else:
+#             piv = df
+#         return piv
+#
+#     @staticmethod
+#     def _get_column_label(row, agg_fnc):
+#         print(row)
+#         return row[0]
+#         if row[1] == "All":
+#             if agg_fnc[row[0]] == sum:
+#                 s = "{}(TOTAL)"
+#             elif agg_fnc[row[0]] == np.mean:
+#                 s = "{}(MEAN)"
+#             else:
+#                 s = "{}({}=ANY)"
+#             return s.format(row[0], row.index[1])
+#         elif row[1]:
+#             return "{}({}='{}')".format(
+#                 row[0],
+#                 session.translate_header(row.index[1]),
+#                 row[1].replace("'", "''"))
+#         else:
+#             return row[0]
+#
+#     def summarize(self, df, session):
+#         cat_col = self._get_cat_cols(df, session)
+#         agg_fnc = self._get_agg_fnc(df, session)
+#
+#         df = super().summarize(df, session)
+#         piv = self._get_pivot_table(df, session)
+#
+#         # # Ensure that the pivot columns have the same dtypes as the original
+#         # # columns:
+#         # for x in piv.columns:
+#         #     match = re.search(r"(.*)\(.*\)", x)
+#         #     if match:
+#         #         name = match.group(1)
+#         #     else:
+#         #         name = x
+#         #     if piv.dtypes[x] != df.dtypes[name]:
+#         #         piv[x] = piv[x].astype(df.dtypes[name])
+#
+#         # Sort the pivot table
+#         if len(cat_col) > 1:
+#             piv = piv.sort_values(by=cat_col[:-1], axis="index")
+#
+#         bundles = collections.defaultdict(list)
+#         d = {}
+#
+#         # row-wise apply the aggregate function
+#         for x in piv.columns[(len(cat_col) - 1):]:
+#             col = x.rpartition("(")[0]
+#             if col:
+#                 bundles[col].append(x)
+#         for col in bundles:
+#             piv[col] = piv[bundles[col]].apply(agg_fnc[col], axis="columns")
+#         # add summary row:
+#         for x in piv.columns[(len(cat_col) - 1):]:
+#             rc_feature = x.partition("(")[0]
+#             if rc_feature in agg_fnc:
+#                 fnc = agg_fnc[rc_feature]
+#                 d[x] = fnc(piv[x])
+#         row_total = pd.DataFrame([pd.Series(d)],
+#                                  columns=piv.columns,
+#                                  index=[ROW_NAMES["row_total"]]).fillna("")
+#         piv = piv.append(row_total)
+#         return piv
 
 
 class Collocations(Manager):
@@ -979,9 +1111,9 @@ class Collocations(Manager):
         # used.
         corpus_size = session.Resource.corpus.get_corpus_size()
 
-        left_cols = ["coq_context_lc{}".format(x + 1)
+        left_cols = [f"coq_context_lc{x + 1}"
                      for x in range(options.cfg.collo_left)]
-        right_cols = ["coq_context_rc{}".format(x + 1)
+        right_cols = [f"coq_context_rc{x + 1}"
                       for x in range(options.cfg.collo_right)]
 
         try:
@@ -1092,13 +1224,12 @@ class ContrastMatrix(FrequencyList):
         df = df.reset_index(drop=True)
         labels = self.collapse_columns(df, session)
         df["coquery_invisible_row_id"] = labels
-        #df = df.sort_values(by="coquery_invisible_row_id")
+        # df = df.sort_values(by="coquery_invisible_row_id")
 
         self.p_values = pd.Series()
 
         for i, x in enumerate(labels):
-            columns = ["statistics_g_test_{}".format(x),
-                       "COQ_P_{}".format(x)]
+            columns = [f"statistics_g_test_{x}", f"COQ_P_{x}"]
 
             try:
                 df[columns] = df.apply(
@@ -1133,15 +1264,15 @@ class ContrastMatrix(FrequencyList):
         # first, get the frequency list:
         df = super(ContrastMatrix, self).summarize(df, session)
         self._freq_function = self.manager_functions.get_list()[0]
-        l = [x if x != self._freq_function.get_id()
-             else "coquery_invisible_count"
-             for x in df.columns]
-        df.columns = l
+        lst = [x if x != self._freq_function.get_id()
+               else "coquery_invisible_count"
+               for x in df.columns]
+        df.columns = lst
         self._freq_function.alias = "coquery_invisible_count"
 
         # now, get a subcorpus size for each row:
         vis_cols = [x for x
-                    in get_visible_columns(df, manager=self, session=session)
+                    in self.get_visible_columns(df)
                     if not x == self._freq_function.get_id()]
         self._subcorpus_size = SubcorpusSize(columns=vis_cols,
                                              alias="coquery_invisible_size")
@@ -1171,7 +1302,7 @@ class ContrastMatrix(FrequencyList):
 
     def select(self, df, session):
         df = super(ContrastMatrix, self).select(df, session)
-        vis_cols = get_visible_columns(df, manager=self, session=session)
+        vis_cols = self.get_visible_columns(df)
         for i, x in enumerate(vis_cols):
             if x.startswith("statistics_g_test"):
                 self._start_pos = i
@@ -1183,16 +1314,17 @@ class ContrastMatrix(FrequencyList):
         Return a list of strings. Each string contains the concatinated
         content of the feature cells in each row of the data frame.
         """
+
         # FIXME: columns should be processed in the order that they appear in
-        # the None results table view.
+        # the results table view.
 
         def fnc(x, cols=None):
             if cols is None:
                 cols = []
-            l = [x[col] for col in cols]
-            return ":".join([str(x).strip() for x in l])
+            lst = [x[col] for col in cols]
+            return ":".join([str(x).strip() for x in lst])
 
-        vis_cols = get_visible_columns(df, manager=self, session=session)
+        vis_cols = self.get_visible_columns(df)
         vis_cols = [x for x in vis_cols
                     if x not in (self._freq_function.get_id(),
                                  self._subcorpus_size.get_id())]
@@ -1268,34 +1400,3 @@ def get_manager(trans_mode, resource):
         options.cfg.managers[resource][trans_mode] = new_manager
     finally:
         return options.cfg.managers[resource][trans_mode]
-
-
-def get_visible_columns(df, manager, session, hidden=False):
-    """
-    Return a list with column names from the data frame.
-
-    Internal columns, i.e. those whose name starts with the string
-    'coquery_invisible', are never returned. The parameter 'hidden' controls
-    if columns hidden by the data manager are included.
-
-    Parameters
-    ----------
-    manager : Manager object
-        The currently active manager.
-
-    session : Session object
-        The currently active session.
-
-    hidden : bool
-        True if columns hidden by the manager are included. False if columns
-        hidden by the manager are excluded.
-    """
-    if hidden:
-        l = [x for x in list(df.columns.values)
-             if not x.startswith("coquery_invisible_")]
-    else:
-        l = [x for x in list(df.columns.values)
-             if (not x.startswith("coquery_invisible_") and
-                 x not in manager.hidden_columns)]
-
-    return l
