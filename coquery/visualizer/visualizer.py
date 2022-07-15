@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 import math
 import logging
+from enum import Enum
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,12 @@ import seaborn as sns
 
 from coquery.visualizer.aggregator import Aggregator
 from coquery.visualizer.colorizer import Colorizer
+
+
+class VisualizerStatus(Enum):
+    Complete = 0
+    InProgress = 1
+    Incomplete = 2
 
 
 class Visualizer:
@@ -31,6 +38,7 @@ class Visualizer:
     prepare_arguments()
     plot_facet()
     set_titles()
+    get_colors()
     colorize_elements()
 
     Other frequently used methods are:
@@ -45,7 +53,8 @@ class Visualizer:
     DEFAULT_XLABEL = "X"
     DEFAULT_YLABEL = "Y"
 
-    def __init__(self, df, session, id_column=None, limiter_fnc=None):
+    def __init__(self, df: pd.DataFrame, session,
+                 id_column=None, limiter_fnc=None):
         """
         Initalize the Visualizer instance.
 
