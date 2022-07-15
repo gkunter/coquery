@@ -729,6 +729,13 @@ class TestCorpus(CoqTestCase):
         dct = self.resource.get_token_conditions(0, token)
         self.assertDictEqual(dct, {"word": ["COQ_WORD_1.Word LIKE 'a%'"]})
 
+    def test_token_conditions_OR_1(self):
+        token = COCAToken("he|she|it")
+        d = self.resource.get_token_conditions(0, token)
+        self.assertDictEqual(
+            d,
+            {"word": ["COQ_WORD_1.Word IN ('he', 'she', 'it')"]})
+
     def test_token_conditions_lemmatized_flat_1(self):
         self.Session.Resource = self.flat_resource
         s = "#abc"

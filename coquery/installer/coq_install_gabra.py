@@ -3,7 +3,7 @@
 """
 coq_install_gabra.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -360,7 +360,7 @@ class BuilderClass(BaseCorpusBuilder):
                 source_id = self._source_id_dict[source_list[0]]
             except KeyError:
                 for x in self._source_id_dict:
-                    if self._source_id_dict[x] == source_list[0]:
+                    if self._source_id_dict[x] in source_list:
                         source_id = self._source_id_dict[x]
                         break
                 else:
@@ -448,6 +448,7 @@ class BuilderClass(BaseCorpusBuilder):
                              self.source_key: entry.get("key", ""),
                              self.source_note: entry.get("note", "")}
                         self.table(self.source_table).add(d)
+
             elif filename == "roots.bson":
                 with open(filepath, "rb") as input_file:
                     for entry in bson.decode_file_iter(input_file):
@@ -462,6 +463,7 @@ class BuilderClass(BaseCorpusBuilder):
                                  entry.get("alternatives", "")}
                         self.table(self.root_table).add(d)
                         self._radicals_dict[radicals] = self._root_id
+
             elif filename == "lexemes.bson":
                 with open(filepath, "rb") as input_file:
                     for entry in bson.decode_file_iter(input_file):
@@ -469,6 +471,7 @@ class BuilderClass(BaseCorpusBuilder):
                         self._lemma_id_dict[str(entry["_id"])] = self._lemma_id
                         d = self._parse_lexemes_entry(entry)
                         self.table(self.lemma_table).add(d)
+
             elif filename == "wordforms.bson":
                 with open(filepath, "rb") as input_file:
                     for entry in bson.decode_file_iter(input_file):

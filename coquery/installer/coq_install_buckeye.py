@@ -14,30 +14,30 @@ from __future__ import unicode_literals
 import logging
 import zipfile
 import pandas as pd
+from io import BytesIO
+import os
+import re
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO, BytesIO
-
-from coquery.corpusbuilder import *
+from coquery.corpusbuilder import (BaseCorpusBuilder,
+                                   Identifier, Column, Link,
+                                   QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_WORD,
+                                   QUERY_ITEM_LEMMA, QUERY_ITEM_POS)
 from coquery.unicode import utf8
+from coquery import options
 
 # The class corpus_code contains the Python source code that will be
 # embedded into the corpus library. It provides the Python code that will
 # override the default class methods of CorpusClass by methods that are
 # tailored for the Buckeye corpus.
-#
-class corpus_code():
+class corpus_code:
     def sql_string_get_time_info(self, token_id):
-        return "SELECT {} FROM {} WHERE {} = {}".format(
-                self.resource.corpus_time,
-                self.resource.corpus_table,
-                self.resource.corpus_id,
-                token_id)
+        return (f"SELECT {self.resource.corpus_time} "
+                f"FROM {self.resource.corpus_table} "
+                f"WHERE {self.resource.corpus_id} = {token_id}")
 
     def get_time_info_header(self):
         return ["Time"]
+
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "s??.zip"
@@ -75,7 +75,7 @@ class BuilderClass(BaseCorpusBuilder):
     speaker_gender = "Gender"
     speaker_interviewer = "Interviewer_gender"
 
-    expected_files = ["s{:02}.zip".format(x + 1) for x in range(40)]
+    expected_files = [f"s{x + 1:02}.zip" for x in range(40)]
 
     _zip_files = [
         's2901b.zip', 's1304a.zip', 's2503b.zip',
@@ -210,105 +210,43 @@ class BuilderClass(BaseCorpusBuilder):
     # is used when trying to salvage incomplete rows.
 
     _VALID_POS = ["CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR",
-                 "JJS", "LS", "MD", "NN", "NNS", "NNP", "NNPS", "PDT",
-                 "POS", "PRP", "PP$", "RB", "RBR", "RBS", "RP", "SYM",
-                 "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ",
-                 "WDT", "WP", "WP$", "WRB", "DT_VBZ", "EX_VBZ", "NULL",
-                 "PRP_MD", "PRP_VBP", "PRP_VBZ", "VBG_TO", "VBP_RB",
-                 "VBP_TO", "VBZ_RB", "WP_VBZ", "WP_RB"]
+                  "JJS", "LS", "MD", "NN", "NNS", "NNP", "NNPS", "PDT",
+                  "POS", "PRP", "PP$", "RB", "RBR", "RBS", "RP", "SYM",
+                  "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ",
+                  "WDT", "WP", "WP$", "WRB", "DT_VBZ", "EX_VBZ", "NULL",
+                  "PRP_MD", "PRP_VBP", "PRP_VBZ", "VBG_TO", "VBP_RB",
+                  "VBP_TO", "VBZ_RB", "WP_VBZ", "WP_RB"]
 
     def __init__(self, gui=False, *args):
-       # all corpus builders have to call the inherited __init__ function:
+        # all corpus builders have to call the inherited __init__ function:
         super(BuilderClass, self).__init__(gui, *args)
 
-        # add table descriptions for the tables used in this database.
-        #
-        # A table description is a dictionary with at least a 'CREATE' key
-        # which takes a list of strings as its value. Each of these strings
-        # represents a MySQL instruction that is used to create the table.
-        # Typically, this instruction is a column specification, but you can
-        # also add other table options such as the primary key for this
-        # table.
-        #
-        # Additionaly, the table description can have an 'INDEX' key which
-        # takes a list of tuples as its value. Each tuple has three
-        # elements. The first element is a list of strings containing the
-        # column names that are to be indexed. The second element is an
-        # integer value specifying the index length for columns of Text
-        # types. The third element specifies the index type (e.g. 'HASH' or
-        # 'BTREE'). Note that not all MySQL storage engines support all
-        # index types.
-
-        self.create_table_description(self.segment_table,
+        self.create_table_description(
+            self.segment_table,
             [Identifier(self.segment_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Column(self.segment_origin_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.segment_starttime, "REAL NOT NULL"),
              Column(self.segment_endtime, "REAL NOT NULL"),
              Column(self.segment_label, "VARCHAR(14) NOT NULL")])
 
-        # Add the main lexicon table. Each row in this table represents a
-        # word-form that occurs in the corpus. It has the following columns:
-        #
-        # WordId
-        # An int value containing the unique identifier of this word-form.
-        #
-        # Text
-        # A text value containing the orthographic representation of this
-        # word-form.
-        #
-        # LemmaId
-        # An int value containing the unique identifier of the lemma that
-        # is associated with this word-form.
-        #
-        # Pos
-        # A text value containing the part-of-speech label of this
-        # word-form.
-        #
-        # Transcript
-        # A text value containing the phonological transcription of this
-        # word-form.
-
-        # Add the file table. Each row in this table represents a data file
-        # that has been incorporated into the corpus. Each token from the
-        # corpus table is linked to exactly one file from this table, and
-        # more than one token may be linked to each file in this table.
-        # The table contains the following columns:
-        #
-        # FileId
-        # An int value containing the unique identifier of this file.
-        #
-        # Path
-        # A text value containing the path that points to this data file.
-
-        self.create_table_description(self.file_table,
+        self.create_table_description(
+            self.file_table,
             [Identifier(self.file_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.file_name, "VARCHAR(18) NOT NULL"),
              Column(self.file_duration, "REAL NOT NULL"),
              Column(self.file_audio_path, "VARCHAR(2048) NOT NULL"),
              Column(self.file_path, "VARCHAR(2048) NOT NULL")])
 
-        self.create_table_description(self.speaker_table,
+        self.create_table_description(
+            self.speaker_table,
             [Identifier(self.speaker_id, "TINYINT(2) UNSIGNED NOT NULL"),
              Column(self.speaker_label, "VARCHAR(3) NOT NULL"),
              Column(self.speaker_age, "ENUM('y','o') NOT NULL"),
              Column(self.speaker_gender, "ENUM('f','m') NOT NULL"),
              Column(self.speaker_interviewer, "ENUM('f','m') NOT NULL")])
 
-        # Add the main corpus table. Each row in this table represents a
-        # token in the corpus. It has the following columns:
-        #
-        # TokenId
-        # An int value containing the unique identifier of the token
-        #
-        # WordId
-        # An int value containing the unique identifier of the lexicon
-        # entry associated with this token.
-        #
-        # FileId
-        # An int value containing the unique identifier of the data file
-        # that contains this token.
-
-        self.create_table_description(self.corpus_table,
+        self.create_table_description(
+            self.corpus_table,
             [Identifier(self.corpus_id, "MEDIUMINT(6) UNSIGNED NOT NULL"),
              Link(self.corpus_file_id, self.file_table),
              Link(self.corpus_speaker_id, self.speaker_table),
@@ -337,11 +275,13 @@ class BuilderClass(BaseCorpusBuilder):
 
         self._file_id = 0
         self._token_id = 0
+        self._speaker_id = None
 
-        self.map_query_item(QUERY_ITEM_TRANSCRIPT, "corpus_lemmatranscript")
-        self.map_query_item(QUERY_ITEM_POS, "corpus_pos")
-        self.map_query_item(QUERY_ITEM_WORD, "corpus_word")
-        self.map_query_item(QUERY_ITEM_LEMMA, "corpus_transcript")
+        for tup in (QUERY_ITEM_WORD, "corpus_word",
+                    QUERY_ITEM_LEMMA, "corpus_transcript",
+                    QUERY_ITEM_TRANSCRIPT, "corpus_lemmatranscript",
+                    QUERY_ITEM_POS, "corpus_pos"):
+            self.map_query_item(*tup)
 
     @staticmethod
     def get_name():
@@ -366,11 +306,18 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_description():
         return [
-            "The Buckeye Corpus of conversational speech contains high-quality recordings from 40 speakers in Columbus OH conversing freely with an interviewer. The speech has been orthographically transcribed and phonetically labeled."]
+            "The Buckeye Corpus of conversational speech contains "
+            "high-quality recordings from 40 speakers in Columbus OH "
+            "conversing freely with an interviewer. The speech has been "
+            "orthographically transcribed and phonetically labeled."]
 
     @staticmethod
     def get_references():
-        return ["Pitt, M.A., Dilley, L., Johnson, K., Kiesling, S., Raymond, W., Hume, E. and Fosler-Lussier, E. (2007) Buckeye Corpus of Conversational Speech (2nd release) [www.buckeyecorpus.osu.edu] Columbus, OH: Department of Psychology, Ohio State University (Distributor)"]
+        return [("Pitt, M.A., Dilley, L., Johnson, K., Kiesling, S., "
+                 "Raymond, W., Hume, E. and Fosler-Lussier, E. (2007) "
+                 "Buckeye Corpus of Conversational Speech (2nd release) "
+                 "[www.buckeyecorpus.osu.edu] Columbus, OH: Department of "
+                 "Psychology, Ohio State University (Distributor)")]
 
     @staticmethod
     def get_url():
@@ -378,7 +325,8 @@ class BuilderClass(BaseCorpusBuilder):
 
     @staticmethod
     def get_license():
-        return "<a href='http://buckeyecorpus.osu.edu/License.pdf'>Buckeye Corpus Content License</a>"
+        return ("<a href='http://buckeyecorpus.osu.edu/License.pdf'>Buckeye "
+                "Corpus Content License</a>")
 
     @staticmethod
     def get_installation_note():
@@ -415,12 +363,7 @@ class BuilderClass(BaseCorpusBuilder):
             if speaker_name in self._zip_files:
                 if self._interrupted:
                     return
-                try:
-                    # Python 2.7:
-                    _io = StringIO(zip_file.read(small_zip_name))
-                except TypeError:
-                    # Python 3.x:
-                    _io = BytesIO(zip_file.read(small_zip_name))
+                _io = BytesIO(zip_file.read(small_zip_name))
                 small_zip_file = zipfile.ZipFile(_io)
                 self._process_words_file(small_zip_file, speaker_name)
 
@@ -428,7 +371,7 @@ class BuilderClass(BaseCorpusBuilder):
                                           self.get_name())
                 audio_file = os.path.join(
                     audio_path,
-                    "{}.wav".format(os.path.splitext(small_zip_name)[0]))
+                    f"{os.path.splitext(small_zip_name)[0]}.wav")
 
                 if not os.path.exists(os.path.split(audio_file)[0]):
                     os.makedirs(os.path.split(audio_file)[0])
@@ -438,29 +381,28 @@ class BuilderClass(BaseCorpusBuilder):
                     with open(audio_file, "wb") as output_file:
                         output_file.write(audio_data)
 
-                self._value_file_audio_path = audio_file
-
-                self._value_file_name = "{}/{}".format(
-                    os.path.basename(filename), speaker_name)
-                self._value_file_path = os.path.split(filename)[0]
-                self._value_file_duration = self._duration
-                d = {self.file_name: self._value_file_name,
-                    self.file_duration: self._value_file_duration,
-                    self.file_path: self._value_file_path,
-                    self.file_audio_path: self._value_file_audio_path}
-                self._file_id = self.table(self.file_table).get_or_insert(d)
+                _file_audio_path = audio_file
+                _file_name = os.path.join(os.path.basename(filename),
+                                          speaker_name)
+                _file_path = os.path.split(filename)[0]
+                _file_duration = self._duration
+                dct = {self.file_name: _file_name,
+                       self.file_duration: _file_duration,
+                       self.file_path: _file_path,
+                       self.file_audio_path: _file_audio_path}
+                self._file_id = self.table(self.file_table).get_or_insert(dct)
                 self.commit_data()
 
     def _get_audio(self, speaker_zip, filename):
         file_name, _ = os.path.splitext(filename)
-        audio_file = "{}.wav".format(file_name)
+        audio_file = f"{file_name}.wav"
         return speaker_zip.read(audio_file)
 
     def _get_segments(self, speaker_zip, filename):
         file_body = False
 
         file_name, _ = os.path.splitext(filename)
-        phones_file = "{}.phones".format(file_name)
+        phones_file = f"{file_name}.phones"
         input_data = speaker_zip.read(phones_file)
         input_data = [utf8(x.strip())
                       for x in input_data.splitlines() if x.strip()]
@@ -479,7 +421,9 @@ class BuilderClass(BaseCorpusBuilder):
                     end_time, _, remain = row.partition(" ")
                     _, _, segment = remain.partition(" ")
                 except ValueError:
-                    logging.warn(".phones file {}: error in row partitioning ({})".format(filename, row))
+                    msg = (f".phones file {filename}: "
+                           f"error in row partitioning ({row})")
+                    logging.warning(msg)
                     continue
                 end_time = float(end_time)
 
@@ -495,7 +439,7 @@ class BuilderClass(BaseCorpusBuilder):
         file_body = False
 
         file_name, _ = os.path.splitext(filename)
-        words_file = "{}.words".format(file_name)
+        words_file = f"{file_name}.words"
         input_data = speaker_zip.read(words_file)
         input_data = [utf8(x.strip()) for x in input_data.splitlines()
                       if x.strip()]
@@ -507,7 +451,6 @@ class BuilderClass(BaseCorpusBuilder):
         # label as values.
         segments = self._get_segments(speaker_zip, filename)
 
-        last_row = None
         # go through the input data and create the list ``tokens''. Each
         # entry in the list is a tuple with the token's ending time as the
         # first element, and as the second element a dictionary with the
@@ -516,14 +459,14 @@ class BuilderClass(BaseCorpusBuilder):
 
         iter_data = iter(input_data)
 
+        re_multiple_spaces = re.compile(r"\s+")
         for row in iter_data:
-            row = re.sub("\s+", " ", row)
+            row = re_multiple_spaces.sub(" ", row)
 
             # only process the lines after the hash mark:
             if row == "#":
                 file_body = True
             elif file_body:
-
                 # There is an error in file s3504a.words: the POS field is
                 # wrapped to a separate line. For this file, the installer
                 # contains special treatment of the input data:
@@ -537,18 +480,21 @@ class BuilderClass(BaseCorpusBuilder):
                     # consistent, supply these labels if needed:
                     if next_row.endswith("null"):
                         next_row = "; U; U; null"
-                    row = "{}{}".format(row, next_row)
-
+                    row = f"{row}{next_row}"
                 try:
-                    self._value_corpus_time, _, remain = row.partition(" ")
+                    _corpus_time, _, remain = row.partition(" ")
                     _, _, value = remain.partition(" ")
                 except ValueError:
-                    logging.warning(".words file {}: error in row partitioning ({})".format(filename, row))
+                    msg = (f".words file {filename}: "
+                           f"error in row partitioning ({row})")
+                    logging.warning(msg)
                     continue
                 try:
-                    self._value_corpus_time = float(self._value_corpus_time)
+                    _corpus_time = float(_corpus_time)
                 except ValueError:
-                    logging.warning(".words file {}: error in float conversion ({})".format(filename, row))
+                    msg = (f".words file {filename}: "
+                           f"error in float conversion ({row})")
+                    logging.warning(msg)
                     continue
 
                 split_values = [x.strip() for x in value.split("; ")]
@@ -557,59 +503,59 @@ class BuilderClass(BaseCorpusBuilder):
                 # canonical transcription, the transcribed word, and the POS
                 # tag.
                 try:
-                    (self._value_corpus_word,
-                    self._value_corpus_lemmatranscript,
-                    self._value_corpus_transcript,
-                    self._value_corpus_pos) = split_values
+                    (_corpus_word,
+                     _corpus_lemmatranscript,
+                     _corpus_transcript,
+                     _corpus_pos) = split_values
                 except ValueError:
                     # if there are less than 4 values, still try to salvage
                     # the row
 
                     # the first value is always the word:
-                    self._value_corpus_word = split_values[0]
+                    _corpus_word = split_values[0]
 
                     # Initialize the other content fields with empty strings:
-                    self._value_corpus_lemmatranscript = ""
-                    self._value_corpus_transcript = ""
-                    self._value_corpus_pos = ""
+                    _corpus_transcript = ""
+                    _corpus_pos = ""
+                    _corpus_lemmatranscript = ""
 
                     if len(split_values) == 3:
                         # check if last value is a valid POS tag, or "null",
                         # i.e. a non-speech label:
                         if split_values[-1] in [self._VALID_POS, "null"]:
-                            self._value_corpus_transcript = split_values[1]
-                            self._value_corpus_lemmatranscript = split_values[1]
-                            self._value_corpus_pos = split_values[-1]
+                            _corpus_transcript = split_values[1]
+                            _corpus_lemmatranscript = split_values[1]
+                            _corpus_pos = split_values[-1]
                         else:
-                            self._value_corpus_transcript = split_values[1]
-                            self._value_corpus_lemmatranscript = split_values[-1]
-                            self._value_corpus_transcript = "null"
+                            _corpus_transcript = split_values[1]
+                            _corpus_lemmatranscript = split_values[-1]
+                            _corpus_transcript = "null"
 
                     elif len(split_values) == 2:
                         # check if last value is a valid POS tag, or "null",
                         # i.e. a non-speech label:
                         if split_values[1] in [self._VALID_POS, "null"]:
-                            self._value_corpus_pos = split_values[1]
+                            _corpus_pos = split_values[1]
                             if split_values[-1] == "null":
                                 # apparently, 'U' is used as transcription of
                                 # non-speech labels:
-                                self._value_corpus_lemmatranscript = "U"
-                                self._value_corpus_transcript = "U"
+                                _corpus_lemmatranscript = "U"
+                                _corpus_transcript = "U"
                         else:
-                            self._value_corpus_transcript = split_values[1]
+                            _corpus_transcript = split_values[1]
 
-                if regex.match(self._value_corpus_word):
-                    self._value_corpus_pos = "null"
-                    self._value_corpus_transcript = ""
-                    self._value_corpus_lemmatranscript = ""
+                if regex.match(_corpus_word):
+                    _corpus_pos = "null"
+                    _corpus_transcript = ""
+                    _corpus_lemmatranscript = ""
 
-                if self._value_corpus_time >= 0:
-                    tokens.append(
-                        (self._value_corpus_time,
-                        {self.corpus_word: self._value_corpus_word,
-                            self.corpus_pos: self._value_corpus_pos,
-                            self.corpus_transcript: self._value_corpus_transcript,
-                            self.corpus_lemmatranscript: self._value_corpus_lemmatranscript}))
+                if _corpus_time >= 0:
+                    dct = {
+                        self.corpus_word: _corpus_word,
+                        self.corpus_pos: _corpus_pos,
+                        self.corpus_transcript: _corpus_transcript,
+                        self.corpus_lemmatranscript: _corpus_lemmatranscript}
+                    tokens.append((_corpus_time, dct))
 
         # Now, go through the tokens in order to add them to the corpus,
         # and to link them to their segments via the meta table.
@@ -641,11 +587,12 @@ class BuilderClass(BaseCorpusBuilder):
                 while True:
                     t, segment = segments[segment_index]
                     if t <= end_time:
-                        d2 = {self.segment_starttime: last_t,
-                              self.segment_origin_id: self._file_id + 1,
-                              self.segment_endtime: t,
-                              self.segment_label: segment}
-                        self._segment_id = self.table(self.segment_table).add(d2)
+                        dct = {self.segment_starttime: last_t,
+                               self.segment_origin_id: self._file_id + 1,
+                               self.segment_endtime: t,
+                               self.segment_label: segment}
+                        self._segment_id = (self.table(self.segment_table)
+                                                .add(dct))
 
                         segment_index += 1
                         last_t = t
@@ -661,6 +608,7 @@ class BuilderClass(BaseCorpusBuilder):
         # because of the zip file structure, the installer handles
         # storing the filenames elsewhere, namely in process_file().
         pass
+
 
 if __name__ == "__main__":
     BuilderClass().build()

@@ -359,7 +359,6 @@ class SqlDB(object):
             df = pd.read_csv(file_name, engine="c", **kwargs)
         for x in capt:
             logging.warning("File {} – {}".format(file_name, x))
-            print("File {} – {}".format(file_name, x))
 
         if fillna is not None:
             df = df.fillna(fillna)
@@ -546,14 +545,12 @@ class SqlDB(object):
                                                     column_name,
                                                     x[0])
                 logging.info(s)
-                print(s)
                 return int(x[0])
         if max_c:
             s = "{}.{}: index length {}".format(table_name,
                                                 column_name,
                                                 max_c[0])
             logging.info(s)
-            print(s)
             return int(max_c[0])
         return None
 

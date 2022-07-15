@@ -373,7 +373,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 raise e
         self._new_tables[table_name] = new_table
 
-    def table(self, table_name):
+    def table(self, table_name) -> Table:
         """
         Return a Table object matching the specified name.
 
@@ -384,7 +384,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
         Returns
         -------
-        table : object
+        table : Table or None
             A Table object, or None if there is no table of the given name
         """
         try:
@@ -1236,8 +1236,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
         S = "SELECT MAX({}) FROM {}".format(self.corpus_id, self.corpus_table)
         with self.DB.engine.connect() as connection:
             result = connection.execute(S).fetchone()
-        print(S)
-        print(result)
         max_id = result[0]
         logging.info("Creating lookup table, max_id is {}".format(max_id))
 
@@ -1302,9 +1300,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                     corpus_id=self.corpus_id,
                     max_id=max_id,
                     width=self.corpusngram_width - 1)
-            print(query_max_row)
             df = pd.read_sql(query_max_row, connection)
-            print(df)
 
             data_dict = {"{}1".format(x): df.iloc[-1][x]
                          for x in df.iloc[-1].index if x != word_id}
@@ -1316,7 +1312,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
             kwargs.update(data_dict)
             kwargs.update(word_dict)
             S = padding_str.format(**kwargs)
-            print(S)
             connection.execute(S.replace("\n", " ").strip())
 
     def build_index_ngram(self):
@@ -2216,17 +2211,16 @@ class TEICorpusBuilder(XMLCorpusBuilder):
 
     def preprocess_element(self, element):
         tag = element.tag
-        print("<{}>".format(tag))
         try:
             self._open_tag_map[tag](element)
         except KeyError:
             print("Unsupported tag: {}".format(tag))
 
     def postprocess_element(self, element):
-        print("</{}>".format(element.tag))
+        ...
 
     def process_content(self, content):
-        print(content)
+        ...
 
 
 def print_error_context(s, content):
