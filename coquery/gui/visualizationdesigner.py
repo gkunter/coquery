@@ -28,7 +28,7 @@ from coquery.gui.app import get_icon
 from coquery.gui.threads import CoqThread
 from coquery.gui.ui.visualizationDesignerUi import Ui_VisualizationDesigner
 
-from coquery.visualizer.visualizer import get_grid_layout
+from coquery.visualizer.visualizer import get_grid_layout, VisualizerStatus
 from coquery.visualizer.colorizer import (
     COQ_SINGLE, COQ_CUSTOM,
     Colorizer, ColorizeByFactor, ColorizeByNum)
@@ -51,9 +51,9 @@ VISUALIZATION_ERROR = tr(
     """<p><b>An error occurred while plotting.</b></p>
     <p>While plotting the visualization, the following error was 
     encountered:</p>
-    <p><span style='color: darkred'><code>{msg}</code></span></p>
+    <p><span style='color: {color}'><code>{msg}</code></span></p>
     <p>The visualization may be incorrect. Please report this error on the 
-    Coquery bug tracker..</p>""",
+    Coquery bug tracker.</p>""",
     None)
 
 MODULE_ERROR = tr(
@@ -62,7 +62,7 @@ MODULE_ERROR = tr(
     <p>The following error occurred when attempting to open the visualization
     module '{module}':</p>
     <p>
-        <span style='color: darkred'>
+        <span style='color: {color}'>
             <code>{type} in file {file}.py, line {line}:<br>{code}</code>
         </span>
     </p>
@@ -232,12 +232,17 @@ class VisualizationDesigner(QtWidgets.QDialog):
             visualizations = getattr(module, "provided_visualizations", [])
             # skip visualizers that haven't been updated to the new interface
             # yet:
-            if not getattr(module, "updated_to_new_interface", False):
+            status = getattr(module,
+                             "updated_to_new_interface",
+                             VisualizerStatus.Incomplete)
+            if status == VisualizerStatus.Incomplete:
                 continue
             for vis_class in visualizations:
                 name = getattr(vis_class, "name",
                                "Unnamed ({})".format(module_name))
                 icon = getattr(vis_class, "icon", "Grid")
+                if status == VisualizerStatus.InProgress:
+                    name = f"* {name}"
                 VisualizationDesigner.visualizers[name] = vis_class
                 self.moduleLoaded.emit(name, icon, vis_class)
         self.allLoaded.emit()
@@ -253,6 +258,7 @@ class VisualizationDesigner(QtWidgets.QDialog):
 
     def _loadingError(self, exception, **kwargs):
         exc_type, exc_obj, exc_tb = self.exc_info
+        color = QtGui.QPalette().color(QtGui.QPalette.Highlight).name()
         QtWidgets.QMessageBox.critical(
             self,
             tr("VisualizationDesigner",
@@ -263,7 +269,8 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 type=type(exception).__name__,
                 file=getattr(exception, "_module_name", "&ls;unknown&gt;"),
                 code=exc_obj,
-                line=exc_tb.tb_lineno))
+                line=exc_tb.tb_lineno,
+                color=color))
 
     def populate_variable_lists(self):
         d = self.get_gui_values()
@@ -1184,10 +1191,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
     def exception_plot(self, e):
         logging.error(e)
         self.progress_bar.hide()
+        color = QtGui.QPalette().color(QtGui.QPalette.Highlight).name()
         QtWidgets.QMessageBox.critical(
             self,
             "Error while plotting – Coquery",
-            VISUALIZATION_ERROR.format(msg=str(e)),
+            VISUALIZATION_ERROR.format(msg=str(e), color=color),
             QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
     def update_annotations(self):
