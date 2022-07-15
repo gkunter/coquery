@@ -35,11 +35,16 @@ RUG_BOTTOM = 0.025
 
 class BarcodePlot(vis.Visualizer):
     axes_style = "white"
-
+    TOP = 0.975
+    BOTTOM = 0.025
     COLOR = None
 
-    name = tr("BarcodePlot", "Barcode plot", None)
+    name = "Barcode plot"
     icon = "Barcode_plot"
+
+    DEFAULT_LABEL = "Corpus position"
+
+    force_horizontal = True
 
     def __init__(self, df, session, id_column=None, limiter_fnc=None):
         super().__init__(df, session, id_column, limiter_fnc)
@@ -92,10 +97,13 @@ class BarcodePlot(vis.Visualizer):
 
         """
         self.horizontal = kwargs["horizontal"]
-        self.draw_tokens(kwargs["x"], kwargs["y"],
+        self.draw_tokens(kwargs["x"],
+                         kwargs["y"],
                          order=kwargs["order"],
                          rug=kwargs.get("rug"))
-
+        if kwargs["x"] is not None:
+            plt.gca().set_ylim(0, 1000)
+            # FIXME: Is this call to set_ylim() really needed?
         return plt.gca().collections
 
     def draw_tokens(self, x, y, order, rug=None, **kwargs):

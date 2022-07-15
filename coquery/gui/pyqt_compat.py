@@ -66,3 +66,14 @@ STYLE_WARN = 'QLineEdit {background-color: lightyellow; }'
 
 COLOR_NAMES = {QtGui.QColor(name).name().lower(): name for name
                in QtGui.QColor.colorNames()}
+
+
+def clear_layout(layout):
+    if layout is not None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+            else:
+                clear_layout(item.layout())

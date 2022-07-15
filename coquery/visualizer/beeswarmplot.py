@@ -22,7 +22,8 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
     name = "Beeswarm plot"
     icon = "Beeswarm_plot"
 
-    def draw_tokens(self, *args, rug=None, **kwargs):
+    def _draw_tokens(self, *args, rug=None, **kwargs):
+        print(args)
         return sns.swarmplot(*args, **kwargs)
 
     def _determine_limits(self):

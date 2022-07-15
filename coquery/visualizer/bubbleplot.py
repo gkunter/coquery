@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from coquery.visualizer.aggregator import Aggregator
-from coquery.visualizer import visualizer as vis
 from coquery.visualizer.treemap import TreeMap
 
 
