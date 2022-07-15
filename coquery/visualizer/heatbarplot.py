@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import coquery.visualizer.visualizer as vis
 from coquery.visualizer import barcodeplot
 from coquery.gui.pyqt_compat import QtWidgets, QtCore, tr
 
@@ -211,13 +212,14 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
 
         width = len(binned) * bw - 1
         if x:
-            kwargs["extent"] = (None, None, 0, width)
+            tup = (None, None, 0, width)
         elif y:
-            kwargs["extent"] = (0, width, None, None)
+            tup = (0, width, None, None)
         elif self.force_horizontal:
-            kwargs["extent"] = (0, width, None, None)
+            tup = (0, width, None, None)
         else:
-            kwargs["extent"] = (None, None, 0, width)
+            tup = (None, None, 0, width)
+        kwargs["extent"] = tup
 
         kwargs["M"] = np.array(m)
         return kwargs
@@ -277,5 +279,5 @@ class HeatbarPlot(barcodeplot.BarcodePlot):
         return elements
 
 
-updated_to_new_interface = True
+updated_to_new_interface = vis.VisualizerStatus.Complete
 provided_visualizations = [HeatbarPlot]
