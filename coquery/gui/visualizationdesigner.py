@@ -251,10 +251,13 @@ class VisualizationDesigner(QtWidgets.QDialog):
         self.figure_types = []
         self.moduleLoaded.connect(self.add_figure_type)
         self.allLoaded.connect(self.check_figure_types)
-        self.figure_loader = CoqThread(self._load_figure_types, parent=self)
-        self.figure_loader.taskFinished.connect(self.allLoaded.emit)
-        self.figure_loader.taskException.connect(self._loadingError)
-        self.figure_loader.start()
+
+        # self.figure_loader = CoqThread(self._load_figure_types, parent=self)
+        # self.figure_loader.taskFinished.connect(self.allLoaded.emit)
+        # self.figure_loader.taskException.connect(self._loadingError)
+        # self.figure_loader.start()
+
+        self._load_figure_types()
 
     def _loadingError(self, exception, **kwargs):
         exc_type, exc_obj, exc_tb = self.exc_info
