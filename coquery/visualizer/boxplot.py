@@ -27,7 +27,7 @@ class BoxPlot(vis.Visualizer):
 
     draw_boxen = True
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         if not hasattr(sns, "boxenplot"):
             return [], [], []
         label = tr("BoxPlot", "Draw multiple boxes", None)
@@ -41,7 +41,7 @@ class BoxPlot(vis.Visualizer):
                 [self.check_horizontal.stateChanged],
                 [])
 
-    def update_values(self):
+    def update_widget_values(self):
         self.draw_boxen = self.check_horizontal.isChecked()
 
     def prepare_arguments(self, data, x, y, z, levels_x, levels_y, **kwargs):

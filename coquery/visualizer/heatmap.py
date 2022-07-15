@@ -35,7 +35,7 @@ class Heatmap(vis.Visualizer):
 
     fill = None
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         text_normalization = tr("HeatMap", "Normalization", None)
         text_centering = tr("HeatMap", "Set center value:", None)
         text_fill = tr("HeatMap", "Supply missing value:", None)
@@ -94,7 +94,7 @@ class Heatmap(vis.Visualizer):
         self.spin_centering.setEnabled(self.check_centering.isChecked())
         self.spin_fill.setEnabled(self.check_fill.isChecked())
 
-    def update_values(self):
+    def update_widget_values(self):
         if self.check_centering.isChecked():
             self.center = float(self.spin_centering.value())
         else:

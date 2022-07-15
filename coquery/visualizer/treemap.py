@@ -42,7 +42,7 @@ class TreeMap(vis.Visualizer):
 
     axes_style = "white"
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         label = tr("TreeMap", "Padding", None)
         self.check_padding = QtWidgets.QCheckBox(label)
         self.check_padding.setCheckState(
@@ -98,7 +98,7 @@ class TreeMap(vis.Visualizer):
                  self.slide_transparency.valueChanged],
                 [])
 
-    def update_values(self):
+    def update_widget_values(self):
         self.box_border = self.check_border.isChecked()
         self.box_padding = self.check_padding.isChecked()
         if self.slide_transparency.isEnabled():

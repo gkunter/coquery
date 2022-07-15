@@ -29,7 +29,7 @@ class TimeSeries(vis.Visualizer):
     kind = "line"
     stacked = False
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         label = tr("TimeSeries", "Bandwidth", None)
         unit = tr("TimeSeries", " units", None)
 
@@ -50,7 +50,7 @@ class TimeSeries(vis.Visualizer):
                 [self.spin_bandwidth.valueChanged],
                 [])
 
-    def update_values(self):
+    def update_widget_values(self):
         self.bandwidth = int(self.spin_bandwidth.value())
 
     def plot_facet(self, data, color,

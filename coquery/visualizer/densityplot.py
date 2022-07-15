@@ -33,7 +33,7 @@ class DensityPlot(vis.Visualizer):
     shading = True
     alpha = 50
 
-    def get_custom_widgets(self, *args, **kwargs):
+    def get_widgets(self, *args, **kwargs):
         label = tr("DensityPlot", "Shade transparency", None)
         check = tr("DensityPlot", "Use shading", None)
 
@@ -64,7 +64,7 @@ class DensityPlot(vis.Visualizer):
     def update_widgets(self):
         self.slider.setEnabled(self.check_shading.isChecked())
 
-    def update_values(self):
+    def update_widget_values(self):
         self.shading = self.check_shading.isChecked()
         self.alpha = int(self.slider.value())
 
