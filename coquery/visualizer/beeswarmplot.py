@@ -13,6 +13,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 
+import coquery.visualizer.visualizer as vis
 from coquery.visualizer import barcodeplot
 
 
@@ -53,5 +54,6 @@ class BeeswarmPlot(barcodeplot.BarcodePlot):
         return dict(zip(keys,
                         (np.arange(len(order)), order)))
 
-updated_to_new_interface = True
+
+updated_to_new_interface = vis.VisualizerStatus.InProgress
 provided_visualizations = [BeeswarmPlot]

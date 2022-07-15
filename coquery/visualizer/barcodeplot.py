@@ -302,5 +302,5 @@ class BarcodePlot(vis.Visualizer):
         return grid
 
 
-updated_to_new_interface = True
+updated_to_new_interface = vis.VisualizerStatus.Complete
 provided_visualizations = [BarcodePlot]
