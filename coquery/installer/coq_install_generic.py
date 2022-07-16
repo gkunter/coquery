@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -35,10 +35,12 @@ class BuilderClass(BaseCorpusBuilder):
     corpus_word_id = "WordId"
     corpus_file_id = "FileId"
     corpus_sentence = "Sentence_Id"
+
     word_table = "Lexicon"
     word_id = "WordId"
     word_lemma = "Lemma"
     word_label = "Word"
+
     file_table = "Files"
     file_id = "FileId"
     file_name = "Filename"
@@ -69,18 +71,21 @@ class BuilderClass(BaseCorpusBuilder):
         # A text value containing the part-of-speech label of this
         # word-form.
 
+        self._file_id = None
         if pos:
             self.word_pos = "POS"
-            self.create_table_description(self.word_table,
+            self.create_table_description(
+                self.word_table,
                 [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
-                Column(self.word_pos, "VARCHAR(128) NOT NULL"),
-                Column(self.word_label, "VARCHAR(1024) NOT NULL")])
+                 Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
+                 Column(self.word_pos, "VARCHAR(128) NOT NULL"),
+                 Column(self.word_label, "VARCHAR(1024) NOT NULL")])
         else:
-            self.create_table_description(self.word_table,
+            self.create_table_description(
+                self.word_table,
                 [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
-                Column(self.word_label, "VARCHAR(1024) NOT NULL")])
+                 Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
+                 Column(self.word_label, "VARCHAR(1024) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -97,10 +102,11 @@ class BuilderClass(BaseCorpusBuilder):
         # Path
         # A text value containing the path that points to this data file.
 
-        self.create_table_description(self.file_table,
+        self.create_table_description(
+            self.file_table,
             [Identifier(self.file_id, "INT UNSIGNED NOT NULL"),
-            Column(self.file_name, "VARCHAR(1024) NOT NULL"),
-            Column(self.file_path, "VARCHAR(4048) NOT NULL")])
+             Column(self.file_name, "VARCHAR(1024) NOT NULL"),
+             Column(self.file_path, "VARCHAR(4048) NOT NULL")])
 
         # Add the main corpus table. Each row in this table represents a
         # token in the corpus. It has the following columns:
@@ -116,7 +122,8 @@ class BuilderClass(BaseCorpusBuilder):
         # An int value containing the unique identifier of the data file
         # that contains this token.
 
-        self.create_table_description(self.corpus_table,
+        self.create_table_description(
+            self.corpus_table,
             [Identifier(self.corpus_id, "BIGINT UNSIGNED NOT NULL"),
              Column(self.corpus_sentence, "INT UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
@@ -127,11 +134,13 @@ class BuilderClass(BaseCorpusBuilder):
         self._meta_file = None
 
     @staticmethod
-    def validate_files(l):
-        if len(l) == 0:
-            raise RuntimeError("<p>No file could be found in the selected directory.</p> ")
+    def validate_files(lst):
+        if not lst:
+            raise RuntimeError("<p>No file could be found in the selected "
+                               "directory.</p> ")
 
-    def _read_text(self, file_name):
+    @staticmethod
+    def _read_text(file_name):
         """
         Return the text content from the file as a string.
 
@@ -157,8 +166,6 @@ class BuilderClass(BaseCorpusBuilder):
         raw_text : str
             The content of the file as a text string.
         """
-        raw_text = ""
-
         file_type = detect_file_type(file_name)
 
         if file_type == FT_PDF:
@@ -166,60 +173,65 @@ class BuilderClass(BaseCorpusBuilder):
                 try:
                     raw_text = pdf_to_str(file_name)
                 except Exception as e:
-                    logging.error("Error in PDF file {}: {}".format(file_name, e))
+                    logging.error(f"Error in PDF file {file_name}: {e}")
                     return ""
             else:
-                logging.warning("Ignoring PDF file {} (the required Python module 'pdfminer' is not available)".format(
-                    file_name))
+                logging.warning(f"Ignoring PDF file {file_name} (the required "
+                                "Python module 'pdfminer' is not available)")
                 return ""
 
         elif file_type == FT_DOCX:
             if options.use_docx:
                 try:
                     raw_text = docx_to_str(file_name)
-                except (Exception) as e:
-                    logging.error("Error in MS Word file {}: {}".format(file_name, e))
+                except Exception as e:
+                    logging.error(f"Error in MS Word file {file_name}: {e}")
                     return ""
             else:
-                logging.warning("Ignoring MS Word file {} (the required Python module 'python-docx' is not available)".format(
-                    file_name))
+                logging.warning(f"Ignoring MS Word file {file_name} (the "
+                                "required Python module 'python-docx' is not "
+                                "available)")
                 return ""
 
         elif file_type == FT_ODT:
             if options.use_odfpy:
                 try:
                     raw_text = odt_to_str(file_name)
-                except (Exception) as e:
-                    logging.error("Error in OpenDocument Text file {}: {}".format(file_name, e))
+                except Exception as e:
+                    logging.error("Error in OpenDocument Text file "
+                                  f"{file_name}: {e}")
                     return ""
             else:
-                logging.warning("Ignoring ODT file {} (the required Python module 'odtpy' is not available)".format(
-                    file_name))
+                logging.warning(f"Ignoring ODT file {file_name} (the required "
+                                "Python module 'odtpy' is not available)")
                 return ""
 
         elif file_type == FT_HTML:
             if options.use_bs4:
                 try:
                     raw_text = html_to_str(file_name)
-                except (Exception) as e:
-                    logging.error("Error in HTML file {}: {}".format(file_name, e))
+                except Exception as e:
+                    logging.error(f"Error in HTML file {file_name}: {e}")
                     return ""
             else:
-                logging.warning("Ignoring HTML file {} (the required Python module 'BeautifulSoup' is not available)".format(
-                    file_name))
+                logging.warning(f"Ignoring HTML file {file_name} (the "
+                                "required Python module 'BeautifulSoup' is "
+                                "not available)")
                 return ""
         elif file_type == FT_PLAIN:
             raw_text = plain_to_str(file_name)
         else:
             # Unsupported format, e.g. BINARY.
-            logging.warning("Ignoring unsupported file format {}, file {}".format(file_type, file_name))
+            logging.warning(f"Ignoring unsupported file format {file_type}, "
+                            f"file {file_name}")
             return ""
 
         if raw_text == "":
-            logging.warning("No text could be retrieved from {} file {}".format(file_type, file_name))
+            logging.warning(f"No text could be retrieved from {file_type} "
+                            f"file {file_name}")
         else:
-            logging.info("Read {} file {}, {} characters".format(
-                file_type, file_name, len(raw_text)))
+            logging.info(f"Read {file_type} file {file_name}, {len(raw_text)} "
+                         "characters")
 
         return raw_text
 
@@ -241,7 +253,8 @@ class BuilderClass(BaseCorpusBuilder):
                      self.word_label: token_string}
         if token_pos and self.arguments.use_nltk:
             word_dict[self.word_pos] = token_pos
-        word_id = self.table(self.word_table).get_or_insert(word_dict, case=True)
+        word_id = self.table(self.word_table).get_or_insert(word_dict,
+                                                            case=True)
 
         # store new token in corpus table:
         return self.add_token_to_corpus(
@@ -254,7 +267,7 @@ class BuilderClass(BaseCorpusBuilder):
         with capt:
             df = self.arguments.metaoptions.read_file(self.arguments.metadata)
         for x in capt:
-            s = "File {} – {}".format(self.arguments.path, x)
+            s = f"File {self.arguments.path} – {x}"
             logging.warning(s)
             print(s)
         meta_columns = []
@@ -263,7 +276,6 @@ class BuilderClass(BaseCorpusBuilder):
                 self.file_name = col
             else:
                 meta_columns.append(col)
-
 
         # prepare a dataframe that adds the correct file path to the meta data
         path_list = []
@@ -279,21 +291,21 @@ class BuilderClass(BaseCorpusBuilder):
         # merge the data frames:
         df = df.merge(df2, how="inner", on=[self.file_name])
 
+        fn_length = int(max(df[self.file_name].str.len()))
         lst = [Identifier(self.file_id, "MEDIUMINT UNSIGNED NOT NULL"),
                Column(self.file_path, "VARCHAR(4096) NOT NULL"),
-               Column(self.file_name, "VARCHAR({}) NOT NULL".format(
-                   int(max(df[self.file_name].str.len()))))]
+               Column(self.file_name, f"VARCHAR({fn_length}) NOT NULL")]
 
         for col in meta_columns:
-            rc_feature = "file_{}".format(col.lower())
+            rc_feature = f"file_{col.lower()}"
             setattr(self, rc_feature, col)
             if df[col].dtype == int:
                 lst.append(Column(col, "MEDIUMINT"))
             elif df[col].dtype == float:
                 lst.append(Column(col, "REAL"))
             else:
-                lst.append(Column(col, "VARCHAR({})".format(
-                    int(max(df[col].str.len())))))
+                col_length = int(max(df[col].str.len()))
+                lst.append(Column(col, f"VARCHAR({col_length})"))
 
         self.create_table_description(self.file_table, lst)
         self.special_files.append(os.path.basename(file_name))
@@ -386,19 +398,15 @@ class BuilderClass(BaseCorpusBuilder):
             return
 
         if not self.has_metadata(basename) and self.arguments.use_meta:
-            s = "{} not in meta data.".format(basename)
-            print(s)
-            logging.warning(s)
+            msg = f"{basename} not in meta data."
+            logging.warning(msg)
 
         try:
             raw_text = self._read_text(file_name)
         except Exception as e:
-            s = "Could not read file {}: {}".format(basename, str(e))
-            print(s)
-            logging.warning(s)
+            msg = f"Could not read file {basename}: {str(e)}"
+            logging.warning(msg)
             return
-
-        tokens = []
 
         # if possible, use NLTK for lemmatization, tokenization, and tagging:
         if self.arguments.use_nltk:
