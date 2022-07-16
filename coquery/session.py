@@ -658,7 +658,9 @@ class SessionInputFile(Session):
                         continue
                     new_query = self.query_type(query_string, self)
                     if len(current_line) != len(self.header):
-                        raise TokenParseError
+                        raise TokenParseError(
+                            current_line,
+                            "row doesn't have enough columns")
                     new_query.input_frame = pd.DataFrame(
                         [current_line], columns=self.header)
                     self.query_list.append(new_query)
