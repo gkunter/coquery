@@ -293,13 +293,14 @@ class QueryToken(object):
                 if token_closed:
                     if current_char not in [cls.quantification_open,
                                             cls.pos_separator]:
-                        # Raise exception if another character follows other than
-                        # the character opening a quantification:
+                        # Raise exception if another character follows other
+                        # than the character opening a quantification:
 
-                        msg = ("{}: expected a quantifier starting with <code "
-                               "style='color: #aa0000'>{}</code> or a "
-                               "part-of-speech specifier of the form <code "
-                               "style='color: #aa0000'>{}{}POS{}</code>".format(
+                        msg = (
+                            "{}: expected a quantifier starting with <code "
+                            "style='color: #aa0000'>{}</code> or a "
+                            "part-of-speech specifier of the form <code "
+                            "style='color: #aa0000'>{}{}POS{}</code>".format(
                                 s,
                                 cls.quantification_open,
                                 cls.pos_separator,
@@ -382,8 +383,7 @@ class QueryToken(object):
             # quantification state?
             elif state == ParseState.IN_QUANTIFICATION:
                 # only add valid quantification characters to the current word:
-                if (current_char
-                        in "0123456789, " + cls.quantification_close):
+                if current_char in f"0123456789, {cls.quantification_close}":
                     # ignore spaces:
                     if current_char.strip():
 
@@ -406,23 +406,25 @@ class QueryToken(object):
                             # immediately after a comma or the opening bracket:
                             if (current_word[-1]
                                     in [",", cls.quantification_open]):
-                                msg = ("{}: only one comma is allowed within a "
-                                       "quantification".format(s))
+                                msg = (
+                                    "{}: only one comma is allowed within a "
+                                    "quantification".format(s))
                                 raise TokenParseError(msg)
                             state = ParseState.NORMAL
                             token_closed = True
 
                         current_word = add(current_word, current_char)
                 else:
-                    msg = ("{}: Illegal character <code style='color: #aa0000'>{}"
-                           "</code> within the quantification".format(
-                                s,
-                                current_char))
+                    msg = (
+                        "{}: Illegal character <code style='color: #aa0000'>"
+                        "{}</code> within the quantification".format(
+                                s, current_char))
                     raise TokenParseError(msg)
 
         if escaping:
-            msg = ("{}: Escape sequence starting with <code style='color: "
-                   "#aa0000'>\\</code> not followed by another character".format(
+            msg = (
+                "{}: Escape sequence starting with <code style='color: "
+                "#aa0000'>\\</code> not followed by another character".format(
                     s))
 
             raise TokenParseError(msg)
