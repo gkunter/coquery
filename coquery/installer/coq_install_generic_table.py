@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -70,9 +70,10 @@ class BuilderClass(BaseCorpusBuilder):
 
         _columns = []
 
+        feature_map = dict(zip(mapping.values(), mapping.keys()))
         for i, label in enumerate(dtypes.index.values):
             if i in mapping.values():
-                query_type = dict(zip(mapping.values(), mapping.keys()))[i]
+                query_type = feature_map[i]
                 rc_feature = f"corpus_{query_type}"
             else:
                 rc_feature = f"corpus_x{i}"
@@ -136,8 +137,8 @@ class BuilderClass(BaseCorpusBuilder):
     def validate_path(self, path):
         return path == self.arguments.path
 
-    @staticmethod
-    def validate_files(l):
+    @classmethod
+    def validate_files(cls, file_list):
         return True
 
     def build_load_files(self):
