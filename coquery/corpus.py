@@ -37,6 +37,12 @@ from . import options
 from .links import get_by_hash
 
 
+class LexiconClass:
+    """
+    This obsolete class is used by the corpus modules.
+    Corpus modules should not use the class.
+    """
+
 class BaseResource(CoqObject):
     """
     """
