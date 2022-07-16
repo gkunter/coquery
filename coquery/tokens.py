@@ -22,7 +22,6 @@ from .defines import (
 from .errors import TokenParseError
 from .unicode import utf8
 
-
 PUNCTUATION = list(".,;!:-+'()") + ['"'] + ["''"] + ["``"] + ["--"] + [r"\?"]
 
 
@@ -128,7 +127,7 @@ class QueryToken(object):
     def replace_wildcards(s):
         """
         Replace the wildcards '*' and '?' by SQL wildcards '%' and '_',
-        respectively. Escape exististing characters '%' and '_'.
+        respectively. Escape existing characters '%' and '_'.
 
         Parameters
         ----------
@@ -372,7 +371,7 @@ class ParseState(Enum):
     POS_SEPARATOR = "POS"
 
 
-def parse_query_string(s, token_type):
+def parse_query_string(cls, s):
     """
     Split a string into query items, making sure that bracketing and
     quotations are valid. Escaping is allowed.
@@ -383,15 +382,6 @@ def parse_query_string(s, token_type):
 
     def add(working, ch):
         return f"{working}{ch}"
-
-    try:
-        s = s.decode("utf-8")
-    except UnicodeEncodeError:
-        # already a unicode string
-        pass
-    except AttributeError:
-        # using Python 3.x
-        pass
 
     tokens = []
     current_word = ""
@@ -423,8 +413,8 @@ def parse_query_string(s, token_type):
             # the stripped word is the current word excluding negations and
             # lemmatization characters
             stripped_word = bool(
-                current_word.strip("".join([token_type.negation_flag,
-                                            token_type.lemmatize_flag])))
+                current_word.strip("".join([cls.negation_flag,
+                                            cls.lemmatize_flag])))
 
             # Check for whitespace:
             if current_char == " ":
@@ -437,53 +427,54 @@ def parse_query_string(s, token_type):
             # Check for other characters
 
             if token_closed:
-                if current_char not in [token_type.quantification_open,
-                                        token_type.pos_separator]:
+                if current_char not in [cls.quantification_open,
+                                        cls.pos_separator]:
                     # Raise exception if another character follows other than
                     # the character opening a quantification:
-                    s = ("{}: expected a quantifier starting with <code "
-                         "style='color: #aa0000'>{}</code> or a "
-                         "part-of-speech specifier of the form <code "
-                         "style='color: #aa0000'>{}{}POS{}</code>").format(
+
+                    msg = ("{}: expected a quantifier starting with <code "
+                           "style='color: #aa0000'>{}</code> or a "
+                           "part-of-speech specifier of the form <code "
+                           "style='color: #aa0000'>{}{}POS{}</code>".format(
                             s,
-                            token_type.quantification_open,
-                            token_type.pos_separator,
-                            token_type.bracket_open,
-                            token_type.bracket_close)
-                    raise TokenParseError(s)
-                if current_char == token_type.pos_separator:
+                            cls.quantification_open,
+                            cls.pos_separator,
+                            cls.bracket_open,
+                            cls.bracket_close))
+                    raise TokenParseError(msg)
+                if current_char == cls.pos_separator:
                     state = ParseState.POS_SEPARATOR
                     token_closed = False
 
-            if current_char in {token_type.negation_flag,
-                                token_type.lemmatize_flag}:
+            if current_char in {cls.negation_flag,
+                                cls.lemmatize_flag}:
                 current_word = add(current_word, current_char)
                 continue
 
             # check for opening characters:
-            if current_char in {token_type.transcript_open,
-                                token_type.bracket_open,
-                                token_type.quote_open}:
+            if current_char in {cls.transcript_open,
+                                cls.bracket_open,
+                                cls.quote_open}:
 
                 if not stripped_word:
                     # set new state:
-                    if current_char == token_type.transcript_open:
+                    if current_char == cls.transcript_open:
                         state = ParseState.IN_TRANSCRIPT
-                    elif current_char == token_type.bracket_open:
+                    elif current_char == cls.bracket_open:
                         state = ParseState.IN_BRACKET
-                    elif current_char == token_type.quote_open:
+                    elif current_char == cls.quote_open:
                         state = ParseState.IN_QUOTE
 
-            if current_char == token_type.quantification_open:
+            if current_char == cls.quantification_open:
                 if stripped_word:
                     state = ParseState.IN_QUANTIFICATION
                     comma_added = False
                 else:
-                    if current_char == token_type.quantification_open:
+                    if current_char == cls.quantification_open:
                         raise TokenParseError(
                             msg_unexpected_quantifier_start.format(
                                 s, pos_string,
-                                token_type.quantification_open))
+                                cls.quantification_open))
 
             current_char = current_char.strip()
 
@@ -493,33 +484,34 @@ def parse_query_string(s, token_type):
 
         elif state == ParseState.POS_SEPARATOR:
             current_word = add(current_word, current_char)
-            if current_char == token_type.bracket_open:
+            if current_char == cls.bracket_open:
                 state = ParseState.IN_BRACKET
                 token_closed = False
             else:
-                s = ("{}: illegal character after full stop, expected <code "
-                     "style='color: #aa0000'>{}</code>").format(
-                    s, token_type.bracket_open)
-                raise TokenParseError(s)
+                msg = ("{}: illegal character after full stop, expected "
+                       "<code style='color: #aa0000'>{}</code>".format(
+                        s,
+                        cls.bracket_open))
+                raise TokenParseError(msg)
 
         # bracket state?
         elif state == ParseState.IN_BRACKET:
             current_word = add(current_word, current_char)
-            if current_char == token_type.bracket_close:
+            if current_char == cls.bracket_close:
                 state = ParseState.NORMAL
                 token_closed = True
 
         # transcript state?
         elif state == ParseState.IN_TRANSCRIPT:
             current_word = add(current_word, current_char)
-            if current_char == token_type.transcript_close:
+            if current_char == cls.transcript_close:
                 state = ParseState.NORMAL
                 token_closed = True
 
         # quote state?
         elif state == ParseState.IN_QUOTE:
             current_word = add(current_word, current_char)
-            if current_char == token_type.quote_close:
+            if current_char == cls.quote_close:
                 state = ParseState.NORMAL
                 token_closed = True
 
@@ -527,64 +519,66 @@ def parse_query_string(s, token_type):
         elif state == ParseState.IN_QUANTIFICATION:
             # only add valid quantification characters to the current word:
             if (current_char
-                    in "0123456789, " + token_type.quantification_close):
+                    in "0123456789, " + cls.quantification_close):
                 # ignore spaces:
                 if current_char.strip():
 
                     if current_char == ",":
                         # raise an exception if a comma immediately follows
                         # an opening bracket:
-                        if current_word[-1] == token_type.quantification_open:
-                            s = "{}: {}".format(
-                                s, "no lower range in the quantification")
-                            raise TokenParseError(s)
+                        if current_word[-1] == cls.quantification_open:
+                            msg = ("{}: no lower range in the "
+                                   "quantification".format(s))
+                            raise TokenParseError(msg)
                         # raise exception if a comma has already been added:
                         if comma_added:
-                            s = "{}: {}".format(
-                                s, ("only one comma is allowed within a "
-                                    "quantification"))
-                            raise TokenParseError(s)
+                            msg = ("{}: only one comma is allowed within a "
+                                   "quantification".format(s))
+                            raise TokenParseError(msg)
                         else:
                             comma_added = True
-                    if current_char == token_type.quantification_close:
+                    if current_char == cls.quantification_close:
                         # raise an exception if the closing bracket follows
                         # immediately after a comma or the opening bracket:
                         if (current_word[-1]
-                                in [",", token_type.quantification_open]):
-                            s = "{}: {}".format(
-                                s, "no upper range in quantification")
-                            raise TokenParseError(s)
+                                in [",", cls.quantification_open]):
+                            msg = ("{}: only one comma is allowed within a "
+                                   "quantification".format(s))
+                            raise TokenParseError(msg)
                         state = ParseState.NORMAL
                         token_closed = True
 
                     current_word = add(current_word, current_char)
             else:
-                s = ("{}: Illegal character <code style='color: #aa0000'>{}"
-                     "</code> within the quantification").format(
-                         s, current_char)
-                raise TokenParseError(s)
+                msg = ("{}: Illegal character <code style='color: #aa0000'>{}"
+                       "</code> within the quantification".format(
+                            s,
+                            current_char))
+                raise TokenParseError(msg)
 
     if escaping:
-        s = (f"{s}: Escape sequence starting with <code style='color: "
-             "#aa0000'>\\</code> not followed by another character.")
-        raise TokenParseError(s)
+        msg = ("{}: Escape sequence starting with <code style='color: "
+               "#aa0000'>\\</code> not followed by another character".format(
+                s))
+
+        raise TokenParseError(msg)
 
     if state != ParseState.NORMAL:
         if state == ParseState.POS_SEPARATOR:
             raise TokenParseError(msg_missing_pos_spec.format(
-                s, pos_string, token_type.pos_separator))
+                s, pos_string, cls.pos_separator))
         if state == ParseState.IN_BRACKET:
-            op = token_type.bracket_open
-            cl = token_type.bracket_close
+            op = cls.bracket_open
+            cl = cls.bracket_close
         elif state == ParseState.IN_TRANSCRIPT:
-            op = token_type.transcript_open
-            cl = token_type.transcript_close
+            op = cls.transcript_open
+            cl = cls.transcript_close
         elif state == ParseState.IN_QUOTE:
-            op = token_type.quote_open
-            cl = token_type.quote_close
+            op = cls.quote_open
+            cl = cls.quote_close
         elif state == ParseState.IN_QUANTIFICATION:
-            op = token_type.quantification_open
-            cl = token_type.quantification_close
+            op = cls.quantification_open
+            cl = cls.quantification_close
         else:
             op = "?"
             cl = "?"
@@ -632,9 +626,9 @@ def get_quantifiers(s):
         except TypeError:
             end = start
         token = match.groupdict()["token"]
-        return (token, start, end)
+        return token, start, end
     else:
-        return (s, 1, 1)
+        return s, 1, 1
 
 
 def preprocess_query(s, literal=False):
@@ -665,7 +659,7 @@ def preprocess_query(s, literal=False):
     """
 
     if not literal:
-        tokens = parse_query_string(s, COCAToken)
+        tokens = parse_query_string(COCAToken, s)
     else:
         tokens = [x.strip() for x in s.split() if x.strip()]
 
