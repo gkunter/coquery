@@ -14,6 +14,7 @@ from collections import defaultdict
 import re
 import logging
 import math
+
 import pandas as pd
 import os
 import tempfile
@@ -34,10 +35,6 @@ from .general import collapse_words, CoqObject, html_escape, Print
 from . import tokens
 from . import options
 from .links import get_by_hash
-
-
-class LexiconClass:
-    pass
 
 
 class BaseResource(CoqObject):
@@ -95,7 +92,7 @@ class BaseResource(CoqObject):
 
         Returns
         --------
-        lst : list[str]
+        lst : list
             A list of header labels.
         """
         # special case for "coquery_query_token", which receives numbers like
@@ -293,10 +290,10 @@ class BaseResource(CoqObject):
 
         Parameters
         ----------
-        start : string
+        start : str
             A resource feature name, indicating the starting point of the
             search
-        end : string
+        end : str
             A resource feature name, indicating the end point of the search
 
         Returns
@@ -1230,12 +1227,17 @@ class SQLResource(BaseResource):
 
     def add_table_path(self, start_feature, end_feature):
         """
-        Add the join string  needed to access end_feature from the table
+        Add the join string needed to access end_feature from the table
         containing start_feature.
 
         This method modifies the class attributes joined_tables (to keep
         track of tables that are already included in the join) and
         table_list (which contains the join strings).
+
+        Side effects
+        ------------
+
+        The attributes table_list() and joined_tables() will be modified.
         """
         # FIXME: treat features from linked tables like native features
         _, last_table, _ = self.split_resource_feature(start_feature)
@@ -1418,10 +1420,10 @@ class SQLResource(BaseResource):
         table_list = ["{} AS {}".format(word_table, word_alias)]
         _, last_table, _ = cls.split_resource_feature(word_feature)
 
-        path = cls.get_table_path(w_tab, l_tab)
         prev_alias = word_alias
         prev_tab = w_tab
 
+        path = cls.get_table_path(w_tab, l_tab)
         if path:
             for table in path[1:]:
                 table_name = getattr(cls, f"{table}_table")
@@ -2151,9 +2153,7 @@ class SQLResource(BaseResource):
         return df
 
 
-class CorpusClass(object):
-    """
-    """
+class CorpusClass:
     _frequency_cache = {}
     _corpus_size_cache = {}
     _subcorpus_size_cache = {}
