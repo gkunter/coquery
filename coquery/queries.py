@@ -15,8 +15,7 @@ import os
 import pandas as pd
 import numpy as np
 
-from coquery.defines import (QUERY_ITEM_LEMMA, QUERY_ITEM_WORD,
-                             CONTEXT_NONE)
+from coquery.defines import QUERY_ITEM_LEMMA, QUERY_ITEM_WORD, CONTEXT_NONE
 from coquery.errors import SQLQueryCancelled
 
 from . import tokens
@@ -32,15 +31,15 @@ class TokenQuery(object):
     of the query results.
     """
 
-    def __init__(self, S, Session):
+    def __init__(self, query_string, session):
         self.query_list = []
-        for s in S.split("\n"):
+        for s in query_string.split("\n"):
             if s:
                 self.query_list += tokens.preprocess_query(s)
-        self.query_string = S
-        self.Session = Session
-        self.Resource = Session.Resource
-        self.Corpus = Session.Corpus
+        self.query_string = query_string
+        self.Session = session
+        self.Resource = session.Resource
+        self.Corpus = session.Corpus
         self.Results = []
         self.input_frame = pd.DataFrame()
         self.results_frame = pd.DataFrame()
@@ -122,12 +121,12 @@ class TokenQuery(object):
                 options.cfg.selected_features)
             self.attach_databases(connection, attach_list)
 
-        for i, self._sub_query in enumerate(self.query_list):
+        for i, sub_query in enumerate(self.query_list):
             sub_str = [item if item else "_NULL"
-                       for _, item in self._sub_query]
+                       for _, item in sub_query]
             self.sql_list.append(
                 "-- query string: {}".format(" ".join(sub_str)))
-            lst = [utf8(x) for _, x in self._sub_query if x]
+            lst = [utf8(x) for _, x in sub_query if x]
             self._current_number_of_tokens = len(lst)
             self._current_subquery_string = " ".join(lst)
 
@@ -139,13 +138,15 @@ class TokenQuery(object):
                 logging.info(s)
 
             query_string = self.Resource.get_query_string(
-                query_items=self._sub_query,
+                query_items=sub_query,
                 selected=options.cfg.selected_features,
                 to_file=to_file)
 
             self.sql_list.append(query_string)
 
             df = None
+            md5 = None
+
             if options.cfg.use_cache and query_string:
                 try:
                     s = "".join(sorted(query_string)).encode()
