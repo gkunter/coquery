@@ -618,7 +618,7 @@ provided_tests = [
                   TestPretty,
                   TestCollapseWords,
                   TestEnglishCollapseWords,
-                  TestFailing,
+                  TestREcycle
                   ]
 
 

@@ -830,6 +830,7 @@ class TestCorpus(CoqTestCase):
                      WHERE (COQ_WORD_1.Word LIKE '_ome'))"""))
 
     def test_token_conditions_id_query_1(self):
+<<<<<<< HEAD
         s = "=123"
         token = COCAToken(s)
         dct = self.resource.get_token_conditions(0, token)
@@ -837,6 +838,17 @@ class TestCorpus(CoqTestCase):
                          simple("""ID1 = '123'"""))
 
     # SELECT COLUMNS
+=======
+        S = "=123"
+        token = COCAToken(S)
+        d = self.resource.get_token_conditions(0, token)
+        print(d)
+        self.assertEqual(
+            simple(d["corpus"][0]),
+            simple("""ID1 = '123'"""))
+
+    ### SELECT COLUMNS
+>>>>>>> 367fc3a0f1fc692a7057235e65777310c524d3ac
 
     def test_get_required_columns_1(self):
         query = TokenQuery("*", self.Session)

@@ -20,6 +20,7 @@ class TestColorizer(CoqTestCase):
     def test_get_palette(self):
         colorizer = Colorizer("Paired", 5)
         pal = colorizer.get_palette()
+
         sns_pal = sns.color_palette("Paired", 5)
         colorizer = Colorizer(sns_pal)
         pal = colorizer.get_palette()
@@ -238,7 +239,6 @@ class TestColorizeByNum(CoqTestCase):
 
         self.assertEqual(len(levels), len(data))
         self.assertListEqual(levels, expected)
-
 
 class TestColorizeByFreq(CoqTestCase):
     pass
