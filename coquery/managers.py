@@ -731,7 +731,6 @@ class Manager(CoqObject):
             columns = ([x for x in self._column_order] +
                        [x for x in df.columns if x not in self._column_order])
             df = df[columns]
-
         # Get index of rows that are retained if duplicates are removed from
         # the data frame after sorting it by the number of query tokens that
         # returned the rows. This ensures that if the same token is returned
@@ -879,7 +878,7 @@ class ContingencyTable(FrequencyList):
                     .tolist()[(len(categoricals) - 1):]),
             name=ROW_NAMES["row_total"],
             index=df.columns)
-        df = df.append(val)
+        df = pd.concat([df, pd.DataFrame([val])], axis=0, ignore_index=True)
         return df
 
     def summarize(self, df, session):
@@ -904,7 +903,7 @@ class ContingencyTable(FrequencyList):
                           ct["statistics_column_total"].sum()],
                     name="row_total",
                     index=ct.columns)
-                ct = ct.append(row_total)
+                ct = pd.concat([ct, pd.DataFrame([row_total])], axis=0, ignore_index=True)
         return ct
 
 # class ContingencyTable(FrequencyList):
