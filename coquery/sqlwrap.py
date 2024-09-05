@@ -2,7 +2,7 @@
 """
 sqlwrap.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,6 +15,8 @@ import logging
 import codecs
 import sys
 import pandas as pd
+
+import sqlalchemy
 
 try:
     from cStringIO import StringIO as IO_Stream
@@ -89,7 +91,7 @@ class SqlDB(object):
                     FROM information_schema.tables
                     WHERE table_schema = '{}' AND table_name = '{}'
                     """.format(self.db_name, table_name)
-                return bool(connection.execute(S))
+                return bool(connection.execute(sqlalchemy.text(S)))
             elif self.db_type == SQL_SQLITE:
                 S = """
                     SELECT *
@@ -112,7 +114,7 @@ class SqlDB(object):
         """
         S = 'CREATE TABLE {} ({})'.format(table_name, description)
         with self.engine.connect() as connection:
-            return connection.execute(S)
+            return connection.execute(sqlalchemy.text(S))
 
     def find(self, table, values, case=False):
         """
@@ -158,7 +160,7 @@ class SqlDB(object):
                 S = "{} COLLATE NOCASE".format(S)
 
         S = S.replace("\\", "\\\\")
-        results = self.connection.execute(S).fetchall()
+        results = self.connection.execute(sqlalchemy.text(S)).fetchall()
         return results
 
     def kill_connection(self):
@@ -169,9 +171,10 @@ class SqlDB(object):
 
     def set_variable(self, variable, value):
         if isinstance(value, str):
-            self.connection.execute("SET {} '{}'".format(variable, value))
+            sql_template = f"SET {variable}='{value}'"
         else:
-            self.connection.execute("SET {}={}".format(variable, value))
+            sql_template = f"SET {variable}={value}"
+        self.connection.execute(sqlalchemy.text(sql_template))
 
     def close(self):
         return
@@ -192,7 +195,7 @@ class SqlDB(object):
         if command in ["SHOW", "DESCRIBE", "SET", "RESET"]:
             return
         try:
-            explain_table = self.connection.execute("EXPLAIN %s" % S)
+            explain_table = self.connection.execute(sqlalchemy.text("EXPLAIN %s" % S))
         except pymysql.ProgrammingError as e:
             raise SQLProgrammingError(S + "\n" + "%s" % e)
         else:
@@ -244,7 +247,7 @@ class SqlDB(object):
             con = self.get_connection()
             con.row_factory = dict_factory
             cursor = con.cursor()
-        cursor.execute(S)
+        cursor.execute(sqlalchemy.text(S))
         return cursor
 
     def load_dataframe(self, df, table_name, index_label,
@@ -356,6 +359,10 @@ class SqlDB(object):
         """
         capt = capturer.Capturer(stderr=True)
         with capt:
+            if "error_bad_lines" in kwargs:
+                kwargs.pop("error_bad_lines")
+                kwargs["on_bad_lines"] = "warn"
+
             df = pd.read_csv(file_name, engine="c", **kwargs)
         for x in capt:
             logging.warning("File {} – {}".format(file_name, x))
@@ -388,7 +395,7 @@ class SqlDB(object):
         if self.db_type == SQL_MYSQL:
             S = "SHOW FIELDS FROM {} WHERE Field = '{}'".format(
                 table_name, column_name)
-            results = self.connection.execute(S).fetchone()
+            results = self.connection.execute(sqlalchemy.text(S)).fetchone()
             try:
                 if isinstance(results, bytes):
                     results = results.decode("utf-8")
@@ -404,7 +411,7 @@ class SqlDB(object):
 
         elif self.db_type == SQL_SQLITE:
             S = "PRAGMA table_info({})".format(table_name)
-            results = self.connection.execute(S)
+            results = self.connection.execute(sqlalchemy.text(S))
             for row in results:
                 result = dict(zip(
                     ("cid", "name", "type", "notnull", "dflt_value", "pk"),
@@ -440,7 +447,7 @@ class SqlDB(object):
             return self.get_field_type(table_name, column_name)
         S = "SELECT {} FROM {} PROCEDURE ANALYSE()".format(column_name,
                                                            table_name)
-        x = list(self.connection.execute(S).fetchone())
+        x = list(self.connection.execute(sqlalchemy.text(S)).fetchone())
         x = x[-1]
         try:
             if isinstance(x, bytes):
@@ -463,7 +470,7 @@ class SqlDB(object):
         """
         S = "ALTER TABLE {} MODIFY {} {}".format(
             table_name, column_name, new_type)
-        self.connection.execute(S)
+        self.connection.execute(sqlalchemy.text(S))
         if options.cfg.verbose:
             logging.info(S)
 
@@ -484,13 +491,13 @@ class SqlDB(object):
         if self.db_type == SQL_MYSQL:
             S = "SHOW INDEX FROM {} WHERE Key_name = '{}'".format(table,
                                                                   index)
-            return bool(self.connection.execute(S))
+            return bool(self.connection.execute(sqlalchemy.text(S)))
         elif self.db_type == SQL_SQLITE:
             S = """
                 SELECT name FROM sqlite_master
                 WHERE type = 'index' AND name = '{}' AND tbl_name = '{}'
                 """.format(index, table)
-            return bool(len(self.connection.execute(S).fetchall()))
+            return bool(len(self.connection.execute(sqlalchemy.text(S)).fetchall()))
 
     def get_index_length(self, table_name, column_name, coverage=0.95):
         """
@@ -535,7 +542,7 @@ class SqlDB(object):
         GROUP BY len""".format(
             table=table_name, column=column_name)
 
-        results = self.connection.execute(S)
+        results = self.connection.execute(sqlalchemy.text(S))
         max_c = None
         for x in results:
             if not max_c or x[3] > max_c[3]:
@@ -578,15 +585,15 @@ class SqlDB(object):
             variables = ["%s(%s)" % (variables[0], index_length)]
         S = 'CREATE INDEX {} ON {}({})'.format(
             index_name, table_name, ",".join(variables))
-        self.connection.execute(S)
+        self.connection.execute(sqlalchemy.text(S))
 
     def executemany(self, s, d):
         s = s.replace("%s", "?")
-        self.connection.execute(s, d)
+        self.connection.execute(sqlalchemy.text(s), d)
 
     def execute(self, S):
         S = S.strip()
         if options.cfg.explain_queries:
             self.explain(S)
         logging.debug(S)
-        self.connection.execute(S)
+        self.connection.execute(sqlalchemy.text(S))
