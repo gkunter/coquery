@@ -97,10 +97,10 @@ class Filter(CoqObject):
             else:
                 # attempt to coerce the value to a numeric variable
                 if not isinstance(x, (int, float)):
-                    val = np.float(x)
+                    val = float(x)
                     try:
-                        if x == np.int(x):
-                            val = np.int(x)
+                        if x == int(x):
+                            val = int(x)
                     except ValueError:
                         pass
                 else:
