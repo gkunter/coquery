@@ -2,7 +2,7 @@
 """
 connections.py is part of Coquery.
 
-Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -211,10 +211,9 @@ class MySQLConnection(Connection):
         engine = self.get_engine()
         if not engine:
             return False, ""
-
         try:
             with engine.connect() as connection:
-                result = connection.execute("SELECT VERSION()")
+                result = connection.execute(sqlalchemy.text("SELECT VERSION()"))
         except sqlalchemy.exc.SQLAlchemyError as e:
             res = (False, e)
         except Exception as e:
@@ -234,14 +233,14 @@ class MySQLConnection(Connection):
             COLLATE utf8mb4_unicode_ci
             """.format(db_name.split()[0])
         with engine.connect() as connection:
-            connection.execute(sql_str)
+            connection.execute(sqlalchemy.text(sql_str))
         engine.dispose()
 
     def remove_database(self, db_name):
         engine = self.get_engine(db_name)
         sql_template = f"DROP DATABASE {db_name}"
         with engine.connect() as connection:
-            connection.execute(sql_template)
+            connection.execute(sqlalchemy.text(sql_template))
         engine.dispose()
 
     def has_database(self, db_name):
@@ -263,7 +262,7 @@ class MySQLConnection(Connection):
             FROM information_schema.tables
             WHERE table_schema = '{}'""".format(db_name)
         with engine.connect() as connection:
-            size = connection.execute(sql_template).fetchone()[0]
+            size = connection.execute(sqlalchemy.text(sql_template)).fetchone()[0]
         engine.dispose()
         return size
 
@@ -279,7 +278,7 @@ class MySQLConnection(Connection):
 
         engine = self.get_engine()
         with engine.connect() as connection:
-            results = connection.execute(sql_template)
+            results = connection.execute(sqlalchemy.text(sql_template))
         engine.dispose()
 
         local_hosts = ["127.0.0.1", "localhost"]
@@ -296,21 +295,21 @@ class MySQLConnection(Connection):
             return False
 
     def create_user(self, user, pwd):
-        sql_new_user = f"CREATE USER {user}@{self.host} IDENTIFIED BY {pwd}"
+        sql_new_user = f"CREATE USER '{user}'@'{self.host}' IDENTIFIED BY '{pwd}'"
         sql_privileges = f"GRANT ALL PRIVILEGES ON * . * TO {user}@{self.host}"
         sql_flush = "FLUSH PRIVILEGES"
 
         engine = self.get_engine()
         try:
             with engine.connect() as connection:
-                connection.execute(sql_new_user)
+                connection.execute(sqlalchemy.text(sql_new_user))
 
             # now that the user has been created, grant it all privileges
             # it needs:
             try:
                 with engine.connect() as connection:
-                    connection.execute(sql_privileges)
-                    connection.execute(sql_flush)
+                    connection.execute(sqlalchemy.text(sql_privileges))
+                    connection.execute(sqlalchemy.text(sql_flush))
             except Exception as e:
                 self.drop_user(user)
                 raise RuntimeError(f"User not created:\n{str(e)}")
@@ -323,7 +322,7 @@ class MySQLConnection(Connection):
         engine = self.get_engine()
         try:
             with engine.connect() as connection:
-                connection.execute(sql_remove_user)
+                connection.execute(sqlalchemy.text(sql_remove_user))
         finally:
             engine.dispose()
 
