@@ -3,7 +3,7 @@
 """
 coq_install_coha.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -200,10 +200,11 @@ class BuilderClass(BaseCorpusBuilder):
                     skiprows=2,
                     header=None,
                     names=names,
-                    error_bad_lines=False,
+                    on_bad_lines="warn",
                     na_filter=False,
                     drop_duplicate=self.word_id,
                     **kwargs)
+
             else:
                 # load a corpus file
                 names = (self.corpus_source_id, self.corpus_id,
