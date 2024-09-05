@@ -1515,7 +1515,13 @@ class SQLResource(BaseResource):
                 query_feature = "corpus_id"
             else:
                 col = None
-                query_feature = getattr(cls, label)
+                try:
+                    query_feature = getattr(cls, label)
+                    col = getattr(cls, query_feature)
+                except AttributeError:
+                    raise UnsupportedQueryItemError(item_type)
+
+                # Check of there is a reverse lookup column for the feature:
                 if token.S.startswith("*") and len(token.S) > 1:
                     try:
                         col = getattr(cls, f"{query_feature}_rev")
@@ -1523,11 +1529,7 @@ class SQLResource(BaseResource):
                         pass
                     else:
                         reverse_str = True
-                if not col:
-                    try:
-                        col = getattr(cls, query_feature)
-                    except AttributeError:
-                        raise UnsupportedQueryItemError(item_type)
+
             _, tab, _ = cls.split_resource_feature(query_feature)
 
             if tab == "corpus":
