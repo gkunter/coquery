@@ -2,7 +2,7 @@
 """
 sqlqueries.py is part of Coquery.
 
-Copyright (c) 2019-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2019-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -28,7 +28,7 @@ except ImportError:
     warnings.warn("No syntax highlighting available")
     import re
 
-    def highlight(text, *args, **kwargs):
+    def highlight(text, lexer, formatter, *args, **kwargs):
         text = text.split("\n")
         lst = []
         for line in text:
@@ -44,7 +44,10 @@ except ImportError:
         pass
 
     class HtmlFormatter():
-        def get_style_defs(self, s):
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def get_style_defs(self, s=""):
             return ""
 
 _translate = QtCore.QCoreApplication.translate
