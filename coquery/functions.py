@@ -131,7 +131,6 @@ class Function(CoqObject):
                 ignore_case = True
 
             return re.IGNORECASE if ignore_case else 0
-
         return False
 
     def get_label(self, session, unlabel=False):
@@ -334,12 +333,10 @@ class StringSeriesFunction(StringFunction):
         pat = kwargs.get("pat")
 
         if self.str_func in ("replace", "contains", "extract", "count"):
-            # ensure that regex functions use unicode:
-            if "(?u)" not in pat:
-                kwargs["pat"] = "(?u){}".format(pat)
-
+            # ensure unicode search
+            kwargs["flags"] = kwargs.get("flags", 0) + re.UNICODE
             # add case-sensitivity flag:
-            kwargs["flags"] = self.get_flag("case")
+            kwargs["flags"] += self.get_flag("case")
             try:
                 kwargs.pop("case")
             except KeyError:
@@ -354,7 +351,6 @@ class StringSeriesFunction(StringFunction):
             else:
                 # get string function from original column
                 fnc = getattr(df[col].str, self.str_func)
-
             try:
                 val = fnc(**kwargs)
             except re.error as e:
