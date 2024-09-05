@@ -2,7 +2,7 @@
 """
 csvoptions.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,6 +13,7 @@ import codecs
 import os
 import re
 import pandas as pd
+import numpy as np
 from PyQt5 import QtWidgets, QtGui, QtCore
 
 from coquery import options
@@ -55,10 +56,9 @@ class MyTableModel(QtCore.QAbstractTableModel):
             c_role = QtGui.QPalette.Text
         elif role == QtCore.Qt.DisplayRole:
             value = self.df.iloc[index.row()][index.column()]
-            if isinstance(value, pd.np.int64):
+            if isinstance(value, np.int64):
                 value = int(value)
-            elif isinstance(value,
-                            (pd.np.float64, pd.np.float, pd.np.float32)):
+            elif isinstance(value, (np.float64, np.float32)):
                 value = float(value)
 
         if c_role:
@@ -260,16 +260,16 @@ class CSVOptionDialog(QtWidgets.QDialog):
                 self._read_from_xls = True
 
         if not self._read_from_xls:
+            kwargs = {
+                "header": header,
+                "sep": utf8(self.separator),
+                "quoting": 3 if not quote else 0,
+                "quotechar": quote if quote else "#",
+                "on_bad_lines": "warn",
+                "encoding": encoding}
+
             try:
-                df = pd.read_table(
-                        file_name,
-                        header=header,
-                        sep=utf8(self.separator),
-                        quoting=3 if not quote else 0,
-                        quotechar=quote if quote else "#",
-                        nrows=nrows,
-                        error_bad_lines=False,
-                        encoding=encoding)
+                df = pd.read_table(file_name, nrows=nrows, **kwargs)
             except (ValueError, pd.errors.ParserError) as e:
                 # this is most likely due to an encoding error.
 
@@ -290,20 +290,11 @@ class CSVOptionDialog(QtWidgets.QDialog):
                             codecs.open(file_name, "rb",
                                         encoding="utf-8").read()
                         except UnicodeDecodeError:
-                            encoding = "latin-1"
+                            kwargs["encoding"] = "latin-1"
                         else:
-                            encoding = "utf-8"
+                            kwargs["encoding"] = "utf-8"
                     try:
-                        df = pd.read_table(
-                                file_name,
-                                header=header,
-                                sep=utf8(self.separator),
-                                quoting=3 if not quote else 0,
-                                quotechar=quote if quote else "#",
-                                na_filter=False,
-                                nrows=100,
-                                error_bad_lines=False,
-                                encoding=encoding)
+                        df = pd.read_table(file_name, nrows=100, **kwargs)
                     except (ValueError, pd.errors.ParserError) as e:
                         # the table could still not be read. Raise an error.
                         QtWidgets.QMessageBox.critical(
