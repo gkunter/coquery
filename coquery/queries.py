@@ -2,7 +2,7 @@
 """
 queries.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,6 +11,7 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import hashlib
 import logging
 import os
+import sqlalchemy
 
 import pandas as pd
 import numpy as np
@@ -59,7 +60,7 @@ class TokenQuery(object):
                 S = "ATTACH DATABASE '{}' AS {}".format(
                     path, db_name)
                 try:
-                    connection.execute(S)
+                    connection.execute(sqlalchemy.text(S))
                     self.sql_list.append(S)
                 except Exception:
                     error = ("Exception raised when executing {}").format(S)
@@ -163,9 +164,10 @@ class TokenQuery(object):
                         logging.info(query_string)
 
                     try:
+                        S = query_string.replace("%", "%%")
                         results = (connection
                                    .execution_options(stream_results=True)
-                                   .execute(query_string.replace("%", "%%")))
+                                   .execute(sqlalchemy.text(S)))
                     except Exception as e:
                         print(query_string)
                         raise e
@@ -201,7 +203,7 @@ class TokenQuery(object):
                 if self.results_frame.empty:
                     self.results_frame = df
                 else:
-                    self.results_frame = self.results_frame.append(df)
+                    self.results_frame = pd.concat([self.results_frame, df])
 
         self.results_frame = self.results_frame.reset_index(drop=True)
         TokenQuery._id += 1
