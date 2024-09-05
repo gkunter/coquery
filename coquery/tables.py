@@ -2,7 +2,7 @@
 """
 tables.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -16,6 +16,7 @@ import pandas as pd
 import re
 
 import sqlalchemy.exc
+import sqlalchemy
 
 from .defines import SQL_MYSQL, SQL_SQLITE
 
@@ -455,6 +456,7 @@ class Table(object):
         sql_str = f"SELECT MAX({col.name} IS NULL) FROM {self.name}"
         try:
             with self._DB.engine.connect() as connection:
+                sql_str = sqlalchemy.text(sql_str)
                 has_null = connection.execute(sql_str).fetchone()[0]
         except sqlalchemy.exc.ProgrammingError:
             has_null = 0
@@ -469,6 +471,7 @@ class Table(object):
             sql_str = (f"SELECT MIN({col.name}), MAX({col.name}) "
                        f"FROM {self.name} WHERE {col.name} IS NOT NULL")
             with self._DB.engine.connect() as connection:
+                sql_str = sqlalchemy.text(sql_str)
                 v_min, v_max = connection.execute(sql_str).fetchone()
 
             for dt_min, dt_max, dt_label in sql_int:
@@ -486,6 +489,7 @@ class Table(object):
             sql_str = (f"SELECT MAX({func_length}(RTRIM({col.name}))) "
                        f"FROM {self.name}")
             with self._DB.engine.connect() as connection:
+                sql_str = sqlalchemy.text(sql_str)
                 max_len = connection.execute(sql_str).fetchone()[0]
             dt_type = "VARCHAR({})".format(max_len + 1)
 
@@ -506,6 +510,7 @@ class Table(object):
             sql_str = (f"SELECT MIN({col.name}), MAX({col.name}) "
                        f"FROM {self.name} WHERE {col.name} IS NOT NULL")
             with self._DB.engine.connect() as connection:
+                sql_str = sqlalchemy.text(sql_str)
                 v_min, _ = connection.execute(sql_str).fetchone()
 
         # all other data types:
@@ -517,7 +522,7 @@ class Table(object):
 
         return dt_type
 
-    def _get_create_string_MySQL(self, tables, index_gen):
+    def _get_create_string_MySQL(self, tables, index_gen, mapping=None):
         col_defs = []
         for column in self.columns:
             if not column.create:
@@ -565,7 +570,7 @@ class Table(object):
 
         return ",\n\t".join(col_defs)
 
-    def _get_create_string_SQLite(self, tables, index_gen):
+    def _get_create_string_SQLite(self, tables, index_gen, mappings=None):
         col_defs = []
         for column in self.columns:
             if not column.create:
@@ -611,7 +616,8 @@ class Table(object):
         table_str = re.sub(r"\s*UNSIGNED", "", table_str)
         return table_str
 
-    def get_create_string(self, db_type, tables, index_gen=False):
+    def get_create_string(self,
+                          db_type, tables, index_gen=False, mapping=None):
         """
         Generates the SQL command required to create the table.
 
@@ -636,14 +642,26 @@ class Table(object):
             A list of Table objects that is used to resolve links between
             tables.
 
+        mapping : dict or None
+            A dictionary that maps query item types to resource features. It
+            can be used to create reverse lookup columns to speed up queries
+            if the query item string starts with a wildcard.
+
         Returns
         -------
         S : str
             A string that can be sent to the SQL engine in order to create
             the table according to the specifications.
         """
+        print(mapping)
+        mapping = mapping or dict()
+        for query_item, rc_feature in mapping.items():
+            print(query_item, rc_feature)
+
         if db_type == SQL_SQLITE:
-            table_str = self._get_create_string_SQLite(tables, index_gen)
+            table_str = self._get_create_string_SQLite(
+                tables, index_gen, mapping)
         else:
-            table_str = self._get_create_string_MySQL(tables, index_gen)
+            table_str = self._get_create_string_MySQL(
+                tables, index_gen, mapping)
         return table_str
