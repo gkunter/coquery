@@ -869,7 +869,8 @@ class CSVOptions(object):
             "skiprows": self.skip_lines,
             "quotechar": self.quote_char,
             "low_memory": False,
-            "error_bad_lines": False}
+            "on_bad_lines": "warn"}
+
         try:
             df = pd.read_csv(path, **kwargs)
         except Exception as e:
