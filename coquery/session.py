@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -259,7 +259,7 @@ class Session(object):
                 self.to_file = to_file
 
                 if not to_file:
-                    self.data_table = self.data_table.append(df)
+                    self.data_table = pd.concat([self.data_table, df])
                 else:
                     df = manager.process(df, session=self)
                     self.save_dataframe(df, append=True)
