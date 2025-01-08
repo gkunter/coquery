@@ -22,6 +22,8 @@ import sys
 import fnmatch
 import inspect
 from lxml import etree as ET
+import sqlalchemy
+
 
 from . import sqlwrap
 from . import options
@@ -567,16 +569,28 @@ class BaseCorpusBuilder(corpus.SQLResource):
             The resource feature that will be used to access the information
             needed for the query item type specified by 'item_type'.
         """
-        if item_type == QUERY_ITEM_WORD:
-            self.query_item_word = rc_feature
-        elif item_type == QUERY_ITEM_LEMMA:
-            self.query_item_lemma = rc_feature
-        elif item_type == QUERY_ITEM_TRANSCRIPT:
-            self.query_item_transcript = rc_feature
-        elif item_type == QUERY_ITEM_POS:
-            self.query_item_pos = rc_feature
-        elif item_type == QUERY_ITEM_GLOSS:
-            self.query_item_gloss = rc_feature
+        if item_type in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                         QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+            setattr(self, item_type, rc_feature)
+
+    @property
+    def query_items(self):
+        """
+        Create a dictionary that maps all supported query item types to the
+        resource features that contain the respective data.
+
+        Returns
+        -------
+        dct: dict
+            A dictionary with supported query item types as keys and resource
+            features as values
+        """
+        dct = {}
+        for item_type in (QUERY_ITEM_WORD, QUERY_ITEM_LEMMA, QUERY_ITEM_POS,
+                          QUERY_ITEM_TRANSCRIPT, QUERY_ITEM_GLOSS):
+            if hasattr(self, item_type):
+                dct[item_type] = getattr(self, item_type)
+        return dct
 
     def add_time_feature(self, rc_feature):
         """
@@ -1235,7 +1249,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
         # determine highest ID in the corpus table
         S = "SELECT MAX({}) FROM {}".format(self.corpus_id, self.corpus_table)
         with self.DB.engine.connect() as connection:
-            result = connection.execute(S).fetchone()
+            result = connection.execute(sqlalchemy.text(S)).fetchone()
         max_id = result[0]
         logging.info("Creating lookup table, max_id is {}".format(max_id))
 
@@ -1258,7 +1272,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
             self.corpusngram_table,
             ngram_table.get_create_string(
                 options.cfg.current_connection.db_type(),
-                self._new_tables.values()))
+                self._new_tables.values(),
+                self.query_items))
 
         self._widget.progressSet.emit(
             1 + ((max_id-1) // step),
@@ -1278,11 +1293,13 @@ class BaseCorpusBuilder(corpus.SQLResource):
                         lower=current_id,
                         upper=current_id + step))
 
-                S = sql_template.format(
-                    insert_str=self.build_lookup_get_insert_string(),
-                    token_range=token_range)
-
-                connection.execute(S.strip().replace("\n", " "))
+                sql_string: str = (
+                    sql_template
+                    .format(insert_str=self.build_lookup_get_insert_string(),
+                            token_range=token_range)
+                    .strip()
+                    .replace("\n", " "))
+                connection.execute(sqlalchemy.text(sql_string))
                 current_id = current_id + step
 
                 _chunk += 1
@@ -1312,7 +1329,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
             kwargs.update(data_dict)
             kwargs.update(word_dict)
             S = padding_str.format(**kwargs)
-            connection.execute(S.replace("\n", " ").strip())
+            connection.execute(sqlalchemy.text(S.replace("\n", " ").strip()))
 
     def build_index_ngram(self):
         pass
@@ -1344,18 +1361,16 @@ class BaseCorpusBuilder(corpus.SQLResource):
             for column in table.columns:
                 # Links should get the same optimal data type as the linked
                 # column:
-                if column.key:
-                    try:
+                try:
+                    if column.key:
                         _table = self._new_tables[column._link]
                         _column = _table.primary
                         optimal = _table.suggest_data_type(_column.name)
-                    except TypeError:
-                        continue
-                else:
-                    try:
+                    else:
                         optimal = table.suggest_data_type(column.name)
-                    except TypeError:
-                        continue
+                except TypeError:
+                    continue
+
                 try:
                     current = self.DB.get_field_type(table.name, column.name)
                     current = current.strip().upper()
@@ -1385,9 +1400,6 @@ class BaseCorpusBuilder(corpus.SQLResource):
 
                 if self._widget:
                     self._widget.progressUpdate.emit(column_count + 1)
-
-        if self.interrupted:
-            return
 
     def build_create_indices(self):
         """
@@ -1491,33 +1503,70 @@ class BaseCorpusBuilder(corpus.SQLResource):
         POS             pos_label, word_pos, lemma_pos, corpus_pos
 
         """
+
+        # for qtype, features in (
+        #         ("word", ["word_label", "corpus_word"]),
+        #         ("lemma", ["lemma_label", "word_lemma", "corpus_lemma"]),
+        #         ("transcript", ["transcript_label", "word_transcript",
+        #                         "corpus_transcript"]),
+        #         ("pos", ["pos_label", "word_pos", "lemma_pos", "corpus_pos"]),
+        #         ("gloss", ["gloss_label", "word_gloss", "lemma_gloss",
+        #                    "corpus_gloss"])):
+        #     if not hasattr(self, f"query_item_{qtype}"):
+        #         print(f"NO QUERY ITEM query_item_{qtype}")
+        #         for x in features:
+        #             print("\t", x)
+        #             if hasattr(self, x):
+        #                 print("\t\tFOUND ", x)
+        #                 setattr(self, f"query_item_{qtype}", x)
+        #                 break
+        #     else:
+        #         print(f"QUERY ITEM query_item_{qtype} exists")
+
         if not hasattr(self, "query_item_word"):
             for x in ["word_label", "corpus_word"]:
                 if hasattr(self, x):
                     self.query_item_word = x
                     break
+
         if not hasattr(self, "query_item_lemma"):
             for x in ["lemma_label", "word_lemma", "corpus_lemma"]:
                 if hasattr(self, x):
                     self.query_item_lemma = x
                     break
+
         if not hasattr(self, "query_item_transcript"):
             for x in ["transcript_label", "word_transcript",
                       "corpus_transcript"]:
                 if hasattr(self, x):
                     self.query_item_transcript = x
                     break
+
         if not hasattr(self, "query_item_pos"):
             for x in ["pos_label", "word_pos", "lemma_pos", "corpus_pos"]:
                 if hasattr(self, x):
                     self.query_item_pos = x
                     break
+
         if not hasattr(self, "query_item_gloss"):
             for x in ["gloss_label", "word_gloss",
                       "lemma_gloss", "corpus_gloss"]:
                 if hasattr(self, x):
                     self.query_item_gloss = x
                     break
+
+    def get_reverse_columns(self, rc_table):
+        mapping = self.query_items
+        reverse_columns = {}
+        for query_item, rc_feature in mapping.items():
+            print(query_item, rc_feature)
+            rc_tab = rc_feature.partition("_")[0]
+            if rc_table == getattr(self, f"{rc_tab}_table"):
+                for column in self.table(rc_table).columns:
+                    if column.name == getattr(self, rc_feature):
+                        reverse_columns[rc_feature] = column
+        print(reverse_columns)
+        return reverse_columns
 
     def store_metadata(self):
         pass
@@ -1725,10 +1774,10 @@ class BaseCorpusBuilder(corpus.SQLResource):
                     raise DependencyError(package, url)
 
         if self.DB.db_type == SQL_MYSQL:
-            self.DB.connection.execute("SET NAMES 'utf8'")
-            self.DB.connection.execute("SET CHARACTER SET 'utf8mb4'")
-            self.DB.connection.execute("SET unique_checks=0")
-            self.DB.connection.execute("SET foreign_key_checks=0")
+            self.DB.connection.execute(sqlalchemy.text("SET NAMES 'utf8'"))
+            self.DB.connection.execute(sqlalchemy.text("SET CHARACTER SET 'utf8mb4'"))
+            self.DB.connection.execute(sqlalchemy.text("SET unique_checks=0"))
+            self.DB.connection.execute(sqlalchemy.text("SET foreign_key_checks=0"))
         logging.info("Builder initialized")
 
     def remove_build(self):
