@@ -212,14 +212,14 @@ class TextgridWriter(object):
                             end_col = f"coq_{label_e}_{number}"
                             start = left_padding - offset + row[start_col]
                             stop = left_padding - offset + row[end_col]
-                        except KeyError:
+                        except KeyError as e:
                             start = 0
                             stop = max_stop
 
                         interval = tgt.Interval(start, stop, val)
                         try:
                             tier.add_interval(interval)
-                        except ValueError:
+                        except ValueError as e:
                             # ValueErrors occur if the new interval overlaps
                             # with a previous interval.
                             # This can happen if no word boundaries are
@@ -263,7 +263,6 @@ class TextgridWriter(object):
             str_end = utf8(offset + grid.end_time - left_padding)
             tier.add_point(tgt.Point(0, str_start))
             tier.add_point(tgt.Point(grid.end_time, str_end))
-
         return grid
 
     def fill_grids(self, columns=None, one_grid_per_match=False,
@@ -336,7 +335,6 @@ class TextgridWriter(object):
         self.output_path = output_path
         grids = self.fill_grids(columns, one_grid_per_match, sound_path,
                                 left_padding, right_padding, remember_time)
-
         textgrids = collections.defaultdict(list)
 
         self.n = 0
@@ -375,22 +373,24 @@ class TextgridWriter(object):
             self.n += 1
             textgrids[basename].append((grid, filename, self._offsets[x]))
 
+        # process sound files if requested
         if sound_path:
             from .sound import Sound
-
             for root, _, files in os.walk(sound_path):
                 for file_name in files:
                     basename, _ = os.path.splitext(file_name)
                     sources = self.resource.audio_to_source(basename)
+
                     for source in sources:
                         if source in textgrids:
                             source_path = os.path.join(root, file_name)
-
                             try:
                                 sound = Sound(source_path)
-                            except TypeError:
+                            except TypeError as e:
+                                logging.warning(
+                                    f"Couldn't read sound file {source_path}: "
+                                    f"{str(e)}")
                                 continue
-
                             for tup in textgrids.get(source, []):
                                 grid, grid_name, offs = tup
                                 wav_name = f"{file_prefix}{grid_name}.wav"
@@ -398,5 +398,4 @@ class TextgridWriter(object):
 
                                 start = max(0, offs - left_padding)
                                 end = offs - left_padding + grid.end_time
-
                                 sound.write(dest_path, start, end)
