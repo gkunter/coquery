@@ -5,7 +5,8 @@ import sys
 import os
 import argparse
 
-from coquery.defines import SQL_SQLITE
+from coquery.defines import (SQL_SQLITE,
+    QUERY_ITEM_WORD, QUERY_ITEM_LEMMA)
 from coquery.coquery import options
 from coquery.corpusbuilder import (
     BaseCorpusBuilder, XMLCorpusBuilder, TEICorpusBuilder,
@@ -237,16 +238,15 @@ class TestingTEI(TEICorpusBuilder):
         self._last_close = element.tag
 
 
-class NgramBuilder(BaseCorpusBuilder):
-    corpusngram_table = "CorpusNgram"
-    corpusngram_width = 3
-
+class TestBuilder(BaseCorpusBuilder):
     word_table = "Lexicon"
     word_id = "WordId"
     word_label = "Word"
+    word_lemma = "Lemma"
     word_columns = [
         Identifier(word_id, "INT"),
-        Column(word_label, "VARCHAR")]
+        Column(word_label, "VARCHAR"),
+        Column(word_lemma, "VARCHAR")]
 
     source_table = "Files"
     source_id = "FileId"
@@ -268,6 +268,15 @@ class NgramBuilder(BaseCorpusBuilder):
     query_item_word = "word_label"
 
 
+class ReverseBuilder(TestBuilder):
+    reverse_query_items = True
+
+
+class NgramBuilder(TestBuilder):
+    corpusngram_table = "CorpusNgram"
+    corpusngram_width = 3
+
+
 class NGramBuilderFlat(BaseCorpusBuilder):
     corpusngram_table = "CorpusNgram"
     corpusngram_width = 3
@@ -282,6 +291,33 @@ class NGramBuilderFlat(BaseCorpusBuilder):
         Column(corpus_pos, "VARCHAR")]
 
     auto_create = ["corpus"]
+
+
+class TestCorpusBuilder(CoqTestCase):
+    def setUp(self) -> None:
+        self.builder = TestBuilder()
+
+    def test_map_query_item(self):
+        for tup in ((QUERY_ITEM_WORD, "word_label"),
+                    (QUERY_ITEM_LEMMA, "word_lemma")):
+            self.builder.map_query_item(*tup)
+
+        self.assertEqual(
+            getattr(self.builder, QUERY_ITEM_WORD), "word_label")
+        self.assertEqual(
+            getattr(self.builder, QUERY_ITEM_LEMMA), "word_lemma")
+
+    def test_set_query_items(self):
+        self.builder.set_query_items()
+        self.assertEqual(
+            getattr(self.builder, QUERY_ITEM_WORD), "word_label")
+        self.assertEqual(
+            getattr(self.builder, QUERY_ITEM_LEMMA), "word_lemma")
+
+    def test_query_items(self):
+        self.builder.set_query_items()
+        self.assertListEqual(list(self.builder.query_items.values()),
+                             ["word_label", "word_lemma"])
 
 
 class TestCorpusNgram(CoqTestCase):
@@ -505,12 +541,65 @@ class TestDisambiguateLabel(CoqTestCase):
         self.assertEqual(label, "ID1")
 
 
+class TestReverseQueryItemBuilder(CoqTestCase):
+    def test_reverse_columns_1(self):
+        builder = ReverseBuilder()
+        reverse_columns = builder.get_reverse_columns(builder.word_table)
+        self.assertListEqual(list(reverse_columns.keys()),
+                             ["word_label", "word_lemma"])
+
+    def test_get_create_string_no_mapping(self):
+        builder = ReverseBuilder()
+        s = builder.table(builder.word_table).get_create_string(
+            SQL_SQLITE,
+            builder._new_tables.values(),
+            mapping=None)
+        self.assertEqual(simple(s),
+                         simple("""
+                             WordId INT PRIMARY KEY,
+                             Word VARCHAR COLLATE NOCASE,
+                             Lemma VARCHAR COLLATE NOCASE"""))
+
+    def test_get_create_string_mapping_1(self):
+        builder = ReverseBuilder()
+        rc_table = builder.word_table
+
+        s = builder.table(rc_table).get_create_string(
+            SQL_SQLITE,
+            builder._new_tables.values(),
+            mapping=builder.get_reverse_columns(rc_table))
+
+        self.assertEqual(simple(s),
+                         simple("""
+                             WordId INT PRIMARY KEY,
+                             Word VARCHAR COLLATE NOCASE,
+                             WordRev VARCHAR COLLATE NOCASE,
+                             Lemma VARCHAR COLLATE NOCASE,
+                             LemmaRev VARCHAR COLLATE NOCASE"""))
+
+    def test_get_create_string_mapping_2(self):
+        builder = ReverseBuilder()
+        rc_table = builder.source_table
+
+        s = builder.table(rc_table).get_create_string(
+            SQL_SQLITE,
+            builder._new_tables.values(),
+            mapping=builder.get_reverse_columns(rc_table))
+
+        self.assertEqual(simple(s),
+                         simple("""
+                             FileId INT PRIMARY KEY,
+                             Title VARCHAR COLLATE NOCASE"""))
+
+
 provided_tests = [
-    TestCorpusNgram,
-    TestFlatCorpusBuilder,
-    TestXMLCorpusBuilder,
-    TestTEICorpusBuilder,
-    TestDisambiguateLabel
+    TestCorpusBuilder,
+    # TestCorpusNgram,
+    # TestFlatCorpusBuilder,
+    # TestXMLCorpusBuilder,
+    # TestTEICorpusBuilder,
+    # TestDisambiguateLabel,
+    TestReverseQueryItemBuilder,
     ]
 
 

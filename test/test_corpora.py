@@ -2267,15 +2267,14 @@ def mock_get_available_resources(configuration):
 
 
 provided_tests = [
-                  TestCorpus,
-                  TestRevCorpus,
-                  TestSuperFlat,
-                  TestCorpusWithExternal,
-                  TestNGramCorpus,
-                  TestBigramCorpus,
-
-                  #TestRenderedContext,
-                  ]
+    TestCorpus,
+    TestRevCorpus,
+    TestSuperFlat,
+    TestCorpusWithExternal,
+    TestNGramCorpus,
+    TestBigramCorpus,
+    #TestRenderedContext,
+    ]
 
 
 def main():
