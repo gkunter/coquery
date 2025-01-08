@@ -21,6 +21,8 @@ import zipfile
 import json
 from csv import QUOTE_NONNUMERIC
 from datetime import datetime
+from sqlalchemy import text
+
 
 from .errors import UnsupportedQueryItemError
 from .defines import (
@@ -739,7 +741,7 @@ class SQLResource(BaseResource):
 
         with engine.connect() as connection:
             rows = [dict(zip(columns, x)) for
-                    x in connection.execute(S.format(table_name))]
+                    x in connection.execute(text(S.format(table_name)))]
         return rows
 
     def get_primary_key(self, rc_table):
@@ -913,7 +915,7 @@ class SQLResource(BaseResource):
             if type(table) != str:
                 continue
             S = "SELECT COUNT(*) FROM {}".format(table)
-            df = pd.DataFrame(db_connection.execute(S).fetchall())
+            df = pd.DataFrame(db_connection.execute(text(S)).fetchall())
             table_sizes[table] = df.values.ravel()[0]
             if signal:
                 signal.emit(s.format(rc_table))
@@ -937,7 +939,7 @@ class SQLResource(BaseResource):
                 pass
             else:
                 S = "SELECT {} FROM {}".format(column, table)
-                df = pd.DataFrame(db_connection.execute(S).fetchall(),
+                df = pd.DataFrame(db_connection.execute(text(S)).fetchall(),
                                   columns=[column])
                 stats.append([table,
                               column,
@@ -1925,7 +1927,7 @@ class SQLResource(BaseResource):
             S = self.get_context_string(token_id, number_of_tokens,
                                         left_span, right_span,
                                         origin_id, sentence_id)
-            results = db_connection.execute(S)
+            results = db_connection.execute(text(S))
         word_lists = [[], [], []]
         for word, pos in results:
             word_lists[pos].append(word)
