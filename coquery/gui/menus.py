@@ -95,6 +95,21 @@ class CoqColumnMenu(QtWidgets.QMenu):
     addGroupRequested = pyqtSignal(str)
     removeGroupRequested = pyqtSignal(str)
 
+    def _sort_none_triggered(self, column):
+        self.changeSortingRequested.emit((column, None, None))
+
+    def _sort_asc_triggered(self, column):
+        self.changeSortingRequested.emit((column, True, False))
+
+    def _sort_desc_triggered(self, column):
+        self.changeSortingRequested.emit((column, False, False))
+
+    def _sort_asc_rev_triggered(self, column):
+        self.changeSortingRequested.emit((column, True, True))
+
+    def _sort_desc_rev_triggered(self, column):
+        self.changeSortingRequested.emit((column, False, True))
+
     def __init__(self, columns=None, title="", parent=None, *args, **kwargs):
         super(CoqColumnMenu, self).__init__(title, parent, *args, **kwargs)
         columns = columns or []
@@ -174,46 +189,50 @@ class CoqColumnMenu(QtWidgets.QMenu):
             sort_asc.setIcon(parent.get_icon("Ascending Sorting"))
             sort_desc.setIcon(parent.get_icon("Descending Sorting"))
 
-            for action, data in ((sort_none, (column, None, None)),
-                                 (sort_asc, (column, True, False)),
-                                 (sort_desc, (column, False, False))):
-                action.triggered.connect(
-                    lambda: self.changeSortingRequested.emit(data))
-                self.addAction(action)
+            sort_none.triggered.connect(
+                lambda: self._sort_none_triggered(column))
+            sort_asc.triggered.connect(
+                lambda: self._sort_asc_triggered(column))
+            sort_desc.triggered.connect(
+                lambda: self._sort_desc_triggered(column))
+
+            self.addAction(sort_none)
+            self.addAction(sort_asc)
+            self.addAction(sort_desc)
 
             dtype = parent.table_model.content[[column]].dtypes[0]
             if pd.api.types.is_string_dtype(dtype):
                 sort_asc_rev = group.addAction(
-                    QtWidgets.QAction("&Ascending, reverse",
-                                      self, checkable=True))
+                    QtWidgets.QAction(
+                        "&Ascending, reverse", self, checkable=True))
                 sort_desc_rev = group.addAction(
-                    QtWidgets.QAction("&Descending, reverse",
-                                      self, checkable=True))
+                    QtWidgets.QAction(
+                        "&Descending, reverse", self, checkable=True))
                 sort_asc_rev.setIcon(
                     parent.get_icon("Ascending Reverse Sorting"))
                 sort_desc_rev.setIcon(
                     parent.get_icon("Descending Reverse Sorting"))
-                for action, data in ((sort_asc_rev, (column, True, True)),
-                                     (sort_desc_rev, (column, False, True))):
-                    action.triggered.connect(
-                        lambda: self.changeSortingRequested.emit(data))
-                    self.addAction(action)
+
+                sort_asc_rev.triggered.connect(
+                    lambda: self._sort_asc_rev_triggered(column))
+                sort_desc_rev.triggered.connect(
+                    lambda: self._sort_desc_rev_triggered(column))
+
+                self.addAction(sort_asc_rev)
+                self.addAction(sort_desc_rev)
 
             # set currently active sorting mode, if any:
             sorter = manager.get_sorter(columns[0])
-            try:
-                if sorter.ascending:
-                    if sorter.reverse:
-                        sort_asc_rev.setChecked(True)
-                    else:
-                        sort_asc.setChecked(True)
-                else:
-                    if sorter.reverse:
-                        sort_desc_rev.setChecked(True)
-                    else:
-                        sort_desc.setChecked(True)
-            except AttributeError:
-                sort_none.setChecked(True)
+            if sorter:
+                mapped_actions = {
+                    (True, False): sort_asc,
+                    (False, False): sort_desc,
+                    (True, True): sort_asc_rev,
+                    (False, True): sort_desc_rev}
+                action = mapped_actions[(sorter.ascending, sorter.reverse)]
+            else:
+                action = sort_none
+            action.setChecked(True)
 
     def add_header(self, columns):
         # Add menu header:
