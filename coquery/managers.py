@@ -405,9 +405,14 @@ class Manager(CoqObject):
         return df
 
     def remove_sorter(self, column):
-        self.sorters.remove(self.get_sorter(column))
-        for i, x in enumerate(self.sorters):
-            x.position = i
+        sorter = self.get_sorter(column)
+        try:
+            self.sorters.remove(sorter)
+            for i, x in enumerate(self.sorters):
+                x.position = i
+        except ValueError:
+            # current column doesn't have a sorter, so do nothing
+            pass
 
     def add_sorter(self, column, ascending=True, reverse=False):
         if self.get_sorter(column):
