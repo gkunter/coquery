@@ -71,6 +71,114 @@ class TestManager(TestMeta):
         df = self.manager.process(self.df, session=self.Session)
         np.testing.assert_array_equal(df.values, self.df.values)
 
+    def test_manager_arrange_str_asc(self):
+        self.manager.add_sorter(column="coq_word_label_3", ascending=True, reverse=False)
+        df = self.manager.arrange(self.df, session=self.Session)
+        self.assertListEqual(
+            list(df["coq_word_label_3"]),
+            list("aaaaabbbbb"))
+        self.assertListEqual(
+            list(df["coquery_invisible_corpus_id"].values),
+            list([10, 8, 6, 4, 2, 9, 7, 5, 3, 1]))
+
+    def test_manager_arrange_str_desc(self):
+        self.manager.add_sorter(column="coq_word_label_3", ascending=False, reverse=False)
+        df = self.manager.arrange(self.df, session=self.Session)
+        self.assertListEqual(
+            list(df["coq_word_label_3"]),
+            list("bbbbbaaaaa"))
+        self.assertListEqual(
+            list(df["coquery_invisible_corpus_id"].values),
+            list([9, 7, 5, 3, 1, 10, 8, 6, 4, 2]))
+
+    def test_manager_arrange_str_asc_rev(self):
+        df_in = self.df.copy()
+        df_in["string_var"] = [
+            "aa",
+            "ba",
+            "bb",
+            "ab",
+            "aa",
+            "ba",
+            "bb",
+            "ab",
+            "aa",
+            "ba"]
+        self.manager.add_sorter(column="string_var", ascending=True, reverse=True)
+        df_out = self.manager.arrange(df_in, session=self.Session)
+        self.assertListEqual(
+            list(df_out["string_var"]),
+            [
+                "aa",
+                "aa",
+                "aa",
+                "ba",
+                "ba",
+                "ba",
+                "ab",
+                "ab",
+                "bb",
+                "bb"])
+        self.assertListEqual(
+            list(df_out["coquery_invisible_corpus_id"].values),
+            list([10, 6, 2, 9, 5, 1, 7, 3, 8, 4]))
+
+    def test_manager_arrange_str_desc_rev(self):
+        df_in = self.df.copy()
+        df_in["string_var"] = [
+            "aa",
+            "ba",
+            "bb",
+            "ab",
+            "aa",
+            "ba",
+            "bb",
+            "ab",
+            "aa",
+            "ba"]
+        self.manager.add_sorter(column="string_var", ascending=False, reverse=True)
+        df_out = self.manager.arrange(df_in, session=self.Session)
+        self.assertListEqual(
+            list(df_out["string_var"]),
+            [
+                "bb",
+                "bb",
+                "ab",
+                "ab",
+                "ba",
+                "ba",
+                "ba",
+                "aa",
+                "aa",
+                "aa"])
+        self.assertListEqual(
+            list(df_out["coquery_invisible_corpus_id"].values),
+            list([8, 4, 7, 3, 9, 5, 1, 10, 6, 2]))
+
+    def test_manager_arrange_num_asc(self):
+        df_in = self.df.copy()
+        df_in["num_var"] = [10, 1, 9, 2, 8, 3, 7, 4, 6, 5]
+        self.manager.add_sorter(column="num_var", ascending=True, reverse=False)
+        df_out = self.manager.arrange(df_in, session=self.Session)
+        self.assertListEqual(
+            list(df_out["num_var"]),
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        self.assertListEqual(
+            list(df_out["coquery_invisible_corpus_id"].values),
+            list([9, 7, 5, 3, 1, 2, 4, 6, 8, 10]))
+
+    def test_manager_arrange_num_desc(self):
+        df_in = self.df.copy()
+        df_in["num_var"] = [10, 1, 9, 2, 8, 3, 7, 4, 6, 5]
+        self.manager.add_sorter(column="num_var", ascending=False, reverse=False)
+        df_out = self.manager.arrange(df_in, session=self.Session)
+        self.assertListEqual(
+            list(df_out["num_var"]),
+            [10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+        self.assertListEqual(
+            list(df_out["coquery_invisible_corpus_id"].values),
+            list([10, 8, 6, 4, 2, 1, 3, 5, 7, 9]))
+
     def test_manager_arrange_groups_1(self):
         group = Group("Test", ["coq_word_label_2"])
         self.manager.set_groups([group])
