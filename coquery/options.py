@@ -1154,9 +1154,11 @@ def process_options(use_file=True):
             settings = CoqSettings(
                         os.path.join(general.get_home_dir(), "coquery.ini"),
                         QtCore.QSettings.IniFormat)
-        except IOError:
+        except IOError as e:
+            warnings.warn(f"Could not restore settings: {str(e)}")
             settings = None
     else:
+        warnings.warn("Not using Qt, settings not restored")
         settings = None
 
     options = Options()
