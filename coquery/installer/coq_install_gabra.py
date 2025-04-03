@@ -21,7 +21,7 @@ from coquery.bibliography import Reference, PersonList, Person
 from coquery.defines import VIEW_MODE_TABLES
 
 
-def yn(s) -> str:
+def yn(s)       :
     """
     Return 'Y' if int(s) is True, or 'N' otherwise. Return an empty
     string if s is None.
@@ -268,7 +268,7 @@ class BuilderClass(BaseCorpusBuilder):
         self._lemma_id = None
 
     @staticmethod
-    def _parse_noun_spec(dct: dict) -> str:
+    def _parse_noun_spec(dct      )       :
         if not dct:
             return ""
         else:
@@ -277,7 +277,7 @@ class BuilderClass(BaseCorpusBuilder):
                    if dct.get(feature)]
             return "_".join([x for x in lst if x])
 
-    def _parse_lexemes_entry(self, entry) -> dict:
+    def _parse_lexemes_entry(self, entry)        :
         # Fix some spelling mistakes in the key names:
         for x, correct in [("achaic", "archaic"),
                            ("archaic ", "archaic"),
@@ -351,7 +351,7 @@ class BuilderClass(BaseCorpusBuilder):
              self.lemma_verbalnoun: verbal_noun}
         return d
 
-    def _parse_wordforms_entry(self, entry) -> dict:
+    def _parse_wordforms_entry(self, entry)        :
         # try to get source id at all costs:
         source_id = 0
         source_list = entry.get("sources")
