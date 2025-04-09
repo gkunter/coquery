@@ -2,7 +2,7 @@
 """
 visualizer.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -19,6 +19,7 @@ import logging
 
 import scipy.stats as st
 import pandas as pd
+import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -311,7 +312,7 @@ class Visualizer(QtCore.QObject):
                 # the time being, only a few functions are included by the
                 # designer, and all of them are in fact numerical, but this
                 # might change at some point.
-                return pd.np.float64
+                return np.float64
             try:
                 return df.dtypes[feature]
             except KeyError:
@@ -358,8 +359,8 @@ class Visualizer(QtCore.QObject):
 
     @staticmethod
     def count_parameters(data_x, data_y, data_z, df, session):
-        num_cols = df.select_dtypes(include=[pd.np.number]).columns
-        cat_cols = df.select_dtypes(exclude=[pd.np.number]).columns
+        num_cols = df.select_dtypes(include=[np.number]).columns
+        cat_cols = df.select_dtypes(exclude=[np.number]).columns
         categorical = [x for x in (data_x, data_y) if x in cat_cols]
         numeric = [x for x in (data_x, data_y) if x in num_cols]
         empty = [x for x in (data_x, data_y, data_z) if x is None]

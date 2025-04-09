@@ -3,7 +3,7 @@
 """
 coq_install_icle.py is part of Coquery.
 
-Copyright (c) 2016 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 import re
 import string
 import pandas as pd
+# import numpy as np
 
 from coquery.corpusbuilder import *
 from coquery.unicode import utf8
@@ -36,9 +37,9 @@ In [4]: lst = list(records)
 In [5]: df = pd.DataFrame(lst)
 In [6]: df = df.dropna(axis="index", how="all")
 In [7]: df = df.loc[df["country"].notna()]
-In [8]: df["monthseng"] = (df["monthseng"].replace("None", pd.np.nan)
+In [8]: df["monthseng"] = (df["monthseng"].replace("None", np.nan)
                                           .astype(float))
-In [9]: df["unieng"] = (df["unieng"].replace("None", pd.np.nan)
+In [9]: df["unieng"] = (df["unieng"].replace("None", np.nan)
                                     .astype(float))
 In [10]: df["filename"] = df["file"] + ".txt"
 In [11]: df.to_csv(

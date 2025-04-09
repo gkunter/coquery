@@ -3,7 +3,7 @@
 """
 coq_install_glowbe.py is part of Coquery.
 
-Copyright (c) 2016-2018 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,6 +15,7 @@ import zipfile
 import os.path
 import logging
 import pandas as pd
+import numpy as np
 
 try:
     from cStringIO import BytesIO
@@ -168,7 +169,7 @@ class BuilderClass(BaseCorpusBuilder):
                               self.word_pos)
                     dtypes = dict(zip(
                         target,
-                        (pd.np.int64, object, object, object)))
+                        (np.int64, object, object, object)))
                 elif base_name == "sources.zip":
                     table = self.source_table
                     target = (self.source_id,
@@ -178,7 +179,7 @@ class BuilderClass(BaseCorpusBuilder):
                               self.source_title)
                     dtypes = dict(zip(
                         target,
-                        (pd.np.int64, pd.np.int64, object, object, object)))
+                        (np.int64, np.int64, object, object, object)))
                 else:
                     table = self.corpus_table
                     target = (self.corpus_source_id,
@@ -186,7 +187,7 @@ class BuilderClass(BaseCorpusBuilder):
                               self.corpus_word_id)
                     dtypes = dict(zip(
                         target,
-                        (pd.np.int64, pd.np.int64, pd.np.int64)))
+                        (np.int64, np.int64, np.int64)))
 
                 # the file "db_us_b03.txt" contains an EOF character \x1a in
                 # the last line (row number 23302766), which breaks the
