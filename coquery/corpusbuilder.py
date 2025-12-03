@@ -2,7 +2,7 @@
 """
 corpusbuilder.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -21,9 +21,15 @@ import re
 import sys
 import fnmatch
 import inspect
-from lxml import etree as ET
 import sqlalchemy
 
+try:
+    from lxml import etree as ET
+except Exception as e:
+    # FIXME: lxml should be a required package so this exception
+    # is never raised
+    warnings.warn("Package lxml could not be imported correctly. This may be due to a version error.\nTry upgrading lxml and/or PYython to a different version.")
+    raise e
 
 from . import sqlwrap
 from . import options
