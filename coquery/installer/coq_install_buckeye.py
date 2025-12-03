@@ -277,10 +277,10 @@ class BuilderClass(BaseCorpusBuilder):
         self._token_id = 0
         self._speaker_id = None
 
-        for tup in (QUERY_ITEM_WORD, "corpus_word",
-                    QUERY_ITEM_LEMMA, "corpus_transcript",
-                    QUERY_ITEM_TRANSCRIPT, "corpus_lemmatranscript",
-                    QUERY_ITEM_POS, "corpus_pos"):
+        for tup in ((QUERY_ITEM_WORD, "corpus_word"),
+                    (QUERY_ITEM_LEMMA, "corpus_transcript"),
+                    (QUERY_ITEM_TRANSCRIPT, "corpus_lemmatranscript"),
+                    (QUERY_ITEM_POS, "corpus_pos")):
             self.map_query_item(*tup)
 
     @staticmethod
