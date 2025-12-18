@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'textgridExport.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.15.6
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_TextgridExport(object):
     def setupUi(self, TextgridExport):
@@ -197,13 +199,11 @@ class Ui_TextgridExport(object):
         self.edit_sound_path.setPlaceholderText(_translate("TextgridExport", "Input path name"))
         self.button_sound_path.setText(_translate("TextgridExport", "&Browse"))
         self.button_sound_path.setShortcut(_translate("TextgridExport", "Alt+B"))
-        self.label_4.setText(_translate("TextgridExport", "&Copy matching sound files to output path:"))
+        self.label_4.setText(_translate("TextgridExport", "&Copy audio data from this binary path:"))
         self.groupBox1.setTitle(_translate("TextgridExport", "Add audio context"))
         self.label_5.setText(_translate("TextgridExport", "&Before:"))
         self.spin_left_padding.setSuffix(_translate("TextgridExport", " seconds"))
         self.label_6.setText(_translate("TextgridExport", "&After:"))
         self.spin_right_padding.setSuffix(_translate("TextgridExport", " seconds"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("TextgridExport", "&Sound files"))
-
 from ..listselect import CoqListSelect
-
