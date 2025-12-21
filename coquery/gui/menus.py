@@ -2,7 +2,7 @@
 """
 menus.py is part of Coquery.
 
-Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -200,6 +200,11 @@ class CoqColumnMenu(QtWidgets.QMenu):
             self.addAction(sort_asc)
             self.addAction(sort_desc)
 
+            mapped_actions = {
+                (True, False): sort_asc,
+                (False, False): sort_desc
+            }
+
             dtype = parent.table_model.content[[column]].dtypes[0]
             if pd.api.types.is_string_dtype(dtype):
                 sort_asc_rev = group.addAction(
@@ -220,15 +225,13 @@ class CoqColumnMenu(QtWidgets.QMenu):
 
                 self.addAction(sort_asc_rev)
                 self.addAction(sort_desc_rev)
+                mapped_actions[(True, True)] = sort_asc_rev
+                mapped_actions[(False, True)] = sort_desc_rev
 
             # set currently active sorting mode, if any:
             sorter = manager.get_sorter(columns[0])
             if sorter:
-                mapped_actions = {
-                    (True, False): sort_asc,
-                    (False, False): sort_desc,
-                    (True, True): sort_asc_rev,
-                    (False, True): sort_desc_rev}
+
                 action = mapped_actions[(sorter.ascending, sorter.reverse)]
             else:
                 action = sort_none
