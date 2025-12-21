@@ -13,8 +13,14 @@ import os
 import glob
 
 import sqlalchemy
-import imp
 import logging
+try:
+    import imp
+    _use_importlib = False
+except ModuleNotFoundError:
+    import importlib.util
+    import importlib.machinery
+    _use_importlib = True
 
 from coquery.defines import SQL_MYSQL, SQL_SQLITE, DEFAULT_CONFIGURATION
 from coquery.general import CoqObject, get_home_dir
@@ -44,6 +50,8 @@ class Connection(CoqObject):
         return path
 
     def find_resources(self):
+        # FIXME: This method replicates the funcionality of
+        # get_available_resources() from the options module.
         self._resources = {}
         path = os.path.join(self.resource_path(), "*.py")
         for module_name in glob.glob(path):
@@ -51,8 +59,14 @@ class Connection(CoqObject):
             corpus_name = utf8(corpus_name)
 
             try:
-                find = imp.find_module(corpus_name, [self.resource_path()])
-                module = imp.load_module(corpus_name, *find)
+                if not _use_importlib:
+                    find = imp.find_module(corpus_name, [self.resource_path()])
+                    module = imp.load_module(corpus_name, *find)
+                else:
+                    spec = importlib.machinery.PathFinder.find_spec(
+                        corpus_name, [self.resource_path()])
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
             except Exception as e:
                 s = ("There is an error in corpus module '{}': {}\n"
                      "The corpus is not available for queries.").format(

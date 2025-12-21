@@ -2,7 +2,7 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -16,7 +16,13 @@ import warnings
 import codecs
 import ast
 import glob
-import imp
+try:
+    import imp
+    _use_importlib = False
+except ModuleNotFoundError:
+    import importlib.util
+    import importlib.machinery
+    _use_importlib = True
 import os
 import sys
 import logging
@@ -1242,6 +1248,9 @@ def get_available_resources(configuration):
         (module.Resource, module.Corpus, module_name)
     """
 
+    # FIXME: This method replicates the funcionality of
+    # Connection.find_resources().
+
     d = {}
     if configuration is None:
         return d
@@ -1258,8 +1267,14 @@ def get_available_resources(configuration):
         corpus_name = utf8(corpus_name)
 
         try:
-            find = imp.find_module(corpus_name, [corpora_path])
-            module = imp.load_module(corpus_name, *find)
+            if not _use_importlib:
+                find = imp.find_module(corpus_name, [corpora_path])
+                module = imp.load_module(corpus_name, *find)
+            else:
+                spec = importlib.machinery.PathFinder.find_spec(
+                    corpus_name, [corpora_path])
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
         except Exception as e:
             s = (f"There is an error in corpus module '{corpus_name}': {e}\n"
                  "The corpus is not available for queries.")
