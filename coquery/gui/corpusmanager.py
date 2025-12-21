@@ -2,7 +2,7 @@
 """
 corpusmanager.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -11,8 +11,14 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import fnmatch
 import os
-import imp
 import logging
+try:
+    import imp
+    _use_importlib = False
+except ModuleNotFoundError:
+    import importlib.util
+    import importlib.machinery
+    _use_importlib = True
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import pyqtSignal
@@ -554,7 +560,18 @@ class CorpusManager(QtWidgets.QDialog):
                         #continue
                     try:
                         # load the module:
-                        module = imp.load_source(basename, module_path)
+                        if not _use_importlib:
+                            module = imp.load_source(basename, module_path)
+                        else:
+                            spec = importlib.util.spec_from_file_location(
+                                basename, module_path)
+                            module = importlib.util.module_from_spec(spec)
+                            sys.modules[basename] = module
+                            try:
+                                spec.loader.exec_module(module)
+                            except Exception:
+                                sys.modules.pop(basename, None)
+                                raise
                     except (ImportError, SyntaxError):
                         msg = msg_corpus_broken.format(
                             name=basename,
