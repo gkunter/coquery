@@ -9,7 +9,13 @@ For details, see the file LICENSE that you should have received along
 with Coquery. If not, see <http://www.gnu.org/licenses/>.
 """
 
-import imp
+try:
+    import imp
+    _use_importlib = False
+except ModuleNotFoundError:
+    import importlib.util
+    import importlib.machinery
+    _use_importlib = True
 import logging
 import sys
 import os
@@ -1233,9 +1239,14 @@ def get_visualizer_module(name):
     # try to import the specified visualization module:
     visualizer_path = os.path.join(options.cfg.base_path, "visualizer")
     try:
-        find = imp.find_module(name, [visualizer_path])
-        module = imp.load_module(name, *find)
-        return module
+        if not _use_importlib:
+            find = imp.find_module(name, [visualizer_path])
+            module = imp.load_module(name, *find)
+        else:
+            spec = importlib.machinery.PathFinder.find_spec(
+                name, [visualizer_path])
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
     except Exception as e:
         msg = "{type} in line {line}: {code}".format(
             type=type(e).__name__,
@@ -1246,7 +1257,8 @@ def get_visualizer_module(name):
         QtWidgets.QMessageBox.critical(None, "Visualization error – Coquery",
                                        s)
         return None
-
+    else:
+        return module
 
 def find_visualizer_modules():
     """
