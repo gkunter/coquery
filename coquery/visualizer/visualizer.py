@@ -291,14 +291,12 @@ class Visualizer(QtCore.QObject):
                          fontname=values["figure_font"])
 
         for ax in grid.fig.axes:
-            for tick in (
-                    ax.xaxis.get_major_ticks() + ax.xaxis.get_minor_ticks()):
-                tick.label.set_fontsize(values["size_xticks"])
-                tick.label.set_fontname(values["figure_font"])
-            for tick in (
-                    ax.yaxis.get_major_ticks() + ax.yaxis.get_minor_ticks()):
-                tick.label.set_fontsize(values["size_yticks"])
-                tick.label.set_fontname(values["figure_font"])
+            ax.tick_params(axis="x", labelsize=values["size_xticks"])
+            for label in ax.get_xticklabels():
+                label.set_fontname(values["figure_font"])
+            ax.tick_params(axis="y", labelsize=values["size_yticks"])
+            for label in ax.get_yticklabels():
+                label.set_fontname(values["figure_font"])
 
         self.rotate_annotations(grid)
 
