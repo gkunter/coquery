@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -301,7 +301,7 @@ class Session(object):
         # Handle dtypes and deal with missing values
         for col in self.data_table.columns:
             S = self.data_table[col]
-            S = S.replace({None: pd.NA, np.NaN: pd.NA})
+            S = S.replace({None: pd.NA, np.nan: pd.NA})
             dtype = S.dropna().convert_dtypes().dtype
             if pd.api.types.is_integer_dtype(dtype):
                 S = pd.Series(S, dtype=pd.Int64Dtype())
