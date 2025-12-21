@@ -2,7 +2,7 @@
 """
 visualizationDesigner.py is part of Coquery.
 
-Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -999,12 +999,29 @@ class VisualizationDesigner(QtWidgets.QDialog):
             #raise e
         logging.info("VIS: start_plot() done")
 
+    # Monkey-patching faceting (required after updating to Seaborn 1.x)
+    # FIXME: Refactor so that monkey-patch isn't required anymore
+    import seaborn.axisgrid as sag
+
+    def safe_facet_axis(self, row_i, col_j, modify_state=True):
+        if self._col_wrap is not None:
+            ax = self.axes.flat[col_j]
+        else:
+            ax = self.axes[row_i, col_j]
+        # Avoid modifying global pyplot state
+        return ax
+
+    sag.FacetGrid.facet_axis = safe_facet_axis
+
     def run_plot(self, **kwargs):
         logging.info("VIS: run_plot()")
         try:
+            logging.info(f"VIS: Type of self.grid: {type(self.grid)}")
+
             self.grid.map_dataframe(self.vis.draw,
                                     colorizer=self.colorizer,
                                     **kwargs)
+
         except Exception as e:
             logging.error("VIS: run_plot(), exception {}".format(str(e)))
             raise e
