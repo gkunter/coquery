@@ -207,9 +207,14 @@ class Visualizer(QtCore.QObject):
                 title=title or legend_title,
                 frameon=True,
                 framealpha=0.7,
-                loc=loc, **kwargs).draggable()
+                loc=loc, **kwargs)
 
             legend = grid.fig.legends[-1]
+            # FIXME: Matplotlib 3.x doesn't have the draggable() method
+            # anymore. The following code should work, but isn't fully
+            # tested.
+            legend.set_draggable(state=True)
+            logging.warn("VIS: Draggable legends may be broken!")
             legend.get_title().set_fontsize(titlesize)
 
     def hide_legend(self, grid):
