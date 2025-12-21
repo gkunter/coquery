@@ -2,7 +2,7 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -16,6 +16,15 @@ import pandas as pd
 import datetime
 import re
 import warnings
+
+# Monkey-patching the append() API change
+def _wrapped_df_append(self, other, *args, **kwargs):
+	warnings.warn(
+            "DataFrame.append() was deprecated in Pandas 2.x. "
+            "Update code to use pd.concat().")
+	return pd.concat([self, other])
+
+pd.DataFrame.append = _wrapped_df_append
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import pyqtSignal
@@ -1723,10 +1732,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         old_list = options.cfg.filter_list
 
         try:
-            columns = (self.table_model.content.columns |
-                       self.hidden_model.content.columns)
-            dtypes = self.table_model.content.dtypes.append(
-                        self.hidden_model.content.dtypes)
+            columns = self.table_model.content.columns.union(
+                self.hidden_model.content.columns)
+            dtypes = pd.concat(
+                [self.table_model.content.dtypes,
+                 self.hidden_model.content.dtypes])
         except AttributeError:
             columns = []
             dtypes = []
