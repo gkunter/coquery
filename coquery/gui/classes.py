@@ -2,7 +2,7 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -754,7 +754,7 @@ class CoqDetailBox(QtWidgets.QWidget):
                 highlight = options.cfg.app.palette().color(
                     QtGui.QPalette.Highlight)
                 darker_highlight = QtGui.QColor(highlight)
-                darker_highlight.setAlpha(0.5)
+                darker_highlight.setAlphaF(0.5)
 
                 kwargs = {
                     "border": get_pal(QtGui.QPalette.Button),
