@@ -1804,3 +1804,70 @@ class CoqWidgetListView(QtWidgets.QListView):
         """
         super(CoqWidgetListView, self).setModel(model)
         self.selectionModel().selectionChanged.connect(self.changeSelect)
+
+
+class CoqFrequencyBarDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent=None, maximum=1):
+        super().__init__(parent)
+        self.maximum = maximum
+
+    def paint(self, painter, option, index):
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+
+        value = int(index.data(QtCore.Qt.DisplayRole))
+        text = options.text
+        options.text = ""
+
+        if options.widget:
+            style = options.widget.style()
+        else:
+            style = QtWidgets.QApplication.style()
+
+        style.drawControl(
+            QtWidgets.QStyle.CE_ItemViewItem,
+            options,
+            painter,
+            options.widget)
+
+        painter.save()
+
+        text_width = options.fontMetrics.horizontalAdvance(text)
+        left_margin = 4
+        right_margin = 6
+        text_padding = 8
+        top_bottom_margin = 2
+
+        content_rect = options.rect.adjusted(
+            left_margin,
+            top_bottom_margin,
+            -right_margin,
+            -top_bottom_margin)
+
+        max_bar_width = max(0,
+                            content_rect.width() - text_width - text_padding)
+        ratio = max(0.0, min(1.0, value / self.maximum))
+
+        if ratio > 0 and max_bar_width > 0:
+            bar_rect = QtCore.QRect(content_rect)
+            bar_rect.setWidth(int(max_bar_width * ratio))
+
+            if options.state & QtWidgets.QStyle.State_Selected:
+                color = options.palette.highlight().color().lighter(130)
+            else:
+                color = options.palette.highlight().color().lighter(160)
+            painter.fillRect(bar_rect, color)
+
+        style.drawItemText(
+            painter,
+            QtCore.QRect(content_rect),
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter,
+            options.palette,
+            True,
+            text,
+            (QtGui.QPalette.HighlightedText
+                if options.state & QtWidgets.QStyle.State_Selected
+                else QtGui.QPalette.Text)
+        )
+
+        painter.restore()
