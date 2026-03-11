@@ -2,7 +2,7 @@
 """
 corpus.py is part of Coquery.
 
-Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -49,7 +49,8 @@ class BaseResource(CoqObject):
     coquery_query_token = "Query item"
 
     special_table_list = ["coquery", "tag"]
-    render_token_style = "background: lightyellow"
+    #FIXME: render_token_style should be configurable
+    render_token_style = "background: lightyellow; color: black"
     audio_features = []
     image_features = []
     video_features = []
@@ -2691,8 +2692,7 @@ class CorpusClass(object):
         if len(opening):
             lst.extend(list(opening.apply(lambda x: self.parse_tags(x, True),
                                           axis="columns")))
-        token_style = "<span style='{};'>".format(
-            self.resource.render_token_style)
+        token_style = f"<span style='{self.resource.render_token_style};'>"
         if word:
             # highlight words that are in the results table:
             if word_id in self.id_list:
@@ -2717,8 +2717,7 @@ class CorpusClass(object):
     def parse_df(self, df, tags, token_id, token_width):
         df["COQ_FORMATTED"] = df["coq_word_label_1"].apply(lambda x: [x])
 
-        token_style = "<span style='{};'>".format(
-            self.resource.render_token_style)
+        token_style = f"<span style='{self.resource.render_token_style};'>"
 
         mask = df["coquery_invisible_corpus_id"] == token_id
         df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
@@ -2734,7 +2733,8 @@ class CorpusClass(object):
         df.loc[mask, "COQ_FORMATTED"] = df.loc[mask, "COQ_FORMATTED"].apply(
             lambda x: x + ["</span>"])
 
-        return [item for sublist in df["COQ_FORMATTED"] for item in sublist]
+        lst = [item for sublist in df["COQ_FORMATTED"] for item in sublist]
+        return lst
 
     def get_rendered_context(self, token_id, source_id, token_width,
                              context_width, widget):
