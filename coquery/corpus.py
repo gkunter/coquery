@@ -49,7 +49,7 @@ class BaseResource(CoqObject):
     coquery_query_token = "Query item"
 
     special_table_list = ["coquery", "tag"]
-    #FIXME: render_token_style should be configurable
+    # FIXME: render_token_style should be configurable
     render_token_style = "background: lightyellow; color: black"
     audio_features = []
     image_features = []
@@ -913,7 +913,7 @@ class SQLResource(BaseResource):
                          x.endswith("_table") and
                          not x.startswith("tag_")]:
             table = getattr(self, rc_table)
-            if type(table) != str:
+            if not isinstance(table, str):
                 continue
             S = "SELECT COUNT(*) FROM {}".format(table)
             df = pd.DataFrame(db_connection.execute(text(S)).fetchall())
