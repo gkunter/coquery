@@ -2,7 +2,7 @@
 """
 app.py is part of Coquery.
 
-Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -19,10 +19,10 @@ import warnings
 
 # Monkey-patching the append() API change
 def _wrapped_df_append(self, other, *args, **kwargs):
-	warnings.warn(
+    warnings.warn(
             "DataFrame.append() was deprecated in Pandas 2.x. "
             "Update code to use pd.concat().")
-	return pd.concat([self, other])
+    return pd.concat([self, other])
 
 pd.DataFrame.append = _wrapped_df_append
 
@@ -103,16 +103,16 @@ def get_icon(s, small_n_flat=True, size="24x24"):
                             "Icons8",
                             "PNG",
                             size,
-                            "{}.png".format(s))
+                            f"{s}.png")
     else:
         if not s.lower().endswith(".png"):
-            s = "{}.png".format(s)
+            s = f"{s}.png"
         path = os.path.join(options.cfg.base_path,
                             "icons",
                             "artwork",
                             s)
     icon.addFile(path)
-    assert os.path.exists(path), "Image not found: {}".format(path)
+    assert os.path.exists(path), f"Image not found: {path}"
     return icon
 
 
@@ -150,7 +150,7 @@ class keyFilter(QtCore.QObject):
     keyPressed = pyqtSignal()
 
     def __init__(self, k, *args, **kwargs):
-        super(keyFilter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if not hasattr(k, "__iter__"):
             k = {k}
         self.keys = k
@@ -183,7 +183,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """ Initialize the main window. This sets up any widget that needs
         special care, and also sets up some special attributes that relate
         to the GUI, including default appearances of the columns."""
-        QtWidgets.QMainWindow.__init__(self, parent)
+        super().__init__(parent)
         options.cfg.main_window = self
 
         self.file_content = None
@@ -257,7 +257,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # https://stackoverflow.com/questions/1551605#1552105
         if sys.platform == "win32":
             import ctypes
-            coq_id = 'Coquery.Coquery.{}'.format(__version__)
+            coq_id = f'Coquery.Coquery.{__version__}'
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
                 coq_id)
 
@@ -377,8 +377,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.set_columns_widget()
 
-        self.ui.status_message = QtWidgets.QLabel(
-            "{} {}".format(NAME, __version__))
+        self.ui.status_message = QtWidgets.QLabel(f"{NAME} {__version__}")
         self.ui.status_message.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
                                              QtWidgets.QSizePolicy.Ignored)
         self.ui.status_progress = QtWidgets.QProgressBar()
@@ -433,6 +432,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.column_width = {}
 
         self._resizing_column = False
+
+        # Apply custom stylesheet for checkboxes and radio buttons
+        app = QtWidgets.QApplication.instance()
+        app.setStyle(CoqProxyStyle(app.style()))
 
     def setup_icons(self):
         self.ui.action_help.setIcon(get_icon("Lifebuoy"))
@@ -728,7 +731,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         if (ref_corpus and
                 ref_corpus in options.cfg.current_connection.resources()):
-            s = "Change &reference corpus... ({})".format(ref_corpus)
+            s = f"Change &reference corpus... ({ref_corpus})"
         else:
             s = "Set &reference corpus..."
         self.ui.action_reference_corpus.setText(s)
@@ -813,8 +816,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             palette = QtWidgets.QApplication.instance().palette()
             fg = palette.color(QtGui.QPalette.HighlightedText).name()
             bg = palette.color(QtGui.QPalette.Highlight).name()
-            stylesheet = """color: {};
-                            background-color: {};""".format(fg, bg)
+            stylesheet = f"color: {fg}; background-color: {bg};"
         else:
             stylesheet = None
             # disable buttons if there is no results table:
@@ -846,8 +848,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
             return False
         else:
-            self.ui.edit_file_name.setStyleSheet("QLineEdit {{ background-color: {} }} ".format(
-                options.cfg.app.palette().color(QtGui.QPalette.Base).name()))
+            col = options.cfg.app.palette().color(QtGui.QPalette.Base).name()
+            self.ui.edit_file_name.setStyleSheet(f"QLineEdit {{ background-color: {col} }} ")
             return True
 
     def switch_to_file(self):
@@ -911,7 +913,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             s = "<font color='{}'>Match limit: {}</font>"
             str_list.insert(0, s.format(col, options.cfg.number_of_tokens))
 
-        str_list.append("Duration of last operation: {}".format(duration_str))
+        str_list.append(f"Duration of last operation: {duration_str}")
         self.showMessage(" ".join(str_list))
 
     def set_toolbox_appearance(self, row):
@@ -1209,8 +1211,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             if col.startswith("coq_userdata"):
                 max_user_column = max(max_user_column,
                                       int(col.rpartition("_")[-1]))
-        N = max_user_column + 1
-        label = "coq_userdata_{}".format(N)
+        label = f"coq_userdata_{max_user_column + 1}"
         val = [""] * len(self.Session.data_table)
         self.Session.data_table[label] = val
         self.update_columns()
@@ -2034,9 +2035,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             _, ext_res = get_by_hash(hashed)
             db_name = ext_res.db_name
 
-        uniqueviewer.UniqueViewer.show(
-            "{}_{}".format(table, feature),
-            db_name, uniques=uniques, parent=self)
+        uniqueviewer.UniqueViewer.show(f"{table}_{feature}",
+                                       db_name, uniques=uniques, parent=self)
 
     def get_column_submenu(self, selection=None, point=None, hidden=False):
         """
@@ -2123,13 +2123,13 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 selection = self.table_model.content.index[[row]]
         length = len(selection)
         if length > 1:
-            display_name = "{} rows selected".format(len(selection))
+            display_name = f"{len(selection)} rows selected"
         elif length == 1:
             display_name = "Row menu"
         else:
             display_name = "(no row selected)"
         action = QtWidgets.QWidgetAction(self)
-        label = QtWidgets.QLabel("<b>{}</b>".format(display_name), self)
+        label = QtWidgets.QLabel(f"<b>{display_name}</b>", self)
         label.setAlignment(QtCore.Qt.AlignCenter)
         action.setDefaultWidget(label)
         menu.addAction(action)
@@ -2469,7 +2469,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 lambda: self.finalize_query(to_file))
             self.query_thread.taskException.connect(
                 self.exception_during_query)
-            print("run_queries(to_file={}): start".format(to_file))
+            print(f"run_queries(to_file={to_file}): start")
             self.query_thread.start()
 
     def run_statistics(self):
@@ -2584,8 +2584,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             con.remove_resource(entry.name, flags)
 
             if flags:
-                logging.warning("Removed corpus {}.".format(entry.name))
-                self.showMessage("Removed corpus {}.".format(entry.name))
+                msg = f"Removed corpus {entry.name}."
+                logging.warning(msg)
+                self.showMessage(msg)
                 self.corpusListUpdated.emit()
 
             self.fill_combo_corpus()
@@ -2593,9 +2594,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def finalize_export(self):
         entry, file_name = self._export_data
-        S = "Exported corpus {} to {}.".format(entry, file_name)
-        logging.info(S)
-        self.showMessage(S)
+        msg = f"Exported corpus {entry} to {file_name}."
+        logging.info(msg)
+        self.showMessage(msg)
         self.export_dialog.hide()
         del self.export_dialog
 
@@ -2612,7 +2613,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 file_name, stage = tup
                 val = pb.value()
                 pb.setValue(val + 1)
-                pb.setFormat("{} {}...".format(stage, file_name))
+                pb.setFormat(f"{stage} {file_name}...")
 
         tup = options.cfg.current_connection.resources()[entry.name]
         resource_class, corpus_class, _ = tup
@@ -2624,8 +2625,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             license = "(unknown license)"
 
         caption = "Choose export file name"
-        path = os.path.join(options.cfg.export_file_path,
-                            "{}.coq".format(resource.name))
+        path = os.path.join(
+            options.cfg.export_file_path,
+            f"{resource.name}.coq")
 
         name = QtWidgets.QFileDialog.getSaveFileName(
             caption=caption,
@@ -3156,7 +3158,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def set_button_labels(self):
         def get_str(l):
-            return (" ({})".format(len(l)) if l else "")
+            return f" ({l})" if l else ""
 
         label_summary_functions = _translate(
             "MainWindow", "Summary &functions{}...", None)
@@ -3270,6 +3272,163 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 pass
 
         self.update_columns()
+
+
+class CoqProxyStyle(QtWidgets.QProxyStyle):
+    def blend_colors(self, c1, c2, amount):
+        return QtGui.QColor(
+            int(c1.red() * (1.0 - amount) + c2.red() * amount),
+            int(c1.green() * (1.0 - amount) + c2.green() * amount),
+            int(c1.blue() * (1.0 - amount) + c2.blue() * amount),
+        )
+
+    def get_colors(self, option):
+        pal = option.palette
+
+        base_color = pal.color(QtGui.QPalette.Base)
+        window_color = pal.color(QtGui.QPalette.Window)
+        text_color = pal.color(QtGui.QPalette.Text)
+
+        mid = pal.color(QtGui.QPalette.Mid)
+        highlight = pal.color(QtGui.QPalette.Highlight)
+        shadow = pal.color(QtGui.QPalette.Shadow)
+
+        enabled = option.state & QtWidgets.QStyle.State_Enabled
+        checked = option.state & QtWidgets.QStyle.State_On
+        partially = option.state & QtWidgets.QStyle.State_NoChange
+        pressed = option.state & QtWidgets.QStyle.State_Sunken
+        mouse_over = (option.state & QtWidgets.QStyle.State_MouseOver)
+
+        if enabled:
+            if checked or partially:
+                fill_color = self.blend_colors(
+                    highlight,
+                    base_color, 0.15)
+                border_color = self.blend_colors(
+                    highlight,
+                    text_color,
+                    0.20 if mouse_over else 0.10)
+            else:
+                fill_color = self.blend_colors(
+                    base_color,
+                    window_color, 0.25)
+                border_color = self.blend_colors(
+                    mid,
+                    text_color,
+                    0.35 if mouse_over else 0.20)
+        else:
+            fill_color = self.blend_colors(window_color, base_color, 0.50)
+            border_color = self.blend_colors(mid, shadow, 0.20)
+
+        if pressed:
+            fill_color = fill_color.darker(110)
+
+        # see https://en.wikipedia.org/wiki/Luma_(video) for details:
+        luma = (0.2126 * fill_color.redF() +
+                0.7152 * fill_color.greenF() +
+                0.0722 * fill_color.blueF())
+        contrast_color = (
+            QtGui.QColor("black") if luma > 0.5
+            else QtGui.QColor("white"))
+
+        return fill_color, contrast_color, border_color
+
+    def _draw_checkbox_indicator(self, option, painter, widget=None):
+        fill, contrast, border = self.get_colors(option)
+        rect = option.rect.adjusted(1, 1, -1, -1)
+
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        painter.setPen(QtGui.QPen(border, 1))
+        painter.setBrush(fill)
+
+        # draw outer box:
+        path = QtGui.QPainterPath()
+        path.addRoundedRect(QtCore.QRectF(rect), 3.0, 3.0)
+        painter.drawPath(path)
+
+        if option.state & QtWidgets.QStyle.State_On:
+            # draw checkmark if checked:
+            pen = QtGui.QPen(contrast, 2.0)
+            pen.setCapStyle(QtCore.Qt.RoundCap)
+            pen.setJoinStyle(QtCore.Qt.RoundJoin)
+            painter.setPen(pen)
+            p1 = QtCore.QPointF(rect.x() + rect.width() * 0.22,
+                                rect.y() + rect.height() * 0.55)
+            p2 = QtCore.QPointF(rect.x() + rect.width() * 0.43,
+                                rect.y() + rect.height() * 0.74)
+            p3 = QtCore.QPointF(rect.x() + rect.width() * 0.78,
+                                rect.y() + rect.height() * 0.30)
+            painter.drawLine(p1, p2)
+            painter.drawLine(p2, p3)
+
+        elif option.state & QtWidgets.QStyle.State_NoChange:
+            # draw horizontal bar if checkbox is partially checked:
+            bar_rect = QtCore.QRectF(
+                rect.x() + rect.width() * 0.22,
+                rect.y() + rect.height() * 0.44,
+                rect.width() * 0.56,
+                rect.height() * 0.12)
+            painter.fillRect(bar_rect, contrast)
+
+        if option.state & QtWidgets.QStyle.State_HasFocus:
+            # apply focus markings from current style:
+            focus = QtWidgets.QStyleOptionFocusRect()
+            focus.QStyleOption = option
+            focus.rect = rect.adjusted(-2, -2, 2, 2)
+            focus.state = option.state
+            focus.backgroundColor = fill
+            super().drawPrimitive(
+                QtWidgets.QStyle.PE_FrameFocusRect,
+                focus,
+                painter,
+                widget)
+
+        painter.restore()
+
+    def _draw_radiobutton_indicator(self, option, painter, widget=None):
+        fill, contrast, border = self.get_colors(option)
+        rect = option.rect.adjusted(1, 1, -1, -1)
+
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+
+        outer = QtCore.QRectF(rect)
+
+        painter.setPen(QtGui.QPen(border, 1))
+        painter.setBrush(fill)
+        painter.drawEllipse(outer)
+
+        if option.state & QtWidgets.QStyle.State_On:
+            # draw indicator if selected:
+            inset = min(rect.width(), rect.height()) * 0.28
+            inner = outer.adjusted(inset, inset, -inset, -inset)
+            painter.setPen(QtCore.Qt.NoPen)
+            painter.setBrush(contrast)
+            painter.drawEllipse(inner)
+
+        if option.state & QtWidgets.QStyle.State_HasFocus:
+            # apply focus markings from current style:
+            focus = QtWidgets.QStyleOptionFocusRect()
+            focus.QStyleOption = option
+            focus.rect = rect.adjusted(-3, -3, 3, 3)
+            focus.state = option.state
+            focus.backgroundColor = fill
+            super().drawPrimitive(
+                QtWidgets.QStyle.PE_FrameFocusRect,
+                focus,
+                painter,
+                widget)
+
+        painter.restore()
+
+    def drawPrimitive(self, element, option, painter, widget=None):
+        if element == QtWidgets.QStyle.PE_IndicatorCheckBox:
+            self._draw_checkbox_indicator(option, painter, widget)
+        elif element == QtWidgets.QStyle.PE_IndicatorRadioButton:
+            self._draw_radiobutton_indicator(option, painter, widget)
+        else:
+            super().drawPrimitive(element, option, painter, widget)
 
 
 def _translate(x, text, y):
