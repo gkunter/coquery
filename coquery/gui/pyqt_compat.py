@@ -62,7 +62,7 @@ def close_toplevel_widgets():
             del widget
 
 
-STYLE_WARN = 'QLineEdit {background-color: lightyellow; }'
+STYLE_WARN = 'QLineEdit {background-color: lightyellow; color: black;}'
 
 COLOR_NAMES = {QtGui.QColor(name).name().lower(): name for name
                in QtGui.QColor.colorNames()}
