@@ -3,7 +3,7 @@
 """
 coq_install_buckeye.py is part of Coquery.
 
-Copyright (c) 2016–2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016–2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -67,6 +67,7 @@ class BuilderClass(BaseCorpusBuilder):
     segment_label = "Segment"
     segment_starttime = "SegStart"
     segment_endtime = "SegEnd"
+    segment_duration = "SegDuration"
 
     speaker_table = "Speakers"
     speaker_id = "SpeakerId"
@@ -227,6 +228,7 @@ class BuilderClass(BaseCorpusBuilder):
              Column(self.segment_origin_id, "TINYINT(3) UNSIGNED NOT NULL"),
              Column(self.segment_starttime, "REAL NOT NULL"),
              Column(self.segment_endtime, "REAL NOT NULL"),
+             Column(self.segment_duration, "REAL NOT NULL"),
              Column(self.segment_label, "VARCHAR(14) NOT NULL")])
 
         self.create_table_description(
@@ -266,6 +268,7 @@ class BuilderClass(BaseCorpusBuilder):
         self.add_time_feature(self.corpus_starttime)
         self.add_time_feature(self.corpus_endtime)
         self.add_time_feature(self.corpus_duration)
+        self.add_time_feature(self.segment_duration)
         for x in ["corpus_word", "corpus_pos", "corpus_transcript",
                   "corpus_lemmatranscript", "corpus_id", "corpus_starttime",
                   "corpus_endtime", "corpus_duration"]:
@@ -590,6 +593,7 @@ class BuilderClass(BaseCorpusBuilder):
                         dct = {self.segment_starttime: last_t,
                                self.segment_origin_id: self._file_id + 1,
                                self.segment_endtime: t,
+                               self.segment_duration: t - last_t,
                                self.segment_label: segment}
                         self._segment_id = (self.table(self.segment_table)
                                                 .add(dct))
