@@ -1187,6 +1187,8 @@ class LogTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ForegroundRole:
             if record.levelno in [logging.ERROR, logging.CRITICAL]:
                 return QtGui.QBrush(QtCore.Qt.white)
+            elif record.levelno == logging.WARNING:
+                return QtGui.QBrush(QtCore.Qt.black)
             else:
                 return None
         elif role == QtCore.Qt.BackgroundRole:
