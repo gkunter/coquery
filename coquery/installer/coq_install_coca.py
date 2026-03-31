@@ -3,7 +3,7 @@
 """
 coq_install_coca.py is part of Coquery.
 
-Copyright (c) 2016, 2017 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -12,13 +12,48 @@ with Coquery. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import unicode_literals
 import logging
+import zipfile
+import tarfile
 import os
+import io
+import pandas as pd
+import csv
 
 from coquery.corpusbuilder import BaseCorpusBuilder
 from coquery.tables import Identifier, Column, Link
 from coquery import options
 from coquery.defines import SQL_MYSQL
 
+
+_FILENAME_SOURCES: str = "coca-sources.zip"
+_FILENAME_SUBGENRES: str = "coca-subgenres.txt"
+_FILENAME_LEXICON: str = "coca-lexicon.zip"
+_FILENAME_DB: str = "coca-db.tar"
+_CHUNKSIZE: int = 100000
+# For some weird reason, the COCA engineers decided to introduce some kind of
+# dummy entry into the lexicon with the word ID 14000000. This dummy entry has
+# no real orthographic representation (lexicon.txt has "@zq" as value for this
+# entry). The really crazy decision is that they use this dummy entry in the
+# DB dumps for the BLOG section with non-unique token IDs: the token ID value
+# 1 occurs more than 2400 times in db_blog_01.txt, which of course introduces
+# database inconsistencies if the token ID is set to be unique.
+#
+# This is really a puzzling decision, and I couldn't find any documentation for
+# this dummy entry. It's also weird that they chose a relatively low number for
+# this ID: the highest genuine word ID is 13602391, which leaves something like
+# 400,000 IDs until the dummy entry ID is reached. That's not too much given
+# the poor quality of the blog and web-based tokenization process.
+#
+# Be it as it may, that leaves me with two options:
+# (1) Keep the token ID column from the DB files, but create a new column that
+#     will serve as the truly unique token ID that the SQL database requires
+# (2) Remove all occurrences of this dummy entry to keep the SQL database
+#     consistent
+
+# Since there is no obvious advantage of retaining the dummy item, I opt for
+# option (2) since option (1) will inflate the size of the database for no
+# good reason.
+_COCA_MAGIC_WORD_ID: int = 14000000
 
 class BuilderClass(BaseCorpusBuilder):
     file_filter = "db_*_*.txt"
@@ -48,22 +83,7 @@ class BuilderClass(BaseCorpusBuilder):
     subgenre_label = "Subgenre"
     subgenre_columns = [
         Identifier(subgenre_id, "SMALLINT UNSIGNED"),
-        Column(subgenre_label,
-               "ENUM("
-               "'ACAD:Education','ACAD:Geog/SocSci','ACAD:History',"
-               "'ACAD:Humanities','ACAD:Law/PolSci','ACAD:Medicine',"
-               "'ACAD:Misc','ACAD:Phil/Rel','ACAD:Sci/Tech',"
-               "'FIC:Gen (Book)','FIC:Gen (Jrnl)','FIC:Juvenile',"
-               "'FIC:Movies','FIC:SciFi/Fant',"
-               "'MAG:Afric-Amer','MAG:Children','MAG:Entertain',"
-               "'MAG:Financial','MAG:Home/Health','MAG:News/Opin',"
-               "'MAG:Religion','MAG:Sci/Tech','MAG:Soc/Arts','MAG:Sports',"
-               "'MAG:Women/Men',"
-               "'NEWS:Editorial','NEWS:Life','NEWS:Misc','NEWS:Money',"
-               "'NEWS:News_Intl','NEWS:News_Local','NEWS:News_Natl',"
-               "'NEWS:Sports',"
-               "'SPOK:ABC','SPOK:CBS','SPOK:CNN','SPOK:FOX','SPOK:Indep',"
-               "'SPOK:MSNBC','SPOK:NBC','SPOK:NPR','SPOK:PBS') NOT NULL")]
+        Column(subgenre_label, "VARCHAR(20) NOT NULL")]
 
     source_table = "Sources"
     source_id = "SourceId"
@@ -75,7 +95,7 @@ class BuilderClass(BaseCorpusBuilder):
     source_columns = [
         Identifier(source_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
         Column(source_year,  "SMALLINT(4) NOT NULL"),
-        Column(source_genre, "CHAR(4) NOT NULL"),
+        Column(source_genre, "CHAR(6) NOT NULL"),
         Link(source_subgenre_id, subgenre_table),
         Column(source_label, "VARCHAR(177)"),
         Column(source_title, "VARCHAR(499)")]
@@ -91,48 +111,11 @@ class BuilderClass(BaseCorpusBuilder):
 
     auto_create = ["word", "file", "subgenre", "source", "corpus"]
 
-    special_files = ["coca-sources.txt", "lexicon.txt", "Sub-genre codes.txt"]
-
-    expected_files = special_files + [
-        "db_acad_1990.txt", "db_acad_1991.txt", "db_acad_1992.txt",
-        "db_acad_1993.txt", "db_acad_1994.txt", "db_acad_1995.txt",
-        "db_acad_1996.txt", "db_acad_1997.txt", "db_acad_1998.txt",
-        "db_acad_1999.txt", "db_acad_2000.txt", "db_acad_2001.txt",
-        "db_acad_2002.txt", "db_acad_2003.txt", "db_acad_2004.txt",
-        "db_acad_2005.txt", "db_acad_2006.txt", "db_acad_2007.txt",
-        "db_acad_2008.txt", "db_acad_2009.txt", "db_acad_2010.txt",
-        "db_acad_2011.txt", "db_acad_2012.txt", "db_fic_1990.txt",
-        "db_fic_1991.txt", "db_fic_1992.txt", "db_fic_1993.txt",
-        "db_fic_1994.txt", "db_fic_1995.txt", "db_fic_1996.txt",
-        "db_fic_1997.txt", "db_fic_1998.txt", "db_fic_1999.txt",
-        "db_fic_2000.txt", "db_fic_2001.txt", "db_fic_2002.txt",
-        "db_fic_2003.txt", "db_fic_2004.txt", "db_fic_2005.txt",
-        "db_fic_2006.txt", "db_fic_2007.txt", "db_fic_2008.txt",
-        "db_fic_2009.txt", "db_fic_2010.txt", "db_fic_2011.txt",
-        "db_fic_2012.txt", "db_mag_1990.txt", "db_mag_1991.txt",
-        "db_mag_1992.txt", "db_mag_1993.txt", "db_mag_1994.txt",
-        "db_mag_1995.txt", "db_mag_1996.txt", "db_mag_1997.txt",
-        "db_mag_1998.txt", "db_mag_1999.txt", "db_mag_2000.txt",
-        "db_mag_2001.txt", "db_mag_2002.txt", "db_mag_2003.txt",
-        "db_mag_2004.txt", "db_mag_2005.txt", "db_mag_2006.txt",
-        "db_mag_2007.txt", "db_mag_2008.txt", "db_mag_2009.txt",
-        "db_mag_2010.txt", "db_mag_2011.txt", "db_mag_2012.txt",
-        "db_news_1990.txt", "db_news_1991.txt", "db_news_1992.txt",
-        "db_news_1993.txt", "db_news_1994.txt", "db_news_1995.txt",
-        "db_news_1996.txt", "db_news_1997.txt", "db_news_1998.txt",
-        "db_news_1999.txt", "db_news_2000.txt", "db_news_2001.txt",
-        "db_news_2002.txt", "db_news_2003.txt", "db_news_2004.txt",
-        "db_news_2005.txt", "db_news_2006.txt", "db_news_2007.txt",
-        "db_news_2008.txt", "db_news_2009.txt", "db_news_2010.txt",
-        "db_news_2011.txt", "db_news_2012.txt", "db_spok_1990.txt",
-        "db_spok_1991.txt", "db_spok_1992.txt", "db_spok_1993.txt",
-        "db_spok_1994.txt", "db_spok_1995.txt", "db_spok_1996.txt",
-        "db_spok_1997.txt", "db_spok_1998.txt", "db_spok_1999.txt",
-        "db_spok_2000.txt", "db_spok_2001.txt", "db_spok_2002.txt",
-        "db_spok_2003.txt", "db_spok_2004.txt", "db_spok_2005.txt",
-        "db_spok_2006.txt", "db_spok_2007.txt", "db_spok_2008.txt",
-        "db_spok_2009.txt", "db_spok_2010.txt", "db_spok_2011.txt",
-        "db_spok_2012.txt"]
+    expected_files = [
+        _FILENAME_SOURCES, _FILENAME_SUBGENRES,
+        _FILENAME_LEXICON,
+        _FILENAME_DB,
+        ]
 
     def __init__(self, gui=False, *args):
         # all corpus builders have to call the inherited __init__ function:
@@ -162,90 +145,245 @@ class BuilderClass(BaseCorpusBuilder):
     @staticmethod
     def get_description():
         return [
-            "The Corpus of Contemporary American English (COCA) is the "
-            "largest freely-available corpus of English, and the only large "
-            "and balanced corpus of American English. The corpus was created "
-            "by Mark Davies of Brigham Young University, and it is used by "
-            "tens of thousands of users every month (linguists, teachers, "
-            "translators, and other researchers).",
-            "The corpus contains more than 450 million words of text and is "
-            "equally divided among spoken, fiction, popular magazines, "
-            "newspapers, and academic texts. It includes 20 million words "
-            "each year from 1990-2012. Because of its design, it is perhaps "
-            "the only corpus of English that is suitable for looking at "
-            "current, ongoing changes in the language."]
+            "From the website:",
+            "\"The Corpus of Contemporary American English (COCA) was created "
+            "by Mark Davies, and it is the only large and 'balanced' corpus "
+            "of American English. COCA is probably the most widely-used "
+            "corpus of English, and it is related to other corpora from "
+            "English-Corpora.org, which offer unparalleled insight into "
+            "variation in English.",
+            "The corpus contains more than one billion words of text (25+ "
+            "million words each year 1990-2019) from eight genres: spoken, "
+            "fiction, popular magazines, newspapers, academic texts, TV and "
+            "movies subtitles, blogs, and other web pages.\""]
 
     @staticmethod
     def get_references():
         return ["Davies, Mark. (2008-) "
-                "<i>The Corpus of Contemporary American English: "
-                "450 million words, 1990-present</i>. "
-                "Available online at http://corpus.byu.edu/coca/"]
+                "<i>The Corpus of Contemporary American English (COCA)</i>. "
+                "Available online at https://www.english-corpora.org/coca/"]
 
     @staticmethod
     def get_url():
-        return "http://corpus.byu.edu/coca/"
+        return "https://www.english-corpora.org"
 
     @staticmethod
     def get_license():
         return "COCA is available under the terms of a commercial license."
 
+    @classmethod
+    def get_installation_note(cls):
+        return (
+            "<p>The installer expects the following files in the selected "
+            "directory:</p><ul>"
+            f"<li>{_FILENAME_DB}</li>"
+            f"<li>{_FILENAME_LEXICON}</li>"
+            f"<li>{_FILENAME_SOURCES}</li>"
+            f"<li>{_FILENAME_SUBGENRES}</li>"
+            "</ul>")
+
+
     def build_load_files(self):
         file_list = self.get_file_list(self.arguments.path, self.file_filter)
-        files = sorted(file_list)
 
-        self._widget.progressSet.emit(len(files), "")
+        _process_mappings = {
+            _FILENAME_SOURCES:      self._process_sources,
+            _FILENAME_SUBGENRES:    self._process_subgenres,
+            _FILENAME_DB:           self._process_db,
+            _FILENAME_LEXICON:      self._process_lexicon}
 
-        for count, file_name in enumerate(files):
+        for count, file_name in enumerate(file_list):
+            if self.interrupted:
+                return
+
             base_name = os.path.basename(file_name)
+            _process_mappings[base_name](file_name)
 
-            s = "Reading '{}'".format(base_name)
-            self._widget.labelSet.emit("{} (file %v out of %m)".format(s))
-            logging.info(s)
 
-            # The dictionary 'kwargs' stores the arguments that are needed to
-            # correctly load the specified file into an SQL table using the
-            # `load_file()` method of the current database object.
+    def _process_sources(self, file_name: str) -> None:
+        base_name: str = os.path.basename(file_name)
 
-            kwargs = {"sep": "\t", "quoting": 3, "encoding": "cp850",
-                      "index": None, "header": None,
-                      "file_name": file_name}
+        msg: str = f"Reading sources from {base_name}"
+        self._widget.labelSet.emit(msg)
+        logging.info(msg)
 
-            # modify arguments depending on the current file:
-            if base_name == "coca-sources.txt":
-                kwargs.update(dict(
-                    names=(self.source_id, self.source_year,
-                           self.source_genre, self.source_subgenre_id,
-                           self.source_label, self.source_title),
-                    table=self.source_table,
-                    na_values="",
-                    fillna=0,
-                    skiprows=2))
+        # The dictionary 'kwargs' stores the arguments that are needed to
+        # correctly load the specified file into an SQL table using the
+        # `load_file()` method of the current database object.
 
-            elif base_name == "Sub-genre codes.txt":
-                kwargs.update(dict(
-                    names=(self.subgenre_id, self.subgenre_label),
-                    table=self.subgenre_table,
-                    skiprows=0))
+        kwargs = {
+            "sep": "\t",
+            "quoting": 3,
+            "encoding": "iso8859_15",
+            "header": None,
+            "na_values": "",
+            "names": (self.source_id, self.source_year, self.source_genre,
+                      self.source_subgenre_id, self.source_label,
+                      self.source_title)}
 
-            elif base_name == "lexicon.txt":
-                kwargs.update(dict(
-                    names=(self.word_id, self.word_label, self.word_lemma,
-                           self.word_pos),
-                    table=self.word_table,
-                    skiprows=2, fillna="", error_bad_lines=False,
-                    na_filter=False, drop_duplicate=self.word_id))
+        with zipfile.ZipFile(file_name) as zip_file:
+            for source_filename in zip_file.namelist():
+                if self.interrupted:
+                    return
 
-            else:
-                kwargs.update(dict(
-                    names=(self.corpus_source_id, self.corpus_id,
-                           self.corpus_word_id),
-                    table=self.corpus_table))
+                with zip_file.open(source_filename) as archived_file:
+                    df = pd.read_csv(archived_file, **kwargs)
+                    n_lines = self.DB.load_dataframe(
+                        df,
+                        table_name=self.source_table,
+                        index_label=False)
 
-            n_lines = self.DB.load_file(**kwargs)
+    def _process_subgenres(self, file_name: str) -> None:
+        base_name: str = os.path.basename(file_name)
 
-            if kwargs["table"] == self.corpus_table:
-                self._corpus_id += n_lines
-                self.store_filename(base_name)
+        msg: str = f"Reading subgenres from {base_name}"
+        self._widget.labelSet.emit(msg)
+        logging.info(msg)
 
-            self._widget.progressUpdate.emit(count + 1)
+        kwargs = {
+            "sep": "\t",
+            "quoting": 3,
+            "encoding": "utf-8",
+            "header": None,
+            "na_values": "",
+            "names": (self.subgenre_id, self.subgenre_label)}
+
+        df = pd.read_csv(file_name, **kwargs)
+        n_lines = self.DB.load_dataframe(
+            df,
+            table_name=self.subgenre_table,
+            index_label=False)
+
+    def _process_lexicon(self, file_name: str) -> None:
+        base_name: str = os.path.basename(file_name)
+
+        msg: str = f"Reading lexicon from {base_name}"
+        self._widget.labelSet.emit(msg)
+        logging.info(msg)
+
+        # The dictionary 'kwargs' stores the arguments that are needed to
+        # correctly load the specified file into an SQL table using the
+        # `load_file()` method of the current database object.
+
+        column_names = (self.word_id, self.word_label, self.word_lemma,
+                        self.word_pos)
+        dtypes = ("Int64", "str", "str", "str")
+
+        kwargs = {
+            "sep": "\t",
+            "quoting": csv.QUOTE_NONE,
+            "encoding": "iso8859_15",
+            "header": None,
+            "na_values": "",
+            "names": column_names,
+            "dtype": dict(zip(column_names, dtypes)),
+            "chunksize": _CHUNKSIZE
+            }
+
+        with zipfile.ZipFile(file_name) as zip_file:
+            for source_filename in zip_file.namelist():
+                if self.interrupted:
+                    return
+
+                msg: str = f"Determining number of entries in {source_filename}"
+                self._widget.progressSet.emit(0, msg)
+
+
+                with zip_file.open(source_filename) as archived_file:
+                    n_lines = sum(1 for _ in archived_file)
+                    n_chunks = 1 + n_lines // _CHUNKSIZE
+                    print(f"Number of lines: {n_lines}")
+                    self._widget.progressSet.emit(
+                        n_chunks,
+                        "Inserting lexicon chunks... (%v of %m)")
+
+                with zip_file.open(source_filename) as archived_file:
+                    reader = pd.read_csv(archived_file, **kwargs)
+
+                    for i, chunk in enumerate(reader):
+                        if self.interrupted:
+                            return
+                        self._widget.progressUpdate.emit(i)
+                        chunk = chunk[~chunk.duplicated(self.word_id)]
+                        self.DB.load_dataframe(
+                            chunk.fillna(""),
+                            table_name=self.word_table,
+                            index_label=False,
+                        )
+
+    def _process_db(self, file_name: str) -> None:
+        base_name: str = os.path.basename(file_name)
+        column_names=(self.corpus_source_id,
+                      self.corpus_id,
+                      self.corpus_word_id)
+        dtypes = ("Int64", "Int64", "Int64")
+        kwargs = {
+                "sep": "\t",
+                "quoting": csv.QUOTE_NONE,
+                "encoding": "iso8859_15",
+                "header": None,
+                "na_values": "",
+                "names": column_names,
+                "dtype": dict(zip(column_names, dtypes)),
+                "chunksize": _CHUNKSIZE
+                }
+
+
+        n_files: int = 0
+        files_processed: int = 0
+
+        msg: str = f"Determining number of files in {base_name}"
+        self._widget.progressSet.emit(0, msg)
+        with tarfile.open(file_name, mode="r|*") as tar_file:
+            for member in tar_file:
+                src = (tar_file
+                        .extractfile(member)
+                        .read())
+                zip_buffer = io.BytesIO(src)
+
+                with zipfile.ZipFile(zip_buffer) as zip_file:
+                    n_files += len(zip_file.namelist())
+
+        msg: str = f"Extracting archives from {base_name}"
+        self._widget.progressSet.emit(n_files, msg)
+        logging.info(msg)
+
+        with tarfile.open(file_name, mode="r|*") as tar_file:
+            for member in tar_file:
+                if self.interrupted:
+                    return
+
+                src = (tar_file
+                        .extractfile(member)
+                        .read())
+                zip_buffer = io.BytesIO(src)
+
+                with zipfile.ZipFile(zip_buffer) as zip_file:
+                    for zip_name in zip_file.namelist():
+                        if self.interrupted:
+                            return
+                        files_processed += 1
+                        logging.info(f"Inserting from {zip_name}")
+                        with zip_file.open(zip_name) as input_file:
+                            reader = pd.read_csv(input_file,
+                                                    **kwargs)
+                            for i, chunk in enumerate(reader):
+                                if self.interrupted:
+                                    return
+
+                                msg = f"Inserting chunk {i} from {zip_name}"
+                                self._widget.labelSet.emit(
+                                    f"{msg} (file %v of %m)")
+                                self._widget.progressUpdate.emit(
+                                    files_processed)
+
+                                chunk = chunk[
+                                    chunk[
+                                        self.word_id] != _COCA_MAGIC_WORD_ID]
+                                chunk = chunk.fillna("")
+                                self.DB.load_dataframe(
+                                    chunk,
+                                    table_name=self.corpus_table,
+                                    index_label=False)
+
+                            self.commit_data()
