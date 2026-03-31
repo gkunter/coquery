@@ -2,7 +2,7 @@
 """
 csvoptions.py is part of Coquery.
 
-Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -15,6 +15,7 @@ import re
 import pandas as pd
 import numpy as np
 from PyQt5 import QtWidgets, QtGui, QtCore
+import logging
 
 from coquery import options
 from coquery.options import CSVOptions
@@ -265,8 +266,12 @@ class CSVOptionDialog(QtWidgets.QDialog):
                 "sep": utf8(self.separator),
                 "quoting": 3 if not quote else 0,
                 "quotechar": quote if quote else "#",
-                "on_bad_lines": "warn",
                 "encoding": encoding}
+
+            if pd.__version__ < "2.0.0":
+                kwargs["error_bad_lines"] = "warn"
+            else:
+                kwargs["on_bad_lines"] = "warn"
 
             try:
                 df = pd.read_table(file_name, nrows=nrows, **kwargs)

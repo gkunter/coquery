@@ -2,7 +2,7 @@
 """
 options.py is part of Coquery.
 
-Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -874,8 +874,13 @@ class CSVOptions(object):
             "sep": self.sep,
             "skiprows": self.skip_lines,
             "quotechar": self.quote_char,
-            "low_memory": False,
-            "on_bad_lines": "warn"}
+            "low_memory": False
+        }
+
+        if pd.__version__ < "2.0.0":
+            kwargs["error_bad_lines"] = "warn"
+        else:
+            kwargs["on_bad_lines"] = "warn"
 
         try:
             df = pd.read_csv(path, **kwargs)

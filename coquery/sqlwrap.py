@@ -2,7 +2,7 @@
 """
 sqlwrap.py is part of Coquery.
 
-Copyright (c) 2016-2024 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -359,10 +359,14 @@ class SqlDB(object):
         """
         capt = capturer.Capturer(stderr=True)
         with capt:
-            if "error_bad_lines" in kwargs:
-                kwargs.pop("error_bad_lines")
+            if pd.__version__ < "2.0.0":
+                kwargs["error_bad_lines"] = "warn"
+                if "on_bad_lines" in kwargs:
+                    kwargs.pop("error_bad_lines")
+            else:
                 kwargs["on_bad_lines"] = "warn"
-
+                if "error_bad_lines" in kwargs:
+                    kwargs.pop("error_bad_lines")
             df = pd.read_csv(file_name, engine="c", **kwargs)
         for x in capt:
             logging.warning("File {} – {}".format(file_name, x))
