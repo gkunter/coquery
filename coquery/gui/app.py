@@ -30,7 +30,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import pyqtSignal
 
 from coquery import managers
-from coquery import NAME, __version__
+from coquery import NAME, __version__, APP_NAME
 from coquery.general import memory_dump
 from coquery import options
 from coquery.options import CSVOptions
@@ -377,7 +377,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         self.set_columns_widget()
 
-        self.ui.status_message = QtWidgets.QLabel(f"{NAME} {__version__}")
+        self.ui.status_message = QtWidgets.QLabel()
         self.ui.status_message.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
                                              QtWidgets.QSizePolicy.Ignored)
         self.ui.status_progress = QtWidgets.QProgressBar()
@@ -391,8 +391,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self.ui.multi_query_progress.setValue)
         self.updateMultiProgress.connect(
             lambda n: self.ui.status_progress.setValue(0))
-        self.updateStatusMessage.connect(
-            lambda s: self.ui.status_message.setText(s))
+        self.updateStatusMessage.connect(self.showMessage)
 
         statusbar = self.statusBar()
         pb_height = QtWidgets.QProgressBar().sizeHint().height() + 2
@@ -403,6 +402,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         statusbar.addWidget(self.ui.status_message, 1)
         statusbar.addWidget(self.ui.multi_query_progress, 2)
         statusbar.addWidget(self.ui.status_progress, 3)
+        self.showMessage(APP_NAME)
 
         label = _translate("MainWindow", "Connection: ", None)
         frame = QtWidgets.QFrame()
@@ -1905,8 +1905,11 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.showMessage(f"Done writing {self.textgrid_writer.n} text grids "
                          f"to {self.textgrid_writer.output_path}.")
 
-    def showMessage(self, S):
-        self.ui.status_message.setText(S)
+    def showMessage(self, S, highlight=False):
+        msg = f"<b>{S}</b>" if highlight else S
+        if self.ui.status_message.text() == APP_NAME:
+            msg = f"{self.ui.status_message.text()} {msg}"
+        self.ui.status_message.setText(msg)
 
     def showConnectionStatus(self, S):
         self.ui.status_server.setText(S)
@@ -2223,11 +2226,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         """
         for column in selection:
             self.hidden_features.add(column)
-        if AUTO_VISIBILITY in options.settings.value(
-                "settings_auto_apply", AUTO_APPLY_DEFAULT):
-            self.update_table_models()
-            self.update_columns()
-        else:
+        try:
+            if AUTO_VISIBILITY in options.settings.value(
+                    "settings_auto_apply", AUTO_APPLY_DEFAULT):
+                self.update_table_models()
+                self.update_columns()
+            else:
+                self.enable_apply_button()
+        except TypeError as e:
+            logging.warning(f"Can't find settings for auto-apply ({str(e)})")
             self.enable_apply_button()
 
     def show_columns(self, selection):
@@ -2873,6 +2880,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         OrphanagedDatabasesDialog.display()
         self.fill_combo_corpus()
         self.change_corpus()
+        if not options.cfg.current_connection.resources():
+            self.showMessage("<b>No corpus installed. Select 'Corpus manager…' from the Corpus menu, and install a corpus.</b>")
 
         self._prev_con = name
 
@@ -3233,12 +3242,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             self._add_to_functionlist(self.Session.column_functions,
                                       response)
 
-            if AUTO_FUNCTION in options.settings.value(
-                        "settings_auto_apply", AUTO_APPLY_DEFAULT):
-                self.reaggregate()
-            else:
+            try:
+                if AUTO_FUNCTION in options.settings.value(
+                            "settings_auto_apply", AUTO_APPLY_DEFAULT):
+                    self.reaggregate()
+                else:
+                    self.enable_apply_button()
+            except TypeError as e:
+                logging.warning(f"Can't find settings for auto-apply ({str(e)})")
                 self.enable_apply_button()
-
     def edit_function(self, column):
         from . import addfunction
         func = self.Session.column_functions.find_function(column)
