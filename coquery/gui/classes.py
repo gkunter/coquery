@@ -1383,7 +1383,10 @@ class CoqFloatEdit(QtWidgets.QLineEdit):
         text = ev.text()
         content = utf8(self.text())
         leading_figures = content[:self.cursorPosition()].strip("-")
-        text_to_dec = content.partition(self.dec)[0]
+        if self.dec:
+            text_to_dec = content.partition(self.dec)[0]
+        else:
+            text_to_dec = [ch for ch in content if ch in "0123456789"]
 
         # handle special keys that don't have a visual representation or are
         # represented by an escape sequence:
