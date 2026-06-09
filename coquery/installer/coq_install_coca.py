@@ -74,16 +74,16 @@ class BuilderClass(BaseCorpusBuilder):
     word_pos = "POS"
     word_columns = [
         Identifier(word_id, "MEDIUMINT(7) UNSIGNED NOT NULL"),
-        Column(word_label, "VARCHAR(43) NOT NULL"),
-        Column(word_lemma, "VARCHAR(24) NOT NULL"),
-        Column(word_pos, "VARCHAR(24) NOT NULL")]
+        Column(word_label, "VARCHAR(64) NOT NULL"),
+        Column(word_lemma, "VARCHAR(64) NOT NULL"),
+        Column(word_pos, "VARCHAR(32) NOT NULL")]
 
     subgenre_table = "Subgenres"
     subgenre_id = "SubgenreId"
     subgenre_label = "Subgenre"
     subgenre_columns = [
         Identifier(subgenre_id, "SMALLINT UNSIGNED"),
-        Column(subgenre_label, "VARCHAR(20) NOT NULL")]
+        Column(subgenre_label, "VARCHAR(32) NOT NULL")]
 
     source_table = "Sources"
     source_id = "SourceId"
@@ -97,8 +97,8 @@ class BuilderClass(BaseCorpusBuilder):
         Column(source_year,  "SMALLINT(4) NOT NULL"),
         Column(source_genre, "CHAR(6) NOT NULL"),
         Link(source_subgenre_id, subgenre_table),
-        Column(source_label, "VARCHAR(177)"),
-        Column(source_title, "VARCHAR(499)")]
+        Column(source_label, "VARCHAR(256)"),
+        Column(source_title, "VARCHAR(512)")]
 
     corpus_table = "Corpus"
     corpus_id = "ID"
@@ -292,7 +292,6 @@ class BuilderClass(BaseCorpusBuilder):
                 with zip_file.open(source_filename) as archived_file:
                     n_lines = sum(1 for _ in archived_file)
                     n_chunks = 1 + n_lines // _CHUNKSIZE
-                    print(f"Number of lines: {n_lines}")
                     self._widget.progressSet.emit(
                         n_chunks,
                         "Inserting lexicon chunks... (%v of %m)")
