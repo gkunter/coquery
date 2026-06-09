@@ -140,7 +140,7 @@ class Connection(CoqObject):
     def count_resources(self):
         return len(self._resources)
 
-    def get_engine(self, database=None):
+    def get_engine(self, database=None, **kwargs):
         try:
             return sqlalchemy.create_engine(self.url(database))
         except ModuleNotFoundError:
@@ -220,6 +220,12 @@ class MySQLConnection(Connection):
         else:
             kwargs["params"] = ""
         return template.format(**kwargs)
+
+    def get_engine(self, database=None):
+        kwargs = {}
+        kwargs["pool_recycle"] = 1800
+        kwargs["pool_pre_ping"] = True
+        return super().get_engine(database, **kwargs)
 
     def test(self):
         engine = self.get_engine()
