@@ -145,6 +145,7 @@ class Ui_CorpusInstaller(object):
         self.gridLayout_2.addWidget(self.widget_read_files, 1, 2, 1, 1)
         self.radio_read_files = QtWidgets.QRadioButton(CorpusInstaller)
         self.radio_read_files.setText("")
+        self.radio_read_files.setChecked(True)
         self.radio_read_files.setObjectName("radio_read_files")
         self.gridLayout_2.addWidget(self.radio_read_files, 0, 0, 1, 1)
         self.horizontalLayout_6 = QtWidgets.QHBoxLayout()
