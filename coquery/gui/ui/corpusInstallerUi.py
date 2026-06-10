@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'coquery/gui/ui/corpusInstaller.ui'
+# Form implementation generated from reading ui file 'corpusInstaller.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.15.6
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_CorpusInstaller(object):
     def setupUi(self, CorpusInstaller):
@@ -43,9 +45,6 @@ class Ui_CorpusInstaller(object):
         self.radio_only_module.setText("")
         self.radio_only_module.setObjectName("radio_only_module")
         self.gridLayout_2.addWidget(self.radio_only_module, 2, 0, 1, 1)
-        self.label_only_module = CoqClickableLabel(CorpusInstaller)
-        self.label_only_module.setObjectName("label_only_module")
-        self.gridLayout_2.addWidget(self.label_only_module, 2, 2, 1, 1)
         self.label_read_files = CoqClickableLabel(CorpusInstaller)
         self.label_read_files.setObjectName("label_read_files")
         self.gridLayout_2.addWidget(self.label_read_files, 0, 1, 1, 2)
@@ -148,12 +147,27 @@ class Ui_CorpusInstaller(object):
         self.radio_read_files.setText("")
         self.radio_read_files.setObjectName("radio_read_files")
         self.gridLayout_2.addWidget(self.radio_read_files, 0, 0, 1, 1)
+        self.horizontalLayout_6 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_6.setObjectName("horizontalLayout_6")
+        self.label_only_module = CoqClickableLabel(CorpusInstaller)
+        self.label_only_module.setEnabled(True)
+        self.label_only_module.setObjectName("label_only_module")
+        self.horizontalLayout_6.addWidget(self.label_only_module)
+        spacerItem1 = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_6.addItem(spacerItem1)
+        self.button_advanced = QtWidgets.QPushButton(CorpusInstaller)
+        self.button_advanced.setObjectName("button_advanced")
+        self.horizontalLayout_6.addWidget(self.button_advanced)
+        self.gridLayout_2.addLayout(self.horizontalLayout_6, 2, 2, 1, 1)
         self.verticalLayout_4.addLayout(self.gridLayout_2)
+        self.horizontalLayout_5 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_5.setObjectName("horizontalLayout_5")
+        self.verticalLayout_4.addLayout(self.horizontalLayout_5)
         self.issue_label = QtWidgets.QLabel(CorpusInstaller)
         self.issue_label.setObjectName("issue_label")
         self.verticalLayout_4.addWidget(self.issue_label)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_4.addItem(spacerItem1)
+        spacerItem2 = QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_4.addItem(spacerItem2)
         self.progress_box = QtWidgets.QFrame(CorpusInstaller)
         self.progress_box.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.progress_box.setFrameShadow(QtWidgets.QFrame.Raised)
@@ -182,9 +196,9 @@ class Ui_CorpusInstaller(object):
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout_4.addWidget(self.buttonBox)
         self.name_label.setBuddy(self.corpus_name)
-        self.label_only_module.setBuddy(self.radio_only_module)
         self.label_read_files.setBuddy(self.radio_read_files)
         self.label_input_path.setBuddy(self.input_path)
+        self.label_only_module.setBuddy(self.radio_only_module)
 
         self.retranslateUi(CorpusInstaller)
         self.buttonBox.rejected.connect(CorpusInstaller.reject)
@@ -194,7 +208,6 @@ class Ui_CorpusInstaller(object):
         _translate = QtCore.QCoreApplication.translate
         CorpusInstaller.setWindowTitle(_translate("CorpusInstaller", "Corpus Installer – Coquery"))
         self.name_label.setText(_translate("CorpusInstaller", "&Corpus name:"))
-        self.label_only_module.setText(_translate("CorpusInstaller", "Only install corpus &module"))
         self.label_read_files.setText(_translate("CorpusInstaller", "Build corpus from &text files"))
         self.label_input_path.setText(_translate("CorpusInstaller", "Directory containg &text files:"))
         self.input_path.setText(_translate("CorpusInstaller", "(no path or file selected)"))
@@ -206,8 +219,9 @@ class Ui_CorpusInstaller(object):
         self.check_n_gram.setText(_translate("CorpusInstaller", "&Generate lookup table for multi-item query strings,"))
         self.spin_n.setSuffix(_translate("CorpusInstaller", " items"))
         self.spin_n.setPrefix(_translate("CorpusInstaller", "up to "))
+        self.label_only_module.setText(_translate("CorpusInstaller", "Modify or repair corpus"))
+        self.button_advanced.setText(_translate("CorpusInstaller", "Options…"))
         self.issue_label.setText(_translate("CorpusInstaller", "TextLabel"))
         self.label.setText(_translate("CorpusInstaller", "Installing..."))
         self.progress_general.setFormat(_translate("CorpusInstaller", "Stage %v of %m"))
-
 from ..classes import CoqClickableLabel
