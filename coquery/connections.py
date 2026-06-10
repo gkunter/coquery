@@ -95,34 +95,37 @@ class Connection(CoqObject):
         pass
 
     def remove_resource(self, name, flags=(MODULE | DATABASE | INSTALLER)):
-        resource = self.resources()[name][0]
-        db_name = resource.db_name
-        if flags & (Connection.DATABASE | Connection.MODULE):
+        db_name = ""
+        if name in self.resources():
+            resource = self.resources()[name][0]
+            db_name = resource.db_name
+            if flags & (Connection.DATABASE | Connection.MODULE):
 
-            # remove database:
-            if flags & Connection.DATABASE:
-                self.remove_database(db_name)
+                # remove database:
+                if flags & Connection.DATABASE:
+                    self.remove_database(db_name)
 
-            # remove corpus module:
-            if flags & Connection.MODULE:
-                module_path = os.path.join(self.resource_path(),
-                                           "{}.py".format(db_name))
-                if os.path.exists(module_path):
-                    os.remove(module_path)
+                # remove corpus module:
+                if flags & Connection.MODULE:
+                    module_path = os.path.join(self.resource_path(),
+                                            "{}.py".format(db_name))
+                    if os.path.exists(module_path):
+                        os.remove(module_path)
 
-                # also remove the compiled python module:
-                try:
-                    os.remove("{}c".format(module_path))
-                except FileNotFoundError:
-                    pass
+                    # also remove the compiled python module:
+                    try:
+                        os.remove("{}c".format(module_path))
+                    except FileNotFoundError:
+                        pass
 
         # remove installer (only for adhoc corpora):
         if flags & Connection.INSTALLER:
-            adhoc_path = os.path.join(self.base_path(),
-                                      "adhoc",
-                                      "coq_install_{}.py".format(db_name))
-            if os.path.exists(adhoc_path):
-                os.remove(adhoc_path)
+            if db_name:
+                adhoc_path = os.path.join(self.base_path(),
+                                        "adhoc",
+                                        f"coq_install_{db_name}.py")
+                if os.path.exists(adhoc_path):
+                    os.remove(adhoc_path)
             try:
                 self._resources.pop(name)
             except KeyError:
