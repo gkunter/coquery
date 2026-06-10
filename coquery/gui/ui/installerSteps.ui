@@ -18,18 +18,40 @@
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
       <widget class="QCheckBox" name="checkbox_create_tables">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Create SQL tables</string>
        </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
        <property name="checked">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QCheckBox" name="checkbox_load_files">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Load files</string>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="checkbox_optimize_columns">
+       <property name="text">
+        <string>Optimize columns</string>
        </property>
        <property name="checked">
         <bool>true</bool>
@@ -40,16 +62,6 @@
       <widget class="QCheckBox" name="checkbox_create_indices">
        <property name="text">
         <string>Create indices</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="checkbox_optimize_columns">
-       <property name="text">
-        <string>Optimize columns</string>
        </property>
        <property name="checked">
         <bool>true</bool>
