@@ -3271,7 +3271,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def remove_functions(self, columns):
         for col in columns:
             # is this a multicolumn function?
-            match = re.search("(func_[^_]*_[^_]*)_\d+_\d+", col)
+            match = re.search(r"(func_[^_]*_[^_]*)_\d+_\d+", col)
             if match:
                 col = match.group(1)
 
