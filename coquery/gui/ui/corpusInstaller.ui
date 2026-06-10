@@ -389,7 +389,7 @@
          <number>0</number>
         </property>
         <property name="maximum">
-         <number>9</number>
+         <number>7</number>
         </property>
         <property name="value">
          <number>0</number>

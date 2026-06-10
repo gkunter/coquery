@@ -181,7 +181,7 @@ class Ui_CorpusInstaller(object):
         self.verticalLayout_2.addWidget(self.label)
         self.progress_general = QtWidgets.QProgressBar(self.progress_box)
         self.progress_general.setMinimum(0)
-        self.progress_general.setMaximum(9)
+        self.progress_general.setMaximum(7)
         self.progress_general.setProperty("value", 0)
         self.progress_general.setObjectName("progress_general")
         self.verticalLayout_2.addWidget(self.progress_general)
