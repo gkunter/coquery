@@ -35,7 +35,7 @@ from coquery.gui.ui.corpusInstallerUi import Ui_CorpusInstaller
 from coquery.gui.ui.corpusTableUi import Ui_CorpusTable
 from coquery.gui.ui.readPackageUi import Ui_PackageInstaller
 from coquery.gui.namedtableoptions import NamedTableOptionsDialog
-
+from coquery.gui.installersteps import SelectInstallerSteps, InstallerSteps
 
 class MetaGui(QtWidgets.QDialog):
     button_label = "&Install"
@@ -52,6 +52,9 @@ class MetaGui(QtWidgets.QDialog):
         self._testing = False
         self._onefile = False
         self._meta_options = None
+        self._installer_steps = set()
+        for key in InstallerSteps:
+            self._installer_steps.add(key)
         self.builder_class = builder_class
 
         self.ui = gui()
@@ -291,23 +294,15 @@ class MetaGui(QtWidgets.QDialog):
         namespace.use_meta = False
         namespace.lookup_ngram = False
         namespace.metadata = False
+        namespace.installer_steps = self._installer_steps
 
         # FIXME: check if the following one-letter variables are still used
         # in CorpusBuilder.build().
         if (hasattr(self.ui, "radio_only_module") and
                 self.ui.radio_only_module.isChecked()):
-            namespace.o = False
-            namespace.i = False
-            namespace.l = False
-            namespace.c = False
-            namespace.w = True
             namespace.only_module = True
         else:
-            namespace.w = True
-            namespace.o = True
-            namespace.i = True
-            namespace.l = True
-            namespace.c = True
+
             namespace.only_module = False
 
         if hasattr(self.ui, "input_path"):
@@ -366,11 +361,10 @@ class InstallerGui(MetaGui):
         self.ui.button_input_path.clicked.connect(self.select_path)
         self.ui.button_metafile.clicked.connect(self.select_metafile)
         self.ui.label_metafile.clicked.connect(self.select_metafile)
+        self.ui.button_advanced.clicked.connect(self.select_installer_steps)
 
-        self.ui.radio_read_files.toggled.connect(
-            lambda x: self.activate_read(True))
-        self.ui.radio_only_module.toggled.connect(
-            lambda x: self.activate_read(False))
+        self.ui.radio_read_files.clicked.connect(self.activate_read)
+        self.ui.radio_only_module.clicked.connect(self.disable_read)
         self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
 
     def restore_settings(self):
@@ -378,9 +372,6 @@ class InstallerGui(MetaGui):
 
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
-
-        val = options.settings.value("corpusinstaller_read_files", "true")
-        self.activate_read(val == "true" or val is True)
 
         self.ui.check_use_metafile.setChecked(False)
         self.ui.label_metafile.setText("")
@@ -482,15 +473,36 @@ class InstallerGui(MetaGui):
                 self.ui.check_use_metafile.setChecked(False)
         self.ui.check_use_metafile.blockSignals(False)
 
-    def activate_read(self, activate):
+    def select_installer_steps(self) -> None:
+        dialog = SelectInstallerSteps(
+            default=self._installer_steps,
+            parent=self)
+
+        result = dialog.exec_()
+        if result:
+            self._installer_steps = dialog.selected
+            self.ui.radio_only_module.setChecked(True)
+
+    def activate_read(self):
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
-        self.ui.radio_read_files.setChecked(activate)
-        self.ui.radio_only_module.setChecked(not activate)
-        self.ui.widget_read_files.setEnabled(activate)
+        self.ui.radio_read_files.setChecked(True)
+        self.ui.widget_read_files.setEnabled(True)
         self.validate_dialog()
         self.ui.radio_read_files.blockSignals(False)
         self.ui.radio_only_module.blockSignals(False)
+
+    def disable_read(self):
+        self.ui.radio_read_files.blockSignals(True)
+        self.ui.radio_only_module.blockSignals(True)
+        self.ui.radio_only_module.setChecked(True)
+        self.ui.widget_read_files.setEnabled(False)
+        self.select_installer_steps()
+        self.validate_dialog()
+        self.ui.radio_read_files.blockSignals(False)
+        self.ui.radio_only_module.blockSignals(False)
+
+
 
     def reject(self):
         try:
@@ -510,7 +522,7 @@ class InstallerGui(MetaGui):
             super(InstallerGui, self).reject()
 
     def check_input(self):
-        if self.ui.radio_only_module.isChecked():
+        if not InstallerSteps.LOAD_FILES in self._installer_steps:
             self.ui.input_path.setStyleSheet('')
             self.ui.yes_button.setEnabled(True)
         else:
@@ -584,7 +596,6 @@ class InstallerGui(MetaGui):
                     options.cfg.experimental):
                 namespace.lookup_ngram = True
                 namespace.ngram_width = int(self.ui.spin_n.value())
-
         return namespace
 
 
