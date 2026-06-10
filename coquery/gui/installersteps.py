@@ -47,23 +47,25 @@ class SelectInstallerSteps(QtWidgets.QDialog):
                 checkbox.toggled.connect(
                     lambda state, name=key.value: self.toggle_step(name, state))
 
-        print("__init__:", self.selected)
-
     def toggle_step(self, checkbox_name, state):
         this_step = None
         for key in InstallerSteps:
             if key.value == checkbox_name:
                 this_step = key
                 break
-        if not this_step:
-            print("Step not found: ", checkbox_name)
-            return
 
         if state:
             self.selected.add(this_step)
         else:
             self.selected.remove(this_step)
-        print("toggle_step(): ", self.selected)
+
+    def accept(self, *args):
+        self.selected = set()
+        for key in InstallerSteps:
+            checkbox = getattr(self.ui, key.value, None)
+            if checkbox and checkbox.isChecked():
+                self.selected.add(key)
+        super().accept(*args)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
