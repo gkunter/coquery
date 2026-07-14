@@ -16,15 +16,15 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class CoqSettings(QtCore.QSettings):
-    def value(self, key, default=None, *args, **kwargs):
+    def value(self, key, defaultValue=None):
         try:
-            val = super().value(key, default, *args, **kwargs)
+            val = super().value(key=key, defaultValue=defaultValue)
         except Exception as e:
             s = "Exception when requesting setting key '{}': {}".format(
                 key, e)
             print(s)
             warnings.warn(s)
-            val = default
+            val = defaultValue
         return val
 
 
