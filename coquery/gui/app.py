@@ -952,7 +952,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 val = active_icon
             else:
                 # context requested, but no context span
-                val = "info"
+                val = "Info"
             _set_icon(2, val)
 
         elif row == TOOLBOX_STOPWORDS:
