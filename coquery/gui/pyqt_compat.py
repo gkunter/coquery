@@ -18,7 +18,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class CoqSettings(QtCore.QSettings):
     def value(self, key, defaultValue=None):
         try:
-            val = super().value(key=key, defaultValue=defaultValue)
+            val = super().value(key, defaultValue=defaultValue)
         except Exception as e:
             s = "Exception when requesting setting key '{}': {}".format(
                 key, e)
