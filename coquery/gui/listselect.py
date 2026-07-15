@@ -33,8 +33,8 @@ class CoqListSelect(QtWidgets.QWidget):
         self.ui.setupUi(self)
         self.setDefocus(True)
 
-        self.ui.button_add.clicked.connect(self.add_selected)
-        self.ui.button_remove.clicked.connect(self.remove_selected)
+        self.ui.button_add.clicked.connect(self.add_to_selected)
+        self.ui.button_remove.clicked.connect(self.add_to_available)
         self.ui.button_up.clicked.connect(self.selected_up)
         self.ui.button_down.clicked.connect(self.selected_down)
 
@@ -141,7 +141,7 @@ class CoqListSelect(QtWidgets.QWidget):
         self._fill_list_widget(self.ui.list_selected, lst,
                                translate, *args, **kwargs)
 
-    def add_selected(self):
+    def add_to_selected(self):
         for x in self.ui.list_available.selectedItems():
             row = self.ui.list_available.row(x)
             item = self.ui.list_available.takeItem(row)
@@ -154,7 +154,7 @@ class CoqListSelect(QtWidgets.QWidget):
             self.ui.list_selected.setFocus()
             self.ui.list_available.setCurrentItem(None)
 
-    def remove_selected(self):
+    def add_to_available(self):
         for x in self.ui.list_selected.selectedItems():
             if self.ui.list_selected.count() > self.minimumItems():
                 row = self.ui.list_selected.row(x)
@@ -242,11 +242,14 @@ class CoqListSelect(QtWidgets.QWidget):
         self.ui.button_add.setEnabled(
             available_count > 0 and self.ui.list_available.currentRow() > -1)
 
+        self._last_selected_row = self.ui.list_selected.currentItem()
+        self._last_available_row = self.ui.list_available.currentItem()
+
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Right:
-            self.add_selected()
+            self.add_to_selected()
         elif event.key() == QtCore.Qt.Key_Left:
-            self.remove_selected()
+            self.add_to_available()
         elif event.key() == QtCore.Qt.Key_Up:
             if event.modifiers() == QtCore.Qt.ShiftModifier:
                 self.selected_up()
