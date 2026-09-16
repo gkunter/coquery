@@ -300,6 +300,19 @@ class Visualizer(QtCore.QObject):
 
         self.rotate_annotations(grid)
 
+    def set_x_axis_visibility(self, grid, visible: bool) -> None:
+        for ax in grid.fig.axes:
+            if not visible:
+                self._last_x_labels = ax.get_xticklabels()
+                self._last_x_ticks = ax.get_xticks()
+            else:
+                ax.set_xticklabels(self._last_x_labels)
+                ax.set_xticks(self._last_x_ticks)
+
+    def set_y_axis_visibility(self, grid, visible: bool) -> None:
+        for ax in grid.fig.axes:
+            ax.yaxis.set_visible(visible)
+
     @staticmethod
     def get_figure_size():
         fig = plt.gcf()
