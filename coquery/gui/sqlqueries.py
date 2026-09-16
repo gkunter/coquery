@@ -32,7 +32,7 @@ except ImportError:
         text = text.split("\n")
         lst = []
         for line in text:
-            match = re.match("^(\s+)", line)
+            match = re.match(r"^(\s+)", line)
             if match:
                 line = "{}{}".format(
                     "&nbsp;" * len(match.group(1)),
