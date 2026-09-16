@@ -511,6 +511,11 @@ class VisualizationDesigner(QtWidgets.QDialog):
                        self.ui.combo_font_figure.currentIndexChanged):
             signal.connect(self.add_annotations)
 
+        self.ui.check_x_axis.toggled.connect(self.toggle_x_axis)
+        self.ui.check_y_axis.toggled.connect(self.toggle_y_axis)
+
+
+
         # (6) changing the legend layout
         self.ui.edit_legend_title.editingFinished.connect(self.change_legend)
         self.ui.check_show_legend.toggled.connect(self.change_legend)
@@ -1089,6 +1094,16 @@ class VisualizationDesigner(QtWidgets.QDialog):
                 logging.error(str(e))
             else:
                 self.canvas.draw()
+
+    def toggle_x_axis(self, visible: bool) -> None:
+        if not self.vis:
+            return
+        self.vis.set_x_axis_visibility(self.grid, visible)
+
+    def toggle_y_axis(self, visible: bool) -> None:
+        if not self.vis:
+            return
+        self.vis.set_y_axis_visibility(self.grid, visible)
 
     def change_legend(self):
         if self.vis:
