@@ -2,7 +2,7 @@
 """
 textgridview.py is part of Coquery.
 
-Copyright (c) 2017-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2017-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -22,7 +22,9 @@ from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-from scipy import signal
+import scipy
+
+from packaging.version import Version
 
 
 class LockedAxes(mpl.axes.Axes):
@@ -106,14 +108,22 @@ class CoqTextgridView(QtWidgets.QWidget):
         self.ax_textgrid.set_xlabel("Time (s)")
         self.ax_textgrid.xaxis.get_offset_text().set_visible(False)
 
-        self.selector_waveform = SpanSelector(
-            self.ax_waveform, self.on_select, 'horizontal', useblit=True,
-            rectprops=dict(alpha=0.25, facecolor='red'), span_stays=False,
-            button=1)
-        self.selector_spectrogram = SpanSelector(
-            self.ax_spectrogram, self.on_select, 'horizontal', useblit=True,
-            rectprops=dict(alpha=0.25, facecolor='red'), span_stays=False,
-            button=1)
+        kwargs = {
+            "onselect": self.on_select,
+            "direction": "horizontal",
+            "useblit": True,
+            "button": 1
+        }
+
+        if Version(mpl.__version__) < Version("3.5"):
+            kwargs["rectprops"] = dict(alpha=0.25, facecolor='red')
+            kwargs["span_stays"] = False
+        else:
+            kwargs["props"] = dict(alpha=0.25, facecolor='red')
+            kwargs["interactive"] = False
+
+        self.selector_waveform = SpanSelector(self.ax_waveform, **kwargs)
+        self.selector_spectrogram = SpanSelector(self.ax_spectrogram, **kwargs)
 
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -230,21 +240,35 @@ class CoqTextgridView(QtWidgets.QWidget):
         self.plotSpectrogram()
 
     def _get_spectrogram(self, **kwargs):
-
+        y = self.sound().astype(np.float32)
+        y = self.pre_emphasis(y)
         Fs = self.sound().framerate
-        NFFT = int(Fs * self.windowLength())
-        noverlap = int(Fs * self.windowLength() / 2)
+        window_length = self.windowLength()
+        NFFT = int(Fs * window_length)
+        noverlap = int(NFFT * 0.9)
 
-        data, self._ydim, self._xdim, _ = plt.specgram(
-            self.sound().astype(np.int32),
-            Fs=Fs,
-            NFFT=NFFT,
-            noverlap=noverlap,
-            window=signal.gaussian(M=NFFT, std=noverlap))
+        if Version(scipy.__version__) < Version("1.13"):
+            window_fnc = scipy.signal.gaussian
+        else:
+            window_fnc = scipy.signal.windows.gaussian
+        window = window_fnc(M=NFFT, std=noverlap / 8)
+
+        kwargs = {
+            "Fs": Fs,
+            "NFFT": NFFT,
+            "noverlap": noverlap,
+            "mode": "magnitude",
+            "window": window}
+
+        data, self._ydim, self._xdim, _ = plt.specgram(y, **kwargs)
         self._spectrogram = self.transform(data)
 
+    def pre_emphasis(self, data, coef=0.97):
+        return np.append(data[0], data[1:] - coef * data[:-1])
+
     def transform(self, data):
-        return 10 * np.log10(data)
+        data_db = 10 * np.log10(data / data.max() + 1e-12)
+        return np.clip(data_db, - self.dynamicRange(), 0)
 
     def normalize(self):
         max_db = self._spectrogram.max()
