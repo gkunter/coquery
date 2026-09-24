@@ -12,7 +12,6 @@ from PyQt5 import QtCore, QtWidgets
 
 from coquery.corpusbuilder import InstallerSteps
 from coquery.gui import errorbox
-from coquery.gui.pyqt_compat import get_toplevel_window
 from coquery.gui.ui.installerStepsUi import Ui_InstallerStepSelection
 
 translate = QtWidgets.QApplication.instance().translate
@@ -38,7 +37,8 @@ class SelectInstallerSteps(QtWidgets.QDialog):
                 checkbox = getattr(self.ui, key.value)
                 checkbox.setChecked(key in self.selected)
                 checkbox.toggled.connect(
-                    lambda state, name=key.value: self.toggle_step(name, state))
+                    lambda state, name=key.value:
+                        self.toggle_step(name, state))
 
     def toggle_step(self, checkbox_name, state):
         this_step = None
@@ -66,26 +66,3 @@ class SelectInstallerSteps(QtWidgets.QDialog):
 
     def onException(self):
         errorbox.ErrorBox.show(self.exc_info, self.exception)
-
-    def get_uniques(self):
-        self.ui.progress_bar.setRange(0, 0)
-        self.ui.tableWidget.hide()
-        self.ui.button_details.hide()
-        self.ui.label.hide()
-
-        self.thread = CoqThread(
-            self.get_unique,
-            self,
-            self.ui.checkbox_frequency.isChecked())
-        self.thread.taskFinished.connect(self.finalize)
-        self.thread.taskException.connect(self.onException)
-        self.thread.start()
-
-    @staticmethod
-    def show(rc_feature, resource, uniques=True, parent=None):
-        dialog = UniqueViewer(rc_feature, resource,
-                              uniques=uniques, parent=parent)
-
-        dialog.setVisible(True)
-        dialog.get_uniques()
-        get_toplevel_window().widget_list.append(dialog)
