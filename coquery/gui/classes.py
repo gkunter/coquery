@@ -1106,7 +1106,7 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
                           for i in range(item.childCount())]:
                 _check_state(child, object_name, state, column)
 
-        if type(state) != QtCore.Qt.CheckState:
+        if not isinstance(state, QtCore.Qt.CheckState):
             if state:
                 state = QtCore.Qt.Checked
             else:
@@ -1851,7 +1851,11 @@ class CoqFrequencyBarDelegate(QtWidgets.QStyledItemDelegate):
 
         max_bar_width = max(0,
                             content_rect.width() - text_width - text_padding)
-        ratio = max(0.0, min(1.0, value / self.maximum))
+
+        if self.maximum == 0:
+            ratio = 0
+        else:
+            ratio = max(0.0, min(1.0, value / self.maximum))
 
         if ratio > 0 and max_bar_width > 0:
             bar_rect = QtCore.QRect(content_rect)
