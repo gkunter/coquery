@@ -421,6 +421,9 @@ class InstallerGui(MetaGui):
         self.ui.yes_button.setEnabled(True)
         self.ui.issue_label.setText("")
 
+        if not hasattr(self.ui, "radio_read_files"):
+            return
+
         if self.ui.radio_read_files.isChecked() and check_path:
             path = utf8(self.ui.input_path.text())
             if not path:
@@ -876,20 +879,34 @@ class BuilderGui(InstallerGui):
             self.ui.label_metafile.setStyleSheet("")
 
     def validate_dialog(self, check_path=False):
-        super(BuilderGui, self).validate_dialog(check_path)
+        super().validate_dialog(check_path)
 
         self.ui.yes_button.setEnabled(True)
         self.ui.issue_label.setText("")
         if hasattr(self.ui, "corpus_name"):
             self.ui.corpus_name.setStyleSheet("")
             self.validate_name_not_empty(self.ui.yes_button)
-            if self.ui.radio_only_module.isChecked():
-                self.validate_db_does_exist(self.ui.yes_button)
-            else:
+
+            if not hasattr(self.ui, "radio_only_module"):
+                # Packages will only be installed fully, but this will only
+                # be possible if neither the database nor the corpus name are
+                # already used
                 self.validate_name_is_unique(self.ui.yes_button)
                 self.validate_db_does_not_exist(self.ui.yes_button)
-                if not self._onefile:
-                    self.validate_metadata(self.ui.yes_button)
+                return
+
+            # If the builder allows a module-only installation, then the
+            # corresponding database must exist.
+            if self.ui.radio_only_module.isChecked():
+                self.validate_db_does_exist(self.ui.yes_button)
+                return
+
+            # Otherwise, the name needs to be unique, and the database must
+            # not exist yet.
+            self.validate_name_is_unique(self.ui.yes_button)
+            self.validate_db_does_not_exist(self.ui.yes_button)
+            if not self._onefile:
+                self.validate_metadata(self.ui.yes_button)
 
     def select_path(self):
         if self._onefile:
@@ -1146,7 +1163,10 @@ class PackageGui(BuilderGui):
 
     def get_arguments_from_gui(self):
         namespace = argparse.Namespace()
-        namespace.only_module = self.ui.radio_only_module.isChecked()
+        namespace.only_module = False
+        if (hasattr(self.ui, "radio_only_module") and
+                self.ui.radio_only_module.isChecked()):
+            namespace.only_module = True
         namespace.lookup_ngram = False
         namespace.ngram_width = None
         namespace.metadata = None
@@ -1219,7 +1239,8 @@ class TableGui(MetaGui):
         self.validate_name_not_empty(self.ui.yes_button)
         self.validate_file_exists(self.ui.yes_button)
 
-        if self.ui.radio_only_module.isChecked():
+        if (hasattr(self.ui, "radio_only_module") and
+                self.ui.radio_only_module.isChecked()):
             self.validate_db_does_exist(self.ui.yes_button)
         else:
             self.validate_name_is_unique(self.ui.yes_button)
