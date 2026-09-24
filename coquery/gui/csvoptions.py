@@ -32,7 +32,7 @@ class MyTableModel(QtCore.QAbstractTableModel):
     A table class for the content of a CSV file.
     """
     def __init__(self, parent, df, skip, *args):
-        super(MyTableModel, self).__init__(parent, *args)
+        super().__init__(parent, *args)
         self.df = df
         self.header = self.df.columns.values.tolist()
         self.skip_lines = skip
@@ -108,7 +108,7 @@ quote_chars = {
 
 class CSVOptionDialog(QtWidgets.QDialog):
     def __init__(self, default=None, parent=None, icon=None, ui=None):
-        super(CSVOptionDialog, self).__init__(parent)
+        super().__init__(parent)
         self.file_name = default.file_name
         self.file_content = None
 
@@ -193,7 +193,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
         options.settings.setValue("csvoptions_size", self.size())
 
     def exec_(self, *args, **kwargs):
-        result = super(CSVOptionDialog, self).exec_(*args, **kwargs)
+        result = super().exec_(*args, **kwargs)
         if result:
             quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
                 utf8(self.ui.quote_char.currentText())]
@@ -240,10 +240,6 @@ class CSVOptionDialog(QtWidgets.QDialog):
         df = pd.DataFrame()
         quote = dict(zip(quote_chars.values(), quote_chars.keys()))[
             utf8(self.ui.quote_char.currentText())]
-        if self.ui.file_has_headers.isChecked():
-            header = 0
-        else:
-            header = None
         header = 0 if self.ui.file_has_headers.isChecked() else None
         encoding = utf8(self.ui.combo_encoding.currentText())
 
