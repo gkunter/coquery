@@ -26,6 +26,7 @@ from coquery.defines import (msg_install_abort,
                              msg_corpus_path_not_valid)
 from coquery.errors import DependencyError
 from coquery.unicode import utf8
+from coquery.corpusbuilder import InstallerSteps
 
 from coquery.gui import classes
 from coquery.gui import errorbox
@@ -35,7 +36,8 @@ from coquery.gui.ui.corpusInstallerUi import Ui_CorpusInstaller
 from coquery.gui.ui.corpusTableUi import Ui_CorpusTable
 from coquery.gui.ui.readPackageUi import Ui_PackageInstaller
 from coquery.gui.namedtableoptions import NamedTableOptionsDialog
-from coquery.gui.installersteps import SelectInstallerSteps, InstallerSteps
+from coquery.gui.installersteps import SelectInstallerSteps
+
 
 class MetaGui(QtWidgets.QDialog):
     button_label = "&Install"
@@ -438,7 +440,7 @@ class InstallerGui(MetaGui):
                 directory=path,
                 options=(QtWidgets.QFileDialog.DontUseNativeDialog |
                          QtWidgets.QFileDialog.ReadOnly))
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if name:
             self.ui.input_path.setText(name)
@@ -502,8 +504,6 @@ class InstallerGui(MetaGui):
         self.ui.radio_read_files.blockSignals(False)
         self.ui.radio_only_module.blockSignals(False)
 
-
-
     def reject(self):
         try:
             if self.state == "finished":
@@ -522,7 +522,7 @@ class InstallerGui(MetaGui):
             super(InstallerGui, self).reject()
 
     def check_input(self):
-        if not InstallerSteps.LOAD_FILES in self._installer_steps:
+        if InstallerSteps.LOAD_FILES not in self._installer_steps:
             self.ui.input_path.setStyleSheet('')
             self.ui.yes_button.setEnabled(True)
         else:
@@ -754,12 +754,12 @@ class BuilderGui(InstallerGui):
         # https://stackoverflow.com/a/33925425
 
         regstr = (r".*Resource\s*"
-                  "(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
-                  "\s*'?"
-                  "(\w+)"
-                  "'?\s*"
-                  "(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
-                  "\s*not found")
+                  r"(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
+                  r"\s*'?"
+                  r"(\w+)"
+                  r"'?\s*"
+                  r"(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
+                  r"\s*not found")
 
         regexp = re.compile(regstr)
 
@@ -904,7 +904,7 @@ class BuilderGui(InstallerGui):
                 options=(QtWidgets.QFileDialog.DontUseNativeDialog |
                          QtWidgets.QFileDialog.ReadOnly))
 
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if name:
             if not self._onefile:
@@ -915,7 +915,7 @@ class BuilderGui(InstallerGui):
 
     def install_exception(self):
         self.state = "failed"
-        if type(self.exception) == RuntimeError:
+        if isinstance(self.exception, RuntimeError):
             QtWidgets.QMessageBox.critical(
                 self, "Corpus building error – Coquery", str(self.exception))
         else:
@@ -998,7 +998,7 @@ class PackageGui(BuilderGui):
             caption="Select corpus package file",
             filter="Coquery package files (*.coq);;Any file (*.*)")
 
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         name = utf8(name)
         if name:
@@ -1232,7 +1232,7 @@ class TableGui(MetaGui):
             path = os.path.split(options.cfg.corpus_table_source_path)[0]
         name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
 
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if name:
             options.cfg.corpus_table_source_path = name
@@ -1240,7 +1240,7 @@ class TableGui(MetaGui):
 
     def install_exception(self):
         self.state = "failed"
-        if type(self.exception) == RuntimeError:
+        if isinstance(self.exception, RuntimeError):
             QtWidgets.QMessageBox.critical(
                 self, "Corpus building error – Coquery", str(self.exception))
         else:
