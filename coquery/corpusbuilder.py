@@ -1830,6 +1830,8 @@ class BaseCorpusBuilder(corpus.SQLResource):
             pass
 
     def step_selected(self, step: InstallerSteps) -> bool:
+        if not hasattr(self.arguments , "installer_steps"):
+            return True
         return (step in self.arguments.installer_steps)
 
     def build_finalize(self):
