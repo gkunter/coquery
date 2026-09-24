@@ -719,7 +719,7 @@ class SQLResource(BaseResource):
         engine = options.cfg.current_connection.get_engine(self.db_name)
         table = getattr(self, "{}_table".format(rc_table))
         S = "SELECT COUNT(*) FROM {}".format(table)
-        size = pd.read_sql(S, con=engine).iloc[0][0]
+        size = pd.read_sql(S, con=engine).iat[0, 0]
         engine.dispose()
         return size
 
