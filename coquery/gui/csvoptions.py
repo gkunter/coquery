@@ -56,7 +56,7 @@ class MyTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ForegroundRole:
             c_role = QtGui.QPalette.Text
         elif role == QtCore.Qt.DisplayRole:
-            value = self.df.iloc[index.row()][index.column()]
+            value = self.df.iat[index.row(), index.column()]
             if isinstance(value, np.int64):
                 value = int(value)
             elif isinstance(value, (np.float64, np.float32)):
@@ -344,7 +344,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
             directory=options.cfg.query_file_path)
 
         # getOpenFileName() returns different types in PyQt and PySide, fix:
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
 
         if name:
@@ -411,7 +411,7 @@ class CSVOptionDialog(QtWidgets.QDialog):
         self.ui.FilePreviewArea.blockSignals(False)
 
     def click_column(self, index):
-        if type(index) == int:
+        if type(index) is int:
             i = index
         else:
             i = index.column()
