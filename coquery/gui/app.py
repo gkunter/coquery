@@ -17,20 +17,12 @@ import datetime
 import re
 import warnings
 
-# Monkey-patching the append() API change
-def _wrapped_df_append(self, other, *args, **kwargs):
-    warnings.warn(
-            "DataFrame.append() was deprecated in Pandas 2.x. "
-            "Update code to use pd.concat().")
-    return pd.concat([self, other])
-
-pd.DataFrame.append = _wrapped_df_append
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import pyqtSignal
 
 from coquery import managers
-from coquery import NAME, __version__, APP_NAME
+from coquery import __version__, APP_NAME
 from coquery.general import memory_dump
 from coquery import options
 from coquery.options import CSVOptions
@@ -72,6 +64,17 @@ from coquery.gui.orphanageddatabases import OrphanagedDatabasesDialog
 
 
 critical_box = QtWidgets.QMessageBox.critical
+
+
+# Monkey-patching the append() API change
+def _wrapped_df_append(self, other, *args, **kwargs):
+    warnings.warn(
+            "DataFrame.append() was deprecated in Pandas 2.x. "
+            "Update code to use pd.concat().")
+    return pd.concat([self, other])
+
+
+pd.DataFrame.append = _wrapped_df_append
 
 
 # add path required for visualizers::
@@ -371,7 +374,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.ui.button_filters.setEnabled(False)
         self.ui.text_no_match.hide()
 
-        ## set vertical splitter: top: no stretch, bottom: full stretch
+        # set vertical splitter: top: no stretch, bottom: full stretch
         self.ui.splitter.setStretchFactor(0, 0)
         self.ui.splitter.setStretchFactor(1, 1)
 
@@ -465,7 +468,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def setup_menu_actions(self):
         """ Connect menu actions to their methods."""
         def _set_number_of_tokens():
-            options.cfg.number_of_tokens = int(self.ui.spin_query_limit.value())
+            query_limit = int(self.ui.spin_query_limit.value())
+            options.cfg.number_of_tokens = query_limit
 
         action_mappings = (
             (self.ui.action_save_results, self.save_results),
@@ -662,8 +666,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         self.useContextConnection.connect(self.add_context_connection)
         self.closeContextConnection.connect(self.close_context_connection)
 
-        ## FIXME: reimplement row visibility
-        #self.rowVisibilityChanged.connect(self.update_row_visibility)
+        # FIXME: reimplement row visibility
+        # self.rowVisibilityChanged.connect(self.update_row_visibility)
 
     def keyPressEvent(self, e):
         if e.key() != QtCore.Qt.Key_Escape or not self.reaggregating:
@@ -792,12 +796,14 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def toggle_data_management(self):
         options.cfg.show_data_management = not options.cfg.show_data_management
-        self.ui.action_toggle_management.setChecked(options.cfg.show_data_management)
+        self.ui.action_toggle_management.setChecked(
+            options.cfg.show_data_management)
         self.set_main_screen_appearance()
 
     def toggle_output_columns(self):
         options.cfg.show_output_columns = not options.cfg.show_output_columns
-        self.ui.action_toggle_columns.setChecked(options.cfg.show_output_columns)
+        self.ui.action_toggle_columns.setChecked(
+            options.cfg.show_output_columns)
         self.set_main_screen_appearance()
 
     def change_toolbox(self, i):
@@ -845,16 +851,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def verify_file_name(self):
         file_name = str(self.ui.edit_file_name.text())
         if not os.path.isfile(file_name):
-            self.ui.edit_file_name.setStyleSheet("QLineEdit { background-color: rgb(255, 255, 192) }")
+            style = "QLineEdit { background-color: rgb(255, 255, 192) }"
+            self.ui.edit_file_name.setStyleSheet(style)
             return False
         else:
             col = options.cfg.app.palette().color(QtGui.QPalette.Base).name()
-            self.ui.edit_file_name.setStyleSheet(f"QLineEdit {{ background-color: {col} }} ")
+            style = f"QLineEdit {{ background-color: {col} }} "
+            self.ui.edit_file_name.setStyleSheet(style)
             return True
 
     def switch_to_file(self):
         """ Toggle to query file input. """
-        #self.ui.radio_query_file.setFocus()
+        # self.ui.radio_query_file.setFocus()
         self.ui.radio_query_file.setChecked(True)
 
     def switch_to_query(self):
@@ -863,8 +871,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     @staticmethod
     def get_icon(*args, **kwargs):
-        ## FIXME: change all cases where the static class method is called to
-        ## calls to the module method.
+        # FIXME: change all cases where the static class method is called to
+        # calls to the module method.
         return get_icon(*args, **kwargs)
 
     def show_query_status(self):
@@ -1033,7 +1041,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         button_width = self.ui.button_toggle_hidden.size().width()
         if w <= button_width:
             w = int(splitter_sizeHint.width() * 0.1) + button_width
-            self.ui.splitter_columns.setSizes([splitter_sizeHint.width() - w, w])
+            sizes = [splitter_sizeHint.width() - w, w]
+            self.ui.splitter_columns.setSizes(sizes)
 
         self._old_sizes = self.ui.splitter_columns.sizes()
 
@@ -1102,7 +1111,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         # get context options:
         options.cfg.context_left = self.ui.context_left_span.value()
         options.cfg.context_right = self.ui.context_right_span.value()
-        options.cfg.context_span = max(self.ui.context_left_span.value(), self.ui.context_right_span.value())
+        options.cfg.context_span = max(
+            self.ui.context_left_span.value(),
+            self.ui.context_right_span.value())
         options.cfg.collo_left = self.ui.spin_collo_left.value()
         options.cfg.collo_right = self.ui.spin_collo_right.value()
 
@@ -1124,7 +1135,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         columns = columns or []
         manager = self.Session.get_manager(options.cfg.MODE)
 
-        #FIXME: the whole way column properties are handled needs to be
+        # FIXME: the whole way column properties are handled needs to be
         # revised!
 
         # Get the column properties from the settings file, and save them
@@ -1241,7 +1252,9 @@ class CoqMainWindow(QtWidgets.QMainWindow):
     def manage_stopwords(self):
         from . import stopwords
         old_list = options.cfg.stopword_list
-        result = stopwords.Stopwords.manage(options.cfg.stopword_list, options.cfg.icon)
+        result = stopwords.Stopwords.manage(
+            options.cfg.stopword_list,
+            options.cfg.icon)
         if result is not None:
             options.cfg.stopword_list = result
 
@@ -1255,7 +1268,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
     def set_reference_corpus(self):
         from . import linkselect
-        #title = _translate("MainWindow", "Select reference corpus – Coquery", None)
+        # title = _translate("MainWindow", "Select reference corpus – Coquery", None)
         current_connection = options.cfg.current_connection.name
         title = "Select reference corpus"
         subtitle = "&Available corpora"
@@ -1280,15 +1293,15 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             pass
 
     def result_column_resize(self, index, old, new):
-        #header = self.table_model.header[index].lower()
-        #options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
-        ## notify the GUI that the whole data frame has changed:
-        #self.table_model.dataChanged.emit(
-            #self.table_model.createIndex(0, 0),
-            #self.table_model.createIndex(self.table_model.rowCount(), self.table_model.columnCount()))
+        # header = self.table_model.header[index].lower()
+        # options.cfg.column_width[header.replace(" ", "_").replace(":", "_")] = new
+        # # notify the GUI that the whole data frame has changed:
+        # self.table_model.dataChanged.emit(
+        #     self.table_model.createIndex(0, 0),
+        #     self.table_model.createIndex(self.table_model.rowCount(), self.table_model.columnCount()))
 
-        #self.ui.data_preview.setTextElideMode(QtCore.Qt.ElideMiddle)
-        #self.ui.data_preview.setHorizontalScrollMode(self.ui.data_preview.ScrollPerPixel)
+        # self.ui.data_preview.setTextElideMode(QtCore.Qt.ElideMiddle)
+        # self.ui.data_preview.setHorizontalScrollMode(self.ui.data_preview.ScrollPerPixel)
         if options.cfg.word_wrap:
             self.resize_rows()
 
@@ -1466,7 +1479,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         for i in range(self.ui.list_toolbox.rowCount()):
             self.set_toolbox_appearance(i)
 
-    ### FIXME: continue module reorganization from here
+    # FIXME: continue module reorganization from here
 
     def change_corpus(self):
         """
@@ -1793,7 +1806,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
             caption=caption,
             directory=options.cfg.results_file_path)
 
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if not name:
             return
@@ -1988,10 +2001,8 @@ class CoqMainWindow(QtWidgets.QMainWindow):
                 self.Session = self.new_session
                 self.user_columns = False
                 self.reaggregate()
-                if self.Session.is_statistics_session():
-                    self.ui.tool_widget.widget(TOOLBOX_GROUPING).setDisabled(True)
-                else:
-                    self.ui.tool_widget.widget(TOOLBOX_GROUPING).setEnabled(True)
+                self.ui.tool_widget.widget(TOOLBOX_GROUPING).setDisabled(
+                    self.Session.is_statistics_session())
             del self.new_session
             self.set_stop_button(False)
 
@@ -2207,9 +2218,10 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         Show a context menu for the current row selection. If no row is
         selected, show a context menu for the row that has been clicked on.
         """
-        selection = []
-
-        selection = self.table_model.content.index[[x.row() for x in self.ui.data_preview.selectionModel().selectedRows()]]
+        selection_rows = [
+            x.row() for
+            x in self.ui.data_preview.selectionModel().selectedRows()]
+        selection = self.table_model.content.index[selection_rows]
 
         header = self.ui.data_preview.verticalHeader()
         self.menu = self.get_row_submenu(selection=selection, point=point)
