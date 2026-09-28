@@ -29,7 +29,10 @@ try:
 except Exception as e:
     # FIXME: lxml should be a required package so this exception
     # is never raised
-    warnings.warn("Package lxml could not be imported correctly. This may be due to a version error.\nTry upgrading lxml and/or PYython to a different version.")
+    warnings.warn(
+        "Package lxml could not be imported correctly. This may be due to a"
+        "version error.\n"
+        "Try upgrading lxml and/or Python to a different version.")
     raise e
 
 from . import sqlwrap
@@ -54,7 +57,6 @@ class InstallerSteps(Enum):
     OPTIMIZE_COLUMNS = "checkbox_optimize_columns"
     CREATE_INDICES = "checkbox_create_indices"
     WRITE_CORPUS_MODULE = "checkbox_write_corpus_module"
-
 
 
 """
@@ -1830,7 +1832,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
             pass
 
     def step_selected(self, step: InstallerSteps) -> bool:
-        if not hasattr(self.arguments , "installer_steps"):
+        if not hasattr(self.arguments, "installer_steps"):
             return True
         return (step in self.arguments.installer_steps)
 
@@ -1912,8 +1914,9 @@ class BaseCorpusBuilder(corpus.SQLResource):
                             return
                         logging.info("Stage 1")
                         if self.arguments.metadata:
-                            self.add_metadata(self.arguments.metadata,
-                                                self.arguments.metadata_column)
+                            self.add_metadata(
+                                self.arguments.metadata,
+                                self.arguments.metadata_column)
                         try:
                             self.build_create_tables()
                         except Exception as e:
