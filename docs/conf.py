@@ -199,4 +199,4 @@ html_static_path = ['_static', "_static/css"]
 htmlhelp_basename = 'Coquerydoc'
 
 def setup(app):
-    app.add_stylesheet('coquery.css')
+    app.add_css_file('coquery.css')
