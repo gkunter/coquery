@@ -273,7 +273,7 @@
          <item row="0" column="1">
           <widget class="QLabel" name="label_4">
            <property name="text">
-            <string>&amp;Copy matching sound files to output path:</string>
+            <string>&amp;Copy audio data from this binary path:</string>
            </property>
            <property name="buddy">
             <cstring>check_copy_sounds</cstring>

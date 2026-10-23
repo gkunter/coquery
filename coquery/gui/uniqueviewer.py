@@ -2,7 +2,7 @@
 """
 uniqueviewer.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -72,6 +72,11 @@ class UniqueViewer(QtWidgets.QDialog):
         save_button = self.ui.buttonBox.button(self.ui.buttonBox.Save)
         save_button.clicked.connect(self.save_list)
 
+        if uniques:
+            self.ui.checkbox_frequency.toggled.connect(self.get_uniques)
+        else:
+            self.ui.checkbox_frequency.hide()
+
         self.rc_feature = rc_feature
         self.db_name = db_name
         self.resource = options.get_resource_of_database(db_name)
@@ -85,7 +90,7 @@ class UniqueViewer(QtWidgets.QDialog):
             self.ui.button_details.setText(
                 str(self.ui.button_details.text()).format(
                     self.resource.name,
-                    "{}.{}".format(self.table, self.column)))
+                    f"{self.table}.{self.column}"))
             self.ui.button_details.setAlternativeText(
                 self.ui.button_details.text())
         else:
@@ -109,45 +114,71 @@ class UniqueViewer(QtWidgets.QDialog):
         options.settings.setValue("uniqueviewer_details",
                                   self.ui.button_details.isExpanded())
 
-    def get_unique(self):
+    def get_unique(self, frequency: bool = False):
         if not self.db_name:
             return
 
         engine = options.cfg.current_connection.get_engine(self.db_name)
         if self._uniques:
-            S = "SELECT DISTINCT {} FROM {}".format(self.column, self.table)
+            if frequency:
+                S = (f"SELECT {self.column}, COUNT(*) N FROM {self.table} "
+                     f"GROUP BY {self.column}")
+            else:
+                S = f"SELECT DISTINCT {self.column} FROM {self.table}"
             self.df = pd.read_sql(S, engine)
             self.df = self.df.sort_values(self.column, ascending=True)
         else:
-            S = "SELECT {} FROM {}".format(self.column, self.table)
+            S = f"SELECT {self.column} FROM {self.table}"
             self.df = pd.read_sql(S, engine)
         engine.dispose()
 
     def finalize(self):
+        self.ui.tableWidget.setSortingEnabled(False)
+        self.ui.tableWidget.horizontalHeader().show()
+        self.ui.tableWidget.setColumnCount(1)
+
         # update dialog appearance
         if self._uniques:
             self.ui.label.setText(
                 str(self.ui.label.text()).format(len(self.df.index)))
-            self.ui.tableWidget.horizontalHeader().hide()
+            if not self.ui.checkbox_frequency.isChecked():
+                self.ui.tableWidget.horizontalHeader().hide()
+            else:
+                self.ui.tableWidget.setColumnCount(2)
+                self.ui.tableWidget.setHorizontalHeaderLabels(["Value", "N"])
         else:
             self.ui.tableWidget.setHorizontalHeaderLabels(["Click to sort"])
+
             uniques = sorted(self.df[self.column].dropna().unique())
-            value_str = ", ".join([str(x) for x in uniques[:5]])
+            value_str = ", ".join([f"'{str(x)}'" for x in uniques[:5]])
             if len(uniques) > 6:
-                value_str = "{}, and {} other values".format(
-                    value_str, len(uniques) - 5)
-            s = "{} ({})".format(len(uniques), value_str)
+                value_str = f"{value_str}, and {len(uniques) - 5} other values"
+            s = f"{len(uniques)} ({value_str})"
             self.ui.label.setText(
                 str(self.ui.label.text()).format(len(self.df.index), s))
 
         self.ui.tableWidget.setRowCount(len(self.df))
-        self.ui.tableWidget.setColumnCount(1)
 
         # populate table
         items = (self.df[self.column].apply(utf8)
                                      .apply(QtWidgets.QTableWidgetItem))
         for row, item in enumerate(items):
             self.ui.tableWidget.setItem(row, 0, item)
+
+        if self._uniques and self.ui.checkbox_frequency.isChecked():
+            max_freq = max(self.df["N"])
+            self.ui.tableWidget.setItemDelegateForColumn(
+                1,
+                classes.CoqFrequencyBarDelegate(self.ui.tableWidget, max_freq))
+
+            for row, value in enumerate(self.df["N"]):
+                item = QtWidgets.QTableWidgetItem()
+                item.setData(QtCore.Qt.DisplayRole, int(value))
+                item.setTextAlignment(
+                    QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+                self.ui.tableWidget.setItem(row, 1, item)
+
+        self.ui.tableWidget.setSortingEnabled(True)
 
         self.ui.progress_bar.setRange(1, 0)
         self.ui.progress_bar.hide()
@@ -169,16 +200,16 @@ class UniqueViewer(QtWidgets.QDialog):
             gui_query_string.append(text)
         elif self.rc_feature in ("lemma_label", "word_lemma",
                                  "corpus_lemma"):
-            gui_query_string.append("[{}]".format(text))
+            gui_query_string.append(f"[{text}]")
         elif self.rc_feature in ("pos_label", "word_pos", "corpus_pos"):
-            gui_query_string.append("*.[{}]".format(text))
+            gui_query_string.append(f"*.[{text}]")
         elif self.rc_feature in ("transcript_label",
                                  "word_transcript",
                                  "corpus_transcript"):
-            gui_query_string.append("/{}/".format(text))
+            gui_query_string.append(f"/{text}/")
         elif self.rc_feature in ("lemma_transcript",
                                  "corpus_lemma_transcript"):
-            gui_query_string.append("[/{}/]".format(text))
+            gui_query_string.append(f"[/{text}/]")
         else:
             gui_query_string.append(text)
 
@@ -192,7 +223,7 @@ class UniqueViewer(QtWidgets.QDialog):
     def save_list(self):
         name = QtWidgets.QFileDialog.getSaveFileName(
             directory=options.cfg.uniques_file_path)
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if name:
             options.cfg.uniques_file_path = os.path.dirname(name)
@@ -201,7 +232,7 @@ class UniqueViewer(QtWidgets.QDialog):
                     name,
                     sep=options.cfg.output_separator,
                     index=False,
-                    header=["{}.{}".format(self.table, self.column)],
+                    header=[f"{self.table}.{self.column}"],
                     encoding=options.cfg.output_encoding)
             except IOError:
                 QtWidgets.QMessageBox.critical(
@@ -216,7 +247,10 @@ class UniqueViewer(QtWidgets.QDialog):
         self.ui.button_details.hide()
         self.ui.label.hide()
 
-        self.thread = CoqThread(self.get_unique, self)
+        self.thread = CoqThread(
+            self.get_unique,
+            self,
+            self.ui.checkbox_frequency.isChecked())
         self.thread.taskFinished.connect(self.finalize)
         self.thread.taskException.connect(self.onException)
         self.thread.start()

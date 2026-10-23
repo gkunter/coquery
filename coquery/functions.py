@@ -2,7 +2,7 @@
 """
 functions.py is part of Coquery.
 
-Copyright (c) 2016-2021 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -1183,6 +1183,7 @@ class StandardizedTypeTokenRatio(Types):
         tty_list = []
         ix = df.sample(len(df)).index
         for i in range(len(df) // parameter):
+
             dsub = df.loc[ix].iloc[(i * parameter):(i + 1) * parameter]
             types = super().evaluate(dsub, **kwargs)
             tokens = Tokens(group=self.group,
@@ -1334,7 +1335,7 @@ class ConditionalProbability(Proportion):
 
 class MutualInformation(ConditionalProbability2):
     """ Calculate the Mutual Information for the words in the first and the
-    second column using this formula (cf. Bezina 2018):
+    second column using this formula (cf. Brezina 2018):
 
     MI = log f(C1, C2) * N / (f(C1) * f(C2)),
 
@@ -1346,13 +1347,25 @@ class MutualInformation(ConditionalProbability2):
 
     _name = "Mutual Information"
 
+    arguments = {"check": [("lemmas", "Lemma-based:", False)]}
+
+
     def evaluate(self, df, **kwargs):
         resource = self.get_resource(**kwargs)
         if resource is None:
             return self.constant(df, pd.NA)
-        span = df[self.columns[0]] + " " + df[self.columns[1]]
+
         left = df[self.columns[0]]
         right = df[self.columns[1]]
+
+        # FIXME: Lemma-based MIs are currently untested!
+        lemmas = kwargs["lemmas"]
+        if lemmas:
+            left = left.str.replace(r"[[]?(.+)[]]?(.*)", r"[\1]\2", regex=True)
+            right = right.str.replace(r"[[]?(.+)[]]?(.*)", r"[\1]\2", regex=True)
+
+        span = left + " " + right
+
         engine = options.cfg.current_connection.get_engine(resource.db_name)
         try:
             freq_full = span.apply(

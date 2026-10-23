@@ -2,7 +2,7 @@
 """
 independencetestviewer.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -140,7 +140,7 @@ class IndependenceTestViewer(QtWidgets.QDialog):
                              if p_g2 > manager.alpha else "significant"),
                         adj_a=(str_flt.format(manager.alpha)
                                if manager.alpha < 0.05 else 0.05),
-                        ref=(", Benjamini and Hochberg 1995"
+                        ref=(", Benjamini and Hochberg 1995, <a href='https://doi.org/10.1111/j.2517-6161.1995.tb02031.x'>doi:10.1111/j.2517-6161.1995.tb02031.x</a>"
                              if manager.alpha < 0.05 else ""))
 
         # Calculate Cramér's Phi for the 2x2 case:

@@ -569,44 +569,21 @@
          <property name="title">
           <string>Data</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,1,0">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_9">
-            <property name="text">
-             <string>&amp;X axis:</string>
-            </property>
-            <property name="buddy">
-             <cstring>edit_x_label</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,0,0">
+         <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0,0">
+          <item row="1" column="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_7">
             <item>
-             <widget class="QLineEdit" name="edit_x_label">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="placeholderText">
-               <string>Label</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label">
+             <widget class="QLabel" name="label_17">
               <property name="text">
-               <string>&amp;X label size:</string>
+               <string>&amp;Y tick size:</string>
               </property>
               <property name="buddy">
-               <cstring>spin_size_x_label</cstring>
+               <cstring>spin_size_y_ticklabels</cstring>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spin_size_x_label">
+             <widget class="QSpinBox" name="spin_size_y_ticklabels">
               <property name="suffix">
                <string> pt</string>
               </property>
@@ -646,16 +623,6 @@
              </widget>
             </item>
            </layout>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_10">
-            <property name="text">
-             <string>&amp;Y axis:</string>
-            </property>
-            <property name="buddy">
-             <cstring>edit_y_label</cstring>
-            </property>
-           </widget>
           </item>
           <item row="1" column="1">
            <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,0,0">
@@ -700,20 +667,33 @@
             </item>
            </layout>
           </item>
-          <item row="1" column="2">
-           <layout class="QHBoxLayout" name="horizontalLayout_7">
+          <item row="0" column="1">
+           <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,0,0">
             <item>
-             <widget class="QLabel" name="label_17">
-              <property name="text">
-               <string>&amp;Y tick size:</string>
+             <widget class="QLineEdit" name="edit_x_label">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
               </property>
-              <property name="buddy">
-               <cstring>spin_size_y_ticklabels</cstring>
+              <property name="placeholderText">
+               <string>Label</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spin_size_y_ticklabels">
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>&amp;X label size:</string>
+              </property>
+              <property name="buddy">
+               <cstring>spin_size_x_label</cstring>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="spin_size_x_label">
               <property name="suffix">
                <string> pt</string>
               </property>
@@ -726,6 +706,26 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="check_x_axis">
+            <property name="text">
+             <string>X axis:</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="check_y_axis">
+            <property name="text">
+             <string>Y axis:</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -1366,5 +1366,326 @@
   <tabstop>spin_number</tabstop>
  </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_12</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>327</x>
+     <y>365</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>35</x>
+     <y>409</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>edit_legend_title</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>327</x>
+     <y>365</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>288</x>
+     <y>409</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_4</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>327</x>
+     <y>365</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>539</x>
+     <y>409</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_19</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_13</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_columns</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_size_legend</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_show_legend</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_size_legend_entries</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_x_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>edit_x_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_x_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_x_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_size_x_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_x_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_14</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_x_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>edit_x_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_x_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_size_x_ticklabels</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_y_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>edit_y_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_y_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_2</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_y_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_size_y_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_y_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>label_17</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_y_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>edit_y_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>check_y_axis</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>spin_size_y_ticklabels</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

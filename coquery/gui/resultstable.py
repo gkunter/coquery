@@ -2,7 +2,7 @@
 """
 resultstable.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -298,6 +298,10 @@ class CoqResultsTableView(classes.CoqTableView):
             elif column.startswith("statistics_g_test"):
                 deleg = CoqLikelihoodDelegate(self,
                                               threshold=manager.threshold)
+            elif column.startswith("statistics_frequency"):
+                column = get_toplevel_window().table_model.content.iloc[:, i]
+                deleg = classes.CoqFrequencyBarDelegate(self,
+                                                        maximum=max(column))
             else:
                 deleg = CoqResultCellDelegate(self)
             self.setItemDelegateForColumn(i, deleg)

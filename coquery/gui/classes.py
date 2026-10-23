@@ -2,7 +2,7 @@
 """
 classes.py is part of Coquery.
 
-Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -1106,7 +1106,7 @@ class CoqTreeWidget(QtWidgets.QTreeWidget):
                           for i in range(item.childCount())]:
                 _check_state(child, object_name, state, column)
 
-        if type(state) != QtCore.Qt.CheckState:
+        if not isinstance(state, QtCore.Qt.CheckState):
             if state:
                 state = QtCore.Qt.Checked
             else:
@@ -1187,6 +1187,8 @@ class LogTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ForegroundRole:
             if record.levelno in [logging.ERROR, logging.CRITICAL]:
                 return QtGui.QBrush(QtCore.Qt.white)
+            elif record.levelno == logging.WARNING:
+                return QtGui.QBrush(QtCore.Qt.black)
             else:
                 return None
         elif role == QtCore.Qt.BackgroundRole:
@@ -1381,7 +1383,10 @@ class CoqFloatEdit(QtWidgets.QLineEdit):
         text = ev.text()
         content = utf8(self.text())
         leading_figures = content[:self.cursorPosition()].strip("-")
-        text_to_dec = content.partition(self.dec)[0]
+        if self.dec:
+            text_to_dec = content.partition(self.dec)[0]
+        else:
+            text_to_dec = [ch for ch in content if ch in "0123456789"]
 
         # handle special keys that don't have a visual representation or are
         # represented by an escape sequence:
@@ -1804,3 +1809,74 @@ class CoqWidgetListView(QtWidgets.QListView):
         """
         super(CoqWidgetListView, self).setModel(model)
         self.selectionModel().selectionChanged.connect(self.changeSelect)
+
+
+class CoqFrequencyBarDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent=None, maximum=1):
+        super().__init__(parent)
+        self.maximum = maximum
+
+    def paint(self, painter, option, index):
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+
+        value = int(index.data(QtCore.Qt.DisplayRole))
+        text = options.text
+        options.text = ""
+
+        if options.widget:
+            style = options.widget.style()
+        else:
+            style = QtWidgets.QApplication.style()
+
+        style.drawControl(
+            QtWidgets.QStyle.CE_ItemViewItem,
+            options,
+            painter,
+            options.widget)
+
+        painter.save()
+
+        text_width = options.fontMetrics.horizontalAdvance(text)
+        left_margin = 4
+        right_margin = 6
+        text_padding = 8
+        top_bottom_margin = 2
+
+        content_rect = options.rect.adjusted(
+            left_margin,
+            top_bottom_margin,
+            -right_margin,
+            -top_bottom_margin)
+
+        max_bar_width = max(0,
+                            content_rect.width() - text_width - text_padding)
+
+        if self.maximum == 0:
+            ratio = 0
+        else:
+            ratio = max(0.0, min(1.0, value / self.maximum))
+
+        if ratio > 0 and max_bar_width > 0:
+            bar_rect = QtCore.QRect(content_rect)
+            bar_rect.setWidth(int(max_bar_width * ratio))
+
+            if options.state & QtWidgets.QStyle.State_Selected:
+                color = options.palette.highlight().color().lighter(130)
+            else:
+                color = options.palette.highlight().color().lighter(160)
+            painter.fillRect(bar_rect, color)
+
+        style.drawItemText(
+            painter,
+            QtCore.QRect(content_rect),
+            QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter,
+            options.palette,
+            True,
+            text,
+            (QtGui.QPalette.HighlightedText
+                if options.state & QtWidgets.QStyle.State_Selected
+                else QtGui.QPalette.Text)
+        )
+
+        painter.restore()

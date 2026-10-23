@@ -2,7 +2,7 @@
 """
 corpusbuilder.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -21,9 +21,19 @@ import re
 import sys
 import fnmatch
 import inspect
-from lxml import etree as ET
 import sqlalchemy
+from enum import Enum
 
+try:
+    from lxml import etree as ET
+except Exception as e:
+    # FIXME: lxml should be a required package so this exception
+    # is never raised
+    warnings.warn(
+        "Package lxml could not be imported correctly. This may be due to a"
+        "version error.\n"
+        "Try upgrading lxml and/or Python to a different version.")
+    raise e
 
 from . import sqlwrap
 from . import options
@@ -39,6 +49,15 @@ from .defines import (SQL_MYSQL,
                       msg_nltk_tagger, msg_nltk_tagger_fallback)
 from .unicode import utf8
 from .general import check_fs_case_sensitive
+
+
+class InstallerSteps(Enum):
+    CREATE_TABLES = "checkbox_create_tables"
+    LOAD_FILES = "checkbox_load_files"
+    OPTIMIZE_COLUMNS = "checkbox_optimize_columns"
+    CREATE_INDICES = "checkbox_create_indices"
+    WRITE_CORPUS_MODULE = "checkbox_write_corpus_module"
+
 
 """
 The module :mod:`corpusbuilder.py` provides the framework for corpus module
@@ -1660,14 +1679,14 @@ class BaseCorpusBuilder(corpus.SQLResource):
             output_file.write(self.module_content)
             logging.info("Corpus module %s written." % path)
 
-    def setup_db(self, keep_db):
+    def setup_db(self):
         """
         Create a connection to the server, and creates the database if
         necessary.
         """
         con = options.cfg.current_connection
         if con.has_database(self.arguments.db_name):
-            if not keep_db:
+            if self.step_selected(InstallerSteps.LOAD_FILES):
                 con.remove_database(self.arguments.db_name)
         if not con.has_database(self.arguments.db_name):
             con.create_database(self.arguments.db_name)
@@ -1761,10 +1780,10 @@ class BaseCorpusBuilder(corpus.SQLResource):
         # Corpus installers may require additional modules. For example,
         # Gabra is currently distributed as MongoDB files, which are read by
         # using the pymongo library.
-        # Unless the user wishes to install only the corpus module, try to
+        # Unless the user wishes to doesn't want to load the data files, try to
         # import these additional modules, and raise an exception if they are
         # unavailable:
-        if not self.arguments.only_module:
+        if self.step_selected(InstallerSteps.LOAD_FILES):
             for module, package, url in self.get_modules():
                 logging.info("importing module: {}".format(module))
                 try:
@@ -1811,6 +1830,11 @@ class BaseCorpusBuilder(corpus.SQLResource):
             os.remove(path)
         except Exception:
             pass
+
+    def step_selected(self, step: InstallerSteps) -> bool:
+        if not hasattr(self.arguments, "installer_steps"):
+            return True
+        return (step in self.arguments.installer_steps)
 
     def build_finalize(self):
         """ Wrap up everything after the corpus installation is complete. """
@@ -1867,7 +1891,7 @@ class BaseCorpusBuilder(corpus.SQLResource):
                 self._widget.progressUpdate.emit(0)
 
         self.check_arguments()
-        self.setup_db(self.arguments.only_module)
+        self.setup_db()
 
         if self._widget:
             steps = 3 + (int(self.arguments.lookup_ngram) +
@@ -1878,22 +1902,32 @@ class BaseCorpusBuilder(corpus.SQLResource):
         current = 0
         current = progress_next(current)
 
-        with self.DB.engine.connect() as self.DB.connection:
-            logging.info("Stage 0")
-            self.build_initialize()
+        try:
+            with self.DB.engine.connect() as self.DB.connection:
+                logging.info("Stage 0")
+                self.build_initialize()
 
-            try:
-                if not self.arguments.only_module:
-                    # create tables
-                    if not self.interrupted:
+                try:
+                    if self.step_selected(InstallerSteps.CREATE_TABLES):
+                        # create tables
+                        if self.interrupted:
+                            return
                         logging.info("Stage 1")
                         if self.arguments.metadata:
-                            self.add_metadata(self.arguments.metadata,
-                                              self.arguments.metadata_column)
-                        self.build_create_tables()
+                            self.add_metadata(
+                                self.arguments.metadata,
+                                self.arguments.metadata_column)
+                        try:
+                            self.build_create_tables()
+                        except Exception as e:
+                            S = f"Error creating the SQL tables: {e}"
+                            logging.error(S)
+                            print(S)
 
-                    # read files
-                    if not self.interrupted:
+                    if self.step_selected(InstallerSteps.LOAD_FILES):
+                        # read files
+                        if self.interrupted:
+                            return
                         logging.info("Stage 2")
                         current = progress_next(current)
                         if self.arguments.metadata:
@@ -1907,60 +1941,67 @@ class BaseCorpusBuilder(corpus.SQLResource):
                         # called before the module is written:
                         self.set_query_items()
 
-                    # any additional stage
-                    if not self.interrupted:
-                        logging.info("Stage 3")
-                        current = progress_next(current)
-                        for stage in self.additional_stages:
-                            if not self.interrupted:
+                        # any additional stage
+                        if not self.interrupted:
+                            for stage in self.additional_stages:
+                                if self.interrupted:
+                                    return
                                 stage()
 
-                    # optimize
-                    if (not self.interrupted and
-                            self.DB.db_type == SQL_MYSQL):
-                        logging.info("Stage 4")
-                        current = progress_next(current)
-                        self.build_optimize()
+                    if self.step_selected(InstallerSteps.OPTIMIZE_COLUMNS):
+                        # optimize
+                        if self.interrupted:
+                            return
+                        if self.DB.db_type == SQL_MYSQL:
+                            logging.info("Stage 4")
+                            current = progress_next(current)
+                            self.build_optimize()
 
-                    # lookup table
-                    try:
-                        if (not self.interrupted and
-                                self.arguments.lookup_ngram):
+                    if self.step_selected(InstallerSteps.LOAD_FILES):
+                        if self.arguments.lookup_ngram:
+                            # lookup table
+                            if self.interrupted:
+                                return
                             logging.info("Stage 5")
                             current = progress_next(current)
-                            self.build_lookup_ngram()
-                    except Exception as e:
-                        S = "Error building ngram lookup table: {}".format(e)
-                        logging.error(S)
-                        print(S)
-                        raise e
+                            try:
+                                self.build_lookup_ngram()
+                            except Exception as e:
+                                S = f"Error building ngram lookup table: {e}"
+                                logging.error(S)
+                                print(S)
+                                raise e
 
-                    # build indexes
-                    if not self.interrupted:
+                    if self.step_selected(InstallerSteps.CREATE_INDICES):
+                        # build indexes
+                        if self.interrupted:
+                            return
                         logging.info("Stage 6")
                         current = progress_next(current)
                         self.build_create_indices()
 
-                else:
                     self.set_query_items()
 
-                # write module
-                if not self.interrupted:
-                    logging.info("Stage 8")
-                    current = progress_next(current)
-                    self.build_write_module()
+                    if self.step_selected(InstallerSteps.WRITE_CORPUS_MODULE):
+                        # write module
+                        if self.interrupted:
+                            return
+                        logging.info("Stage 7")
+                        current = progress_next(current)
+                        self.build_write_module()
 
-                self.build_finalize()
-            except Exception as e:
-                for x in get_error_repr(sys.exc_info()):
-                    print(x)
-                    logging.warning(x)
-                logging.warning(str(e))
-                print(str(e))
-                self.remove_build()
-                self.DB.connection.close()
-                raise e
-        self.DB.engine.dispose()
+                    self.build_finalize()
+                except Exception as e:
+                    for x in get_error_repr(sys.exc_info()):
+                        print(x)
+                        logging.warning(x)
+                    logging.warning(str(e))
+                    print(str(e))
+                    self.remove_build()
+                    self.DB.connection.close()
+                    raise e
+        finally:
+            self.DB.engine.dispose()
 
     def create_description_text(self):
         if self.arguments.use_nltk:

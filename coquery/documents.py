@@ -65,7 +65,7 @@ def detect_file_type(file_name, sample_length=1024):
     # Define magic numbers and headers:
     _pk_header = b"PK\x03\x04"
     _pdf_header = b"%PDF-"
-    _html_header = b"\s*<!DOCTYPE\s+html\s*.*>"
+    _html_header = r"\s*<!DOCTYPE\s+html\s*.*>"
 
     # get extension:
     _, ext = os.path.splitext(file_name)
@@ -181,7 +181,7 @@ def html_to_str(path, encoding="utf-8"):
     return " ".join(list(filter(visible, texts)))
 
 
-def odt_to_str(path):
+def odt_to_str(path, _encoding):
     if options.use_odfpy:
         from odf.opendocument import load
         from odf import text
@@ -193,7 +193,7 @@ def odt_to_str(path):
     return "\n".join(txt)
 
 
-def plain_to_str(path):
+def plain_to_str(path, _encoding):
     if options.use_chardet:
         import chardet
         content = open(path, "rb").read()
@@ -228,3 +228,102 @@ def plain_to_str(path):
                 s = "Assuming encoding 'ISO-8859-1' for file {}".format(path)
                 logging.info(s)
     return utf8(raw_text, errors="replace")
+
+
+class BaseReader():
+    msg_error = "Error in file {file_name}: {msg}"
+    msg_warning = "Ignoring file {file_name}"
+    flag_name = None
+    fnc_reader = None
+
+    @classmethod
+    def is_available(cls):
+        return cls.flag_name is None or getattr(options, cls.flag_name, False)
+
+    @classmethod
+    def file_to_str(cls, file_name, *args, **kwargs):
+        if not cls.is_available():
+            logging.warning(cls.msg_warning.format(file_name=file_name))
+            return None
+        try:
+            return cls.fnc_reader(file_name, *args, **kwargs)
+        except Exception as e:
+            logging.error(cls.msg_error.format(
+                file_name=file_name, msg=str(e)))
+            return None
+
+
+class PDFReader(BaseReader):
+    msg_error: str = "Error in PDF file {file_name}: {msg}"
+    msg_warning: str = ("Ignoring PDF file {file_name} (the required Python "
+                        "module 'pdfminer' is not available)")
+    fnc_reader = staticmethod(pdf_to_str)
+    flag_name = "use_pdfminer"
+
+
+class DocXReader(BaseReader):
+    msg_error: str = "Error in MS Word file {file_name}: {msg}"
+    msg_warning: str = ("Ignoring Ms Word file {file_name} (the required "
+                        "Python module 'python-docx' is not available)")
+    fnc_reader = staticmethod(docx_to_str)
+    flag_name = "use_docx"
+
+
+class ODTReader(BaseReader):
+    msg_error: str = "Error in OpenDocument Text file {file_name}: {msg}"
+    msg_warning: str = ("Ignoring ODT file {file_name} (the required Python "
+                        "module 'odtpy' is not available)")
+    fnc_reader = staticmethod(odt_to_str)
+    flag_name = "use_odfpy"
+
+
+class HTMLReader(BaseReader):
+    msg_error: str = "Error in HTML file {file_name}: {msg}"
+    msg_warning: str = ("Ignoring HTML file {file_name} (the required Python "
+                        "module 'BeautifulSoup' is not available)")
+    fnc_reader = staticmethod(html_to_str)
+    flag_name = "use_bs4"
+
+
+class PlainReader(BaseReader):
+    msg_error: str = "Error in plain text file {file_name}: {msg}"
+    msg_warning: str = ("Ignoring file {file_name} (perhaps the file is a "
+                        "binary file?)")
+    fnc_reader = staticmethod(plain_to_str)
+
+
+def read_file(file_name, sample_length=1024):
+    """
+    Reads the content of the file, and returns it as a string. If the file
+    cannot be read (because the file type is not supported, because the
+    required module is unavailable, or because reading the file produces an
+    error), None is returned.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the file
+    sample_length : int (default: 1024)
+        Number of bytes that are read when determining the file type
+
+    Returns
+    -------
+    value : str or None
+        The content of the file, or None if the file couldn't be read.'
+    """
+    READERS = {
+        FT_PDF: PDFReader,
+        FT_DOCX: DocXReader,
+        FT_ODT: ODTReader,
+        FT_HTML: HTMLReader,
+        FT_PLAIN: PlainReader}
+
+    file_type = detect_file_type(file_name, sample_length)
+    try:
+        reader_class = READERS[file_type]
+    except KeyError:
+        logging.error(
+            (f"Skipping file {file_name}: No reader available for file type "
+             f"{file_type}"))
+        return None
+    return reader_class.file_to_str(file_name)

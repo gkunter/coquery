@@ -2,7 +2,7 @@
 """
 corpusbuilder_interface.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -13,7 +13,6 @@ import argparse
 import codecs
 import re
 import os
-import sys
 import zipfile
 
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -26,6 +25,7 @@ from coquery.defines import (msg_install_abort,
                              msg_corpus_path_not_valid)
 from coquery.errors import DependencyError
 from coquery.unicode import utf8
+from coquery.corpusbuilder import InstallerSteps
 
 from coquery.gui import classes
 from coquery.gui import errorbox
@@ -35,6 +35,7 @@ from coquery.gui.ui.corpusInstallerUi import Ui_CorpusInstaller
 from coquery.gui.ui.corpusTableUi import Ui_CorpusTable
 from coquery.gui.ui.readPackageUi import Ui_PackageInstaller
 from coquery.gui.namedtableoptions import NamedTableOptionsDialog
+from coquery.gui.installersteps import SelectInstallerSteps
 
 
 class MetaGui(QtWidgets.QDialog):
@@ -52,6 +53,9 @@ class MetaGui(QtWidgets.QDialog):
         self._testing = False
         self._onefile = False
         self._meta_options = None
+        self._installer_steps = set()
+        for key in InstallerSteps:
+            self._installer_steps.add(key)
         self.builder_class = builder_class
 
         self.ui = gui()
@@ -291,23 +295,15 @@ class MetaGui(QtWidgets.QDialog):
         namespace.use_meta = False
         namespace.lookup_ngram = False
         namespace.metadata = False
+        namespace.installer_steps = self._installer_steps
 
         # FIXME: check if the following one-letter variables are still used
         # in CorpusBuilder.build().
         if (hasattr(self.ui, "radio_only_module") and
                 self.ui.radio_only_module.isChecked()):
-            namespace.o = False
-            namespace.i = False
-            namespace.l = False
-            namespace.c = False
-            namespace.w = True
             namespace.only_module = True
         else:
-            namespace.w = True
-            namespace.o = True
-            namespace.i = True
-            namespace.l = True
-            namespace.c = True
+
             namespace.only_module = False
 
         if hasattr(self.ui, "input_path"):
@@ -366,11 +362,10 @@ class InstallerGui(MetaGui):
         self.ui.button_input_path.clicked.connect(self.select_path)
         self.ui.button_metafile.clicked.connect(self.select_metafile)
         self.ui.label_metafile.clicked.connect(self.select_metafile)
+        self.ui.button_advanced.clicked.connect(self.select_installer_steps)
 
-        self.ui.radio_read_files.toggled.connect(
-            lambda x: self.activate_read(True))
-        self.ui.radio_only_module.toggled.connect(
-            lambda x: self.activate_read(False))
+        self.ui.radio_read_files.clicked.connect(self.activate_read)
+        self.ui.radio_only_module.clicked.connect(self.disable_read)
         self.ui.check_use_metafile.toggled.connect(self.toggle_use_metafile)
 
     def restore_settings(self):
@@ -378,9 +373,6 @@ class InstallerGui(MetaGui):
 
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
-
-        val = options.settings.value("corpusinstaller_read_files", "true")
-        self.activate_read(val == "true" or val is True)
 
         self.ui.check_use_metafile.setChecked(False)
         self.ui.label_metafile.setText("")
@@ -428,6 +420,9 @@ class InstallerGui(MetaGui):
         self.ui.yes_button.setEnabled(True)
         self.ui.issue_label.setText("")
 
+        if not hasattr(self.ui, "radio_read_files"):
+            return
+
         if self.ui.radio_read_files.isChecked() and check_path:
             path = utf8(self.ui.input_path.text())
             if not path:
@@ -447,7 +442,7 @@ class InstallerGui(MetaGui):
                 directory=path,
                 options=(QtWidgets.QFileDialog.DontUseNativeDialog |
                          QtWidgets.QFileDialog.ReadOnly))
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if name:
             self.ui.input_path.setText(name)
@@ -482,12 +477,31 @@ class InstallerGui(MetaGui):
                 self.ui.check_use_metafile.setChecked(False)
         self.ui.check_use_metafile.blockSignals(False)
 
-    def activate_read(self, activate):
+    def select_installer_steps(self) -> None:
+        dialog = SelectInstallerSteps(
+            default=self._installer_steps,
+            parent=self)
+
+        result = dialog.exec_()
+        if result:
+            self._installer_steps = dialog.selected
+            self.ui.radio_only_module.setChecked(True)
+
+    def activate_read(self):
         self.ui.radio_read_files.blockSignals(True)
         self.ui.radio_only_module.blockSignals(True)
-        self.ui.radio_read_files.setChecked(activate)
-        self.ui.radio_only_module.setChecked(not activate)
-        self.ui.widget_read_files.setEnabled(activate)
+        self.ui.radio_read_files.setChecked(True)
+        self.ui.widget_read_files.setEnabled(True)
+        self.validate_dialog()
+        self.ui.radio_read_files.blockSignals(False)
+        self.ui.radio_only_module.blockSignals(False)
+
+    def disable_read(self):
+        self.ui.radio_read_files.blockSignals(True)
+        self.ui.radio_only_module.blockSignals(True)
+        self.ui.radio_only_module.setChecked(True)
+        self.ui.widget_read_files.setEnabled(False)
+        self.select_installer_steps()
         self.validate_dialog()
         self.ui.radio_read_files.blockSignals(False)
         self.ui.radio_only_module.blockSignals(False)
@@ -510,7 +524,7 @@ class InstallerGui(MetaGui):
             super(InstallerGui, self).reject()
 
     def check_input(self):
-        if self.ui.radio_only_module.isChecked():
+        if InstallerSteps.LOAD_FILES not in self._installer_steps:
             self.ui.input_path.setStyleSheet('')
             self.ui.yes_button.setEnabled(True)
         else:
@@ -584,7 +598,6 @@ class InstallerGui(MetaGui):
                     options.cfg.experimental):
                 namespace.lookup_ngram = True
                 namespace.ngram_width = int(self.ui.spin_n.value())
-
         return namespace
 
 
@@ -730,86 +743,92 @@ class BuilderGui(InstallerGui):
         errorbox.ErrorBox.show(self.exc_info, self, no_trace=True)
 
     def test_nltk_core(self):
+        """
+        Check if an NLTK resource required for automatic tagging and
+        lemmatization is missing. In that case, append the name of the
+        resource to the class property `nltk_exception` so that the user can
+        decide whether they want to download the missing resources.
+
+        Side effects
+        ------------
+        Modifies the following properties:
+        self._nltk_lemmatize: bool
+        self._nltk_tokenize: bool
+        self._nltk_tagging: bool
+        self.nltk_exceptions: List
+
+        Also loads the nltk module.
+
+        Details
+        -------
+
+        If an NLTK resource (lemmatizer, tokenizer, tagger) is unavailable,
+        NLTK throws a LookupError with the following error string:
+
+        # ********************************************************************
+        # Resource [resource_name] not found.
+        # Please use the NLTK Downloader to obtain the resource:
+        #
+        # >>> import nltk
+        # >>> nltk.download('[resource_name]')
+        #
+        # For more information see: https://www.nltk.org/data.html
+        #
+        # Attempted to load corpora/[resource_name]
+        #
+        # Searched in:
+        # [list of directories]
+        # ********************************************************************
+
+        In this case, Coquery will extract the resource name from the line
+        # >>> nltk.download('[resource_name]')
+        by matching the error string against a regular expression. The name
+        is then added to the list `self.nltk_exception`, which is in turn used
+        in `test_nltk_results()` to show a dialog that allows to install the
+        missing components. In addition, the corresponding flag is set to False
+        (e.g. `self._nltk_lemmatize = False` if the lemmatizer resource is
+        unavailable).
+
+        If an NLTK resource is available, the corresponding flag is set to True
+        (e.g. `self._nltk_lemmatize = True`).
+        """
+        def set_lemmatize_flag(b: bool) -> None:
+            self._nltk_lemmatize = b
+
+        def set_tokenize_flag(b: bool) -> None:
+            self._nltk_tokenize = b
+
+        def set_tagging_flag(b: bool) -> None:
+            self._nltk_tagging = b
+
+        def get_resource_name(s: str) -> str:
+            regstr = r"nltk\.download\(\'(.*)\'\)"
+            match = re.search(regstr, s)
+            if match:
+                return match.group(1)
+            return ""
+
         import nltk
-        # test lemmatizer:
+        resource_tests = zip(
+            (set_lemmatize_flag, set_tokenize_flag, set_tagging_flag),
+            (nltk.stem.wordnet.WordNetLemmatizer().lemmatize,
+             nltk.sent_tokenize,
+             nltk.pos_tag),
+            ("lemmatize_test", "tokenize_test", ["pos_test"]))
 
-        # This regular expression matches the error output of nltk.LookupError
-        # of the form
-        #
-        # Resource [ANSI|']resource_name[ANSI|'] not found
-        #
-        # where ANSI can be any ANSI sequence, e.g. one used to change the
-        # color of the output. The ANSI part is based on
-        # https://stackoverflow.com/a/33925425
-
-        regstr = (r".*Resource\s*"
-                  "(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
-                  "\s*'?"
-                  "(\w+)"
-                  "'?\s*"
-                  "(?:(?:\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])?"
-                  "\s*not found")
-
-        regexp = re.compile(regstr)
-
-        try:
-            nltk.stem.wordnet.WordNetLemmatizer().lemmatize("Test")
-        except LookupError as e:
-            s = str(e).replace("\n", "").strip("*")
-            match = regexp.match(s)
-            if match:
-                self.nltk_exceptions.append(match.group(1).strip("'"))
+        for (fnc_set_flag, fnc_test_nltk, test_data) in resource_tests:
+            fnc_set_flag(False)
+            try:
+                fnc_test_nltk(test_data)
+            except LookupError as e:
+                resource_name = get_resource_name(str(e))
+                if resource_name:
+                    self.nltk_exceptions.append(resource_name)
+                else:
+                    msg = str(e).replace("\n", "<br>").strip("*")
+                    raise RuntimeError(msg_nltk_message_error.format(msg))
             else:
-                error_msg = str(e).replace("\n", "<br>")
-                raise RuntimeError(msg_nltk_message_error.format(error_msg))
-            self._nltk_lemmatize = False
-        except Exception as e:
-            self.nltk_exceptions.append(
-                ("An unexpected error occurred when testing the "
-                 "lemmatizer:\n{}".format(sys.exc_info())))
-            raise e
-        else:
-            self._nltk_lemmatize = True
-
-        # test tokenzie:
-        try:
-            nltk.sent_tokenize("test")
-        except LookupError as e:
-            s = str(e).replace("\n", "")
-            match = regexp.match(s)
-            if match:
-                self.nltk_exceptions.append(match.group(1).strip("'"))
-            else:
-                error_msg = str(e).replace("\n", "<br>")
-                raise RuntimeError(msg_nltk_message_error.format(error_msg))
-            self._nltk_tokenize = False
-        except Exception as e:
-            self.nltk_exceptions.append(
-                ("An unexpected error occurred when testing the "
-                 "tokenizer:\n{}".format(sys.exc_info())))
-            raise e
-        else:
-            self._nltk_tokenize = True
-
-        # test tagging:
-        try:
-            nltk.pos_tag(["test"])
-        except LookupError as e:
-            s = str(e).replace("\n", "")
-            match = regexp.match(s)
-            if match:
-                self.nltk_exceptions.append(match.group(1).strip("'"))
-            else:
-                error_msg = str(e).replace("\n", "<br>")
-                raise RuntimeError(msg_nltk_message_error.format(error_msg))
-            self._nltk_tagging = False
-        except Exception as e:
-            self.nltk_exceptions.append(
-                ("An unexpected error occurred when testing the POS "
-                 "tagger:\n{}".format(sys.exc_info())))
-            raise e
-        else:
-            self._nltk_tagging = True
+                fnc_set_flag(True)
 
     def test_nltk_results(self):
         def pass_check():
@@ -865,20 +884,34 @@ class BuilderGui(InstallerGui):
             self.ui.label_metafile.setStyleSheet("")
 
     def validate_dialog(self, check_path=False):
-        super(BuilderGui, self).validate_dialog(check_path)
+        super().validate_dialog(check_path)
 
         self.ui.yes_button.setEnabled(True)
         self.ui.issue_label.setText("")
         if hasattr(self.ui, "corpus_name"):
             self.ui.corpus_name.setStyleSheet("")
             self.validate_name_not_empty(self.ui.yes_button)
-            if self.ui.radio_only_module.isChecked():
-                self.validate_db_does_exist(self.ui.yes_button)
-            else:
+
+            if not hasattr(self.ui, "radio_only_module"):
+                # Packages will only be installed fully, but this will only
+                # be possible if neither the database nor the corpus name are
+                # already used
                 self.validate_name_is_unique(self.ui.yes_button)
                 self.validate_db_does_not_exist(self.ui.yes_button)
-                if not self._onefile:
-                    self.validate_metadata(self.ui.yes_button)
+                return
+
+            # If the builder allows a module-only installation, then the
+            # corresponding database must exist.
+            if self.ui.radio_only_module.isChecked():
+                self.validate_db_does_exist(self.ui.yes_button)
+                return
+
+            # Otherwise, the name needs to be unique, and the database must
+            # not exist yet.
+            self.validate_name_is_unique(self.ui.yes_button)
+            self.validate_db_does_not_exist(self.ui.yes_button)
+            if not self._onefile:
+                self.validate_metadata(self.ui.yes_button)
 
     def select_path(self):
         if self._onefile:
@@ -893,7 +926,7 @@ class BuilderGui(InstallerGui):
                 options=(QtWidgets.QFileDialog.DontUseNativeDialog |
                          QtWidgets.QFileDialog.ReadOnly))
 
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if name:
             if not self._onefile:
@@ -904,7 +937,7 @@ class BuilderGui(InstallerGui):
 
     def install_exception(self):
         self.state = "failed"
-        if type(self.exception) == RuntimeError:
+        if isinstance(self.exception, RuntimeError):
             QtWidgets.QMessageBox.critical(
                 self, "Corpus building error – Coquery", str(self.exception))
         else:
@@ -987,7 +1020,7 @@ class PackageGui(BuilderGui):
             caption="Select corpus package file",
             filter="Coquery package files (*.coq);;Any file (*.*)")
 
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         name = utf8(name)
         if name:
@@ -1135,7 +1168,10 @@ class PackageGui(BuilderGui):
 
     def get_arguments_from_gui(self):
         namespace = argparse.Namespace()
-        namespace.only_module = self.ui.radio_only_module.isChecked()
+        namespace.only_module = False
+        if (hasattr(self.ui, "radio_only_module") and
+                self.ui.radio_only_module.isChecked()):
+            namespace.only_module = True
         namespace.lookup_ngram = False
         namespace.ngram_width = None
         namespace.metadata = None
@@ -1208,7 +1244,8 @@ class TableGui(MetaGui):
         self.validate_name_not_empty(self.ui.yes_button)
         self.validate_file_exists(self.ui.yes_button)
 
-        if self.ui.radio_only_module.isChecked():
+        if (hasattr(self.ui, "radio_only_module") and
+                self.ui.radio_only_module.isChecked()):
             self.validate_db_does_exist(self.ui.yes_button)
         else:
             self.validate_name_is_unique(self.ui.yes_button)
@@ -1221,7 +1258,7 @@ class TableGui(MetaGui):
             path = os.path.split(options.cfg.corpus_table_source_path)[0]
         name = QtWidgets.QFileDialog.getOpenFileName(directory=path)
 
-        if type(name) == tuple:
+        if isinstance(name, tuple):
             name = name[0]
         if name:
             options.cfg.corpus_table_source_path = name
@@ -1229,7 +1266,7 @@ class TableGui(MetaGui):
 
     def install_exception(self):
         self.state = "failed"
-        if type(self.exception) == RuntimeError:
+        if isinstance(self.exception, RuntimeError):
             QtWidgets.QMessageBox.critical(
                 self, "Corpus building error – Coquery", str(self.exception))
         else:

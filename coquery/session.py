@@ -2,7 +2,7 @@
 """
 session.py is part of Coquery.
 
-Copyright (c) 2016-2025 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -609,53 +609,52 @@ class SessionCommandLine(Session):
 
 class SessionInputFile(Session):
     def prepare_queries(self):
-        with open(options.cfg.input_path, "rt") as InputFile:
-            read_lines = 0
-            try:
-                input_file = pd.read_csv(
-                    filepath_or_buffer=InputFile,
-                    sep=options.cfg.input_separator,
-                    header=0 if options.cfg.file_has_headers else None,
-                    quotechar=options.cfg.quote_char,
-                    encoding=options.cfg.input_encoding,
-                    nrows=options.cfg.csv_restrict,
-                    na_filter=False)
-            except ValueError:
-                raise EmptyInputFileError(InputFile)
-            if self.header is None:
-                if options.cfg.file_has_headers:
-                    self.header = input_file.columns.values.tolist()
-                else:
-                    self.header = ["X{}".format(i+1) for i, _
-                                   in enumerate(input_file.columns)]
-                    input_file.columns = self.header
+        read_lines = 0
+        try:
+            input_file = pd.read_csv(
+                filepath_or_buffer=options.cfg.input_path,
+                sep=options.cfg.input_separator,
+                header=0 if options.cfg.file_has_headers else None,
+                quotechar=options.cfg.quote_char,
+                encoding=options.cfg.input_encoding,
+                nrows=options.cfg.csv_restrict,
+                na_filter=False)
+        except ValueError:
+            raise EmptyInputFileError(options.cfg.input_path)
+        if self.header is None:
+            if options.cfg.file_has_headers:
+                self.header = input_file.columns.values.tolist()
+            else:
+                self.header = [
+                    f"X{i + 1}" for i, _ in enumerate(input_file.columns)]
+                input_file.columns = self.header
 
-            options.cfg.query_label = self.header.pop(
-                options.cfg.query_column_number - 1)
-            for current_line in input_file.iterrows():
-                current_line = list(current_line[1])
-                if options.cfg.query_column_number > len(current_line):
-                    raise IllegalArgumentError(
-                        "Column number for queries too big (-n {})".format(
-                            options.cfg.query_column_number))
+        options.cfg.query_label = self.header.pop(
+            options.cfg.query_column_number - 1)
+        for current_line in input_file.iterrows():
+            current_line = list(current_line[1])
+            if options.cfg.query_column_number > len(current_line):
+                raise IllegalArgumentError(
+                    "Column number for queries too big (-n {})".format(
+                        options.cfg.query_column_number))
 
-                if read_lines >= options.cfg.skip_lines:
-                    try:
-                        query_string = current_line.pop(
-                            options.cfg.query_column_number - 1)
-                    except AttributeError:
-                        continue
-                    new_query = self.query_type(query_string, self)
-                    if len(current_line) != len(self.header):
-                        raise TokenParseError
-                    new_query.input_frame = pd.DataFrame(
-                        [current_line], columns=self.header)
-                    self.query_list.append(new_query)
-                self.max_number_of_input_columns = max(
-                    len(current_line),
-                    self.max_number_of_input_columns)
-                read_lines += 1
-            self.input_columns = ["coq_{}".format(x) for x in self.header]
+            if read_lines >= options.cfg.skip_lines:
+                try:
+                    query_string = current_line.pop(
+                        options.cfg.query_column_number - 1)
+                except AttributeError:
+                    continue
+                new_query = self.query_type(query_string, self)
+                if len(current_line) != len(self.header):
+                    raise TokenParseError
+                new_query.input_frame = pd.DataFrame(
+                    [current_line], columns=self.header)
+                self.query_list.append(new_query)
+            self.max_number_of_input_columns = max(
+                len(current_line),
+                self.max_number_of_input_columns)
+            read_lines += 1
+        self.input_columns = ["coq_{}".format(x) for x in self.header]
 
         logging.info(
             "Input file: {} ({} {})".format(

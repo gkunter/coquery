@@ -3,7 +3,7 @@
 """
 coq_install_generic.py is part of Coquery.
 
-Copyright (c) 2016-2019 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -71,16 +71,18 @@ class BuilderClass(BaseCorpusBuilder):
 
         if pos:
             self.word_pos = "POS"
-            self.create_table_description(self.word_table,
+            self.create_table_description(
+                self.word_table,
                 [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
-                Column(self.word_pos, "VARCHAR(128) NOT NULL"),
-                Column(self.word_label, "VARCHAR(1024) NOT NULL")])
+                 Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
+                 Column(self.word_pos, "VARCHAR(128) NOT NULL"),
+                 Column(self.word_label, "VARCHAR(1024) NOT NULL")])
         else:
-            self.create_table_description(self.word_table,
+            self.create_table_description(
+                self.word_table,
                 [Identifier(self.word_id, "INT UNSIGNED NOT NULL"),
-                Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
-                Column(self.word_label, "VARCHAR(1024) NOT NULL")])
+                 Column(self.word_lemma, "VARCHAR(1024) NOT NULL"),
+                 Column(self.word_label, "VARCHAR(1024) NOT NULL")])
 
         # Add the file table. Each row in this table represents a data file
         # that has been incorporated into the corpus. Each token from the
@@ -97,10 +99,11 @@ class BuilderClass(BaseCorpusBuilder):
         # Path
         # A text value containing the path that points to this data file.
 
-        self.create_table_description(self.file_table,
+        self.create_table_description(
+            self.file_table,
             [Identifier(self.file_id, "INT UNSIGNED NOT NULL"),
-            Column(self.file_name, "VARCHAR(1024) NOT NULL"),
-            Column(self.file_path, "VARCHAR(4048) NOT NULL")])
+             Column(self.file_name, "VARCHAR(1024) NOT NULL"),
+             Column(self.file_path, "VARCHAR(4048) NOT NULL")])
 
         # Add the main corpus table. Each row in this table represents a
         # token in the corpus. It has the following columns:
@@ -116,7 +119,8 @@ class BuilderClass(BaseCorpusBuilder):
         # An int value containing the unique identifier of the data file
         # that contains this token.
 
-        self.create_table_description(self.corpus_table,
+        self.create_table_description(
+            self.corpus_table,
             [Identifier(self.corpus_id, "BIGINT UNSIGNED NOT NULL"),
              Column(self.corpus_sentence, "INT UNSIGNED NOT NULL"),
              Link(self.corpus_word_id, self.word_table),
@@ -127,9 +131,10 @@ class BuilderClass(BaseCorpusBuilder):
         self._meta_file = None
 
     @staticmethod
-    def validate_files(l):
-        if len(l) == 0:
-            raise RuntimeError("<p>No file could be found in the selected directory.</p> ")
+    def validate_files(lst):
+        if len(lst) == 0:
+            raise RuntimeError(
+                "<p>No file could be found in the selected directory.</p> ")
 
     def _read_text(self, file_name):
         """
@@ -264,7 +269,6 @@ class BuilderClass(BaseCorpusBuilder):
             else:
                 meta_columns.append(col)
 
-
         # prepare a dataframe that adds the correct file path to the meta data
         path_list = []
         file_list = []
@@ -352,7 +356,7 @@ class BuilderClass(BaseCorpusBuilder):
             #
             # If NLTK is used, the lemmatizer will use the data from WordNet,
             # which will result in much better results.
-            self._lemmatize = lambda x, y: x
+            self._lemmatize = lambda x, y: x.tolower()
             self._pos_translate = lambda x: x
 
     def process_file(self, file_name):

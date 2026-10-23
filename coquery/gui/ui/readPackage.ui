@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>687</width>
-    <height>513</height>
+    <height>596</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -73,8 +73,7 @@
        </property>
        <property name="icon">
         <iconset theme="folder">
-         <normaloff/>
-        </iconset>
+         <normaloff>.</normaloff>.</iconset>
        </property>
        <property name="shortcut">
         <string>Alt+B</string>
@@ -126,30 +125,13 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QRadioButton" name="radio_read_files">
-        <property name="text">
-         <string>&amp;Read corpus from package</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="radio_only_module">
-        <property name="text">
-         <string>Only install corpus &amp;module</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
    <item>
     <widget class="QLabel" name="issue_label">
      <property name="styleSheet">
-      <string notr="true">QLabel { color: lightred; }</string>
+      <string notr="true">QLabel { color: &quot;#ff0000&quot;; }</string>
      </property>
      <property name="text">
       <string>TextLabel</string>
@@ -178,7 +160,16 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="margin">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
        <number>10</number>
       </property>
       <item>

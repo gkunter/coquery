@@ -2,7 +2,7 @@
 """
 sound.py is part of Coquery.
 
-Copyright (c) 2016-2022 Gero Kunter (gero.kunter@coquery.org)
+Copyright (c) 2016-2026 Gero Kunter (gero.kunter@coquery.org)
 
 Coquery is released under the terms of the GNU General Public License (v3).
 For details, see the file LICENSE that you should have received along
@@ -258,9 +258,9 @@ class Sound(object):
         _buffer.seek(0)
         return Sound(_buffer)
 
-    def play(self, start=0, end=None, async=True):
+    def play(self, start=0, end=None, threaded=True):
         self.thread = _get_sound_thread(sound=self, start=start, end=end)
-        if not async:
+        if not threaded:
             self.thread.run()
             return None
         else:
