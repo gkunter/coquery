@@ -3181,6 +3181,7 @@ class CoqMainWindow(QtWidgets.QMainWindow):
         def get_str(l):
             return f" ({l})" if l else ""
 
+
         label_summary_functions = _translate(
             "MainWindow", "Summary &functions{}...", None)
         label_summary_filters = _translate(
@@ -3190,11 +3191,18 @@ class CoqMainWindow(QtWidgets.QMainWindow):
 
         # summary button labels:
         lst = self.Session.summary_group.get_functions()
+        suffix = _translate(
+            "MainWindow", f" ({len(lst)} active)", "SummaryGroupButton")
+            if lst else ""
         self.ui.button_add_summary_function.setText(
-            label_summary_functions.format(get_str(lst)))
+            label_summary_functions.format(suffix))
+
+
         lst = options.cfg.filter_list
-        self.ui.button_filters.setText(
-            label_summary_filters.format(get_str(lst)))
+        suffix = _translate(
+            "MainWindow", f" ({len(lst)} active)", "SummaryFilterButton")
+            if lst else ""
+        self.ui.button_filters.setText(label_summary_filters.format(suffix)
 
         # stop word label:
         lst = options.cfg.stopword_list
