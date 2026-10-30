@@ -1820,7 +1820,7 @@ class CoqFrequencyBarDelegate(QtWidgets.QStyledItemDelegate):
         options = QtWidgets.QStyleOptionViewItem(option)
         self.initStyleOption(options, index)
 
-        value = int(index.data(QtCore.Qt.DisplayRole))
+        value = int(float(index.data(QtCore.Qt.DisplayRole)))
         text = options.text
         options.text = ""
 
